@@ -13,14 +13,12 @@
 #include "utils/utils.h"
 #include "utils/logger.hpp"
 #include "restAPI/restAPI.hpp"
-#include "navigation/highways.h"
 #include "vision/ArucoCam.hpp"
-#include "actions/revolver.hpp" // TODO Remove (For testing)
 
 #define EMULATE_CAM
 #ifndef __CROSS_COMPILE_ARM__
     #define DISABLE_LIDAR
-    // #define TEST_API_ONLY
+    #define TEST_API_ONLY
     #define EMULATE_I2C
 #endif
 
@@ -86,14 +84,14 @@ int main(int argc, char *argv[])
 
         // Get Sensor Data
         {
-            int16_t x, y, theta;
-            asserv.get_coordinates(x, y, theta);
-            tableStatus.robot.pos = {x, y, theta};
-            // LOG_GREEN_INFO("Robot pos : { x = ", x," y = ", y, " theta = ", theta, " }");
+            int16_t x, y, a;
+            asserv.get_coordinates(x, y, a);
+            tableStatus.robot.pos = {x, y, a};
+            // LOG_GREEN_INFO("Robot pos : { x = ", x," y = ", y, " a = ", a, " }");
             tableStatus.robot.braking_distance = asserv.get_braking_distance();
-            asserv.get_current_target(x, y, theta);
-            tableStatus.robot.target = {x, y, theta};
-            // LOG_GREEN_INFO("Robot target : { x = ", x," y = ", y, " theta = ", theta, " }");
+            asserv.get_current_target(x, y, a);
+            tableStatus.robot.target = {x, y, a};
+            // LOG_GREEN_INFO("Robot target : { x = ", x," y = ", y, " a = ", a, " }");
             tableStatus.robot.direction_side = (int)asserv.get_direction_side();
 
             if (currentState != INIT && currentState != FIN)
@@ -113,7 +111,6 @@ int main(int argc, char *argv[])
             if (initState)
             {
                 LOG_GREEN_INFO("INIT");
-                init_highways();
                 disableActuators();
                 tableStatus.reset();
                 arduino.RGB_Rainbow();
@@ -125,7 +122,6 @@ int main(int argc, char *argv[])
         //****************************************************************
         case WAITSTART:
         {
-            static long int startWaitstart = _millis();
             if (initState){
                 LOG_GREEN_INFO("WAITSTART");  
                 enableActuators();
@@ -133,12 +129,8 @@ int main(int argc, char *argv[])
                 arduino.setStepper(0, 2);
                 arduino.setStepper(0, 3);
                 arduino.setStepper(0, 4);
-                moveColumnsElevator(1);
-                moveClaws(0);
                 homeActuators();
                 lidar.startSpin();
-                arduino.setStepperSpeed(PLATFORMS_ELEVATOR_STEPPER_NUM, 500);
-                startWaitstart = _millis();
                 if (tableStatus.robot.colorTeam == NONE)
                     arduino.RGB_Blinking(255, 0, 0); // Red Blinking
             }
@@ -146,21 +138,9 @@ int main(int argc, char *argv[])
             // colorTeam_t color = readColorSensorSwitch();
             // switchTeamSide(color);
 
-            static bool endOfSeq = false; 
-            if (!endOfSeq && arduino.readSensor(3, endOfSeq)){
-                if (!endOfSeq)
-                    movePlatformElevator(-2);
-                else{
-                    arduino.setStepper(0, PLATFORMS_ELEVATOR_STEPPER_NUM);
-                    arduino.setStepperSpeed(PLATFORMS_ELEVATOR_STEPPER_NUM, 5000);
-                    movePlatformElevator(0);
-
-                }
-            }
-
-            if (readLatchSensor() && tableStatus.robot.colorTeam != NONE && endOfSeq)
+            if (readLatchSensor() && tableStatus.robot.colorTeam != NONE)
                 nextState = RUN;
-            if (manual_ctrl && endOfSeq)
+            if (manual_ctrl)
                 nextState = MANUAL;
             break;
         }
@@ -169,8 +149,8 @@ int main(int argc, char *argv[])
         {
             if (initState){
                 log_asserv()->setLogStatus(true);
-                {int16_t x, y, theta;
-                asserv.get_coordinates(x, y, theta);}// for log
+                {int16_t x, y, a;
+                asserv.get_coordinates(x, y, a);}// for log
                 LOG_GREEN_INFO("RUN");
                 tableStatus.reset();
                 tableStatus.startTime = _millis();
@@ -276,41 +256,14 @@ int StartSequence()
 
 #ifdef TEST_API_ONLY
     TestAPIServer();
-    sleep(4);
-    init_highways();
+    sleep(1);
     LOG_DEBUG("Starting main debug loop");
     int i = 0;
     while(!ctrl_c_pressed){
         sleep(0.1);
-//#ifndef DISABLE_LIDAR
-        //getData(lidarData, lidar_count);
-//#endif
-        if (i % 1000 == 0){
-            int x; int y; int t;
-            if (arucoCam1.getPos(x,y,t)){
-                tableStatus.robot.pos.x = x;
-                tableStatus.robot.pos.y = y;
-                tableStatus.robot.pos.theta = t;
-            }
-        }
-        if (i % 10000 == 0){
-            // randomly change the position of highway obstacles
-            for (int i = 0; i < 10; i++)
-                obs_obj_stocks[i].present = rand() % 2;
-            // and the pos of the opponent obstacle
-            obs_obj_opponent.pos.x = rand() % 1500 - 750;
-            obs_obj_opponent.pos.y = rand() % 2200 - 1100;
-            tableStatus.pos_opponent.x = obs_obj_opponent.pos.x;
-            tableStatus.pos_opponent.y = obs_obj_opponent.pos.y;
-
-            // randomly change the position of the robot
-            // tableStatus.robot.pos.x = rand() % 1500 - 750;
-            // tableStatus.robot.pos.y = rand() % 2200 - 1100;
-
-            // goto a random position
-            navigationGoTo(rand() % 1500 - 750, rand() % 2200 - 1100, 0, Direction::FORWARD, Rotation::SHORTEST, Rotation::SHORTEST, true);
-        }
-        i++;
+        // randomly change the position of highway obstacles
+        position_t t_pos = {rand() % 1500 - 750, rand() % 2200 - 1100, 0};
+        navigationGoTo(t_pos, Direction::FORWARD, Rotation::SHORTEST, Rotation::SHORTEST);
     }
     StopAPIServer();
     api_server_thread.join();

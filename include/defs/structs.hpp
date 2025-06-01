@@ -7,7 +7,7 @@ typedef struct
 {
     int  x;
     int  y;
-    int  theta;
+    int  a;
 }position_t; 
 
 //Define serialization for position_t

@@ -1,5 +1,4 @@
 #include "utils/logger.hpp"
-#include "navigation/highways.h"
 
 bool testLogger();
 bool test_lidar_opponent();
@@ -21,10 +20,6 @@ int runAllTests() {
     //Runs the logger tests
     LOG_INFO("Running logger tests" );
     UNIT_TEST(testLogger());
-
-    LOG_INFO("Running highway tests");
-    init_highways();
-    UNIT_TEST(unit_tests());
 
     //Runs the lidar tests
     LOG_INFO("Running lidar tests");

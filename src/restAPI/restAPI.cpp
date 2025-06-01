@@ -8,7 +8,6 @@
 #include "defs/tableState.hpp"
 #include "lidar/lidarAnalize.h" //for static variable
 #include "navigation/navigation.h"
-#include "navigation/highways.h"
 #include "actions/functions.h" //for state machine functions
 
 #include "restAPI/crow.hpp"
@@ -113,13 +112,6 @@ void StartAPIServer(){
             limitedAbsoluteLidarData.push_back({{"x", lidar.data[i].x}, {"y", lidar.data[i].y}});
         }
         response["lidar"] = limitedAbsoluteLidarData;
-
-        json highway_segments;
-        highway_segments_json(highway_segments);
-        response["highway-segments"] = highway_segments;
-        json highway_obstacles;
-        highway_obstacles_json(highway_obstacles);
-        response["highway-obstacles"] = highway_obstacles;
         json current_navigation_path;
         navigation_path_json(current_navigation_path);
         response["navigation"] = current_navigation_path;
@@ -308,12 +300,12 @@ void StartAPIServer(){
         if (req_data.contains("y"))
             req_y_value = req_data["y"];
 
-        int req_theta_value = tableStatus.robot.pos.theta;
-        if (req_data.contains("theta"))
-            req_theta_value = req_data["theta"];
+        int req_a_value = tableStatus.robot.pos.a;
+        if (req_data.contains("a"))
+            req_a_value = req_data["a"];
 
         //Apply the values
-        asserv.set_coordinates(req_x_value, req_y_value, req_theta_value);
+        asserv.set_coordinates(req_x_value, req_y_value, req_a_value);
 
         json response;
         response["message"] = "Successfull";
@@ -339,14 +331,16 @@ void StartAPIServer(){
             req_y_value = req_data["y"];
 
         // Apply the values
-        if (req_data.contains("theta")){
-            int req_theta_value = req_data["theta"];
-            LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", req_x_value, " y=", req_y_value, " theta=", req_theta_value);
-            navigationGoTo(req_x_value, req_y_value, tableStatus.robot.pos.theta, Direction::FORWARD, Rotation::SHORTEST, Rotation::SHORTEST, false);
+        if (req_data.contains("a")){
+            int req_a_value = req_data["a"];
+            LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", req_x_value, " y=", req_y_value, " a=", req_a_value);
+            position_t pos = {req_x_value, req_y_value, tableStatus.robot.pos.a};
+            navigationGoTo(pos, Direction::FORWARD, Rotation::SHORTEST, Rotation::SHORTEST);
         }
         else{
             LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", req_x_value, " y=", req_y_value);
-            navigationGoToNoTurn(req_x_value, req_y_value, Direction::FORWARD, Rotation::SHORTEST, false);
+            position_t pos = {req_x_value, req_y_value, 0};
+            navigationGoToNoTurn(pos, Direction::FORWARD, Rotation::SHORTEST);
         }
 
         json response;
@@ -373,14 +367,17 @@ void StartAPIServer(){
             req_y_value = req_data["y"];
 
         // Apply the values
-        if (req_data.contains("theta")){
-            int req_theta_value = req_data["theta"];
-            LOG_INFO("Manual ctrl : Requested set_target_coordinates_highway, x=", req_x_value, " y=", req_y_value, " theta=", req_theta_value);
-            navigationGoTo(req_x_value, req_y_value, req_theta_value, Direction::FORWARD, Rotation::SHORTEST, Rotation::SHORTEST, true);
+        if (req_data.contains("a")){
+            int req_a_value = req_data["a"];
+            LOG_INFO("Manual ctrl : Requested set_target_coordinates_highway, x=", req_x_value, " y=", req_y_value, " a=", req_a_value);
+            position_t pos = {req_x_value, req_y_value, req_a_value};
+            navigationGoTo(pos, Direction::FORWARD, Rotation::SHORTEST, Rotation::SHORTEST);
         }
         else{
             LOG_INFO("Manual ctrl : Requested set_target_coordinates_highway, x=", req_x_value, " y=", req_y_value);
-            navigationGoToNoTurn(req_x_value, req_y_value, Direction::FORWARD, Rotation::SHORTEST, true);
+            position_t pos = {req_x_value, req_y_value, 0};
+
+            navigationGoToNoTurn(pos, Direction::FORWARD, Rotation::SHORTEST);
         }
 
         json response;
@@ -400,13 +397,14 @@ void StartAPIServer(){
 
         int req_value = req_data["value"];
 
-        int newXvalue = tableStatus.robot.pos.x + cos(tableStatus.robot.pos.theta * DEG_TO_RAD) * req_value;
-        int newYvalue = tableStatus.robot.pos.y + sin(tableStatus.robot.pos.theta * DEG_TO_RAD) * req_value;
+        int newXvalue = tableStatus.robot.pos.x + cos(tableStatus.robot.pos.a * DEG_TO_RAD) * req_value;
+        int newYvalue = tableStatus.robot.pos.y + sin(tableStatus.robot.pos.a * DEG_TO_RAD) * req_value;
 
         LOG_INFO("Manual ctrl : Requested set_move, value=", req_value);
 
         // Apply the value
-        navigationGoToNoTurn(newXvalue, newYvalue, req_value < 0 ? Direction::BACKWARD : Direction::FORWARD, Rotation::SHORTEST, false);
+        position_t pos = {newXvalue, newYvalue, 0};
+        navigationGoToNoTurn(pos, req_value < 0 ? Direction::BACKWARD : Direction::FORWARD, Rotation::SHORTEST);
 
         json response;
         response["message"] = "Successfull";
@@ -427,7 +425,7 @@ void StartAPIServer(){
 
         // Apply the value
         asserv.stop();
-        asserv.consigne_angulaire(tableStatus.robot.pos.theta + req_value, Rotation::SHORTEST);
+        asserv.consigne_angulaire(tableStatus.robot.pos.a + req_value, Rotation::SHORTEST);
 
         LOG_INFO("Manual ctrl : Requested set_rotate, value=", req_value);
 
@@ -495,14 +493,7 @@ void StartAPIServer(){
         std::string req_value = req_data["value"];
 
         // Apply the value
-        if      (req_value == "takeStockPlatforms")     manual_currentFunc = takeStockPlatforms;
-        else if (req_value == "constructSingleTribune") manual_currentFunc = constructSingleTribune;
-        else if (req_value == "liftSingleTribune")      manual_currentFunc = liftSingleTribune;
-        else if (req_value == "lowerSingleTribune")     manual_currentFunc = lowerSingleTribune;
-        else if (req_value == "deployBannerFront")      manual_currentFunc = deployBannerFront;
-        else if (req_value == "deployBannerBack")       manual_currentFunc = deployBannerBack;
-        else if (req_value == "liftAllColumns")         manual_currentFunc = liftAllColumns;
-        else if (req_value == "releaseAllColumns")      manual_currentFunc = releaseAllColumns;
+        if      (req_value == "deployBanner")     manual_currentFunc = deployBanner;
         else {
             json response;
             response["message"] = "Invalid action requested";
@@ -587,7 +578,7 @@ void StopAPIServer(){
 void TestAPIServer(){
     // Sets some variable to display them statically
 
-    tableStatus.robot.pos.theta = 15;
+    tableStatus.robot.pos.a = 15;
     tableStatus.robot.pos.x = 100;
     tableStatus.robot.pos.y = 100;
 

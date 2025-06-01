@@ -37,7 +37,7 @@
                 <input id="set-y" type="number" class="form-control" placeholder="y (mm)">
             </div>
             <div class="col">
-                <input id="set-theta" type="number" class="form-control" placeholder="theta (degs)">
+                <input id="set-angle" type="number" class="form-control" placeholder="angle (degs)">
             </div>
             <div class="col">
                 <button type="button" class="btn btn-primary w-100" onclick="sendSetCoordinates()">Set</button>
@@ -55,7 +55,7 @@
                 <input id="target-y" type="number" class="form-control" placeholder="y (mm)">
             </div>
             <div class="col">
-                <input id="target-theta" type="number" class="form-control" placeholder="theta (degs)">
+                <input id="target-angle" type="number" class="form-control" placeholder="angle (degs)">
             </div>
             <div class="col">
                 <button type="button" class="btn btn-success w-100" onclick="sendSetTargetCoordinates()">Go Direct</button>
@@ -248,7 +248,7 @@
         
         const set_x_inputfield = document.getElementById("set-x");
         const set_y_inputfield = document.getElementById("set-y");
-        const set_theta_inputfield = document.getElementById("set-theta");
+        const set_angle_inputfield = document.getElementById("set-angle");
 
         function sendSetCoordinates() {
             fetch('/set_coordinates', {
@@ -259,7 +259,7 @@
                 body: JSON.stringify({
                     x: set_x_inputfield.value.trim() !== '' ? Number(set_x_inputfield.value) : undefined,
                     y: set_y_inputfield.value.trim() !== '' ? Number(set_y_inputfield.value) : undefined,
-                    theta: set_theta_inputfield.value.trim() !== '' ? Number(set_theta_inputfield.value) : undefined
+                    angle: set_angle_inputfield.value.trim() !== '' ? Number(set_angle_inputfield.value) : undefined
                 })
             })
             .then(response => {
@@ -282,7 +282,7 @@
 
         const set_target_x_inputfield = document.getElementById("target-x");
         const set_target_y_inputfield = document.getElementById("target-y");
-        const set_target_theta_inputfield = document.getElementById("target-theta");
+        const set_target_angle_inputfield = document.getElementById("target-angle");
 
         function sendSetTargetCoordinates() {
             fetch('/set_target_coordinates', {
@@ -293,7 +293,7 @@
                 body: JSON.stringify({
                     x: set_target_x_inputfield.value.trim() !== '' ? Number(set_target_x_inputfield.value) : undefined,
                     y: set_target_y_inputfield.value.trim() !== '' ? Number(set_target_y_inputfield.value) : undefined,
-                    theta: set_target_theta_inputfield.value.trim() !== '' ? Number(set_target_theta_inputfield.value) : undefined
+                    angle: set_target_angle_inputfield.value.trim() !== '' ? Number(set_target_angle_inputfield.value) : undefined
                 })
             })
             .then(response => {
@@ -322,7 +322,7 @@
                 body: JSON.stringify({
                     x: set_target_x_inputfield.value.trim() !== '' ? Number(set_target_x_inputfield.value) : undefined,
                     y: set_target_y_inputfield.value.trim() !== '' ? Number(set_target_y_inputfield.value) : undefined,
-                    theta: set_target_theta_inputfield.value.trim() !== '' ? Number(set_target_theta_inputfield.value) : undefined
+                    angle: set_target_angle_inputfield.value.trim() !== '' ? Number(set_target_angle_inputfield.value) : undefined
                 })
             })
             .then(response => {

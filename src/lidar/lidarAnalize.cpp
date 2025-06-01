@@ -5,8 +5,8 @@
 
 void convertAngularToAxial(lidarAnalize_t* data, int count, position_t position, int narrow){
     for(int i = 0; i< count; i++){
-        data[i].x =  data[i].dist * cos(double((data[i].angle - position.theta) * DEG_TO_RAD)) + position.x;
-        data[i].y = -data[i].dist * sin(double((data[i].angle - position.theta) * DEG_TO_RAD)) + position.y;
+        data[i].x =  data[i].dist * cos(double((data[i].angle - position.a) * DEG_TO_RAD)) + position.x;
+        data[i].y = -data[i].dist * sin(double((data[i].angle - position.a) * DEG_TO_RAD)) + position.y;
         
         data[i].onTable = (data[i].x <  1000 - narrow && 
                            data[i].x > -1000 + narrow && 

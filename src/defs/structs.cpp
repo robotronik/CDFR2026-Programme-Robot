@@ -16,10 +16,10 @@ double position_distance(position_t from, position_t to){
 
 void position_robot_flip(position_t& pos){
     pos.y = -pos.y;
-    if (pos.theta >= 0)
-        pos.theta = 180 - pos.theta;
+    if (pos.a >= 0)
+        pos.a = 180 - pos.a;
     else
-        pos.theta = -180 - pos.theta;
+        pos.a = -180 - pos.a;
 }
 
 
@@ -28,7 +28,7 @@ void to_json(json& j, const position_t& p) {
     j = json{
         {"x", p.x},
         {"y", p.y},
-        {"theta", p.theta}
+        {"a", p.a}
     };
 }
 

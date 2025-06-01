@@ -54,7 +54,7 @@ ArucoCam::~ArucoCam(){
     if (pid > 0)
         stopPythonProgram(pid);
 }
-bool ArucoCam::getPos(int & x, int & y, int & theta) {
+bool ArucoCam::getPos(int & x, int & y, int & a) {
     if (status == false) {
         LOG_ERROR("ArucoCam ", id, " is not running, will start it now");
         start();
@@ -88,8 +88,8 @@ bool ArucoCam::getPos(int & x, int & y, int & theta) {
     json position = response["position"];
     x = position.value("x", 0);
     y = position.value("y", 0);
-    theta = position.value("theta", 0);
-    LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", theta = ", theta, " }");
+    a = position.value("a", 0);
+    LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted
     // TODO Maybe call stop() so the cam is not running anymore
     return true;

@@ -136,10 +136,10 @@
             drawSquare(ctx, data["table"]["robot"]["pos"]["y"], 
                             data["table"]["robot"]["pos"]["x"], 
                             250, 
-                            data["table"]["robot"]["pos"]["theta"]);
+                            data["table"]["robot"]["pos"]["a"]);
 
             //Draws an arrow of the target position
-            drawArrow(ctx, data["target_pos"]["y"], data["target_pos"]["x"], data["target_pos"]["theta"]);
+            drawArrow(ctx, data["target_pos"]["y"], data["target_pos"]["x"], data["target_pos"]["a"]);
 
             // Draw opponent
             ctx.strokeStyle = 'white';

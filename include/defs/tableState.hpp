@@ -14,17 +14,14 @@ public:
     void reset();
     int getScore();
     
-    /* data generale*/
+    /* common data */
     position_t pos_opponent;
     unsigned long startTime;
     robot_t robot;
 
     int strategy;
 
-    /* data Show Must Go On*/
-    bool avail_stocks[STOCK_COUNT];     // Is stock available
-    bool done_banderole;               // Is action done
-    int builtTribuneHeights[10];  // Heigh of the tribunes built by us
+    /* data Winter is comming */
 };
 
 // Serialize tableState
