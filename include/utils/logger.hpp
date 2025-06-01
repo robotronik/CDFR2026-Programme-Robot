@@ -21,7 +21,7 @@
 #include <initializer_list>
 
 #ifdef __CROSS_COMPILE_ARM__
-    #define LOG_PATH "/home/robotronik/LOG_CDFR2025/"
+    #define LOG_PATH "/home/robotronik/LOG_CDFR/"
 #else
     #define LOG_PATH "log/"
 #endif

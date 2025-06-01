@@ -1,8 +1,8 @@
-# 🤖 CDFR2025-Programme-Robot
+# 🤖 CDFR-Programme-Robot
 
-Welcome to the **CDFR2025-Programme-Robot** project!
+Welcome to the **CDFR-Programme-Robot** project!
 
-This project aims to develop a program to control a robot for the CDFR 2025 event.
+This project aims to develop a program to control a robot for the CDFR  event.
 
 ## 📖 Description
 
@@ -45,10 +45,10 @@ sudo apt install gdbserver
    git clone git@github.com:robotronik/CDFR.git --recursive
    ```
 
-2. Navigate to the CDFR2025-Programme-Robot directory:
+2. Navigate to the CDFR-Programme-Robot directory:
 
    ```bash
-   cd informatique/CDFR2025-Programme-Robot/
+   cd informatique/CDFR-Programme-Robot/
    ```
 
 3. Switch to the `main` branch and update the project:
