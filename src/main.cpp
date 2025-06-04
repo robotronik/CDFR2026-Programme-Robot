@@ -84,13 +84,12 @@ int main(int argc, char *argv[])
 
         // Get Sensor Data
         {
-            // TODO
             packed_motion_t mot = drive.get_motion();
-            drive.position = (vector_t)mot.pos;
-            drive.velocity = (vector_t)mot.vel;
-            drive.acceleration = (vector_t)mot.acc;
-            packed_vector_t target = drive.get_target();
-            drive.target = (vector_t)target;
+            drive.position = convertPackedToPosition(mot.pos);
+            drive.velocity = convertPackedToPosition(mot.vel);
+            drive.acceleration = convertPackedToPosition(mot.acc);
+            packed_position_t target = drive.get_target();
+            drive.target = convertPackedToPosition(target);
 
             if (currentState != INIT && currentState != FIN)
             {
@@ -293,7 +292,7 @@ void GetLidar()
 
     if (lidar.getData())
     {
-        position_t position = (vector_t)drive.position; //TODO
+        position_t position = drive.position;
         convertAngularToAxial(lidar.data, lidar.count, position, 200);
         
         if (currentState == RUN || currentState == MANUAL)

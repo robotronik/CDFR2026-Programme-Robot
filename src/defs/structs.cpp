@@ -32,15 +32,6 @@ void to_json(json& j, const position_t& p) {
     };
 }
 
-//Define serialization for position_t
-void to_json(json& j, const position_double_t& p){
-    j = json{
-        {"x", p.x},
-        {"y", p.y},
-        {"angle", p.angle},
-    };
-}
-
 // Define serialization for lidarAnalize_t
 void to_json(json& j, const lidarAnalize_t& p) {
     j = json{

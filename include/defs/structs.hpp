@@ -1,12 +1,14 @@
 #pragma once
 #include "utils/utils.h"
+#include "drive_interface.h"
 #include <utils/json.hpp>
 using json = nlohmann::json;
 
+/* Already defined in drive_interface.h
 typedef struct 
 {
     double  x, y, a;
-}position_t; 
+}position_t;*/
 
 //Define serialization for position_t
 void to_json(json& j, const position_t& p);
@@ -19,21 +21,6 @@ double position_distance(position_t from, position_t to);
 
 void position_robot_flip(position_t& pos);
 
-typedef struct {
-    float x;
-    float y;
-    float angle;
-} position_float_t;
-
-typedef struct {
-    double x;
-    double y;
-    double angle;
-} position_double_t;
-
-//Define serialization for position_t
-void to_json(json& j, const position_double_t& p);
-
 typedef struct 
 {
     double angle;
@@ -41,7 +28,7 @@ typedef struct
     int    x;
     int    y;
     bool   onTable;
-}lidarAnalize_t;
+} lidarAnalize_t;
 
 // Define serialization for lidarAnalize_t
 void to_json(json& j, const lidarAnalize_t& p);
