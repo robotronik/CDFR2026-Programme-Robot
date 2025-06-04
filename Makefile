@@ -15,22 +15,18 @@ TARGET = $(BINDIR)/programCDFR
 TEST_TARGET = $(BINDIR)/tests
 
 SRCDIR = src
-SRCDIR_LIBCOM = ../librairie-commune/master/src
 SRCDIR_TEST = tests
 
 OBJDIR = obj
 OBJDIR_MAIN = $(OBJDIR)/main_obj
-OBJDIR_LIBCOM = $(OBJDIR)/lib_com_obj
 OBJDIR_TEST = $(OBJDIR)/test_obj
 
 
-# Recursively find .cpp files in SRCDIR and SRCDIR_LIBCOM
+# Recursively find .cpp files in SRCDIR
 SRC = $(shell find $(SRCDIR) -name "*.cpp")
-SRC_LIB_COM = $(shell find $(SRCDIR_LIBCOM) -name "*.cpp")
 
 # Generate corresponding object files
 OBJ = $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR_MAIN)/%.o,$(SRC))
-OBJ += $(patsubst $(SRCDIR_LIBCOM)/%.cpp,$(OBJDIR_LIBCOM)/%.o,$(SRC_LIB_COM))
 
 SRC_NO_MAIN = $(filter-out $(SRCDIR)/main.cpp \
 			$(SRCDIR)/restAPI/restAPI.cpp \
@@ -43,7 +39,6 @@ SRC_NO_MAIN = $(filter-out $(SRCDIR)/main.cpp \
 		, $(SRC) )
 SRC_TEST = $(wildcard $(SRCDIR_TEST)/*.cpp)
 OBJ_NO_MAIN = $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR_MAIN)/%.o,$(SRC_NO_MAIN))
-OBJ_NO_MAIN += $(patsubst $(SRCDIR_LIBCOM)/%.cpp,$(OBJDIR_LIBCOM)/%.o,$(SRC_LIB_COM))
 TEST_OBJ = $(patsubst $(SRCDIR_TEST)/%.cpp,$(OBJDIR_TEST)/%.o,$(SRC_TEST))
 
 DEPENDS := $(shell find obj -type f -name '*.d')
@@ -53,18 +48,10 @@ DEPENDS := $(shell find obj -type f -name '*.d')
 
 
 all:
-	$(MAKE) -j$(expr $(nproc) \- 2) check $(BINDIR) build_lidarLib $(TARGET) $(TEST_TARGET) copy_html copy_lidar copy_aruco
+	$(MAKE) -j$(expr $(nproc) \- 2) $(BINDIR) build_lidarLib $(TARGET) $(TEST_TARGET) copy_html copy_lidar copy_aruco
 	@echo "Compilation terminée. Exécutez '(cd $(BINDIR) && sudo ./programCDFR)' pour exécuter le programme."
 
 -include $(DEPENDS)
-
-check:
-	@if [ ! -d "$(SRCDIR_LIBCOM)" ]; then \
-		echo "Error: The path SRCDIR_LIBCOM ($(SRCDIR_LIBCOM)) is incorrect or does not exist"; \
-		echo "Don't work only in CDFR25. Clone CDFR :"; \
-		echo "https://github.com/robotronik/CDFR"; \
-		exit 1; \
-	fi
 
 $(TARGET): $(OBJ) | $(BINDIR)
 	@echo "--------------------------------- Compilation du programme principal... ---------------------------------"
@@ -81,19 +68,10 @@ $(OBJDIR_MAIN)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR_MAIN)
 	@mkdir -p $(dir $@)
 	@$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
-$(OBJDIR_LIBCOM)/%.o: $(SRCDIR_LIBCOM)/%.cpp | $(OBJDIR_LIBCOM)
-	@mkdir -p $(dir $@)
-	@echo " CXX  $@"
-	@$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
-
 $(OBJDIR_TEST)/%.o: $(SRCDIR_TEST)/%.cpp | $(OBJDIR_TEST)
 	@mkdir -p $(dir $@)
 	@echo " CXX  $@"
 	@$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
-
-$(OBJDIR_LIBCOM):
-	@echo " DIR  $@"
-	@mkdir -p $@
 
 $(OBJDIR_MAIN):
 	@echo " DIR  $@"
@@ -130,17 +108,14 @@ PI_DIR = /home/$(PI_USER)/CDFR
 # Define the ARM target and object directory for cross-compilation
 ARMBINDIR = arm_bin
 OBJDIR_ARM = $(OBJDIR)/arm_obj
-OBJDIR_ARM_LIBCOM = $(OBJDIR)/arm_obj_lib_com
 OBJDIR_ARM_TEST = $(OBJDIR)/arm_test_obj
 
 ARM_TARGET = $(ARMBINDIR)/programCDFR
 ARM_TEST_TARGET = $(ARMBINDIR)/tests
 
 ARM_OBJ = $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR_ARM)/%.o,$(SRC))
-ARM_OBJ += $(patsubst $(SRCDIR_LIBCOM)/%.cpp,$(OBJDIR_ARM_LIBCOM)/%.o,$(SRC_LIB_COM))
 
 ARM_OBJ_NO_MAIN = $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR_ARM)/%.o,$(SRC_NO_MAIN))
-ARM_OBJ_NO_MAIN += $(patsubst $(SRCDIR_LIBCOM)/%.cpp,$(OBJDIR_ARM_LIBCOM)/%.o,$(SRC_LIB_COM))
 ARM_TEST_OBJ = $(patsubst $(SRCDIR_TEST)/%.cpp,$(OBJDIR_ARM_TEST)/%.o,$(SRC_TEST))
 
 
@@ -150,14 +125,6 @@ $(OBJDIR_ARM)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR_ARM)
 	@echo " ARM_CXX  $@"
 	@$(ARM_CXX) $(CXXFLAGS) -D__CROSS_COMPILE_ARM__ -MMD -MP -c $< -o $@
 $(OBJDIR_ARM):
-	@echo " ARM_DIR  $@"
-	@mkdir -p $@
-
-$(OBJDIR_ARM_LIBCOM)/%.o: $(SRCDIR_LIBCOM)/%.cpp | $(OBJDIR_ARM_LIBCOM)
-	@mkdir -p $(dir $@)
-	@echo " ARM_CXX  $@"
-	@$(ARM_CXX) $(CXXFLAGS) -D__CROSS_COMPILE_ARM__ -MMD -MP -c $< -o $@
-$(OBJDIR_ARM_LIBCOM):
 	@echo " ARM_DIR  $@"
 	@mkdir -p $@
 
@@ -187,12 +154,12 @@ $(ARM_TEST_TARGET): $(ARM_OBJ_NO_MAIN) $(ARM_TEST_OBJ) | $(ARMBINDIR)
 
 # Deploy target
 deploy:
-	$(MAKE) -j$(expr $(nproc) \- 2) check build_arm_lidarLib $(ARM_TARGET) copy_html_arm copy_install_sh copy_aruco_arm
+	$(MAKE) -j$(expr $(nproc) \- 2) build_arm_lidarLib $(ARM_TARGET) copy_html_arm copy_install_sh copy_aruco_arm
 	@echo "--------------------------------- Deploiement vers le Raspberry Pi... ---------------------------------"
 	ssh $(PI_USER)@$(PI_HOST) 'mkdir -p $(PI_DIR)'
 	rsync -av --progress ./$(ARMBINDIR) $(PI_USER)@$(PI_HOST):$(PI_DIR)
 
-deploy-tests: check build_arm_lidarLib $(ARM_TEST_TARGET) copy_lidar_arm
+deploy-tests: build_arm_lidarLib $(ARM_TEST_TARGET) copy_lidar_arm
 	@echo "--------------------------------- Exécution des tests... ---------------------------------"
 	ssh $(PI_USER)@$(PI_HOST) 'mkdir -p $(PI_DIR)'
 	rsync -av --progress ./$(ARMBINDIR) $(PI_USER)@$(PI_HOST):$(PI_DIR)
