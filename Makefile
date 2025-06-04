@@ -3,18 +3,10 @@ CXXFLAGS = -std=c++17 -Wall -g -O0 -static $(INCLUDE_DIR)
 LDFLAGS = -Lrplidar_sdk/output/Linux/Release
 LDLIBS = -pthread -li2c -lrt -lpthread -lsl_lidar_sdk
 
-#Get short git sha one from librairie-commune
-PART1 = $(shell echo "-DGIT_COMMIT_SHA_PART1=0x$(shell echo $(shell git -C ../librairie-commune rev-parse --short HEAD) | cut -c1-2)")
-PART2 = $(shell echo "-DGIT_COMMIT_SHA_PART2=0x$(shell echo $(shell git -C ../librairie-commune rev-parse --short HEAD) | cut -c3-4)")
-PART3 = $(shell echo "-DGIT_COMMIT_SHA_PART3=0x$(shell echo $(shell git -C ../librairie-commune rev-parse --short HEAD) | cut -c5-6)")
-PART4 = $(shell echo "-DGIT_COMMIT_SHA_PART4=0x$(shell echo $(shell git -C ../librairie-commune rev-parse --short HEAD) | cut -c7-8)")
-CXXFLAGS += $(PART1) $(PART2) $(PART3) $(PART4)
-
 INCLUDE_DIR = -Iinclude
 INCLUDE_DIR += -Irplidar_sdk/sdk/include
 INCLUDE_DIR += -Irplidar_sdk/sdk/src
-INCLUDE_DIR += -I../librairie-commune/common/include
-INCLUDE_DIR += -I../librairie-commune/master/include
+INCLUDE_DIR += -I../CDFR2026-Program-DriveControl/include/interface
 INCLUDE_DIR += -I../cdfr2024-programme-Actionneur/include/common
 INCLUDE_DIR += -IWiringPi/wiringPi
 
