@@ -11,7 +11,7 @@
 
 #define RAD_TO_DEG 57.29577951
 #define DEG_TO_RAD 0.01745329252
-
+#define ROBOT_WIDTH 200     // mm
 #define OPPONENT_ROBOT_RADIUS 250
 
 // Define the nums of the arduino for the STEPPERS

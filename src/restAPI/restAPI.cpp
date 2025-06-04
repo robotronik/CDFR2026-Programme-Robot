@@ -8,6 +8,7 @@
 #include "defs/tableState.hpp"
 #include "lidar/lidarAnalize.h" //for static variable
 #include "navigation/navigation.h"
+#include "navigation/nav.h"
 #include "actions/functions.h" //for state machine functions
 
 #include "restAPI/crow.hpp"
@@ -126,6 +127,23 @@ void StartAPIServer(){
     ([](){
         json response;
         
+        json costmap_json = json::array();
+
+        for (int y = 0; y < HEIGHT; ++y) {
+            for (int x = 0; x < WIDTH; ++x) {
+                int cost = costmap[y][x];
+                if (cost > 0) {
+                    costmap_json.push_back({
+                        {"x", x},
+                        {"y", y},
+                        {"cost", cost}
+                    });
+                }
+            }
+        }
+
+        response["costmap"] = costmap_json;
+
         json limitedLidarData = json::array();
 
         // Add the first lidar_count elements to the new array
@@ -193,6 +211,28 @@ void StartAPIServer(){
         // Extract fields
         main_State_t req_state = req_data["state"];
 
+    CROW_ROUTE(app, "/get_costmap")
+    ([](){
+        json response;
+        json costmap_json = json::array();
+
+        // Remplace cette boucle par ton accès réel à la costmap
+        for (int y = 0; y < HEIGHT; ++y) {
+            for (int x = 0; x < WIDTH; ++x) {
+                int cost = costmap[y][x]; // remplace avec ton tableau réel
+                if (cost > 0) { // Filtrage pour alléger la réponse
+                    costmap_json.push_back({
+                        {"x", x},
+                        {"y", y},
+                        {"cost", cost}
+                    });
+                }
+            }
+        }
+
+        response["costmap"] = costmap_json;
+        return crow::response(response.dump());
+    });
         if (req_state < 0 || req_state > 6){
             // Denies the POST resquest
             json response;

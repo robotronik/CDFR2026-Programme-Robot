@@ -10,6 +10,7 @@
 #include "actions/functions.h"
 #include "lidar/lidarAnalize.h"
 #include "navigation/navigation.h"
+#include "navigation/nav.h"
 #include "utils/utils.h"
 #include "utils/logger.hpp"
 #include "restAPI/restAPI.hpp"
@@ -252,18 +253,51 @@ int StartSequence()
 
     // Start the api server in a separate thread
     api_server_thread = std::thread([&]()
-                                    { StartAPIServer(); });
+    { StartAPIServer(); });
 
-#ifdef TEST_API_ONLY
+    #ifdef TEST_API_ONLY
     TestAPIServer();
-    sleep(1);
+    sleep(2);
+    
     LOG_DEBUG("Starting main debug loop");
-    int i = 0;
+    
     while(!ctrl_c_pressed){
-        sleep(0.1);
-        // randomly change the position of highway obstacles
-        position_t t_pos = {rand() % 1500 - 750, rand() % 2200 - 1100, 0};
-        navigationGoTo(t_pos, Direction::FORWARD, Rotation::SHORTEST, Rotation::SHORTEST);
+        sleep(2);
+//#ifndef DISABLE_LIDAR
+        //getData(lidarData, lidar_count);
+//#endif
+    initialize_costmap();
+
+    const int STOCK_WIDTH_MM = 400;
+    const int STOCK_HEIGHT_MM = 100;
+    const int INFLATION_RADIUS_MM = 10;
+
+    place_obstacle_rect_with_inflation(675, 725, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation(1425, 325, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation(1425, -600, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation(725, -750, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation(400, -50, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation(-675, 725, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation(-1425, 325, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation(-1425, -600, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation(-725, -750, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation(-400, -50, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, INFLATION_RADIUS_MM);
+
+
+    /*
+    int start_x = 0, start_y = 0;
+    int goal_x = 29, goal_y = 29;
+
+    a_star(start_x, start_y, goal_x, goal_y);
+
+    Point path[HEIGHT * WIDTH];
+    int path_len = reconstruct_path_points(start_x, start_y, goal_x, goal_y, path, HEIGHT * WIDTH);
+    print_costmap_with_path(path, path_len);
+
+    Point smoothed_path[HEIGHT * WIDTH];
+    int smoothed_len = smooth_path(path, path_len, smoothed_path, HEIGHT * WIDTH);
+    print_costmap_with_path(smoothed_path, smoothed_len);
+    */ 
     }
     StopAPIServer();
     api_server_thread.join();
