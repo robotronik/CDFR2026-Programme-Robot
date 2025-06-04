@@ -83,7 +83,7 @@ void StartAPIServer(){
     CROW_ROUTE(app, "/get_pos")
     ([](){
         json response;
-        response["pos"] = tableStatus.robot.pos;
+        response["pos"] = (position_t)drive.position;
 
         return crow::response(response.dump(4));
     });
@@ -116,7 +116,7 @@ void StartAPIServer(){
         navigation_path_json(current_navigation_path);
         response["navigation"] = current_navigation_path;
         
-        response["target_pos"] = tableStatus.robot.target;
+        response["target_pos"] = (position_t)drive.target; // TODO
 
         return crow::response(response.dump());
     });
@@ -141,7 +141,7 @@ void StartAPIServer(){
     ([](){
         json response;
         response["status"] = currentState;
-        response["team"] = tableStatus.robot.colorTeam;
+        response["team"] = tableStatus.colorTeam;
         response["score"] = tableStatus.getScore();
         response["time"] = (tableStatus.startTime == 0) ? 0 : (_millis() - tableStatus.startTime);
         response["strategy"] = tableStatus.strategy;
@@ -292,20 +292,20 @@ void StartAPIServer(){
             return crow::response(400, response.dump(4));
         }
 
-        int req_x_value = tableStatus.robot.pos.x;
+        double req_x_value = drive.position.x;
         if (req_data.contains("x"))
             req_x_value = req_data["x"];
             
-        int req_y_value = tableStatus.robot.pos.y;
+        double req_y_value = drive.position.y;
         if (req_data.contains("y"))
             req_y_value = req_data["y"];
 
-        int req_a_value = tableStatus.robot.pos.a;
+        double req_a_value = drive.position.a;
         if (req_data.contains("a"))
             req_a_value = req_data["a"];
 
         //Apply the values
-        asserv.set_coordinates(req_x_value, req_y_value, req_a_value);
+        drive.set_coordinates({req_x_value, req_y_value, req_a_value});
 
         json response;
         response["message"] = "Successfull";
@@ -322,25 +322,25 @@ void StartAPIServer(){
             return crow::response(400, response.dump(4));
         }
 
-        int req_x_value = tableStatus.robot.pos.x;
+        double req_x_value = drive.position.x;
         if (req_data.contains("x"))
             req_x_value = req_data["x"];
             
-        int req_y_value = tableStatus.robot.pos.y;
+        double req_y_value = drive.position.y;
         if (req_data.contains("y"))
             req_y_value = req_data["y"];
 
         // Apply the values
         if (req_data.contains("a")){
-            int req_a_value = req_data["a"];
+            double req_a_value = req_data["a"];
             LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", req_x_value, " y=", req_y_value, " a=", req_a_value);
-            position_t pos = {req_x_value, req_y_value, tableStatus.robot.pos.a};
-            navigationGoTo(pos, Direction::FORWARD, Rotation::SHORTEST, Rotation::SHORTEST);
+            position_t pos = {req_x_value, req_y_value, drive.position.a};
+            navigationGoTo(pos, true);
         }
         else{
             LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", req_x_value, " y=", req_y_value);
             position_t pos = {req_x_value, req_y_value, 0};
-            navigationGoToNoTurn(pos, Direction::FORWARD, Rotation::SHORTEST);
+            navigationGoTo(pos, false);
         }
 
         json response;
@@ -358,26 +358,26 @@ void StartAPIServer(){
             return crow::response(400, response.dump(4));
         }
 
-        int req_x_value = tableStatus.robot.pos.x;
+        double req_x_value = drive.position.x;
         if (req_data.contains("x"))
             req_x_value = req_data["x"];
             
-        int req_y_value = tableStatus.robot.pos.y;
+        double req_y_value = drive.position.y;
         if (req_data.contains("y"))
             req_y_value = req_data["y"];
 
         // Apply the values
         if (req_data.contains("a")){
-            int req_a_value = req_data["a"];
+            double req_a_value = req_data["a"];
             LOG_INFO("Manual ctrl : Requested set_target_coordinates_highway, x=", req_x_value, " y=", req_y_value, " a=", req_a_value);
             position_t pos = {req_x_value, req_y_value, req_a_value};
-            navigationGoTo(pos, Direction::FORWARD, Rotation::SHORTEST, Rotation::SHORTEST);
+            navigationGoTo(pos, true);
         }
         else{
             LOG_INFO("Manual ctrl : Requested set_target_coordinates_highway, x=", req_x_value, " y=", req_y_value);
             position_t pos = {req_x_value, req_y_value, 0};
 
-            navigationGoToNoTurn(pos, Direction::FORWARD, Rotation::SHORTEST);
+            navigationGoTo(pos, true);
         }
 
         json response;
@@ -395,16 +395,16 @@ void StartAPIServer(){
             return crow::response(400, response.dump(4));
         }
 
-        int req_value = req_data["value"];
+        double req_value = req_data["value"];
 
-        int newXvalue = tableStatus.robot.pos.x + cos(tableStatus.robot.pos.a * DEG_TO_RAD) * req_value;
-        int newYvalue = tableStatus.robot.pos.y + sin(tableStatus.robot.pos.a * DEG_TO_RAD) * req_value;
+        double newXvalue = drive.position.x + cos(drive.position.a * DEG_TO_RAD) * req_value;
+        double newYvalue = drive.position.y + sin(drive.position.a * DEG_TO_RAD) * req_value;
 
         LOG_INFO("Manual ctrl : Requested set_move, value=", req_value);
 
         // Apply the value
         position_t pos = {newXvalue, newYvalue, 0};
-        navigationGoToNoTurn(pos, req_value < 0 ? Direction::BACKWARD : Direction::FORWARD, Rotation::SHORTEST);
+        navigationGoTo(pos, false);
 
         json response;
         response["message"] = "Successfull";
@@ -424,8 +424,9 @@ void StartAPIServer(){
         int req_value = req_data["value"];
 
         // Apply the value
-        asserv.stop();
-        asserv.consigne_angulaire(tableStatus.robot.pos.a + req_value, Rotation::SHORTEST);
+        // TODO
+        //drive.stop();
+        //drive.consigne_angulaire(drive.position.a + req_value, Rotation::SHORTEST);
 
         LOG_INFO("Manual ctrl : Requested set_rotate, value=", req_value);
 
@@ -578,9 +579,9 @@ void StopAPIServer(){
 void TestAPIServer(){
     // Sets some variable to display them statically
 
-    tableStatus.robot.pos.a = 15;
-    tableStatus.robot.pos.x = 100;
-    tableStatus.robot.pos.y = 100;
+    drive.position.a = 15;
+    drive.position.x = 100;
+    drive.position.y = 100;
 
     tableStatus.pos_opponent.x = 300;
     tableStatus.pos_opponent.y = 300;

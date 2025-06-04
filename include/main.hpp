@@ -20,7 +20,7 @@ extern main_State_t currentState;
 extern main_State_t nextState;
 
 extern TableState tableStatus;
-extern Asserv asserv;
+extern drive_interface drive;
 extern Arduino arduino;
 extern Lidar lidar;
 

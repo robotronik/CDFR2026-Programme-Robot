@@ -52,7 +52,7 @@ ReturnFSM_t ActionFSM::GatherStock(){
     case FSM_GATHER_NAV:
         // TODO Highways should be enabled for some takes
         position_t pos;
-        nav_ret = navigationGoTo(pos, Direction::SHORTEST, Rotation::SHORTEST, Rotation::SHORTEST);
+        nav_ret = navigationGoTo(pos, false);
         if (nav_ret == NAV_DONE){
             gatherStockState = FSM_GATHER_COLLECT;
             LOG_INFO("Nav done and RevolverPrepareLowBarrel done for FSM_GATHER_NAV, going to FSM_GATHER_MOVE");

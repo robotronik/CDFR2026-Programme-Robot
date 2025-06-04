@@ -17,8 +17,8 @@ public:
     /* common data */
     position_t pos_opponent;
     unsigned long startTime;
-    robot_t robot;
 
+    colorTeam_t colorTeam;
     int strategy;
 
     /* data Winter is comming */

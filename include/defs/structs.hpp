@@ -5,9 +5,7 @@ using json = nlohmann::json;
 
 typedef struct 
 {
-    int  x;
-    int  y;
-    int  a;
+    double  x, y, a;
 }position_t; 
 
 //Define serialization for position_t
@@ -47,17 +45,3 @@ typedef struct
 
 // Define serialization for lidarAnalize_t
 void to_json(json& j, const lidarAnalize_t& p);
-
-typedef struct
-{
-    colorTeam_t colorTeam;// équipe du robot
-    position_t pos; //position du robot
-    position_t target;
-    double vit_x,vit_y; //TODO vitesse instantannée du robot
-    int braking_distance;
-    int direction_side;
-    int plank_count;
-}robot_t;
-
-// Define serialization for robot_t
-void to_json(json& j, const robot_t& p);

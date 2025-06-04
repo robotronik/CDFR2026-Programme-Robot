@@ -121,8 +121,7 @@ void enableActuators(){
         arduino.enableStepper(i);
     }
     arduino.enableServos();
-    asserv.set_motor_state(true);
-    asserv.set_brake_state(false); 
+    drive.enable();
 }
 void disableActuators(){
     stopTribuneElevator();
@@ -130,9 +129,7 @@ void disableActuators(){
         arduino.disableStepper(i);
     }
     arduino.disableServos();
-    asserv.stop();
-    asserv.set_motor_state(false);
-    asserv.set_brake_state(false);    
+    drive.disable();
 }
 
 
@@ -144,10 +141,10 @@ bool returnToHome(){
     unsigned long time = _millis() - tableStatus.startTime;
     position_t homePos;
     homePos.x = (time < 98000) ? -200 : -600;
-    homePos.y = (tableStatus.robot.colorTeam == BLUE) ? 1100 : -1100;
+    homePos.y = (tableStatus.colorTeam == BLUE) ? 1100 : -1100;
     homePos.a = 180;
-    nav_return_t res = navigationGoTo(homePos, Direction::SHORTEST, Rotation::SHORTEST, Rotation::SHORTEST);
-    return res == NAV_DONE && isRobotInArrivalZone(tableStatus.robot.pos);
+    nav_return_t res = navigationGoTo(homePos, true);
+    return res == NAV_DONE && isRobotInArrivalZone((position_t)drive.position); //TODO
 }
 
 // Function to check if a point (px, py) lies inside the rectangle
@@ -164,9 +161,9 @@ void opponentInAction(position_t position){
 void switchTeamSide(colorTeam_t color){
     if (color == NONE) return;
     if (currentState == RUN) return;
-    if (color != tableStatus.robot.colorTeam){
+    if (color != tableStatus.colorTeam){
         LOG_INFO("Color switch detected");
-        tableStatus.robot.colorTeam = color;
+        tableStatus.colorTeam = color;
 
         switch (color)
         {
@@ -183,7 +180,7 @@ void switchTeamSide(colorTeam_t color){
         }
 
         position_t pos = StratStartingPos();
-        asserv.set_coordinates(pos.x, pos.y, pos.a);
+        drive.set_coordinates({pos.x, pos.y, pos.a});
     }
 }
 void switchStrategy(int strategy){
@@ -196,7 +193,7 @@ void switchStrategy(int strategy){
         LOG_INFO("Strategy switch detected");
         tableStatus.strategy = strategy;
         position_t pos = StratStartingPos();
-        asserv.set_coordinates(pos.x, pos.y, pos.a);
+        drive.set_coordinates({pos.x, pos.y, pos.a});
     }
 }
 
@@ -206,7 +203,7 @@ bool isRobotInArrivalZone(position_t position){
     int w = 450;
     int h = 600;
     int c_x = -550 - w/2;
-    int c_y = tableStatus.robot.colorTeam == BLUE ? (900 + h/2) : (-900 - h/2);
+    int c_y = tableStatus.colorTeam == BLUE ? (900 + h/2) : (-900 - h/2);
     return m_isPointInsideRectangle(position.x, position.y, c_x, c_y, w + 2*robotSmallRadius, h + 2*robotSmallRadius);
 }
 

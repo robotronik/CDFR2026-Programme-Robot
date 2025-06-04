@@ -14,9 +14,7 @@ typedef enum {
 } nav_return_t;
 
 // Navigation functions
-nav_return_t navigationGoTo(position_t pos, Direction direction = Direction::FORWARD,Rotation rotationLookAt = Rotation::SHORTEST, Rotation rotation = Rotation::SHORTEST);
-nav_return_t navigationGoToNoTurn(position_t pos, Direction direction = Direction::FORWARD,Rotation rotationLookAt = Rotation::SHORTEST);
-nav_return_t navigationPath(position_t path[], int pathLenght, Direction direction = Direction::SHORTEST, Rotation rotationLookAt = Rotation::SHORTEST, Rotation rotation = Rotation::SHORTEST);
-nav_return_t navigationPathNoTurn(position_t path[], int pathLenght, Direction direction = Direction::SHORTEST, Rotation rotationLookAt = Rotation::SHORTEST);
+nav_return_t navigationGoTo(position_t pos, bool turnEnd = false, bool useAStar = false);
+nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd = false);
 void navigation_path_json(json& j);
 void navigationOpponentDetection();

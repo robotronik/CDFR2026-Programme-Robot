@@ -1,9 +1,10 @@
 #pragma once
 
 #include <cstdint>
-#include "asservissement_interface.h"
+#include "drive_interface.h"
 #include "i2c/I2CDevice.hpp"
 
+/*
 class Asserv : public asservissement_interface, public I2CDevice {
     using I2CDevice::I2CDevice;
 public:
@@ -20,3 +21,4 @@ public:
         I2CDevice::I2cReceiveData(command, data, length);
     }
 };
+*/

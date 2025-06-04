@@ -5,9 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/include",
-                "${workspaceFolder}/../librairie-commune/**",
-                "${workspaceFolder}/../librairie-commune/include",
-                "${workspaceFolder}/../cdfr2024-programme-Actionneur/include/common"
+                "${workspaceFolder}/../cdfr2024-programme-Actionneur/include/common",
+                "${workspaceFolder}/../CDFR2026-Program-DriveControl/include/interface"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

@@ -11,7 +11,7 @@ inline void check(colorTeam_t color, int strategy){
 // Function to handle the strategy
 inline position_t StratStartingPos(){
     // Returns the starting position of the robot
-    colorTeam_t color = tableStatus.robot.colorTeam;
+    colorTeam_t color = tableStatus.colorTeam;
     int strategy = tableStatus.strategy;
     check(color, strategy);
     position_t pos = {0, 0, 0};

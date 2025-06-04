@@ -51,17 +51,3 @@ void to_json(json& j, const lidarAnalize_t& p) {
         //{"onTable", p.onTable}
     };
 }
-
-// Define serialization for robot_t
-void to_json(json& j, const robot_t& p) {
-    j = json{
-        {"colorTeam", p.colorTeam},
-        {"pos", p.pos},
-        {"vit_x", p.vit_x},
-        {"vit_y", p.vit_y},
-        {"plank_count", p.plank_count},
-        {"target", p.target},
-        {"braking_distance", p.braking_distance},
-        {"direction_side", p.direction_side},
-    };
-}

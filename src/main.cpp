@@ -28,10 +28,10 @@ ActionFSM action;
 
 // Initiation of i2c devices
 #ifndef EMULATE_I2C
-Asserv asserv(I2C_ASSER_ADDR);
+drive_interface drive;
 Arduino arduino(I2C_ARDUINO_ADDR);
 #else
-Asserv asserv(-1);
+drive_interface drive;
 Arduino arduino(-1);
 #endif
 
@@ -84,15 +84,13 @@ int main(int argc, char *argv[])
 
         // Get Sensor Data
         {
-            int16_t x, y, a;
-            asserv.get_coordinates(x, y, a);
-            tableStatus.robot.pos = {x, y, a};
-            // LOG_GREEN_INFO("Robot pos : { x = ", x," y = ", y, " a = ", a, " }");
-            tableStatus.robot.braking_distance = asserv.get_braking_distance();
-            asserv.get_current_target(x, y, a);
-            tableStatus.robot.target = {x, y, a};
-            // LOG_GREEN_INFO("Robot target : { x = ", x," y = ", y, " a = ", a, " }");
-            tableStatus.robot.direction_side = (int)asserv.get_direction_side();
+            // TODO
+            packed_motion_t mot = drive.get_motion();
+            drive.position = (vector_t)mot.pos;
+            drive.velocity = (vector_t)mot.vel;
+            drive.acceleration = (vector_t)mot.acc;
+            packed_vector_t target = drive.get_target();
+            drive.target = (vector_t)target;
 
             if (currentState != INIT && currentState != FIN)
             {
@@ -131,14 +129,14 @@ int main(int argc, char *argv[])
                 arduino.setStepper(0, 4);
                 homeActuators();
                 lidar.startSpin();
-                if (tableStatus.robot.colorTeam == NONE)
+                if (tableStatus.colorTeam == NONE)
                     arduino.RGB_Blinking(255, 0, 0); // Red Blinking
             }
 
             // colorTeam_t color = readColorSensorSwitch();
             // switchTeamSide(color);
 
-            if (readLatchSensor() && tableStatus.robot.colorTeam != NONE)
+            if (readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = RUN;
             if (manual_ctrl)
                 nextState = MANUAL;
@@ -149,8 +147,6 @@ int main(int argc, char *argv[])
         {
             if (initState){
                 log_asserv()->setLogStatus(true);
-                {int16_t x, y, a;
-                asserv.get_coordinates(x, y, a);}// for log
                 LOG_GREEN_INFO("RUN");
                 tableStatus.reset();
                 tableStatus.startTime = _millis();
@@ -190,7 +186,7 @@ int main(int argc, char *argv[])
                 arduino.RGB_Solid(0, 255, 0);
                 disableActuators();
                 // Clear command buffer
-                asserv.stop();
+                drive.disable();
                 // Clear manual_func
                 manual_currentFunc = NULL;
                 lidar.stopSpin();
@@ -216,7 +212,6 @@ int main(int argc, char *argv[])
             currentState = nextState;
         }
 
-        // asserv.logAsserv();
         // Check if state machine is running above loop time
         unsigned long ms = _millis();
         if (ms > loopStartTime + LOOP_TIME_MS){
@@ -262,8 +257,8 @@ int StartSequence()
     while(!ctrl_c_pressed){
         sleep(0.1);
         // randomly change the position of highway obstacles
-        position_t t_pos = {rand() % 1500 - 750, rand() % 2200 - 1100, 0};
-        navigationGoTo(t_pos, Direction::FORWARD, Rotation::SHORTEST, Rotation::SHORTEST);
+        position_t t_pos = {(rand() % 1500) - 750.0, (rand() % 2200) - 1100.0, 0};
+        navigationGoTo(t_pos, true);
     }
     StopAPIServer();
     api_server_thread.join();
@@ -279,7 +274,7 @@ int StartSequence()
     manual_ctrl = false;
     manual_currentFunc = NULL;
 
-    asserv.set_coordinates(0,0,0);
+    drive.set_coordinates({0,0,0});
 
     LOG_GREEN_INFO("Init sequence done");
     return 0;
@@ -298,7 +293,7 @@ void GetLidar()
 
     if (lidar.getData())
     {
-        position_t position = tableStatus.robot.pos;
+        position_t position = (vector_t)drive.position; //TODO
         convertAngularToAxial(lidar.data, lidar.count, position, 200);
         
         if (currentState == RUN || currentState == MANUAL)
@@ -337,9 +332,7 @@ void EndSequence()
     lidar.Stop();
 
 #ifndef EMULATE_I2C
-    asserv.stop();
-    asserv.set_motor_state(false);
-    asserv.set_brake_state(false);
+    drive.disable();
 
     arduino.RGB_Solid(0, 0, 0); // OFF
 
