@@ -28,10 +28,10 @@ ActionFSM action;
 
 // Initiation of i2c devices
 #ifndef EMULATE_I2C
-drive_interface drive;
+DriveControl drive;
 Arduino arduino(I2C_ARDUINO_ADDR);
 #else
-drive_interface drive;
+DriveControl drive;
 Arduino arduino(-1);
 #endif
 
@@ -84,12 +84,7 @@ int main(int argc, char *argv[])
 
         // Get Sensor Data
         {
-            packed_motion_t mot = drive.get_motion();
-            drive.position = convertPackedToPosition(mot.pos);
-            drive.velocity = convertPackedToPosition(mot.vel);
-            drive.acceleration = convertPackedToPosition(mot.acc);
-            packed_position_t target = drive.get_target();
-            drive.target = convertPackedToPosition(target);
+            drive.update();
 
             if (currentState != INIT && currentState != FIN)
             {
@@ -252,7 +247,6 @@ int StartSequence()
     TestAPIServer();
     sleep(1);
     LOG_DEBUG("Starting main debug loop");
-    int i = 0;
     while(!ctrl_c_pressed){
         sleep(0.1);
         // randomly change the position of highway obstacles

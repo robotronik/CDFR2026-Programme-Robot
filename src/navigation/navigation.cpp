@@ -38,6 +38,7 @@ nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd){
     }
     nav_return_t ireturn = NAV_IN_PROCESS;
     if (hashValue == currentInstructionHash && is_robot_stalled){
+        drive.drive(&drive.position, 1);
         return NAV_PAUSED;
     }
 
@@ -62,6 +63,7 @@ nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd){
         ireturn = NAV_IN_PROCESS ;//drive.get_moving_is_done()
                      //? NAV_DONE : NAV_IN_PROCESS;
     }
+    drive.drive(path, pathLenght);
     return ireturn;
 }
 
@@ -95,13 +97,11 @@ void navigationOpponentDetection(){
     // stop the robot if it is endangered
     if (isEndangered && !is_robot_stalled){
         LOG_GREEN_INFO("Opponent is in the way, stopping the robot");
-        // TODO drive.pause();
         is_robot_stalled = true;
         robot_stall_start_time = _millis();
     }
     else if (!isEndangered && is_robot_stalled){
         LOG_GREEN_INFO("Opponent is no longer in the way, resuming the robot");
-        // TODO drive.resume();
         is_robot_stalled = false;
     }
 }

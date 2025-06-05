@@ -5,6 +5,7 @@
 #include "defs/structs.hpp"
 #include "defs/constante.h"
 #include "lidar/Lidar.hpp"
+#include "navigation/driveControl.h"
 
 typedef enum {
     INIT = 0,
@@ -20,7 +21,7 @@ extern main_State_t currentState;
 extern main_State_t nextState;
 
 extern TableState tableStatus;
-extern drive_interface drive;
+extern DriveControl drive;
 extern Arduino arduino;
 extern Lidar lidar;
 

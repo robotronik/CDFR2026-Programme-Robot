@@ -1,14 +1,6 @@
 #include "drive_interface.h"
 
-drive_interface::drive_interface()
-{
-    target = {0, 0, 0};
-    position = {0, 0, 0};
-    velocity = {0, 0, 0};
-    acceleration = {0, 0, 0};
-    is_enabled = false;
-    max_torque = 2.0; // Default max torque in Amps
-}
+drive_interface::drive_interface(){}
 
 uint8_t drive_interface::get_version()
 {
@@ -47,12 +39,10 @@ void drive_interface::set_target(packed_position_t pos)
 void drive_interface::disable()
 {
     //i2c_write(I2C_ADDRESS, CMD_DISABLE, nullptr, 0);
-    is_enabled = false;
 }
 void drive_interface::enable()
 {
     //i2c_write(I2C_ADDRESS, CMD_ENABLE, nullptr, 0);
-    is_enabled = true;
 }
 packed_motor_t drive_interface::get_current()
 {
@@ -73,7 +63,6 @@ void drive_interface::set_brake_state(bool enable)
 void drive_interface::set_max_torque(double current)
 {
     //i2c_write(I2C_ADDRESS, CMD_SET_MAX_TORQUE, (uint8_t*)&current, sizeof(current));
-    max_torque = current; // Update local variable
 }
 status_t drive_interface::get_status()
 {
