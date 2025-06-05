@@ -182,7 +182,7 @@ void Arduino::RGB_Rainbow(int LED_ID){
 }
 
 void Arduino::SetLidarPWM(uint8_t val){
-    if (i2cFile, I2cSendData(i2cFile, CMD_SET_PWM_LIDAR, &val, 1))
+    if (I2cSendData(i2cFile, CMD_SET_PWM_LIDAR, &val, 1))
         LOG_ERROR("Couldn't set Lidar PWM");
 }
 
