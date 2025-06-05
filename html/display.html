@@ -83,7 +83,7 @@
                 }
                 let data = await response.json();
                 draw(data); // Pass the fetched data   
-
+                drawCostmap(data["costmap"]);
                 let robotStatus = data["status"];
                 if (robotStatus == 0)
                     stateLabel.innerHTML = "Robot State : Init";
@@ -122,6 +122,9 @@
         }
 
         function draw(data) {
+            if (data.costmap && Array.isArray(data.costmap)) {
+                drawCostmap(data.costmap);
+            }
             ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
 
             ctx.fillStyle = 'silver';
@@ -278,6 +281,16 @@
             let ratio = canvas.height / canvas.width;
             canvas.style.width = window.innerWidth + 'px';  // Scale the width to fit the screen width
             canvas.style.height = (window.innerWidth * ratio) + 'px';
+        }
+
+        function drawCostmap(costmap) {
+            const scale = 20;
+
+            costmap.forEach(cell => {
+                const { x, y, cost } = cell;
+                ctx.fillStyle = `rgba(255, 0, 0, ${cost / 50.0})`;
+                ctx.fillRect(150 + x * scale, 150 + y * scale, scale, scale);
+            });
         }
 
         // Call the function to resize initially

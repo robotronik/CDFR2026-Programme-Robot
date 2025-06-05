@@ -10,6 +10,7 @@
 #include "actions/functions.h"
 #include "lidar/lidarAnalize.h"
 #include "navigation/navigation.h"
+#include "navigation/nav.h"
 #include "utils/utils.h"
 #include "utils/logger.hpp"
 #include "restAPI/restAPI.hpp"
@@ -237,14 +238,41 @@ int StartSequence()
                                     { StartAPIServer(); });
 
 #ifdef TEST_API_ONLY
+    drive.position.x = 0;
+    drive.position.y = 0;
     TestAPIServer();
     sleep(1);
     LOG_DEBUG("Starting main debug loop");
+    initialize_costmap();
+
+    place_obstacle_rect_with_inflation( -725,675, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation( -325,1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation( 600,1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation( 750,725, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation( 50,400, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation( -725,-675, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation( -325,-1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation(600,-1425,  STOCK_HEIGHT_MM, STOCK_WIDTH_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation( 750,-725, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, INFLATION_RADIUS_MM);
+    place_obstacle_rect_with_inflation(50,-400,  STOCK_WIDTH_MM, STOCK_HEIGHT_MM, INFLATION_RADIUS_MM);
+
+    // Place the opponent obstacle
+    place_obstacle_rect_with_inflation(tableStatus.pos_opponent.x, tableStatus.pos_opponent.y, 400, 400, INFLATION_RADIUS_MM);
+    
     while(!ctrl_c_pressed){
         sleep(1);
-        // randomly change the position of Astart obstacles
-        position_t t_pos = {(rand() % 1500) - 750.0, (rand() % 2200) - 1100.0, 0};
-        navigationGoTo(t_pos, true);
+        int start_x = convert_x_to_index(-800);    int start_y = convert_y_to_index(-1300);
+        int goal_x = convert_x_to_index(800);    int goal_y = convert_y_to_index(1300);
+        position_int path[HEIGHT * WIDTH], path_smooth[HEIGHT * WIDTH];
+        
+        a_star(start_x, start_y, goal_x, goal_y);
+        int path_len = reconstruct_path_points(start_x, start_y, goal_x, goal_y, path, HEIGHT * WIDTH);
+        int smooth_path_len = smooth_path(path, path_len, path_smooth, HEIGHT * WIDTH);
+
+        convert_path_to_coordinates(path, path_len);
+        convert_path_to_coordinates(path_smooth, smooth_path_len);
+
+        fillCurrentPath(path_smooth, smooth_path_len);
     }
     StopAPIServer();
     api_server_thread.join();
