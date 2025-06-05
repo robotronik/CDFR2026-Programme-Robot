@@ -14,6 +14,38 @@ double position_distance(position_t from, position_t to){
     return sqrt(pow(to.x - from.x, 2) + pow(to.y - from.y, 2));
 }
 
+double position_length(position_t pos){
+    // Calculates the length of the position vector
+    return sqrt(pow(pos.x, 2) + pow(pos.y, 2));
+}   
+
+position_t position_vector(position_t from, position_t to){
+    // Calculates the vector between the two points
+    position_t vector;
+    vector.x = to.x - from.x;
+    vector.y = to.y - from.y;
+    vector.a = normalize_angle(position_angle(from, to));
+    return vector;
+}
+
+void position_normalize(position_t& pos){
+    // Normalize the vector
+    double norm = position_length(pos);
+    pos.x /= norm;
+    pos.y /= norm;
+    // Normalize the angle
+    if (pos.a > 180)
+        pos.a -= 360;
+    else if (pos.a < -180)
+        pos.a += 360;
+}
+double normalize_angle(double angle) {
+    // Normalize the angle to be between -180 and 180 degrees
+    while (angle > 180) angle -= 360;
+    while (angle < -180) angle += 360;
+    return angle;
+}
+
 void position_robot_flip(position_t& pos){
     pos.y = -pos.y;
     if (pos.a >= 0)
