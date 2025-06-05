@@ -16,6 +16,14 @@ static int currentPathLenght = 0;
 
 nav_hash createHash(position_t pos);
 
+void fillCurrentPath(position_int path[], int pathLength) {
+    currentPath[0] = {(double)path[0].x, (double)path[0].y};
+    for (int i = 0; i < pathLength; i++) {
+        currentPath[i] = {(double)path[i].x, (double)path[i].y};
+    }
+    currentPathLenght = pathLength;
+}
+
 nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
     if (useAStar){
         /*
