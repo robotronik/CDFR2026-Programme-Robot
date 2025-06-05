@@ -5,23 +5,18 @@ DriveControl::DriveControl() {
     // TODO Connect I2C
     int version = drive_interface::get_version();
 
-    if (version == I2C_VERSION){
+    if (version == DRIVE_I2C_VERSION){
         // GOOD
     }
 
     reset();
 }
+DriveControl::~DriveControl() {}
 
 void DriveControl::reset() {
-    position.x = 0.0;
-    position.y = 0.0;
-    position.a = 0.0;
-    velocity.x = 0.0;
-    velocity.y = 0.0;
-    velocity.a = 0.0;
-    acceleration.x = 0.0;
-    acceleration.y = 0.0;
-    acceleration.a = 0.0;
+    position = {0.0, 0.0, 0.0};
+    velocity = {0.0, 0.0, 0.0};
+    acceleration = {0.0, 0.0, 0.0};
     is_enabled = false;
     drive_interface::disable();
     drive_interface::set_target(convertPositionToPacked(target));
@@ -31,6 +26,14 @@ void DriveControl::reset() {
 }
 
 void DriveControl::drive(position_t pos[], int n) {
+    if (!is_enabled){
+        LOG_ERROR("Not enabled");
+        return;
+    }
+    if (n == 0){
+        LOG_WARNING("No position given");
+        return;
+    }
     // TODO
     target = pos[0];
     drive_interface::set_target(convertPositionToPacked(target));
@@ -65,6 +68,8 @@ void DriveControl::setRedLed(bool status){
 
 void DriveControl::logStatus(){
     status_t status = drive_interface::get_status();
-    LOG_INFO("Status 1: ", status.is_error1);
-    LOG_INFO("Status 2: ", status.is_error2);
+    if (status.is_error1)
+        LOG_ERROR("Status 1 !");
+    if (status.is_error2)
+        LOG_ERROR("Status 2 !");
 }

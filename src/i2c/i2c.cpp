@@ -1,4 +1,4 @@
-#include "i2c/I2CDevice.hpp"
+#include "i2c/i2c.hpp"
 #include <stdio.h>
 #include <string.h> // Include for memcpy
 #include "utils/logger.hpp"
@@ -11,14 +11,15 @@ extern "C" {
 #include <sys/ioctl.h>			//Needed for I2C port
 }
 
-I2CDevice::I2CDevice(int slave_address){
+int I2COpenSlave(int slave_address){
     int adapter_nr = 1; /* probably dynamically determined */
     char filename[20];
+    int i2cFile = -1;
 
     if (slave_address == -1) // I2C Emulation
     {
         LOG_INFO("Emulating I2C");
-        i2cFile = -1;
+        return -1;
     }
     else{
         snprintf(filename, 19, "/dev/i2c-%d", adapter_nr);
@@ -34,24 +35,18 @@ I2CDevice::I2CDevice(int slave_address){
             throw std::runtime_error("Couldn't ioctl I2C file");
         }
     }
+    return i2cFile;
 }
 
-I2CDevice::~I2CDevice(){
-    if (i2cFile >= 0) {
-        close(i2cFile);
-        LOG_INFO("I2C file closed successfully");
-    }
-}
-
-int I2CDevice::I2cSendData (uint8_t command, uint8_t* data, int length, int tries){
-    if (i2cFile >= 0){
+int I2cSendData (int f, uint8_t command, uint8_t* data, int length, int tries){
+    if (f >= 0){
         for (int i = 0; i < tries; i++){
             if(length != 0){
-                if (0 == i2c_smbus_write_i2c_block_data(i2cFile, command, length, data))
+                if (0 == i2c_smbus_write_i2c_block_data(f, command, length, data))
                     return 0;
             }
             else{
-                if (0 == i2c_smbus_write_byte(i2cFile, command))
+                if (0 == i2c_smbus_write_byte(f, command))
                     return 0;
             }
         }
@@ -63,14 +58,14 @@ int I2CDevice::I2cSendData (uint8_t command, uint8_t* data, int length, int trie
 }
 
 
-int I2CDevice::I2cReceiveData (uint8_t command, uint8_t* data, int length, int tries){
-    if (i2cFile >= 0){
+int I2cReceiveData (int f, uint8_t command, uint8_t* data, int length, int tries){
+    if (f >= 0){
         for (int i = 0; i < tries; i++){
-            if (i2c_smbus_write_byte(i2cFile, command))
+            if (i2c_smbus_write_byte(f, command))
                 continue;        
             usleep(200); // wait for sensor to finish loading the output buffer data
-            i2c_smbus_read_byte(i2cFile);
-            if (read(i2cFile, data, length) != length)
+            i2c_smbus_read_byte(f);
+            if (read(f, data, length) != length)
                 continue;
             return 0;
         }
@@ -86,19 +81,19 @@ int I2CDevice::I2cReceiveData (uint8_t command, uint8_t* data, int length, int t
     }
 }
 
-int I2CDevice::I2cSendBlockReceiveData (uint8_t command, uint8_t* data, int length, uint8_t* out_data, int out_length, int tries){
-    if (i2cFile >= 0){
+int I2cSendBlockReceiveData (int f, uint8_t command, uint8_t* data, int length, uint8_t* out_data, int out_length, int tries){
+    if (f >= 0){
         for (int i = 0; i < tries; i++){
             if(length != 0){
-                if (i2c_smbus_write_i2c_block_data(i2cFile, command, length, data))
+                if (i2c_smbus_write_i2c_block_data(f, command, length, data))
                     continue;
             }
             else{
-                if (i2c_smbus_write_byte(i2cFile, command))
+                if (i2c_smbus_write_byte(f, command))
                     continue;
             }
             usleep(200); // wait for sensor to finish loading the output buffer data
-            if (read(i2cFile, out_data, out_length) != out_length)
+            if (read(f, out_data, out_length) != out_length)
                 continue;
             return 0;
         }

@@ -2,13 +2,11 @@
 
 #include <cstdint>
 #include <iostream>
-#include "i2c/I2CDevice.hpp"
 
-class Arduino : public I2CDevice {
-    using I2CDevice::I2CDevice;
+class Arduino {
    
-   public:
-    Arduino(int slave_address);
+public:
+    Arduino();
 
     // Functions return true if successfully executed
     void enableServos();
@@ -30,6 +28,7 @@ class Arduino : public I2CDevice {
     void moveMotorDC(uint8_t speed, uint8_t holding);
     void stopMotorDC();
 private:
+    int i2cFile;
     void setServoPower(bool power);
     void RGB(int LED_ID, uint8_t mode, uint8_t r, uint8_t g, uint8_t b);
 };

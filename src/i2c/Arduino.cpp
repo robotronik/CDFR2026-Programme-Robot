@@ -1,13 +1,21 @@
 #include "i2c/Arduino.hpp"
 #include "utils/logger.hpp"
 #include "protocol.h"
+#include "i2c/i2c.hpp"
 
-Arduino::Arduino(int slave_address) : I2CDevice (slave_address){
+#define ARDUINO_SLAVE_ADDRESS 100
+
+Arduino::Arduino(){
     // Check if the device has the same protocol version
+#ifdef EMULATE_I2C
+    i2cFile = -1;
+#else
+    i2cFile = I2COpenSlave(ARDUINO_SLAVE_ADDRESS);
+#endif
     if (i2cFile == -1) return; // Emulation
     uint8_t version;
     uint8_t message[] = {0};
-    if (I2cSendBlockReceiveData(CMD_GET_VERSION, message, 1, &version, 1) != 0) {
+    if (I2cSendBlockReceiveData(i2cFile, CMD_GET_VERSION, message, 1, &version, 1) != 0) {
         LOG_ERROR("Failed to read protocol version");
         return;
     }
@@ -22,26 +30,23 @@ void Arduino::setServoPower(bool power) {
     uint8_t message [1];
     uint8_t *ptr = message;
     WriteUInt8(&ptr, power);
-    I2cSendData(CMD_POWER_SERVOS, message, 1);
+    I2cSendData(i2cFile, CMD_POWER_SERVOS, message, 1);
 }
 
 void Arduino::enableServos() {
     LOG_DEBUG("Enable Servos");
-    if (i2cFile == -1) return; // Emulation¸
     setServoPower(true);
 }
 
 
 void Arduino::disableServos() {
     LOG_DEBUG("Disable Servos");
-    if (i2cFile == -1) return; // Emulation
     setServoPower(false);
 }
 
 // [0;180]
 void Arduino::moveServo(int ServoID, int position) {
     LOG_DEBUG("Move servo #", ServoID, " to ", position);
-    if (i2cFile == -1) return; // Emulation
     if (position < 0 || position > 270) {
         LOG_ERROR("Servo position out of range");
         return;
@@ -51,13 +56,12 @@ void Arduino::moveServo(int ServoID, int position) {
     WriteUInt8(&ptr, ServoID);
     WriteUInt16(&ptr, position);
     WriteUInt16(&ptr, 0); // Speed (instant)
-    I2cSendData(CMD_MOVE_SERVO, message, 5);
+    I2cSendData(i2cFile, CMD_MOVE_SERVO, message, 5);
 }
 
 // Speed in degs/s
 void Arduino::moveServoSpeed(int ServoID, int position, int speed) {
     LOG_DEBUG("Move servo #", ServoID, " to ", position, " with speed ", speed);
-    if (i2cFile == -1) return; // Emulation
     if (position < 0 || position > 270) {
         LOG_ERROR("Servo position out of range");
         return;
@@ -67,7 +71,7 @@ void Arduino::moveServoSpeed(int ServoID, int position, int speed) {
     WriteUInt8(&ptr, ServoID);
     WriteUInt16(&ptr, position);
     WriteUInt16(&ptr, speed);
-    I2cSendData(CMD_MOVE_SERVO, message, 5);
+    I2cSendData(i2cFile, CMD_MOVE_SERVO, message, 5);
 }
 
 bool Arduino::getServo(int ServoID, int& position){
@@ -75,7 +79,7 @@ bool Arduino::getServo(int ServoID, int& position){
     if (i2cFile == -1) {position = 0; return true;}; // Emulation
     // position is a int16_t
     uint8_t data[2];
-    if (I2cSendBlockReceiveData(CMD_GET_SERVO, (uint8_t*)&ServoID, 1, data, 2))
+    if (I2cSendBlockReceiveData(i2cFile, CMD_GET_SERVO, (uint8_t*)&ServoID, 1, data, 2))
         return false;
     uint8_t* ptr = data;
     position = ReadInt16(&ptr);
@@ -89,7 +93,7 @@ bool Arduino::readSensor(int SensorID, bool& value){
     uint8_t message[1];
     uint8_t *ptr = message;
     WriteUInt8(&ptr, SensorID);
-    if (I2cSendBlockReceiveData(CMD_READ_SENSOR, message, 1, &data, 1)){
+    if (I2cSendBlockReceiveData(i2cFile, CMD_READ_SENSOR, message, 1, &data, 1)){
         LOG_WARNING("Couldn't read sensor");
         return false;
     }
@@ -99,51 +103,46 @@ bool Arduino::readSensor(int SensorID, bool& value){
 
 void Arduino::enableStepper(int StepperID) {
     LOG_DEBUG("Enable Stepper #", StepperID);
-    if (i2cFile == -1) return; // Emulation
-    I2cSendData(CMD_ENABLE_STEPPER, (uint8_t*)&StepperID, 1);
+    I2cSendData(i2cFile, CMD_ENABLE_STEPPER, (uint8_t*)&StepperID, 1);
 }
 
 void Arduino::disableStepper(int StepperID) {
     LOG_DEBUG("Disable Stepper #", StepperID);
-    if (i2cFile == -1) return; // Emulation
-    I2cSendData(CMD_DISABLE_STEPPER, (uint8_t*)&StepperID, 1);
+    I2cSendData(i2cFile, CMD_DISABLE_STEPPER, (uint8_t*)&StepperID, 1);
 }
 
 void Arduino::moveStepper(int32_t absPosition, int StepperID) {
     //LOG_DEBUG("Move Stepper #", StepperID, " to ", absPosition);
-    if (i2cFile == -1) return; // Emulation
     uint8_t message [5];
     uint8_t *ptr = message;
     WriteUInt8(&ptr, StepperID);
     WriteInt32(&ptr, absPosition);
-    I2cSendData(CMD_MOVE_STEPPER, message, 5);
+    I2cSendData(i2cFile, CMD_MOVE_STEPPER, message, 5);
 }
 
 void Arduino::setStepperSpeed(int StepperID, int speed) {
     //LOG_DEBUG("Set Stepper #", StepperID, " speed to ", speed);
-    if (i2cFile == -1) return; // Emulation
     uint8_t message[5];
     uint8_t* ptr = message;
     WriteUInt8(&ptr, StepperID);
     WriteInt32(&ptr, speed);
-    I2cSendData(CMD_SET_STEPPER_SPEED, message, 5);
+    I2cSendData(i2cFile, CMD_SET_STEPPER_SPEED, message, 5);
 }
 
 void Arduino::setStepper(int32_t absPosition, int StepperID){
     LOG_DEBUG("Set Stepper #", StepperID, " to ", absPosition);
-    if (i2cFile == -1) return; // Emulation
     uint8_t message [5];
     uint8_t *ptr = message;
     WriteUInt8(&ptr, StepperID);
     WriteInt32(&ptr, absPosition);
-    I2cSendData(CMD_SET_STEPPER, message, 5);
+    I2cSendData(i2cFile, CMD_SET_STEPPER, message, 5);
 }
 
 bool Arduino::getStepper(int32_t& absPosition, int StepperID){
     //LOG_DEBUG("Get Stepper #", StepperID);
     if (i2cFile == -1) {absPosition = 0; return true;} // Emulation
     uint8_t data[4];
-    if (I2cSendBlockReceiveData(CMD_GET_STEPPER, (uint8_t*)&StepperID, 1, data, 4))
+    if (I2cSendBlockReceiveData(i2cFile, CMD_GET_STEPPER, (uint8_t*)&StepperID, 1, data, 4))
         return false;
     uint8_t* ptr = data;
     absPosition = ReadInt32(&ptr);
@@ -161,10 +160,10 @@ void Arduino::RGB(int LED_ID, uint8_t mode, uint8_t r, uint8_t g, uint8_t b){
         WriteUInt8(&ptr, r);
         WriteUInt8(&ptr, g);
         WriteUInt8(&ptr, b);
-        I2cSendData(CMD_RGB_LED, message, 5);
+        I2cSendData(i2cFile, CMD_RGB_LED, message, 5);
     }
     else 
-        I2cSendData(CMD_RGB_LED, message, 2); // Rainbow mode
+        I2cSendData(i2cFile, CMD_RGB_LED, message, 2); // Rainbow mode
 }
 
 void Arduino::RGB_Solid(uint8_t R, uint8_t G, uint8_t B, int LED_ID){
@@ -183,7 +182,7 @@ void Arduino::RGB_Rainbow(int LED_ID){
 }
 
 void Arduino::SetLidarPWM(uint8_t val){
-    if (I2cSendData(CMD_SET_PWM_LIDAR, &val, 1))
+    if (i2cFile, I2cSendData(i2cFile, CMD_SET_PWM_LIDAR, &val, 1))
         LOG_ERROR("Couldn't set Lidar PWM");
 }
 
@@ -196,7 +195,7 @@ void Arduino::moveMotorDC(uint8_t speed, uint8_t holding){
     WriteUInt8(&ptr, 1);
     WriteUInt8(&ptr, speed);
     WriteUInt8(&ptr, holding);
-    I2cSendData(CMD_MOVE_DC_MOTOR, message, 3);
+    I2cSendData(i2cFile, CMD_MOVE_DC_MOTOR, message, 3);
     LOG_DEBUG("DC Motor moved");
 }
 void Arduino::stopMotorDC(){
@@ -205,5 +204,5 @@ void Arduino::stopMotorDC(){
     uint8_t message [1];
     uint8_t *ptr = message;
     WriteUInt8(&ptr, 1);
-    I2cSendData(CMD_STOP_DC_MOTOR, message, 1);
+    I2cSendData(i2cFile, CMD_STOP_DC_MOTOR, message, 1);
 }

@@ -26,14 +26,8 @@
 TableState tableStatus;
 ActionFSM action;
 
-// Initiation of i2c devices
-#ifndef EMULATE_I2C
 DriveControl drive;
-Arduino arduino(I2C_ARDUINO_ADDR);
-#else
-DriveControl drive;
-Arduino arduino(-1);
-#endif
+Arduino arduino;
 
 Lidar lidar;
 

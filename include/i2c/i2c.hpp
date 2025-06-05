@@ -2,23 +2,11 @@
 
 #include <cstdint>
 
-class I2CDevice {
-protected:
-    int i2cFile;
-
-public:
-
-    // Returns diffent than 0 if error
-    int I2cSendData (uint8_t command, uint8_t* data, int length, int tries = 5);
-    int I2cReceiveData (uint8_t command, uint8_t* data, int length, int tries = 5);
-    int I2cSendBlockReceiveData (uint8_t command, uint8_t* data, int length, uint8_t* out_data, int out_length, int tries = 5);
-
-protected:
-    I2CDevice(int slave_address);
-    ~I2CDevice();
-};
-
-
+// Returns diffent than 0 if error
+int I2COpenSlave(int slave_address);
+int I2cSendData (int f, uint8_t command, uint8_t* data, int length, int tries = 5);
+int I2cReceiveData (int f, uint8_t command, uint8_t* data, int length, int tries = 5);
+int I2cSendBlockReceiveData (int f, uint8_t command, uint8_t* data, int length, uint8_t* out_data, int out_length, int tries = 5);
 /**
  * Read an int8_t from a buffer of bytes
  * @param buffer the buffer of bytes

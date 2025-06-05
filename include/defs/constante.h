@@ -2,9 +2,6 @@
 #include "defs/structs.hpp"
 #define SIZEDATALIDAR 15000
 
-#define I2C_ASSER_ADDR 42
-#define I2C_ARDUINO_ADDR 100
-
 #define LOOP_TIME_MS 10
 
 #define DISTANCESTOP   500

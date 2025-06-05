@@ -5,6 +5,7 @@
 class DriveControl : public drive_interface {
     public:
         DriveControl();
+        ~DriveControl();
 
         // Read only
         position_t target;
