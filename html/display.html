@@ -166,14 +166,6 @@
                 drawPoint(ctx, point.y, point.x);
             });
             
-            data["highway-segments"].forEach(seg => {
-                ctx.lineWidth = 4;
-                if (seg.available == "true")
-                    ctx.strokeStyle = 'green';
-                else
-                    ctx.strokeStyle = 'red';
-                drawSegment(ctx, seg.ay, seg.ax, seg.by, seg.bx);
-            });
             // Draw the current robot's path
             ctx.lineWidth = 6;
             ctx.strokeStyle = 'blue';
@@ -182,30 +174,6 @@
                 ctx.lineTo(point.y + centerX, point.x + centerY);
             });
             ctx.stroke();       
-
-            data["highway-obstacles"].forEach(obj => {
-                ctx.lineWidth = 4;
-                if (obj.present)
-                    ctx.strokeStyle = 'purple';
-                else
-                    ctx.strokeStyle = 'gray';
-                if (obj.type == 0) // Circle
-                {
-                    ctx.beginPath(); ctx.arc(centerX + obj.pos.y, centerY + obj.pos.x, obj.size, 0, Math.PI * 2); ctx.stroke();
-                }else if (obj.type == 1) // Square
-                {
-                    drawSegment(ctx, obj.pos.y - obj.size, obj.pos.x - obj.size, obj.pos.y + obj.size, obj.pos.x - obj.size); // Top
-                    drawSegment(ctx, obj.pos.y - obj.size, obj.pos.x + obj.size, obj.pos.y + obj.size, obj.pos.x + obj.size); // Bottom
-                    drawSegment(ctx, obj.pos.y - obj.size, obj.pos.x + obj.size, obj.pos.y - obj.size, obj.pos.x - obj.size); // Left
-                    drawSegment(ctx, obj.pos.y + obj.size, obj.pos.x + obj.size, obj.pos.y + obj.size, obj.pos.x - obj.size); // Right
-                }
-                else{ // Rectangle
-                    drawSegment(ctx, obj.pos.y - obj.size2, obj.pos.x - obj.size, obj.pos.y + obj.size2, obj.pos.x - obj.size); // Top
-                    drawSegment(ctx, obj.pos.y - obj.size2, obj.pos.x + obj.size, obj.pos.y + obj.size2, obj.pos.x + obj.size); // Bottom
-                    drawSegment(ctx, obj.pos.y - obj.size2, obj.pos.x + obj.size, obj.pos.y - obj.size2, obj.pos.x - obj.size); // Left
-                    drawSegment(ctx, obj.pos.y + obj.size2, obj.pos.x + obj.size, obj.pos.y + obj.size2, obj.pos.x - obj.size); // Right
-                }
-            });
             
             // Draw point in the center
             ctx.fillStyle = 'red';

@@ -242,7 +242,7 @@ int StartSequence()
     LOG_DEBUG("Starting main debug loop");
     while(!ctrl_c_pressed){
         sleep(1);
-        // randomly change the position of highway obstacles
+        // randomly change the position of Astart obstacles
         position_t t_pos = {(rand() % 1500) - 750.0, (rand() % 2200) - 1100.0, 0};
         navigationGoTo(t_pos, true);
     }

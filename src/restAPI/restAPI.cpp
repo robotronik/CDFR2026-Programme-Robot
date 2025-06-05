@@ -349,8 +349,8 @@ void StartAPIServer(){
         return crow::response(response.dump(4));
     });
 
-    // Define a route for a POST request that sets a target position using highways
-    CROW_ROUTE(app, "/set_target_coordinates_highway").methods(crow::HTTPMethod::POST)([](const crow::request& req){
+    // Define a route for a POST request that sets a target position using Astarts
+    CROW_ROUTE(app, "/set_target_coordinates_Astart").methods(crow::HTTPMethod::POST)([](const crow::request& req){
         auto req_data = json::parse(req.body);
 
         if (currentState != MANUAL){
@@ -370,12 +370,12 @@ void StartAPIServer(){
         // Apply the values
         if (req_data.contains("a")){
             double req_a_value = req_data["a"];
-            LOG_INFO("Manual ctrl : Requested set_target_coordinates_highway, x=", req_x_value, " y=", req_y_value, " a=", req_a_value);
+            LOG_INFO("Manual ctrl : Requested set_target_coordinates_Astart, x=", req_x_value, " y=", req_y_value, " a=", req_a_value);
             position_t pos = {req_x_value, req_y_value, req_a_value};
             navigationGoTo(pos, true);
         }
         else{
-            LOG_INFO("Manual ctrl : Requested set_target_coordinates_highway, x=", req_x_value, " y=", req_y_value);
+            LOG_INFO("Manual ctrl : Requested set_target_coordinates_Astart, x=", req_x_value, " y=", req_y_value);
             position_t pos = {req_x_value, req_y_value, 0};
 
             navigationGoTo(pos, true);

@@ -61,7 +61,7 @@
                 <button type="button" class="btn btn-success w-100" onclick="sendSetTargetCoordinates()">Go Direct</button>
             </div>
             <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendSetTargetCoordinatesHighways()">Go Highways</button>
+                <button type="button" class="btn btn-success w-100" onclick="sendSetTargetCoordinatesAstart()">Go Astart</button>
             </div>
         </div>
 
@@ -313,8 +313,8 @@
             });
         }
 
-        function sendSetTargetCoordinatesHighways() {
-            fetch('/set_target_coordinates_highway', {
+        function sendSetTargetCoordinatesAstart() {
+            fetch('/set_target_coordinates_Astart', {
                 method: 'POST', // HTTP method
                 headers: {
                     'Content-Type': 'application/json' // Define the content type as JSON

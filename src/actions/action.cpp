@@ -50,7 +50,7 @@ ReturnFSM_t ActionFSM::GatherStock(){
     nav_return_t nav_ret;
     switch (gatherStockState){
     case FSM_GATHER_NAV:
-        // TODO Highways should be enabled for some takes
+        // TODO Astarts should be enabled for some takes
         position_t pos;
         nav_ret = navigationGoTo(pos, false);
         if (nav_ret == NAV_DONE){
