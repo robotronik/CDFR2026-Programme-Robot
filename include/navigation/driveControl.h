@@ -28,7 +28,5 @@ class DriveControl : public drive_interface {
 
         void logStatus();
 
-    private:
-        bool connected;
         void reset();
 };

@@ -4,12 +4,13 @@
 #include <math.h>
 
 DriveControl::DriveControl() {
-    // TODO Connect I2C
     int version = drive_interface::get_version();
 
-    if (version == DRIVE_I2C_VERSION){
-        // GOOD
-    }
+    if (version != DRIVE_I2C_VERSION) {
+        LOG_ERROR("Protocol version mismatch, expected ", DRIVE_I2C_VERSION, " but got ", version);
+        return;
+    } 
+    LOG_GREEN_INFO("Protocol version ", version, " is compatible");
 
     reset();
 }

@@ -80,7 +80,7 @@ bool run_lidar_opponent_test(std::string testName, std::string data_file_name, p
 
     convertAngularToAxial(lidarData, lidar_count, robot_pos, 50);
 
-    if (position_opponentV2(lidarData, lidar_count, robot_pos, &pos_opponent)){
+    if (position_opponentV2(lidarData, lidar_count, robot_pos, pos_opponent)){
         LOG_INFO(testName, " Found opponent_pos\t= {\tx=", pos_opponent.x, ",\ty=", pos_opponent.y, " }");
         LOG_INFO(testName, " Expects opponent_pos\t= {\tx=", expected_opponent_pos.x, ",\ty=", expected_opponent_pos.y, " }");
         test_passed = std::abs(pos_opponent.x - expected_opponent_pos.x) < tolerance &&

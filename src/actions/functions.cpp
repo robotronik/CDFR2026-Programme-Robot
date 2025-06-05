@@ -144,7 +144,7 @@ bool returnToHome(){
     homePos.y = (tableStatus.colorTeam == BLUE) ? 1100 : -1100;
     homePos.a = 180;
     nav_return_t res = navigationGoTo(homePos, true);
-    return res == NAV_DONE && isRobotInArrivalZone((position_t)drive.position); //TODO
+    return res == NAV_DONE && isRobotInArrivalZone(drive.position);
 }
 
 // Function to check if a point (px, py) lies inside the rectangle
