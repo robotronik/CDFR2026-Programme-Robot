@@ -116,7 +116,8 @@ void StartAPIServer(){
         navigation_path_json(current_navigation_path);
         response["navigation"] = current_navigation_path;
         
-        response["target_pos"] = (position_t)drive.target; // TODO
+        response["target_pos"] = (position_t)drive.target;
+        response["pos"] = (position_t)drive.position;
 
         return crow::response(response.dump());
     });

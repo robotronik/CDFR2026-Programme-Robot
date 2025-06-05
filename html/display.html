@@ -104,7 +104,7 @@
                 
                 scoreLabel.innerHTML = "Score : " + data["score"];
 
-                let robotColor = data["table"]["robot"]["colorTeam"];
+                let robotColor = data["table"]["colorTeam"];
                 if (robotColor == 1)
                     colorLabel.innerHTML = "Color : Blue";
                 else if (robotColor == 2)
@@ -133,10 +133,10 @@
             // Draw robot
             ctx.lineWidth = 4;
             ctx.strokeStyle = 'white';
-            drawSquare(ctx, data["table"]["robot"]["pos"]["y"], 
-                            data["table"]["robot"]["pos"]["x"], 
+            drawSquare(ctx, data["pos"]["y"], 
+                            data["pos"]["x"], 
                             250, 
-                            data["table"]["robot"]["pos"]["a"]);
+                            data["pos"]["a"]);
 
             //Draws an arrow of the target position
             drawArrow(ctx, data["target_pos"]["y"], data["target_pos"]["x"], data["target_pos"]["a"]);
