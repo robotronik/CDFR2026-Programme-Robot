@@ -14,8 +14,8 @@ class DriveControl : public drive_interface {
         position_t acceleration;
         bool is_enabled;
 
-        // Sets the target position
-        void drive(position_t pos[], int n);
+        // Sets the target position, true when done
+        bool drive(position_t pos[], int n);
 
         // Updates the motion and target
         void update();

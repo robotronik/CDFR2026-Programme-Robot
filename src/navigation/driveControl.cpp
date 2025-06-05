@@ -1,5 +1,7 @@
 #include "navigation/driveControl.h"
 #include "utils/logger.hpp"
+#include "defs/structs.hpp"
+#include <math.h>
 
 DriveControl::DriveControl() {
     // TODO Connect I2C
@@ -25,18 +27,52 @@ void DriveControl::reset() {
     drive_interface::set_max_torque(10.0);
 }
 
-void DriveControl::drive(position_t pos[], int n) {
+// Returns true if done
+bool DriveControl::drive(position_t pos[], int n) {
     if (!is_enabled){
         LOG_WARNING("Not enabled");
-        return;
+        return false;
     }
-    if (n == 0){
+    if (n <= 0){
         LOG_WARNING("No position given");
-        return;
+        return false;
     }
-    // TODO
-    target = pos[0];
-    drive_interface::set_target(convertPositionToPacked(target));
+
+    // TODO Check if the robot is moving
+    const double max_lin_speed = 1000.0; // mm/s
+    const double max_ang_speed = 180.0; // degrees/s
+    double linear_speed = position_length(velocity);
+    double angular_speed = fabs(velocity.a);
+
+    // Calculate the target point along the path
+    position_t pos_target;
+
+    // Calculate a distance along the path
+    const double looking_distance = fmin(100.0 + linear_speed, max_lin_speed) / 3.0;
+    double total_distance = position_distance(position, pos[0]);
+    position_t from = position;
+    int i = 0;
+    while (total_distance < looking_distance && i < n - 1) {
+        // Calculate the distance to the next position
+        total_distance += position_distance(pos[i], pos[i + 1]);
+        from = pos[i];
+        i++;
+    }
+    // Use the position at the looking distance
+    pos_target = pos[i];
+    double resulting_displ = looking_distance - total_distance + position_distance(from, pos_target);
+    position_t displacement = position_vector(from, pos_target);
+    position_normalize(displacement);
+    displacement.x *= resulting_displ;
+    displacement.y *= resulting_displ;
+
+    from.x += displacement.x;
+    from.y += displacement.y;
+
+    from.a = pos[n-1].a; // Use the last angle in the path
+    
+    drive_interface::set_target(convertPositionToPacked(from));
+    return false; // TODO return true if not moving
 }
 
 void DriveControl::update() {

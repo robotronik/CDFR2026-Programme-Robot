@@ -18,8 +18,11 @@ double position_angle(position_t from, position_t to);
 
 // Define a function to calculate the distance from and to a position_t
 double position_distance(position_t from, position_t to);
-
+void position_normalize(position_t& pos);
 void position_robot_flip(position_t& pos);
+double position_length(position_t pos);
+double normalize_angle(double angle);
+position_t position_vector(position_t from, position_t to);
 
 typedef struct 
 {

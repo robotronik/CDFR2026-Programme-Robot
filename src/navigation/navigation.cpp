@@ -51,28 +51,13 @@ nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd){
     }
 
     if (hashValue != currentInstructionHash){
-        LOG_DEBUG("Following path");
-
-        //  TODO
         for (int i = 0; i < pathLenght; i++){
-            //drive.go_to_point(path[i].x, path[i].y);
-
-
             currentPath[i] = path[i];
         }
-        //if (turnEnd)
-            //drive.consigne_angulaire(path[pathLenght - 1].a, rotationLookAt);
-
-
         currentPathLenght = pathLenght;
         currentInstructionHash = hashValue;
     }
-    else{
-        ireturn = NAV_IN_PROCESS ;//drive.get_moving_is_done()
-                     //? NAV_DONE : NAV_IN_PROCESS;
-    }
-    drive.drive(path, pathLenght);
-    return ireturn;
+    return drive.drive(currentPath, currentPathLenght) ? NAV_DONE : NAV_IN_PROCESS;
 }
 
 void navigation_path_json(json& j){
