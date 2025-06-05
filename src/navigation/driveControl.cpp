@@ -27,7 +27,7 @@ void DriveControl::reset() {
 
 void DriveControl::drive(position_t pos[], int n) {
     if (!is_enabled){
-        LOG_ERROR("Not enabled");
+        LOG_WARNING("Not enabled");
         return;
     }
     if (n == 0){

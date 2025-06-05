@@ -5,7 +5,7 @@
 int i2cFile = -1;
 
 drive_interface::drive_interface(){
-#ifdef EMULATE_I2C
+#ifndef __CROSS_COMPILE_ARM__
     i2cFile = -1;
 #else
     i2cFile = I2COpenSlave(DRIVE_I2C_ADRESS);

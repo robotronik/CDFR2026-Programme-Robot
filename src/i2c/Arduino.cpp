@@ -7,7 +7,7 @@
 
 Arduino::Arduino(){
     // Check if the device has the same protocol version
-#ifdef EMULATE_I2C
+#ifndef __CROSS_COMPILE_ARM__
     i2cFile = -1;
 #else
     i2cFile = I2COpenSlave(ARDUINO_SLAVE_ADDRESS);

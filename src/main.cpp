@@ -19,7 +19,6 @@
 #ifndef __CROSS_COMPILE_ARM__
     #define DISABLE_LIDAR
     #define TEST_API_ONLY
-    #define EMULATE_I2C
 #endif
 
 
@@ -242,7 +241,7 @@ int StartSequence()
     sleep(1);
     LOG_DEBUG("Starting main debug loop");
     while(!ctrl_c_pressed){
-        sleep(0.1);
+        sleep(1);
         // randomly change the position of highway obstacles
         position_t t_pos = {(rand() % 1500) - 750.0, (rand() % 2200) - 1100.0, 0};
         navigationGoTo(t_pos, true);
@@ -324,7 +323,7 @@ void EndSequence()
     arduino.RGB_Solid(0, 0, 0); // OFF
 
     for(int i = 0; i < 60; i++){
-        if (homeActuators() & moveColumnsElevator(0) & movePlatformElevator(-1))
+        if (homeActuators() & moveColumnsElevator(0))
             break;
         delay(100);
     };
