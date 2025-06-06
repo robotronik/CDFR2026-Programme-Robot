@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
         // Get Sensor Data
         {
             drive.update();
+            LOG_INFO("x: ", drive.position.x, " y: ", drive.position.y, " a: ", drive.position.a);
 
             if (currentState != INIT && currentState != FIN)
             {

@@ -81,7 +81,6 @@ void DriveControl::update() {
     packed_motion_t mot = drive_interface::get_motion();
     position = convertPackedToPosition(mot.pos);
     velocity = convertPackedToPosition(mot.vel);
-    acceleration = convertPackedToPosition(mot.acc);
     target = convertPackedToPosition(drive_interface::get_target());
 }
 
