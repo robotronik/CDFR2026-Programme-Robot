@@ -6,6 +6,25 @@ int heuristic(int x1, int y1, int x2, int y2) {
     return abs(x1 - x2) + abs(y1 - y2);
 }
 
+void print_costmap_around_point(int x, int y) {
+    int half_size = 5; // Rayon du carré (10x10)
+    for (int i = x - half_size; i <= x + half_size; i++) {
+        for (int j = y - half_size; j <= y + half_size; j++) {
+            if (i < 0 || i >= HEIGHT || j < 0 || j >= WIDTH) {
+                printf("  ? "); // Hors limites
+            } else if (costmap[i][j] == OBSTACLE_COST) {
+                printf("  # "); // Obstacle
+            } else if (costmap[i][j] == 0) {
+                printf("  . "); // Espace libre
+            } else {
+                printf("%3d ", costmap[i][j]); // Coût
+            }
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
 // Récupère le chemin dans points[], retourne la longueur
 int reconstruct_path_points(int start_x, int start_y, int goal_x, int goal_y, position_int *points, int max_points) {
     int length = 0;
