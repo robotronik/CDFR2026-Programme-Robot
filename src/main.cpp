@@ -49,6 +49,7 @@ std::thread api_server_thread;
 int StartSequence();
 void GetLidar();
 void EndSequence();
+void tests();
 
 // Signal Management
 bool ctrl_c_pressed = false;
@@ -149,6 +150,16 @@ int main(int argc, char *argv[])
             break;
         }
         //****************************************************************
+        case TEST:
+        {
+            if (initState){
+                LOG_GREEN_INFO("TEST");
+            }
+            // Run tests
+            tests();
+            break;
+        }
+        //****************************************************************
         case MANUAL:
         {
             if (initState){
@@ -239,67 +250,14 @@ int StartSequence()
                                     { StartAPIServer(); });
 
 #ifdef TEST_API_ONLY
-
-    TestAPIServer();
-    sleep(1);
-    LOG_DEBUG("Starting main debug loop");
-    initialize_costmap();
-
-    place_obstacle_rect_with_inflation( -725,675, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
-    place_obstacle_rect_with_inflation( -325,1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
-    place_obstacle_rect_with_inflation( 600,1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
-    place_obstacle_rect_with_inflation( 750,725, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
-    place_obstacle_rect_with_inflation( 50,400, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
-    place_obstacle_rect_with_inflation( -725,-675, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
-    place_obstacle_rect_with_inflation( -325,-1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
-    place_obstacle_rect_with_inflation(600,-1425,  STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
-    place_obstacle_rect_with_inflation( 750,-725, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
-    place_obstacle_rect_with_inflation(50,-400,  STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
-
-    // Place the opponent obstacle
-    place_obstacle_rect_with_inflation(tableStatus.pos_opponent.x, tableStatus.pos_opponent.y, ROBOT_WIDTH, ROBOT_WIDTH, SECURITE_OPPONENT);
-    
-    while(!ctrl_c_pressed){
-        sleep(1);
-        int rand2,rand1,rand4,rand3;
-        int start_x = 0, start_y = 0, goal_x = 0, goal_y = 0;
-    
-        while (costmap[start_x][start_y] == OBSTACLE_COST || costmap[goal_x][goal_y] == OBSTACLE_COST){
-            rand2 = rand() % (2700) - 2700 / 2;
-            rand1 = rand() % (1700) - 1700 / 2;
-            rand4 = rand() % (2700) - 2700 / 2;
-            rand3 = rand() % (1700) - 1700 / 2;
-            
-            start_x = convert_x_to_index(rand1);
-            start_y = convert_y_to_index(rand2);
-            goal_x = convert_x_to_index(rand3);
-            goal_y = convert_y_to_index(rand4);
-        }
-        drive.position.x = rand1;
-        drive.position.y = rand2;
-        position_int path[HEIGHT * WIDTH], path_smooth[HEIGHT * WIDTH];
-        a_star(start_x, start_y, goal_x, goal_y);
-        int path_len = reconstruct_path_points(start_x, start_y, goal_x, goal_y, path, HEIGHT * WIDTH);
-        int smooth_path_len = smooth_path(path, path_len, path_smooth, HEIGHT * WIDTH);
-    
-        convert_path_to_coordinates(path, path_len);
-        convert_path_to_coordinates(path_smooth, smooth_path_len);
-        LOG_GREEN_INFO("Smooth Path with Costs:");
-        for (int i = 0; i < smooth_path_len; ++i) {
-            LOG_INFO("Point ", i, ": (x = ", path_smooth[i].x, ", y = ", path_smooth[i].y, ", cost = ", path_smooth[i].cost, ")");
-        }
-        fillCurrentPath(path, path_len);
-        usleep(250000); // Sleep for 250 milliseconds
-        fillCurrentPath(path_smooth, smooth_path_len);
-        usleep(500000);
-    }
-    StopAPIServer();
-    api_server_thread.join();
-    return -1;
-#endif
-
+    LOG_GREEN_INFO("Running in API test mode only");
+    currentState = TEST;
+    nextState = TEST;
+#else
     currentState = INIT;
     nextState = INIT;
+#endif // TEST_API_ONLY
+
     initState = true;
     manual_ctrl = false;
     manual_currentFunc = NULL;
@@ -366,4 +324,63 @@ void EndSequence()
     api_server_thread.join();
 
     LOG_GREEN_INFO("Stopped");
+}
+
+void tests()
+{
+    TestAPIServer();
+    sleep(1);
+    LOG_DEBUG("Starting main debug loop");
+    initialize_costmap();
+
+    place_obstacle_rect_with_inflation(-725,  675, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
+    place_obstacle_rect_with_inflation(-325, 1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
+    place_obstacle_rect_with_inflation( 600, 1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
+    place_obstacle_rect_with_inflation( 750,  725, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
+    place_obstacle_rect_with_inflation(  50,  400, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
+    place_obstacle_rect_with_inflation(-725, -675, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
+    place_obstacle_rect_with_inflation(-325,-1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
+    place_obstacle_rect_with_inflation( 600,-1425,  STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
+    place_obstacle_rect_with_inflation( 750, -725, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
+    place_obstacle_rect_with_inflation(  50, -400,  STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
+
+    // Place the opponent obstacle
+    place_obstacle_rect_with_inflation(tableStatus.pos_opponent.x, tableStatus.pos_opponent.y, ROBOT_WIDTH, ROBOT_WIDTH, SECURITE_OPPONENT);
+    
+    while(!ctrl_c_pressed){
+        sleep(1);
+        int start_ix = 0, start_iy = 0, goal_ix = 0, goal_iy = 0;
+        while (costmap[start_ix][start_iy] == OBSTACLE_COST || costmap[goal_ix][goal_iy] == OBSTACLE_COST){
+            drive.position.x = rand() % (1700) - 1700 / 2;
+            drive.position.y = rand() % (2700) - 2700 / 2;
+            drive.target.x = rand() % (1700) - 1700 / 2;
+            drive.target.y = rand() % (2700) - 2700 / 2;
+            
+            convert_pos_to_index(drive.position, start_ix, start_iy);
+            convert_pos_to_index(drive.target, goal_ix, goal_iy);
+        }
+        nav_pos_t path[512], path_smooth[512];
+        position_t resulting_path[512];
+
+        a_star(start_ix, start_iy, goal_ix, goal_iy);
+        int path_len = reconstruct_path_points(start_ix, start_iy, goal_ix, goal_iy, path, 512);
+        int smooth_path_len = smooth_path(path, path_len, path_smooth, 512);
+    
+        LOG_GREEN_INFO("Smooth Path with Costs:");
+        for (int i = 0; i < smooth_path_len; ++i) {
+            LOG_INFO("Point ", i, ": (x = ", path_smooth[i].x, ", y = ", path_smooth[i].y, ", cost = ", path_smooth[i].cost, ")");
+        }
+
+        convert_path_to_coordinates(path, path_len, resulting_path);
+        fillCurrentPath(resulting_path, path_len);
+        usleep(250000); // Sleep for 250 milliseconds
+
+        convert_path_to_coordinates(path_smooth, smooth_path_len, resulting_path);
+        fillCurrentPath(resulting_path, smooth_path_len);
+    }
+    StopAPIServer();
+    api_server_thread.join();
+
+    LOG_GREEN_INFO("Tests finished");
+    nextState = FIN;    
 }

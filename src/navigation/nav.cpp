@@ -1,5 +1,28 @@
 #include "navigation/nav.h"
+#include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <limits.h>
+#include "defs/constante.h"
+#include "utils/logger.hpp"
+
+#define CLAMP(x, min, max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))
+
+#define MAX_OPEN_SIZE (HEIGHT * WIDTH)
+#define FREE_SPACE 0
+
 unsigned char costmap[HEIGHT][WIDTH];
+
+typedef struct {
+    int x, y;
+    int g;  // Coût depuis le départ
+    int h;  // Heuristique jusqu’à la cible
+    int f;  // f = g + h
+    int parent_x, parent_y;
+    bool visited;
+} Node;
+
 Node nodes[HEIGHT][WIDTH];
 
 int heuristic(int x1, int y1, int x2, int y2) {
@@ -26,30 +49,30 @@ void print_costmap_around_point(int x, int y) {
 }
 
 // Récupère le chemin dans points[], retourne la longueur
-int reconstruct_path_points(int start_x, int start_y, int goal_x, int goal_y, position_int *points, int max_points) {
+int reconstruct_path_points(int start_x, int start_y, int goal_x, int goal_y, nav_pos_t *points, int max_points) {
     int length = 0;
     int x = goal_x;
     int y = goal_y;
 
     while (!(x == start_x && y == start_y)) {
         if (x < 0 || x >= HEIGHT || y < 0 || y >= WIDTH) {
-            printf("Erreur: position (%d,%d) hors limites dans reconstruct_path_points\n", x, y);
+            LOG_ERROR("Position (", x, ", ", y, ") hors limites dans reconstruct_path_points");
             break;  // évite le segfault
         }
         if (length >= max_points) break;
-        points[length++] = (position_int){x, y};
+        points[length++] = (nav_pos_t){x, y};
         int px = nodes[x][y].parent_x;
         int py = nodes[x][y].parent_y;
         x = px;
         y = py;
     }
     if (length < max_points) {
-        points[length++] = (position_int){start_x, start_y};
+        points[length++] = (nav_pos_t){start_x, start_y};
     }
 
     // Inverse le tableau (car actuellement du but vers départ)
     for (int i = 0; i < length/2; i++) {
-        position_int tmp = points[i];
+        nav_pos_t tmp = points[i];
         points[i] = points[length-1-i];
         points[length-1-i] = tmp;
     }
@@ -70,20 +93,20 @@ void a_star(int start_x, int start_y, int goal_x, int goal_y) {
     nodes[start_x][start_y].h = heuristic(start_x, start_y, goal_x, goal_y);
     nodes[start_x][start_y].f = nodes[start_x][start_y].h;
 
-    position_int open[MAX_OPEN_SIZE];
+    nav_pos_t open[MAX_OPEN_SIZE];
     int open_size = 0;
-    open[open_size++] = (position_int){start_x, start_y};
+    open[open_size++] = (nav_pos_t){start_x, start_y};
 
     while (open_size > 0) {
         // Trouver le noeud avec le plus petit f dans open
         int best_idx = 0;
         for (int i = 1; i < open_size; i++) {
-            position_int p = open[i];
+            nav_pos_t p = open[i];
             if (nodes[p.x][p.y].f < nodes[open[best_idx].x][open[best_idx].y].f)
                 best_idx = i;
         }
 
-        position_int current = open[best_idx];
+        nav_pos_t current = open[best_idx];
 
         // Retirer current de open
         open[best_idx] = open[--open_size];
@@ -126,12 +149,12 @@ void a_star(int start_x, int start_y, int goal_x, int goal_y) {
                     if (open[i].x == nx && open[i].y == ny)
                         in_open = true;
                 if (!in_open && open_size < MAX_OPEN_SIZE)
-                    open[open_size++] = (position_int){nx, ny};
+                    open[open_size++] = (nav_pos_t){nx, ny};
             }
         }
     }
 
-    printf("Aucun chemin trouvé.\n");
+    LOG_WARNING("Aucun chemin trouvé.");
 }
 
 void initialize_costmap() {
@@ -203,7 +226,7 @@ void print_costmap() {
     printf("\n");
 }
 
-int line_max_cost(position_int p1, position_int p2) {
+int line_max_cost(nav_pos_t p1, nav_pos_t p2) {
     int x0 = p1.x, y0 = p1.y;
     int x1 = p2.x, y1 = p2.y;
 
@@ -229,7 +252,7 @@ int line_max_cost(position_int p1, position_int p2) {
     return max_cost;
 }
 
-int smooth_path(position_int *in_path, int in_length, position_int *out_path, int max_points) {
+int smooth_path(nav_pos_t *in_path, int in_length, nav_pos_t *out_path, int max_points) {
     int out_len = 0;
     int i = 0;
 
@@ -253,7 +276,7 @@ int smooth_path(position_int *in_path, int in_length, position_int *out_path, in
     return out_len;
 }
 
-void print_costmap_with_path(position_int *path, int path_len) {
+void print_costmap_with_path(nav_pos_t *path, int path_len) {
     for (int x = 0; x < HEIGHT; x++) {
         for (int y = 0; y < WIDTH; y++) {
             bool is_path = false;
@@ -279,28 +302,32 @@ void print_costmap_with_path(position_int *path, int path_len) {
     printf("\n");
 }
 
-int convert_x_to_index(int x) {
+int convert_x_to_index(double x) {
     int offset = 1000; // Décalage pour convertir [-1000:1000] en [0:2000]
-    int index = (x + offset) / RESOLUTION;
+    int index = round((x + offset) / RESOLUTION);
     if (index < 0 || index > WIDTH) {
-        printf("Erreur: index hors limites index = (%d), x = (%d)\n", index,x);
-        return -1; // Retourne une valeur invalide si hors limites
+        LOG_WARNING("Erreur: index hors limites index: ", index, ", x: ", x);
+        index = CLAMP(index, 0, WIDTH - 1); // Clamp pour éviter les erreurs
     }
     return index;
 }
-int convert_y_to_index(int y) {
-    int offset = 1500; // Décalage pour convertir [-1000:1000] en [0:2000]
-    int index = (y + offset) / RESOLUTION;
+int convert_y_to_index(double y) {
+    int offset = 1500; // Décalage pour convertir [-1500:1500] en [0:3000]
+    int index = round((y + offset) / RESOLUTION);
     if (index < 0 || index > WIDTH) {
-        printf("Erreur: index hors limites index = (%d), y = (%d)\n", index, y);
-        return -1; // Retourne une valeur invalide si hors limites
+        LOG_WARNING("Erreur: index hors limites index: ", index, ", y: ", y);
+        index = CLAMP(index, 0, HEIGHT - 1); // Clamp pour éviter les erreurs
     }
     return index;
+}
+void convert_pos_to_index(position_t pos, int& ix, int& iy){
+    ix = convert_x_to_index(pos.x);
+    iy = convert_y_to_index(pos.y);
 }
 
-void convert_path_to_coordinates(position_int *path, int path_len) {
+void convert_path_to_coordinates(nav_pos_t nav_path[], int path_len, position_t path[]) {
     for (int i = 0; i < path_len; i++) {
-        path[i].x = path[i].x * RESOLUTION - 1000; // Conversion en coordonnées x
-        path[i].y = path[i].y * RESOLUTION - 1500; // Conversion en coordonnées y
+        path[i].x = nav_path[i].x * RESOLUTION - 1000; // Conversion en coordonnées x
+        path[i].y = nav_path[i].y * RESOLUTION - 1500; // Conversion en coordonnées y
     }
 }

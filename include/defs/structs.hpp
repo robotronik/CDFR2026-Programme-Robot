@@ -37,8 +37,7 @@ typedef struct
 {
     int  x;
     int  y;
-    int  theta;
     int cost;
-}position_int; 
+} nav_pos_t; 
 // Define serialization for lidarAnalize_t
 void to_json(json& j, const lidarAnalize_t& p);

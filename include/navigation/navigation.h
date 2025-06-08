@@ -17,4 +17,6 @@ nav_return_t navigationGoTo(position_t pos, bool turnEnd = false, bool useAStar 
 nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd = false);
 void navigation_path_json(json& j);
 void navigationOpponentDetection();
-void fillCurrentPath(position_int path[], int pathLength);
+
+// FOR TESTING PURPOSES
+void fillCurrentPath(position_t path[], int pathLength);
