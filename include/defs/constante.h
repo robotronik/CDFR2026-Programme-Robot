@@ -9,7 +9,10 @@
 #define RAD_TO_DEG 57.29577951
 #define DEG_TO_RAD 0.01745329252
 
+#define ROBOT_WIDTH 400
 #define OPPONENT_ROBOT_RADIUS 250
+const int STOCK_WIDTH_MM = 100;
+const int STOCK_HEIGHT_MM = 400;
 
 // Define the nums of the arduino for the STEPPERS
 #define STEPPER_NUM_1        1
