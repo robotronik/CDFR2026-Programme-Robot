@@ -28,8 +28,8 @@ typedef struct
 {
     double angle;
     double dist;
-    int    x;
-    int    y;
+    double    x;
+    double    y;
     bool   onTable;
 } lidarAnalize_t;
 

@@ -79,6 +79,7 @@ int main(int argc, char *argv[])
         // Get Sensor Data
         {
             drive.update();
+            LOG_INFO("x: ", drive.position.x, " y: ", drive.position.y, " a: ", drive.position.a);
 
             if (currentState != INIT && currentState != FIN)
             {
@@ -297,16 +298,13 @@ int StartSequence()
     return -1;
 #endif
 
-    // TODO Remove (For testing)
-    // TestRevolver();
-
     currentState = INIT;
     nextState = INIT;
     initState = true;
     manual_ctrl = false;
     manual_currentFunc = NULL;
 
-    drive.set_coordinates({0,0,0});
+    drive.reset();
 
     LOG_GREEN_INFO("Init sequence done");
     return 0;
@@ -314,45 +312,32 @@ int StartSequence()
 
 void GetLidar()
 {
-    // Implements a low passfilter
-    // Simple exponential moving average (EMA)
-    
-    // Smoothing factor (0 < alpha < 1)
-    const float alpha = 0.3f; // Adjust this value for more or less smoothing on the opponent robot posititon
-
-    static position_t pos_opponent_filtered = {0, 0, 0};
-    static bool first_reading = true;
-
+    static position_t prev_pos;
+    static position_t prev_vel;
+    static long prev_time_ms = 0;
     if (lidar.getData())
     {
-        position_t position = drive.position;
-        convertAngularToAxial(lidar.data, lidar.count, position, 200);
+        double time_s = double(_millis() - prev_time_ms) / 1000.0; 
+        //convertAngularToAxial(lidar.data, lidar.count, position, 200);
+        convertAngularToAxialCompensated(lidar.data, lidar.count, prev_pos, prev_vel, time_s, 200);
         
         if (currentState == RUN || currentState == MANUAL)
             navigationOpponentDetection();
         
         position_t pos_opponent;
-        if (position_opponentV2(lidar.data, lidar.count, position, &pos_opponent)){
+        if (position_opponentV2(lidar.data, lidar.count, drive.position, pos_opponent)){
             // If it's the first reading, initialize the filtered position
-            if (first_reading)
-            {
-                pos_opponent_filtered.x = pos_opponent.x;
-                pos_opponent_filtered.y = pos_opponent.y;
-                first_reading = false;
-            }
-            else
-            {
-                // Apply the low-pass filter
-                pos_opponent_filtered.x = alpha * pos_opponent.x + (1 - alpha) * pos_opponent_filtered.x;
-                pos_opponent_filtered.y = alpha * pos_opponent.y + (1 - alpha) * pos_opponent_filtered.y;
-            }
+            // Apply the low-pass filter
+            tableStatus.pos_opponent.x = pos_opponent.x;
+            tableStatus.pos_opponent.y = pos_opponent.y;
 
-            // Save the filtered position to tableStatus
-            tableStatus.pos_opponent.x = pos_opponent_filtered.x;
-            tableStatus.pos_opponent.y = pos_opponent_filtered.y;
             if ((currentState == RUN || currentState == MANUAL) && (_millis() > tableStatus.startTime + 1000))
-                opponentInAction(pos_opponent_filtered);            
+                opponentInAction(pos_opponent);            
         }
+
+        prev_pos = drive.position;
+        prev_vel = drive.velocity;
+        prev_time_ms = _millis();
     }
 }
 

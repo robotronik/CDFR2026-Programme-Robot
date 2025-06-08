@@ -2,7 +2,7 @@
 #include "defs/structs.hpp"
 #define SIZEDATALIDAR 15000
 
-#define LOOP_TIME_MS 10
+#define LOOP_TIME_MS 20
 
 #define DISTANCESTOP   500
 

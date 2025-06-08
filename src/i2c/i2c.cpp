@@ -34,6 +34,7 @@ int I2COpenSlave(int slave_address){
             LOG_ERROR("ioctl error");
             throw std::runtime_error("Couldn't ioctl I2C file");
         }
+        LOG_GREEN_INFO("Opened I2C file for slave ", slave_address);
     }
     return i2cFile;
 }

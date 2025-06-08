@@ -14,6 +14,42 @@ void convertAngularToAxial(lidarAnalize_t* data, int count, position_t position,
                            data[i].y > -1500 + narrow);
     }
 }
+void convertAngularToAxialCompensated(
+    lidarAnalize_t* data,
+    int           count,
+    position_t    start,       // robot pose at beginning of scan
+    position_t    velocity,    // robot linear & angular speeds (mm/s, deg/s)
+    double        scan_period, // lidar rotation period [s]
+    int           narrow
+) {
+    for(int i = 0; i < count; i++){
+        // 1) time offset for this beam:
+        double bearing = data[i].angle;
+        double dt      = bearing / 360.0 * scan_period;
+
+        // 2) pose at capture time:
+        double xi = start.x + velocity.x * dt;  // mm
+        double yi = start.y + velocity.y * dt;  // mm
+        double ai = start.a + velocity.a * dt;  // deg
+
+        // 3) local (sensor) → global:
+        double phi   = bearing * (M_PI/180.0);
+        double xl    = data[i].dist * cos(phi);
+        double yl    = data[i].dist * sin(phi);
+        double ar    = ai * (M_PI/180.0);
+
+        // rotate‐and‐translate:
+        data[i].x = xl * cos(ar) - yl * sin(ar) + xi;
+        data[i].y = xl * sin(ar) + yl * cos(ar) + yi;
+        data[i].onTable = (
+            data[i].x <  1000 - narrow &&
+            data[i].x > -1000 + narrow &&
+            data[i].y <  1500 - narrow &&
+            data[i].y > -1500 + narrow
+        );
+    }
+}
+
 
 double average_angles(double angles[], int count) {
     double x_sum = 0.0, y_sum = 0.0;
@@ -140,7 +176,7 @@ int find_blobs(lidarAnalize_t* data, int count, lidar_blob_detection* blobs, int
 }
 
 // Dans le pire des cas, on a 0.3% des points qui sont l'ennemi
-bool position_opponentV2(lidarAnalize_t* data, int count, position_t robot_pos, position_t *opponent_pos){
+bool position_opponentV2(lidarAnalize_t* data, int count, position_t robot_pos, position_t& opponent_pos){
     lidar_blob_detection blobs[BLOBS_COUNT]; // Array to hold detected blobs
     int min_points = 4 ; //4 points to be an opponent
     int max_distance = 50; //50mm to be a different blob
@@ -180,8 +216,8 @@ bool position_opponentV2(lidarAnalize_t* data, int count, position_t robot_pos, 
     // determination of the opponent could be using the bounding box of the blob
     lidar_blob_detection opponent_blob = blobs[opponent_idx];
     // Calculate the centroid of the largest blob
-    int pos_sum_x = 0;
-    int pos_sum_y = 0;
+    double pos_sum_x = 0;
+    double pos_sum_y = 0;
     if (opponent_blob.index_stop >= opponent_blob.index_start){
         for (int i = opponent_blob.index_start; i <= opponent_blob.index_stop; i++){
             pos_sum_x += data[i].x;
@@ -199,12 +235,12 @@ bool position_opponentV2(lidarAnalize_t* data, int count, position_t robot_pos, 
             pos_sum_y += data[i].y;
         }
     }
-    opponent_pos->x = pos_sum_x / opponent_blob.count;
-    opponent_pos->y = pos_sum_y / opponent_blob.count;
+    opponent_pos.x = pos_sum_x / opponent_blob.count;
+    opponent_pos.y = pos_sum_y / opponent_blob.count;
 
-    double angle_robot_opponent = atan2(opponent_pos->y - robot_pos.y, opponent_pos->x - robot_pos.x);
-    opponent_pos->x += 15*cos(angle_robot_opponent); //Offset the position my 15mm
-    opponent_pos->y += 15*sin(angle_robot_opponent);
+    double angle_robot_opponent = position_angle(robot_pos, opponent_pos);
+    opponent_pos.x += 15*cos(angle_robot_opponent); //Offset the position my 15mm
+    opponent_pos.y += 15*sin(angle_robot_opponent);
 
     return true;
 }

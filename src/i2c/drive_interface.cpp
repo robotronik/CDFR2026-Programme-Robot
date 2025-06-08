@@ -18,8 +18,10 @@ drive_interface::~drive_interface(){
 
 uint8_t drive_interface::get_version()
 {
+    if (i2cFile == -1)
+        return DRIVE_I2C_VERSION;
     uint8_t version;
-    I2cSendData(i2cFile, CMD_GET_VERSION, &version, sizeof(version));
+    I2cReceiveData(i2cFile, CMD_GET_VERSION, (uint8_t*)&version, sizeof(version));
     return version;
 }
 void drive_interface::set_green_led(bool status)
