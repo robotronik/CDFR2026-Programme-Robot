@@ -348,7 +348,7 @@ void tests()
     place_obstacle_rect_with_inflation(tableStatus.pos_opponent.x, tableStatus.pos_opponent.y, ROBOT_WIDTH, ROBOT_WIDTH, SECURITE_OPPONENT);
     
     while(!ctrl_c_pressed){
-        sleep(1);
+        usleep(500000); 
         int start_ix = 0, start_iy = 0, goal_ix = 0, goal_iy = 0;
         while (costmap[start_ix][start_iy] == OBSTACLE_COST || costmap[goal_ix][goal_iy] == OBSTACLE_COST){
             drive.position.x = rand() % (1700) - 1700 / 2;
@@ -359,24 +359,27 @@ void tests()
             convert_pos_to_index(drive.position, start_ix, start_iy);
             convert_pos_to_index(drive.target, goal_ix, goal_iy);
         }
-        nav_pos_t path[512], path_smooth[512];
-        position_t resulting_path[512];
-
+        nav_pos_t path[1024];
+        position_t final_path[1024], final_path2[1024],path_smooth[1024];
         a_star(start_ix, start_iy, goal_ix, goal_iy);
-        int path_len = reconstruct_path_points(start_ix, start_iy, goal_ix, goal_iy, path, 512);
-        int smooth_path_len = smooth_path(path, path_len, path_smooth, 512);
+        int path_len = reconstruct_path_points(start_ix, start_iy, goal_ix, goal_iy, path, 1024);
+        int smooth_path_len = smooth_path2(path, path_len, path_smooth, 1024, 15);
     
+        
+        convert_path_to_coordinates(path, path_len, final_path2);
+        fillCurrentPath(final_path2, path_len);
+        usleep(250000); 
         LOG_GREEN_INFO("Smooth Path with Costs:");
         for (int i = 0; i < smooth_path_len; ++i) {
-            LOG_INFO("Point ", i, ": (x = ", path_smooth[i].x, ", y = ", path_smooth[i].y, ", cost = ", path_smooth[i].cost, ")");
+            LOG_INFO("Point ", i, ": (x = ", path_smooth[i].x, ", y = ", path_smooth[i].y);
         }
 
-        convert_path_to_coordinates(path, path_len, resulting_path);
-        fillCurrentPath(resulting_path, path_len);
-        usleep(250000); // Sleep for 250 milliseconds
+        convert_float_path_to_coordinates(path_smooth, smooth_path_len, final_path);
 
-        convert_path_to_coordinates(path_smooth, smooth_path_len, resulting_path);
-        fillCurrentPath(resulting_path, smooth_path_len);
+        
+        fillCurrentPath(final_path,smooth_path_len);
+
+
     }
     StopAPIServer();
     api_server_thread.join();

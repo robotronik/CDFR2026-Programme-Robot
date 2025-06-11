@@ -276,6 +276,46 @@ int smooth_path(nav_pos_t *in_path, int in_length, nav_pos_t *out_path, int max_
     return out_len;
 }
 
+// Fonction de lissage par moyenne glissante
+int smooth_path2(nav_pos_t *in_path, int in_length, position_t *out_path, int max_points, int window_size) {
+    if (!in_path || !out_path || in_length <= 0 || max_points <= 0 || window_size <= 0 || window_size > in_length) {
+        for (int i = 0; i < in_length && i < max_points; ++i) {
+            out_path[i].x = in_path[i].x;
+            out_path[i].y = in_path[i].y;
+        }
+        return in_length; // Copie directe du chemin
+        return -1; // Paramètres invalides
+    }
+
+    int half_window = window_size / 2;
+    int out_index = 0;
+
+    for (int i = 0; i < in_length && out_index < max_points; ++i) {
+        int x_sum = 0, y_sum = 0, cost_sum = 0;
+        int count = 0;
+
+        // Calcul de la moyenne dans la fenêtre centrée sur i
+        for (int j = i - half_window; j <= i + half_window; ++j) {
+            if (j >= 0 && j < in_length) {
+                x_sum += in_path[j].x;
+                y_sum += in_path[j].y;
+                cost_sum += in_path[j].cost;
+                ++count;
+            }
+        }
+
+        // Moyenne entière arrondie
+        out_path[out_index].x = 1.0*x_sum / count;
+        out_path[out_index].y = 1.0*y_sum / count;
+        
+
+        ++out_index;
+    }
+
+    return out_index; // Nombre de points générés
+}
+
+
 void print_costmap_with_path(nav_pos_t *path, int path_len) {
     for (int x = 0; x < HEIGHT; x++) {
         for (int y = 0; y < WIDTH; y++) {
@@ -326,6 +366,13 @@ void convert_pos_to_index(position_t pos, int& ix, int& iy){
 }
 
 void convert_path_to_coordinates(nav_pos_t nav_path[], int path_len, position_t path[]) {
+    for (int i = 0; i < path_len; i++) {
+        path[i].x = nav_path[i].x * RESOLUTION - 1000; // Conversion en coordonnées x
+        path[i].y = nav_path[i].y * RESOLUTION - 1500; // Conversion en coordonnées y
+    }
+}
+
+void convert_float_path_to_coordinates(position_t nav_path[], int path_len, position_t path[]) {
     for (int i = 0; i < path_len; i++) {
         path[i].x = nav_path[i].x * RESOLUTION - 1000; // Conversion en coordonnées x
         path[i].y = nav_path[i].y * RESOLUTION - 1500; // Conversion en coordonnées y
