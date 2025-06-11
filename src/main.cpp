@@ -359,24 +359,17 @@ void tests()
             convert_pos_to_index(drive.position, start_ix, start_iy);
             convert_pos_to_index(drive.target, goal_ix, goal_iy);
         }
-        nav_pos_t path[1024];
-        position_t final_path[1024], final_path2[1024],path_smooth[1024];
-        a_star(start_ix, start_iy, goal_ix, goal_iy);
+        nav_pos_t path[1024], path_smooth[1024];
+        position_t final_path[1024];
+        a_star(start_ix, start_iy, goal_ix, goal_iy);   
         int path_len = reconstruct_path_points(start_ix, start_iy, goal_ix, goal_iy, path, 1024);
-        int smooth_path_len = smooth_path2(path, path_len, path_smooth, 1024, 15);
-    
-        
-        convert_path_to_coordinates(path, path_len, final_path2);
-        fillCurrentPath(final_path2, path_len);
-        usleep(250000); 
+        int smooth_path_len = smooth_path(path, path_len, path_smooth, 1024);
         LOG_GREEN_INFO("Smooth Path with Costs:");
         for (int i = 0; i < smooth_path_len; ++i) {
             LOG_INFO("Point ", i, ": (x = ", path_smooth[i].x, ", y = ", path_smooth[i].y);
         }
 
-        convert_float_path_to_coordinates(path_smooth, smooth_path_len, final_path);
-
-        
+        convert_path_to_coordinates(path_smooth, smooth_path_len, final_path);
         fillCurrentPath(final_path,smooth_path_len);
 
 

@@ -371,10 +371,3 @@ void convert_path_to_coordinates(nav_pos_t nav_path[], int path_len, position_t 
         path[i].y = nav_path[i].y * RESOLUTION - 1500; // Conversion en coordonnées y
     }
 }
-
-void convert_float_path_to_coordinates(position_t nav_path[], int path_len, position_t path[]) {
-    for (int i = 0; i < path_len; i++) {
-        path[i].x = nav_path[i].x * RESOLUTION - 1000; // Conversion en coordonnées x
-        path[i].y = nav_path[i].y * RESOLUTION - 1500; // Conversion en coordonnées y
-    }
-}
