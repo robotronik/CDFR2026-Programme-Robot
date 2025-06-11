@@ -349,6 +349,8 @@ void tests()
     
     while(!ctrl_c_pressed){
         usleep(500000); 
+
+        //position depart et arrivé aléatoire
         int start_ix = 0, start_iy = 0, goal_ix = 0, goal_iy = 0;
         while (costmap[start_ix][start_iy] == OBSTACLE_COST || costmap[goal_ix][goal_iy] == OBSTACLE_COST){
             drive.position.x = rand() % (1700) - 1700 / 2;
@@ -359,17 +361,22 @@ void tests()
             convert_pos_to_index(drive.position, start_ix, start_iy);
             convert_pos_to_index(drive.target, goal_ix, goal_iy);
         }
+
+        //définition
         nav_pos_t path[1024], path_smooth[1024];
         position_t final_path[1024];
+
+        //calcul a* puis smooth
         a_star(start_ix, start_iy, goal_ix, goal_iy);   
         int path_len = reconstruct_path_points(start_ix, start_iy, goal_ix, goal_iy, path, 1024);
         int smooth_path_len = smooth_path(path, path_len, path_smooth, 1024);
+        convert_path_to_coordinates(path_smooth, smooth_path_len, final_path);
+
+        //affichage log et RestApi des coordonnée smooth path
         LOG_GREEN_INFO("Smooth Path with Costs:");
         for (int i = 0; i < smooth_path_len; ++i) {
-            LOG_INFO("Point ", i, ": (x = ", path_smooth[i].x, ", y = ", path_smooth[i].y);
+            LOG_INFO("Point ", i, ": (x = ", final_path[i].x, ", y = ", final_path[i].y);
         }
-
-        convert_path_to_coordinates(path_smooth, smooth_path_len, final_path);
         fillCurrentPath(final_path,smooth_path_len);
 
 
