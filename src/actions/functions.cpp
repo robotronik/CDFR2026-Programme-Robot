@@ -180,7 +180,7 @@ void switchTeamSide(colorTeam_t color){
         }
 
         position_t pos = StratStartingPos();
-        drive.set_coordinates({pos.x, pos.y, pos.a});
+        drive.setCoordinates(pos);
     }
 }
 void switchStrategy(int strategy){
@@ -193,7 +193,7 @@ void switchStrategy(int strategy){
         LOG_INFO("Strategy switch detected");
         tableStatus.strategy = strategy;
         position_t pos = StratStartingPos();
-        drive.set_coordinates({pos.x, pos.y, pos.a});
+        drive.setCoordinates(pos);
     }
 }
 

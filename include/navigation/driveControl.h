@@ -2,7 +2,7 @@
 
 #include "drive_interface.h"
 
-class DriveControl : public drive_interface {
+class DriveControl : private drive_interface {
     public:
         DriveControl();
         ~DriveControl();
@@ -25,6 +25,8 @@ class DriveControl : public drive_interface {
 
         void setGreenLed(bool status);
         void setRedLed(bool status);
+
+        void setCoordinates(position_t pos);
 
         void logStatus();
 
