@@ -84,6 +84,13 @@ void DriveControl::update() {
     target = convertPackedToPosition(drive_interface::get_target());
 }
 
+void DriveControl::setCoordinates(position_t pos) {
+    position = pos;
+    velocity = {0.0, 0.0, 0.0};
+    acceleration = {0.0, 0.0, 0.0};
+    drive_interface::set_coordinates(convertPositionToPacked(pos));
+}
+
 void DriveControl::enable(){
     is_enabled = true;
     drive_interface::enable();

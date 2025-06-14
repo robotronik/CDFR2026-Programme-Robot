@@ -52,13 +52,12 @@ void EndSequence();
 void tests();
 
 // Signal Management
-bool ctrl_c_pressed = false;
+bool exit_requested = false;
 void ctrlc(int)
 {
     LOG_INFO("Stop Signal Recieved");
-    ctrl_c_pressed = true;
+    exit_requested = true;
 }
-bool ctrl_z_pressed = false;
 void ctrlz(int signal)
 {
     LOG_INFO("Termination Signal Recieved");
@@ -73,7 +72,7 @@ int main(int argc, char *argv[])
 
     // Private counter
     unsigned long loopStartTime;
-    while (!ctrl_c_pressed)
+    while (!exit_requested)
     {
         loopStartTime = _millis();
 
@@ -194,7 +193,7 @@ int main(int argc, char *argv[])
 
             if (!readLatchSensor()){
                 enableActuators();
-                ctrl_c_pressed = true; // nextState = INIT;
+                exit_requested = true; // nextState = INIT;
             }
             break;
         }
@@ -347,7 +346,7 @@ void tests()
     // Place the opponent obstacle
     place_obstacle_rect_with_inflation(tableStatus.pos_opponent.x, tableStatus.pos_opponent.y, ROBOT_WIDTH, ROBOT_WIDTH, SECURITE_OPPONENT);
     
-    while(!ctrl_c_pressed){
+    while(!exit_requested){
         usleep(500000); 
 
         //position depart et arrivé aléatoire

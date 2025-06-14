@@ -29,5 +29,5 @@ extern bool manual_ctrl;
 // Declare a function pointer
 extern bool (*manual_currentFunc)();
 
-extern bool ctrl_c_pressed;
+extern bool exit_requested;
 extern bool ctrl_z_pressed;

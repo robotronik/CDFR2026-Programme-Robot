@@ -345,7 +345,7 @@ void StartAPIServer(){
             req_a_value = req_data["a"];
 
         //Apply the values TODO
-        drive.set_coordinates({req_x_value, req_y_value, req_a_value});
+        drive.setCoordinates({req_x_value, req_y_value, req_a_value});
 
         json response;
         response["message"] = "Successfull";
@@ -553,7 +553,7 @@ void StartAPIServer(){
         response["message"] = "Successfull";
 
         // Apply the value
-        //ctrl_c_pressed = true;
+        //exit_requested = true;
         nextState = FIN;
 
         return crow::response(response.dump(4));
