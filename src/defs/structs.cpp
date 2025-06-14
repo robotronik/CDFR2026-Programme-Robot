@@ -69,8 +69,8 @@ void to_json(json& j, const lidarAnalize_t& p) {
     j = json{
         {"A", p.angle},
         {"R", p.dist},
-        {"x", p.x},
-        {"y", p.y},
+        //{"x", p.x},
+        //{"y", p.y},
         {"onTable", p.onTable}
     };
 }
