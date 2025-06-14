@@ -50,13 +50,12 @@ void GetLidar();
 void EndSequence();
 
 // Signal Management
-bool ctrl_c_pressed = false;
+bool exit_requested = false;
 void ctrlc(int)
 {
     LOG_INFO("Stop Signal Recieved");
-    ctrl_c_pressed = true;
+    exit_requested = true;
 }
-bool ctrl_z_pressed = false;
 void ctrlz(int signal)
 {
     LOG_INFO("Termination Signal Recieved");
@@ -71,7 +70,7 @@ int main(int argc, char *argv[])
 
     // Private counter
     unsigned long loopStartTime;
-    while (!ctrl_c_pressed)
+    while (!exit_requested)
     {
         loopStartTime = _millis();
 
@@ -182,7 +181,7 @@ int main(int argc, char *argv[])
 
             if (!readLatchSensor()){
                 enableActuators();
-                ctrl_c_pressed = true; // nextState = INIT;
+                exit_requested = true; // nextState = INIT;
             }
             break;
         }
@@ -241,7 +240,7 @@ int StartSequence()
     TestAPIServer();
     sleep(1);
     LOG_DEBUG("Starting main debug loop");
-    while(!ctrl_c_pressed){
+    while(!exit_requested){
         sleep(1);
         // randomly change the position of Astart obstacles
         position_t t_pos = {(rand() % 1500) - 750.0, (rand() % 2200) - 1100.0, 0};

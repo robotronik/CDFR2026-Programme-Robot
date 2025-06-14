@@ -514,7 +514,7 @@ void StartAPIServer(){
         response["message"] = "Successfull";
 
         // Apply the value
-        //ctrl_c_pressed = true;
+        //exit_requested = true;
         nextState = FIN;
 
         return crow::response(response.dump(4));
