@@ -29,4 +29,3 @@ extern bool manual_ctrl;
 extern bool (*manual_currentFunc)();
 
 extern bool exit_requested;
-extern bool ctrl_z_pressed;
