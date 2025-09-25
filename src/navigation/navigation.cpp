@@ -16,6 +16,20 @@ static int currentPathLenght = 0;
 
 nav_hash createHash(position_t pos);
 
+nav_return_t navigationGo(){
+    if (currentPathLenght == 0)
+        return NAV_DONE;
+    bool done = drive.drive(currentPath, currentPathLenght);
+
+    // Debug info
+    double distance = sqrt(pow(drive.position.x - drive.target.x, 2) + pow(drive.position.y - drive.target.y, 2));
+    LOG_DEBUG("E, ", distance);
+
+    if (done)
+        currentPathLenght = 0;
+    return done ? NAV_DONE : NAV_IN_PROCESS;
+}
+
 nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
     if (useAStar){
         /*
@@ -24,7 +38,7 @@ nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
             LOG_WARNING("No path found");
         return (navigationPath(currentPath, currentPathLenght));
         */
-       return NAV_IN_PROCESS;
+        return NAV_IN_PROCESS;
     }
     else 
         return (navigationPath(&pos, 1));

@@ -16,8 +16,8 @@
 #include "vision/ArucoCam.hpp"
 
 #define EMULATE_CAM
+#define DISABLE_LIDAR
 #ifndef __CROSS_COMPILE_ARM__
-    #define DISABLE_LIDAR
     #define TEST_API_ONLY
 #endif
 
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
         // Get Sensor Data
         {
             drive.update();
-            LOG_INFO("x: ", drive.position.x, " y: ", drive.position.y, " a: ", drive.position.a);
+            //LOG_INFO("x: ", drive.position.x, " y: ", drive.position.y, " a: ", drive.position.a);
 
             if (currentState != INIT && currentState != FIN)
             {
@@ -100,6 +100,7 @@ int main(int argc, char *argv[])
                 tableStatus.reset();
                 arduino.RGB_Rainbow();
             }
+            nextState = WAITSTART; // TODO REMOVE
             if (readButtonSensor() & !readLatchSensor())
                 nextState = WAITSTART;
             break;
@@ -153,6 +154,7 @@ int main(int argc, char *argv[])
                 LOG_GREEN_INFO("MANUAL");
                 arduino.RGB_Blinking(255, 0, 255); // Purple blinking
             }
+            navigationGo();
 
             // Execute the function as long as it returns false
             if (manual_currentFunc != NULL && manual_currentFunc != nullptr){

@@ -61,6 +61,8 @@ bool DriveControl::drive(position_t pos[], int n) {
     }
     // Use the position at the looking distance
     pos_target = pos[i];
+
+    /*
     double resulting_displ = looking_distance - total_distance + position_distance(from, pos_target);
     position_t displacement = position_vector(from, pos_target);
     position_normalize(displacement);
@@ -69,10 +71,12 @@ bool DriveControl::drive(position_t pos[], int n) {
 
     from.x += displacement.x;
     from.y += displacement.y;
-
     from.a = pos[n-1].a; // Use the last angle in the path
-    
     drive_interface::set_target(convertPositionToPacked(from));
+    */
+    
+    drive_interface::set_target(convertPositionToPacked(pos_target));
+    
     return false; // TODO return true if not moving
 }
 

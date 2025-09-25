@@ -426,8 +426,8 @@ void StartAPIServer(){
 
         // Apply the value
         // TODO
-        //drive.stop();
-        //drive.consigne_angulaire(drive.position.a + req_value, Rotation::SHORTEST);
+        position_t pos = {drive.position.x, drive.position.y, drive.position.a + req_value};
+        navigationGoTo(pos, true);
 
         LOG_INFO("Manual ctrl : Requested set_rotate, value=", req_value);
 
