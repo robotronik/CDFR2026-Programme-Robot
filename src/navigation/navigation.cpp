@@ -13,21 +13,23 @@ static nav_hash currentInstructionHash;
 
 static position_t currentPath[512];
 static int currentPathLenght = 0;
+static int pointAlongPathIndex = 0;
 
 nav_hash createHash(position_t pos);
 
 nav_return_t navigationGo(){
-    if (currentPathLenght == 0)
+    if (currentPathLenght == 0 || pointAlongPathIndex >= currentPathLenght)
         return NAV_DONE;
-    bool done = drive.drive(currentPath, currentPathLenght);
+    bool done = drive.drive(currentPath + pointAlongPathIndex, currentPathLenght - pointAlongPathIndex);
 
-    // Debug info
-    double distance = sqrt(pow(drive.position.x - drive.target.x, 2) + pow(drive.position.y - drive.target.y, 2));
-    LOG_DEBUG("E, ", distance);
-
-    if (done)
-        currentPathLenght = 0;
-    return done ? NAV_DONE : NAV_IN_PROCESS;
+    if (done){
+        pointAlongPathIndex += 1;
+        if (pointAlongPathIndex >= currentPathLenght){
+            // Done with navigation
+            return NAV_DONE;
+        }
+    }
+    return NAV_IN_PROCESS;
 }
 
 nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
@@ -52,7 +54,7 @@ nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd){
     }
     nav_return_t ireturn = NAV_IN_PROCESS;
     if (hashValue == currentInstructionHash && is_robot_stalled){
-        drive.drive(&drive.position, 1);
+        // Drive Break
         return NAV_PAUSED;
     }
 
@@ -62,8 +64,9 @@ nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd){
         }
         currentPathLenght = pathLenght;
         currentInstructionHash = hashValue;
+        pointAlongPathIndex = 0;
     }
-    return drive.drive(currentPath, currentPathLenght) ? NAV_DONE : NAV_IN_PROCESS;
+    return navigationGo();
 }
 
 void navigation_path_json(json& j){
