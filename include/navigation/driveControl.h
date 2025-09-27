@@ -13,6 +13,7 @@ class DriveControl : private drive_interface {
         position_t velocity;
         position_t acceleration;
         bool is_enabled;
+        bool is_slow_mode;
 
         // Sets the target position, true when done
         bool drive(position_t pos[], int n);

@@ -20,3 +20,4 @@ void navigationOpponentDetection();
 
 // FOR TESTING PURPOSES
 void fillCurrentPath(position_t path[], int pathLength);
+nav_return_t navigationGo();

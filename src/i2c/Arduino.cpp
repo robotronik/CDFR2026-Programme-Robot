@@ -10,7 +10,8 @@ Arduino::Arduino(){
 #ifndef __CROSS_COMPILE_ARM__
     i2cFile = -1;
 #else
-    i2cFile = I2COpenSlave(ARDUINO_SLAVE_ADDRESS);
+    i2cFile = -1; // TODO REMOVE
+    //i2cFile = I2COpenSlave(ARDUINO_SLAVE_ADDRESS);
 #endif
     if (i2cFile == -1) return; // Emulation
     uint8_t version;

@@ -3,6 +3,9 @@
 #include "defs/structs.hpp"
 #include <math.h>
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 DriveControl::DriveControl() {
     int version = drive_interface::get_version();
 
@@ -21,6 +24,7 @@ void DriveControl::reset() {
     velocity = {0.0, 0.0, 0.0};
     acceleration = {0.0, 0.0, 0.0};
     is_enabled = false;
+    is_slow_mode = false;
     drive_interface::disable();
     drive_interface::set_target(convertPositionToPacked(target));
     drive_interface::set_coordinates(convertPositionToPacked(position));
@@ -28,7 +32,7 @@ void DriveControl::reset() {
     drive_interface::set_max_torque(10.0);
 }
 
-// Returns true if done
+// Returns true if done or point reached
 bool DriveControl::drive(position_t pos[], int n) {
     if (!is_enabled){
         LOG_WARNING("Not enabled");
@@ -39,17 +43,12 @@ bool DriveControl::drive(position_t pos[], int n) {
         return false;
     }
 
-    // TODO Check if the robot is moving
-    const double max_lin_speed = 1000.0; // mm/s
-    const double max_ang_speed = 180.0; // degrees/s
-    double linear_speed = position_length(velocity);
-    double angular_speed = fabs(velocity.a);
-
     // Calculate the target point along the path
     position_t pos_target;
 
     // Calculate a distance along the path
-    const double looking_distance = fmin(100.0 + linear_speed, max_lin_speed) / 3.0;
+    const double looking_distance = is_slow_mode ? 40.0 : 100.0; // 40 to 100mm (turn radius)
+    const double looking_angle = is_slow_mode ? 8.0 : 30.0; // 8 to 30 degrees
     double total_distance = position_distance(position, pos[0]);
     position_t from = position;
     int i = 0;
@@ -61,18 +60,40 @@ bool DriveControl::drive(position_t pos[], int n) {
     }
     // Use the position at the looking distance
     pos_target = pos[i];
-    double resulting_displ = looking_distance - total_distance + position_distance(from, pos_target);
-    position_t displacement = position_vector(from, pos_target);
-    position_normalize(displacement);
-    displacement.x *= resulting_displ;
-    displacement.y *= resulting_displ;
 
-    from.x += displacement.x;
-    from.y += displacement.y;
+    double error_heading = pos_target.a - from.a;
+    while (error_heading > 180.0) error_heading -= 360.0;
+    while (error_heading < -180.0) error_heading += 360.0;
+    pos_target.a = position.a + MIN(MAX(error_heading, -looking_angle), looking_angle);
+    // Use the angle to the target
 
-    from.a = pos[n-1].a; // Use the last angle in the path
+    if (total_distance > looking_distance){
+        double resulting_displ = looking_distance - total_distance + position_distance(from, pos_target);
+        position_t displacement = position_vector(from, pos_target);
+        position_normalize(displacement);
+        displacement.x *= resulting_displ;
+        displacement.y *= resulting_displ;
+
+        from.x += displacement.x;
+        from.y += displacement.y;
+        from.a = pos_target.a; // Use the last angle in the path
+        drive_interface::set_target(convertPositionToPacked(from));
+    }
+    else{
+        drive_interface::set_target(convertPositionToPacked(pos_target));
+    }
+
+    bool is_done_pos = position_distance(position, pos[n - 1]) < 8.0 && fabs(velocity.x) < 1.0 && fabs(velocity.y) < 1.0;
+    bool is_done_ang = fabs(error_heading) < 2.0 && fabs(velocity.a) < 5.0;
+
+    if (is_done_pos && is_done_ang){
+        return true;
+    }
+
+    bool has_passed_sub_target = position_distance(position, pos_target) < looking_distance;
+    if (has_passed_sub_target)
+        return true;
     
-    drive_interface::set_target(convertPositionToPacked(from));
     return false; // TODO return true if not moving
 }
 
