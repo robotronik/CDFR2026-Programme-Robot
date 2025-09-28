@@ -10,7 +10,7 @@
 #include "actions/functions.h"
 #include "lidar/lidarAnalize.h"
 #include "navigation/navigation.h"
-#include "navigation/nav.h"
+#include "navigation/astar.h"
 #include "utils/utils.h"
 #include "utils/logger.hpp"
 #include "restAPI/restAPI.hpp"
@@ -263,6 +263,12 @@ int StartSequence()
     manual_ctrl = false;
     manual_currentFunc = NULL;
 
+    initialize_costmap();
+
+    // TODO REMOVE
+    place_obstacle_rect_with_inflation(400, 0, 100, 100, SECURITE_OPPONENT);
+
+
     drive.reset();
 
     LOG_GREEN_INFO("Init sequence done");
@@ -327,12 +333,10 @@ void EndSequence()
     LOG_GREEN_INFO("Stopped");
 }
 
+
 void tests()
 {
     TestAPIServer();
-    sleep(1);
-    LOG_DEBUG("Starting main debug loop");
-    initialize_costmap();
 
     place_obstacle_rect_with_inflation(-725,  675, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
     place_obstacle_rect_with_inflation(-325, 1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
@@ -353,15 +357,12 @@ void tests()
 
         //position depart et arrivé aléatoire
         int start_ix = 0, start_iy = 0, goal_ix = 0, goal_iy = 0;
-        while (costmap[start_ix][start_iy] == OBSTACLE_COST || costmap[goal_ix][goal_iy] == OBSTACLE_COST){
-            drive.position.x = rand() % (1700) - 1700 / 2;
-            drive.position.y = rand() % (2700) - 2700 / 2;
-            drive.target.x = rand() % (1700) - 1700 / 2;
-            drive.target.y = rand() % (2700) - 2700 / 2;
-            
-            convert_pos_to_index(drive.position, start_ix, start_iy);
-            convert_pos_to_index(drive.target, goal_ix, goal_iy);
-        }
+        position_t target;
+        target.x = rand() % (600) - 600 / 2;
+        target.y = rand() % (600) - 600 / 2;
+        
+        convert_pos_to_index(drive.position, start_ix, start_iy);
+        convert_pos_to_index(target, goal_ix, goal_iy);
 
         //définition
         nav_pos_t path[1024], path_smooth[1024];

@@ -4,6 +4,7 @@
 #include "defs/constante.h" // DISTANCESTOP and DISTANCESTART
 #include "utils/logger.hpp"
 #include "lidar/lidarAnalize.h"
+#include "navigation/pathfind.h"
 
 
 static bool is_robot_stalled = false;
@@ -11,7 +12,7 @@ static unsigned long robot_stall_start_time;
 typedef std::size_t nav_hash;
 static nav_hash currentInstructionHash;
 
-static position_t currentPath[512];
+static position_t currentPath[1024];
 static int currentPathLenght = 0;
 static int pointAlongPathIndex = 0;
 
@@ -39,25 +40,27 @@ void fillCurrentPath(position_t path[], int pathLength) {
 
 nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
     if (useAStar){
-        /*
-        currentPathLenght = AStar_calculate(drive.position, pos, currentPath);
-        if (currentPathLenght == -1)
+        currentPathLenght = pathfind(drive.position, pos, currentPath);
+        if (currentPathLenght == -1){
             LOG_WARNING("No path found");
-        return (navigationPath(currentPath, currentPathLenght));
-        */
-        return NAV_IN_PROCESS;
+            if (!is_robot_stalled){
+                is_robot_stalled = true;
+                robot_stall_start_time = _millis();
+            }
+        }
+        else
+            LOG_WARNING("Path found!");
+        return (navigationPath(currentPath, currentPathLenght, turnEnd));
     }
     else 
-        return (navigationPath(&pos, 1));
+        return (navigationPath(&pos, 1, turnEnd));
 }
-
 
 nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd){
     nav_hash hashValue = 0;
     for (int i = 0; i < pathLenght; i++){
         hashValue += createHash(path[i]);
     }
-    nav_return_t ireturn = NAV_IN_PROCESS;
     if (hashValue == currentInstructionHash && is_robot_stalled){
         // Drive Break
         return NAV_PAUSED;

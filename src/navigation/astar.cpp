@@ -1,4 +1,4 @@
-#include "navigation/nav.h"
+#include "navigation/astar.h"
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -340,34 +340,4 @@ void print_costmap_with_path(nav_pos_t *path, int path_len) {
         printf("\n");
     }
     printf("\n");
-}
-
-int convert_x_to_index(double x) {
-    int offset = 1000; // Décalage pour convertir [-1000:1000] en [0:2000]
-    int index = round((x + offset) / RESOLUTION);
-    if (index < 0 || index > WIDTH) {
-        LOG_WARNING("Erreur: index hors limites index: ", index, ", x: ", x);
-        index = CLAMP(index, 0, WIDTH - 1); // Clamp pour éviter les erreurs
-    }
-    return index;
-}
-int convert_y_to_index(double y) {
-    int offset = 1500; // Décalage pour convertir [-1500:1500] en [0:3000]
-    int index = round((y + offset) / RESOLUTION);
-    if (index < 0 || index > WIDTH) {
-        LOG_WARNING("Erreur: index hors limites index: ", index, ", y: ", y);
-        index = CLAMP(index, 0, HEIGHT - 1); // Clamp pour éviter les erreurs
-    }
-    return index;
-}
-void convert_pos_to_index(position_t pos, int& ix, int& iy){
-    ix = convert_x_to_index(pos.x);
-    iy = convert_y_to_index(pos.y);
-}
-
-void convert_path_to_coordinates(nav_pos_t nav_path[], int path_len, position_t path[]) {
-    for (int i = 0; i < path_len; i++) {
-        path[i].x = nav_path[i].x * RESOLUTION - 1000; // Conversion en coordonnées x
-        path[i].y = nav_path[i].y * RESOLUTION - 1500; // Conversion en coordonnées y
-    }
 }

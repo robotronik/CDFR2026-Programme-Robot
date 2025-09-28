@@ -8,7 +8,7 @@
 #include "defs/tableState.hpp"
 #include "lidar/lidarAnalize.h" //for static variable
 #include "navigation/navigation.h"
-#include "navigation/nav.h" //for static variable
+#include "navigation/astar.h" //for static variable
 #include "actions/functions.h" //for state machine functions
 
 #include "restAPI/crow.hpp"
@@ -411,13 +411,13 @@ void StartAPIServer(){
             double req_a_value = req_data["a"];
             LOG_INFO("Manual ctrl : Requested set_target_coordinates_Astart, x=", req_x_value, " y=", req_y_value, " a=", req_a_value);
             position_t pos = {req_x_value, req_y_value, req_a_value};
-            navigationGoTo(pos, true);
+            navigationGoTo(pos, true, true);
         }
         else{
             LOG_INFO("Manual ctrl : Requested set_target_coordinates_Astart, x=", req_x_value, " y=", req_y_value);
             position_t pos = {req_x_value, req_y_value, 0};
 
-            navigationGoTo(pos, true);
+            navigationGoTo(pos, true, true);
         }
 
         json response;
