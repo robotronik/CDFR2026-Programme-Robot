@@ -122,8 +122,8 @@ void StartAPIServer(){
         // Costmap
 
         json costmap_json = json::array();
-        for (int y = 0; y < HEIGHT; ++y) {
-            for (int x = 0; x < WIDTH; ++x) {
+        for (int y = 0; y < AS_HEIGHT; ++y) {
+            for (int x = 0; x < AS_WIDTH; ++x) {
                 int cost = costmap[y][x];
                 if (cost > 0) {
                     costmap_json.push_back({
@@ -206,8 +206,8 @@ void StartAPIServer(){
     json costmap_json = json::array();
 
     // Remplace cette boucle par ton accès réel à la costmap
-    for (int y = 0; y < HEIGHT; ++y) {
-        for (int x = 0; x < WIDTH; ++x) {
+    for (int y = 0; y < AS_HEIGHT; ++y) {
+        for (int x = 0; x < AS_WIDTH; ++x) {
             int cost = costmap[y][x]; // remplace avec ton tableau réel
             if (cost > 0) { // Filtrage pour alléger la réponse
                 costmap_json.push_back({

@@ -33,11 +33,5 @@ typedef struct
     bool   onTable;
 } lidarAnalize_t;
 
-typedef struct 
-{
-    int  x;
-    int  y;
-    int cost;
-} nav_pos_t; 
 // Define serialization for lidarAnalize_t
 void to_json(json& j, const lidarAnalize_t& p);
