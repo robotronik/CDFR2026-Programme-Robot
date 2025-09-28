@@ -86,12 +86,12 @@ bool DriveControl::drive(position_t pos[], int n) {
     bool is_done_pos = position_distance(position, pos[n - 1]) < 8.0 && fabs(velocity.x) < 1.0 && fabs(velocity.y) < 1.0;
     bool is_done_ang = fabs(error_heading) < 2.0 && fabs(velocity.a) < 5.0;
 
-    if (is_done_pos && is_done_ang){
+    if (is_done_pos && is_done_ang && n == 1){
         return true;
     }
 
-    bool has_passed_sub_target = position_distance(position, pos_target) < looking_distance;
-    if (has_passed_sub_target)
+    bool has_passed_sub_target = position_distance(position, pos[0]) < looking_distance;
+    if (has_passed_sub_target && n > 1)
         return true;
     
     return false; // TODO return true if not moving
