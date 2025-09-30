@@ -31,3 +31,4 @@ int astar_smooth_path2(astar_pos_t *in_path, int in_length, position_t *out_path
 void astar_print_costmap_with_path(astar_pos_t *path, int path_len);
 void astar_print_costmap();
 void astar_print_costmap_around_point(int x, int y);
+json astar_get_costmap_json();

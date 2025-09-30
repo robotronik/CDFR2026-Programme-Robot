@@ -333,3 +333,22 @@ void astar_print_costmap_with_path(astar_pos_t *path, int path_len) {
     }
     printf("\n");
 }
+
+json astar_get_costmap_json() {
+    json costmap_json = json::array();
+
+    for (int y = 0; y < AS_HEIGHT; ++y) {
+        for (int x = 0; x < AS_WIDTH; ++x) {
+            int cost = costmap[y][x];
+            if (cost > 0) {
+                costmap_json.push_back({
+                    {"x", x},
+                    {"y", y},
+                    {"cost", cost}
+                });
+            }
+        }
+    }
+
+    return costmap_json;
+}

@@ -120,21 +120,7 @@ void StartAPIServer(){
         response["target_pos"] = (position_t)drive.target;
         response["pos"] = (position_t)drive.position;
         // Costmap
-
-        json costmap_json = json::array();
-        for (int y = 0; y < AS_HEIGHT; ++y) {
-            for (int x = 0; x < AS_WIDTH; ++x) {
-                int cost = costmap[y][x];
-                if (cost > 0) {
-                    costmap_json.push_back({
-                        {"x", x},
-                        {"y", y},
-                        {"cost", cost}
-                    });
-                }
-            }
-        }
-        response["costmap"] = costmap_json;
+        response["costmap"] = astar_get_costmap_json();
 
         return crow::response(response.dump());
     });
@@ -202,24 +188,9 @@ void StartAPIServer(){
 
     CROW_ROUTE(app, "/get_costmap")
     ([](){
-    json response;
-    json costmap_json = json::array();
-
-    // Remplace cette boucle par ton accès réel à la costmap
-    for (int y = 0; y < AS_HEIGHT; ++y) {
-        for (int x = 0; x < AS_WIDTH; ++x) {
-            int cost = costmap[y][x]; // remplace avec ton tableau réel
-            if (cost > 0) { // Filtrage pour alléger la réponse
-                costmap_json.push_back({
-                    {"x", x},
-                    {"y", y},
-                    {"cost", cost}
-                });
-            }
-        }
-    }
-    response["costmap"] = costmap_json;
-    return crow::response(response.dump());
+        json response;
+        response["costmap"] = astar_get_costmap_json();
+        return crow::response(response.dump());
     });
 
     // ------------------------------- POST Routes -------------------------------
