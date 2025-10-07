@@ -22,8 +22,11 @@ void TableState::reset(){
 int TableState::getScore()
 {
     int totalScore = 0;
-    if (isRobotInArrivalZone((position_t)drive.position)) // TODO
-        totalScore += 10;
+    // TODO, should be "completely inside" and not just "in"
+    if (isRobotInArrivalZone((position_t)drive.position))
+        totalScore += 5;
+    if (isRobotInArrivalZone((position_t)drive.position))
+        totalScore += 5;
     return totalScore;
 }
 

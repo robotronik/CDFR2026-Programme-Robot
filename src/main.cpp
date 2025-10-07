@@ -10,7 +10,6 @@
 #include "actions/functions.h"
 #include "lidar/lidarAnalize.h"
 #include "navigation/navigation.h"
-#include "navigation/astar.h" // TODO Remove after tests
 #include "navigation/pathfind.h"
 #include "utils/utils.h"
 #include "utils/logger.hpp"
@@ -175,8 +174,9 @@ int main(int argc, char *argv[])
                     manual_currentFunc = NULL;
                 }
             }
-            if (!manual_ctrl)
-                nextState = FIN;
+            if (!manual_ctrl){
+                exit_requested = true;
+            }
             break;
         }
         //****************************************************************
@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
 
             if (!readLatchSensor()){
                 enableActuators();
-                exit_requested = true; // nextState = INIT;
+                exit_requested = true;
             }
             break;
         }
@@ -267,7 +267,7 @@ int StartSequence()
     pathfindInit();
 
     // TODO REMOVE
-    pathfind_place_obstacle_rect_with_inflation(400, 0, 100, 100, SECURITE_OPPONENT);
+    pathfind_place_obstacle_rect_with_inflation(400, 0, 100, 100, 200);
 
 
     drive.reset();
@@ -338,53 +338,23 @@ void EndSequence()
 void tests()
 {
     TestAPIServer();
-
-    pathfind_place_obstacle_rect_with_inflation(-725,  675, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
-    pathfind_place_obstacle_rect_with_inflation(-325, 1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
-    pathfind_place_obstacle_rect_with_inflation( 600, 1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
-    pathfind_place_obstacle_rect_with_inflation( 750,  725, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
-    pathfind_place_obstacle_rect_with_inflation(  50,  400, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
-    pathfind_place_obstacle_rect_with_inflation(-725, -675, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
-    pathfind_place_obstacle_rect_with_inflation(-325,-1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
-    pathfind_place_obstacle_rect_with_inflation( 600,-1425,  STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
-    pathfind_place_obstacle_rect_with_inflation( 750, -725, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
-    pathfind_place_obstacle_rect_with_inflation(  50, -400,  STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
-
-    // Place the opponent obstacle
-    pathfind_place_obstacle_rect_with_inflation(tableStatus.pos_opponent.x, tableStatus.pos_opponent.y, ROBOT_WIDTH, ROBOT_WIDTH, SECURITE_OPPONENT);
+    pathfind_setup();
     
     while(!exit_requested){
         usleep(500000); 
 
         //position depart et arrivé aléatoire
         int start_ix = 0, start_iy = 0, goal_ix = 0, goal_iy = 0;
-        position_t target;
+        position_t target, start, goal;
         target.x = rand() % (600) - 600 / 2;
         target.y = rand() % (600) - 600 / 2;
 
-        /*
+        start.x = rand() % (1400) - 1400 / 2;
+        start.y = rand() % (1400) - 1400 / 2;
+        start.a = rand() % 360;
+        drive.setCoordinates(start);
         
-        convert_pos_to_index(drive.position, start_ix, start_iy);
-        convert_pos_to_index(target, goal_ix, goal_iy);
-
-        //définition
-        astar_pos_t path[1024], path_smooth[1024];
-        position_t final_path[1024];
-
-        //calcul a* puis smooth
-        a_star(start_ix, start_iy, goal_ix, goal_iy);   
-        int path_len = reconstruct_path_points(start_ix, start_iy, goal_ix, goal_iy, path, 1024);
-        int smooth_path_len = smooth_path(path, path_len, path_smooth, 1024);
-        convert_path_to_coordinates(path_smooth, smooth_path_len, final_path);
-
-        //affichage log et RestApi des coordonnée smooth path
-        LOG_GREEN_INFO("Smooth Path with Costs:");
-        for (int i = 0; i < smooth_path_len; ++i) {
-            LOG_INFO("Point ", i, ": (x = ", final_path[i].x, ", y = ", final_path[i].y);
-        }
-        fillCurrentPath(final_path,smooth_path_len);
-
-        */
+        navigationGoTo(target, true, true);
     }
     StopAPIServer();
     api_server_thread.join();

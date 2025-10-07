@@ -94,7 +94,7 @@ bool DriveControl::drive(position_t pos[], int n) {
     if (has_passed_sub_target && n > 1)
         return true;
     
-    return false; // TODO return true if not moving
+    return false; // Not done
 }
 
 void DriveControl::update() {

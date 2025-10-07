@@ -70,3 +70,16 @@ void pathfind_place_obstacle_rect_with_inflation(double cx, double cy, int heigh
 
     astar_place_obstacle_rect_with_inflation(ix, iy, h_cells, w_cells, inflation_radius);
 }
+
+void pathfind_setup() {
+    pathfind_place_obstacle_rect_with_inflation(-725,  675, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
+    pathfind_place_obstacle_rect_with_inflation(-325, 1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
+    pathfind_place_obstacle_rect_with_inflation( 600, 1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
+    pathfind_place_obstacle_rect_with_inflation( 750,  725, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
+    pathfind_place_obstacle_rect_with_inflation(  50,  400, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
+    pathfind_place_obstacle_rect_with_inflation(-725, -675, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
+    pathfind_place_obstacle_rect_with_inflation(-325,-1425, STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
+    pathfind_place_obstacle_rect_with_inflation( 600,-1425,  STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
+    pathfind_place_obstacle_rect_with_inflation( 750, -725, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
+    pathfind_place_obstacle_rect_with_inflation(  50, -400,  STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
+}
