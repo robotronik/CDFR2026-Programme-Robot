@@ -341,17 +341,19 @@ void StartAPIServer(){
         if (req_data.contains("y"))
             req_y_value = req_data["y"];
 
+        double req_a_value = drive.position.a;
+
         // Apply the values
         if (req_data.contains("a")){
             double req_a_value = req_data["a"];
             LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", req_x_value, " y=", req_y_value, " a=", req_a_value);
-            position_t pos = {req_x_value, req_y_value, drive.position.a};
-            navigationGoTo(pos, true);
+            position_t pos = {req_x_value, req_y_value, req_a_value};
+            navigationGoTo(pos, true, false);
         }
         else{
             LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", req_x_value, " y=", req_y_value);
-            position_t pos = {req_x_value, req_y_value, 0};
-            navigationGoTo(pos, false);
+            position_t pos = {req_x_value, req_y_value, req_a_value};
+            navigationGoTo(pos, false, false);
         }
 
         json response;
@@ -377,16 +379,17 @@ void StartAPIServer(){
         if (req_data.contains("y"))
             req_y_value = req_data["y"];
 
+        double req_a_value = drive.position.a;
+
         // Apply the values
         if (req_data.contains("a")){
-            double req_a_value = req_data["a"];
             LOG_INFO("Manual ctrl : Requested set_target_coordinates_Astart, x=", req_x_value, " y=", req_y_value, " a=", req_a_value);
             position_t pos = {req_x_value, req_y_value, req_a_value};
             navigationGoTo(pos, true, true);
         }
         else{
             LOG_INFO("Manual ctrl : Requested set_target_coordinates_Astart, x=", req_x_value, " y=", req_y_value);
-            position_t pos = {req_x_value, req_y_value, 0};
+            position_t pos = {req_x_value, req_y_value, req_a_value};
 
             navigationGoTo(pos, true, true);
         }
