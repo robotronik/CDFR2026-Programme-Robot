@@ -66,7 +66,7 @@ void ctrlz(int signal)
 
 int main(int argc, char *argv[])
 {
-    LOG_DEBUG("Log id is : ",log_asserv()->getLogID());
+    LOG_DEBUG("LOG ID : ",log_asserv()->getLogID());
     if (StartSequence() != 0)
         return -1;
 
