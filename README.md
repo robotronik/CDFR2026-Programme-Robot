@@ -197,6 +197,27 @@ If you are running the Raspberry Pi OS with the default desktop, you can add the
    @/usr/bin/chromium-browser --kiosk http://localhost/robot --incognito --disable-extensions
    ```
 
+✅ Correct setup for Debian 13 (GNOME / Wayland)
+
+Create the file:
+
+~/.config/autostart/kiosk.desktop
+
+With this content:
+```bash
+[Desktop Entry]
+Type=Application
+Name=Kiosk Mode
+Exec=bash -c "sleep 5 && /usr/bin/chromium --kiosk http://localhost/robot --incognito --disable-extensions"
+X-GNOME-Autostart-enabled=true
+```
+Then:
+```bash
+chmod +x ~/.config/autostart/kiosk.desktop
+```
+That’s the correct GNOME-compatible autostart format.
+
+
 3. Save the file and reboot the system.
 
 ## ⚙️ Actions and Actuators
