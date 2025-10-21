@@ -251,8 +251,7 @@ In the code, these elements are referred to as *banner*, *stocks*, *columns*, *p
 ## ✅ Match Checklist
 
 - Position the robot.
-- Elevator at the bottom position.
-- Clamp at the bottom position.
+- Setup mechanical parts.
 - Choose color.
 - Select strategy (verify on the live table).
 - Ready to start.
