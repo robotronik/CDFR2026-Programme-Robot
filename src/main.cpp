@@ -16,10 +16,10 @@
 #include "restAPI/restAPI.hpp"
 #include "vision/ArucoCam.hpp"
 
-#define EMULATE_CAM
 #define DISABLE_LIDAR
 #ifndef __CROSS_COMPILE_ARM__
     #define TEST_API_ONLY
+    #define EMULATE_CAM
 #endif
 
 
@@ -32,7 +32,7 @@ Arduino arduino;
 Lidar lidar;
 
 #ifndef EMULATE_CAM
-ArucoCam arucoCam1(0, "data/brio3.yaml");
+ArucoCam arucoCam1(0, "data/OV9281_1280_800.yaml");
 #else
 ArucoCam arucoCam1(-1, "");
 #endif

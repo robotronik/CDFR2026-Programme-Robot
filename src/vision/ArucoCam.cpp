@@ -26,16 +26,16 @@ ArucoCam::ArucoCam(int cam_number, const char* calibration_file_path) {
         return;
     }
     // Child process: Split the args string into individual arguments
-    char *args[] = {
-        (char *)"python3",
-        (char *)"detect_aruco.py",
-        (char *)calibration_file_path,
-        (char *)"--api-port",
-        (char *)std::to_string(PORT_OFFSET + id).c_str(),
-        (char *)"--cam",
-        (char *)std::to_string(id).c_str(),
-        (char *)"--headless",
-        (char *)"True",
+    std::string port = std::to_string(PORT_OFFSET + id);
+
+    char* args[] = {
+        (char*)"/usr/bin/python3",
+        (char*)"pi_detect_aruco.py",
+        (char*)calibration_file_path,
+        (char*)"--api-port",
+        (char*)port.c_str(),
+        (char*)"--headless",
+        (char*)"True",
         nullptr
     };
 
@@ -141,6 +141,10 @@ bool restAPI_GET(const std::string &url, const std::string &resquest, json &resp
 
 pid_t startPythonProgram(char ** args) {
     pid_t pid = fork();
+
+    setenv("HOME", "/home/robotronik", 1);
+    setenv("USER", "robotronik", 1);
+    setenv("PYTHONPATH", "/home/robotronik/.local/lib/python3.13/site-packages", 1);
 
     if (pid == -1) {
         LOG_ERROR("startPythonProgram - Failed to fork process");

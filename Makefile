@@ -102,7 +102,7 @@ ARM_CXX = $(CROSS_COMPILE_PREFIX)-g++
 
 # Raspberry Pi Deployment Info
 PI_USER = robotronik
-PI_HOST = raspitronik.local
+PI_HOST = 192.168.0.135
 PI_DIR = /home/$(PI_USER)/CDFR
 
 # Define the ARM target and object directory for cross-compilation
@@ -207,11 +207,11 @@ copy_install_sh: | $(ARMBINDIR)
 # Rule to copy the python aruco detection directory to the bin
 copy_aruco: | $(BINDIR)
 	cp -r ../PythonArucoOpenCV/data $(BINDIR)
-	cp ../PythonArucoOpenCV/detect_aruco.py $(BINDIR)
+	cp ../PythonArucoOpenCV/pi_detect_aruco.py $(BINDIR)
 # Rule to copy the python aruco detection directory to the arm bin
 copy_aruco_arm: | $(ARMBINDIR)
 	cp -r ../PythonArucoOpenCV/data $(ARMBINDIR)
-	cp ../PythonArucoOpenCV/detect_aruco.py $(ARMBINDIR)
+	cp ../PythonArucoOpenCV/pi_detect_aruco.py $(ARMBINDIR)
 
 
 
