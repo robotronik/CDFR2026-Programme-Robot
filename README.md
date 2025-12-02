@@ -156,9 +156,18 @@ http://raspitronik.local
 
 ## 📺 Touchscreen on the Robot
 
-To launch Chromium in kiosk mode on the robot, execute:
+To set up the touchscreen kiosk mode on the Raspberry Pi, first disable NTP and set the date to avoid SSL issues:
+```bash
+sudo timedatectl set-ntp false
+sudo timedatectl set-time '2025-12-02 19:40:00'
+sudo apt-get update
+sudo apt-get upgrade -y
+```
+
+Then, install Xorg, Openbox, and Chromium if not already installed:
 
 ```bash
+sudo apt install libcamera-apps
 sudo apt-get install xorg openbox chromium-browser
 sudo apt install xorg openbox -y
 export DISPLAY=:0
@@ -188,7 +197,8 @@ If you are running the Raspberry Pi OS with the default desktop, you can add the
 1. Open (or create if it doesn’t exist) the autostart file:
 
    ```bash
-   /home/pi/.config/autostart/kiosk.desktop
+   mkdir -p /home/robotronik/.config/autostart
+   nano /home/robotronik/.config/autostart/kiosk.desktop
    ```
 
 2. Add the following command:
