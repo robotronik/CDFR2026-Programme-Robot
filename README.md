@@ -218,7 +218,7 @@ With this content:
 [Desktop Entry]
 Type=Application
 Name=Kiosk Mode
-Exec=bash -c "sleep 5 && /usr/bin/chromium --kiosk http://localhost/robot --incognito --disable-extensions"
+Exec=bash -c "sleep 5 && /usr/bin/chromium http://localhost/robot --incognito --no-first-run --no-default-browser-check --password-store=basic"
 X-GNOME-Autostart-enabled=true
 ```
 Then:

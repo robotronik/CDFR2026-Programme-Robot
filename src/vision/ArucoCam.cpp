@@ -54,7 +54,7 @@ ArucoCam::~ArucoCam(){
     if (pid > 0)
         stopPythonProgram(pid);
 }
-bool ArucoCam::getPos(int & x, int & y, int & a) {
+bool ArucoCam::getPos(double & x, double & y, double & a) {
     if (status == false) {
         LOG_ERROR("ArucoCam ", id, " is not running, will start it now");
         start();
@@ -76,10 +76,15 @@ bool ArucoCam::getPos(int & x, int & y, int & a) {
     int failedFrames = response.value("failedFrames", -1);
     int sucessFrames = response.value("sucessFrames", -1);
     // int totalFrames = response.value("totalFrames", -1);
-    if (failedFrames > SCAN_FAIL_FRAMES_NUM) {
-        LOG_WARNING("Cam has too many failed frames : ", failedFrames);
+    if (failedFrames == -1 || sucessFrames == -1) {
+        LOG_ERROR("ArucoCam::getPos() - Invalid response data, camera might not be running");
+        status = false;
         return false;
     }
+    /*if (failedFrames > SCAN_FAIL_FRAMES_NUM) {
+        LOG_WARNING("Cam has too many failed frames : ", failedFrames);
+        return false;
+    }*/
     if (sucessFrames < SCAN_DONE_FRAMES_NUM) {
         LOG_WARNING("Cam has not enough good success frames : ", sucessFrames);
         return false;
