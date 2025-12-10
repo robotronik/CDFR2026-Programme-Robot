@@ -5,6 +5,7 @@
 #include "defs/constante.h"
 #include "lidar/Lidar.hpp"
 #include "navigation/driveControl.h"
+#include "vision/ArucoCam.hpp"
 
 typedef enum {
     INIT = 0,
@@ -24,6 +25,7 @@ extern TableState tableStatus;
 extern DriveControl drive;
 extern Arduino arduino;
 extern Lidar lidar;
+extern ArucoCam arucoCam1;
 
 extern bool manual_ctrl;
 // Declare a function pointer

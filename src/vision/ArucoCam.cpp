@@ -11,7 +11,7 @@ using json = nlohmann::json;
 
 #define PORT_OFFSET 5000
 #define SCAN_FAIL_FRAMES_NUM 10
-#define SCAN_DONE_FRAMES_NUM 30
+#define SCAN_DONE_FRAMES_NUM 20
 
 pid_t startPythonProgram(char** args);
 void stopPythonProgram(pid_t pid);
@@ -96,7 +96,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a) {
     a = position.value("a", 0);
     LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted
-    // TODO Maybe call stop() so the cam is not running anymore
+    stop();
     return true;
 }
 

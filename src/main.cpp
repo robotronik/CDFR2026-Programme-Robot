@@ -14,7 +14,6 @@
 #include "utils/utils.h"
 #include "utils/logger.hpp"
 #include "restAPI/restAPI.hpp"
-#include "vision/ArucoCam.hpp"
 
 #define DISABLE_LIDAR
 #ifndef __CROSS_COMPILE_ARM__
@@ -102,7 +101,9 @@ int main(int argc, char *argv[])
                 tableStatus.reset();
                 arduino.RGB_Rainbow();
             }
+
             nextState = WAITSTART; // TODO REMOVE
+
             if (readButtonSensor() & !readLatchSensor())
                 nextState = WAITSTART;
             break;

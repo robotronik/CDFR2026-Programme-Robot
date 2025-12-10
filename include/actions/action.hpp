@@ -17,6 +17,7 @@ public:
 
 private:
     ReturnFSM_t GatherStock();
+    ReturnFSM_t Calibrate();
 
     typedef enum
     {
@@ -33,4 +34,12 @@ private:
     } StateGatherStock_t;
 
     StateGatherStock_t gatherStockState = FSM_GATHER_NAV;
+
+    typedef enum
+    {
+        FSM_CALIBRATION_NAV,
+        FSM_CALIBRATION_CALIBRATE
+    } StateCalibration_t;
+
+    StateCalibration_t calibrationState = FSM_CALIBRATION_NAV;
 };
