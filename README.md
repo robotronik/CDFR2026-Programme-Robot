@@ -28,8 +28,6 @@ For ARM (Raspberry Pi) compilation, install:
 sudo apt-get install g++-aarch64-linux-gnu
 ```
 
-*Note:* You do not need to install `libi2c-dev_4.3-2`.
-
 For debugging, install:
 
 ```bash
