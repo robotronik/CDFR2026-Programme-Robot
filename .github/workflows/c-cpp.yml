@@ -18,8 +18,8 @@ jobs:
       with:
         packages: make gcc g++ libasio-dev
 
-    - name: Clone Lib Commune
-      run: git clone https://github.com/robotronik/librairie-commune.git ../librairie-commune
+    - name: Clone CDFR2026-Program-DriveControl
+      run: git clone https://github.com/robotronik/CDFR2026-Program-DriveControl.git ../CDFR2026-Program-DriveControl
     - name: Clone Aruco OpenCV
       run: git clone https://github.com/robotronik/PythonArucoOpenCV.git ../PythonArucoOpenCV
     - name: Clone Arduino
