@@ -136,9 +136,8 @@
             // Draw robot
             ctx.lineWidth = 4;
             ctx.strokeStyle = 'white';
-            drawSquare(ctx, data["pos"]["y"], 
-                            data["pos"]["x"], 
-                            250, 
+            drawRobot(ctx, data["pos"]["y"], 
+                            data["pos"]["x"],
                             data["pos"]["a"]);
 
             //Draws an arrow of the target position
@@ -186,22 +185,18 @@
         }
 
         //Screen coords, relative to center
-        function drawSquare(ctx, x, y, size, angleDeg) {
+        function drawRobot(ctx, x, y, angleDeg) {
             // Convert angle from degrees to radians
             const angleRad = angleDeg * Math.PI / 180;
 
-            // Calculate half size
-            const halfSize = size / 2;
-
             // Calculate corner points relative to the center of the square
             const points = [
-                { x: halfSize, y: -halfSize },
-                { x: halfSize, y: halfSize },
-                { x: -halfSize, y: halfSize },
-                { x: -halfSize, y: -halfSize },
-                { x: halfSize, y: -halfSize },
-                { x: 0, y: -halfSize * 0.8 },
-                { x: -halfSize, y: -halfSize },
+                { x: -200, y: -115 },
+                { x: 0, y: 231 },
+                { x: 200, y: -115 },
+                { x: -200, y: -115 },
+                { x: 0, y: -50 },
+                { x: 200, y: -115 }
             ];
 
             // Rotate points around the center

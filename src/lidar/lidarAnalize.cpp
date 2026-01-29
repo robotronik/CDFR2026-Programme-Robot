@@ -23,24 +23,18 @@ void convertAngularToAxialCompensated(
     int           narrow
 ) {
     for(int i = 0; i < count; i++){
-        // 1) time offset for this beam:
-        double bearing = data[i].angle;
-        double dt      = bearing / 360.0 * scan_period;
+        // Time offset for this beam
+        double dt = (360.0 - data[i].angle) / 360.0 * scan_period;
+        dt = scan_period/2.0; // TEMPORARY FIX FOR TESTING PURPOSES
 
-        // 2) pose at capture time:
-        double xi = start.x + velocity.x * dt;  // mm
-        double yi = start.y + velocity.y * dt;  // mm
-        double ai = start.a + velocity.a * dt;  // deg
+        // Pose at capture time
+        double global_angle = -data[i].angle + start.a - velocity.a * dt;
 
-        // 3) local (sensor) → global:
-        double phi   = bearing * (M_PI/180.0);
-        double xl    = data[i].dist * cos(phi);
-        double yl    = data[i].dist * sin(phi);
-        double ar    = ai * (M_PI/180.0);
+        double xi = start.x - velocity.x * dt;
+        double yi = start.y - velocity.y * dt;
 
-        // rotate‐and‐translate:
-        data[i].x = xl * cos(ar) - yl * sin(ar) + xi;
-        data[i].y = xl * sin(ar) + yl * cos(ar) + yi;
+        data[i].x = data[i].dist * cos(global_angle * DEG_TO_RAD) + xi;
+        data[i].y = data[i].dist * sin(global_angle * DEG_TO_RAD) + yi;
         data[i].onTable = (
             data[i].x <  1000 - narrow &&
             data[i].x > -1000 + narrow &&

@@ -187,7 +187,20 @@ sudo nano /boot/firmware/config.txt
 And add the following line:
 
 ```bash
+# Automatically load overlays for detected DSI displays
+display_auto_detect=1
+
+# Automatically load initramfs files, if found
+auto_initramfs=1
+
+# Enable DRM VC4 V3D driver
+dtoverlay=vc4-kms-v3d
 dtoverlay=vc4-kms-dsi-waveshare-panel,8_8_inch
+max_framebuffers=2
+
+# Don't have the firmware create an initial video= setting in cmdline.txt.
+# Use the kernel's default instead.
+# disable_fw_kms_setup=1
 ```
 
 If you are running the Raspberry Pi OS with the default desktop, you can add the command to the autostart file so it launches when the X session starts:
@@ -216,7 +229,7 @@ With this content:
 [Desktop Entry]
 Type=Application
 Name=Kiosk Mode
-Exec=bash -c "sleep 5 && /usr/bin/chromium http://localhost/robot --incognito --no-first-run --no-default-browser-check --password-store=basic"
+Exec=bash -c "sleep 5 && /usr/bin/chromium --kiosk http://localhost/robot --incognito --no-first-run --no-default-browser-check --password-store=basic"
 X-GNOME-Autostart-enabled=true
 ```
 Then:

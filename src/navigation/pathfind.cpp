@@ -1,7 +1,7 @@
 #include "navigation/pathfind.h"
 #include "navigation/astar.h"
 #include "defs/constante.h"
-
+#include "main.hpp"
 
 void pathfindInit(){
     int border = ROBOT_WIDTH / 2/RESOLUTION;
@@ -82,4 +82,19 @@ void pathfind_setup() {
     pathfind_place_obstacle_rect_with_inflation( 600,-1425,  STOCK_HEIGHT_MM, STOCK_WIDTH_MM, SECURITE_PLANK);
     pathfind_place_obstacle_rect_with_inflation( 750, -725, STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
     pathfind_place_obstacle_rect_with_inflation(  50, -400,  STOCK_WIDTH_MM, STOCK_HEIGHT_MM, SECURITE_PLANK);
+}
+
+void pathfind_fill_lidar(){
+    // Reset the costmap
+    pathfindInit();
+
+    for (int i = 0; i < lidar.count; i++){
+        if (!lidar.data[i].onTable) continue;
+        pathfind_place_obstacle_rect_with_inflation(
+            lidar.data[i].x,
+            lidar.data[i].y,
+            100, 100,
+            20
+        );
+    }
 }

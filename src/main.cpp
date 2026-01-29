@@ -15,10 +15,11 @@
 #include "utils/logger.hpp"
 #include "restAPI/restAPI.hpp"
 
-#define DISABLE_LIDAR
 #ifndef __CROSS_COMPILE_ARM__
+    #define DISABLE_LIDAR
     #define TEST_API_ONLY
     #define EMULATE_CAM
+    #define EMULATE_I2C
 #endif
 
 
@@ -101,8 +102,6 @@ int main(int argc, char *argv[])
                 tableStatus.reset();
                 arduino.RGB_Rainbow();
             }
-
-            nextState = WAITSTART; // TODO REMOVE
 
             if (readButtonSensor() & !readLatchSensor())
                 nextState = WAITSTART;
@@ -244,7 +243,7 @@ int StartSequence()
     if (!lidar.setup("/dev/ttyAMA0", 256000))
     {
         LOG_ERROR("Cannot find the lidar");
-        return -1;
+        return -1; //TODO handle error
     }
 #endif
 
@@ -287,6 +286,8 @@ void GetLidar()
         double time_s = double(_millis() - prev_time_ms) / 1000.0; 
         //convertAngularToAxial(lidar.data, lidar.count, position, 200);
         convertAngularToAxialCompensated(lidar.data, lidar.count, prev_pos, prev_vel, time_s, 200);
+
+        pathfind_fill_lidar();
         
         if (currentState == RUN || currentState == MANUAL)
             navigationOpponentDetection();

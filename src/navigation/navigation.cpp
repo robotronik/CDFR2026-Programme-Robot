@@ -87,6 +87,8 @@ void navigation_path_json(json& j){
 
 void navigationOpponentDetection(){
 
+    return; // Disabled for now
+
     bool isEndangered = false;
 
     if (true /* TODO dir != Direction::NONE */){

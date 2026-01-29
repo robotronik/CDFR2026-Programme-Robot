@@ -173,6 +173,10 @@ void astar_place_obstacle_rect_with_inflation(int cx, int cy, int height, int wi
     int half_w_cells = height / 2;
     int half_h_cells = width / 2;
 
+    // Skip if the center is already in an obstacle
+    if (cx < 0 || cx >= AS_HEIGHT || cy < 0 || cy >= AS_WIDTH) return;
+    if (costmap[cx][cy] >= OBSTACLE_COST-2) return;
+
     for (int x = cx - half_w_cells; x <= cx + half_w_cells; x++) {
         for (int y = cy - half_h_cells; y <= cy + half_h_cells; y++) {
             if (x < 0 || x >= AS_HEIGHT || y < 0 || y >= AS_WIDTH) continue;

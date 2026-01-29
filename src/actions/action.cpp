@@ -74,7 +74,8 @@ ReturnFSM_t ActionFSM::GatherStock(){
     return FSM_RETURN_WORKING;
 }
 
-position_t calculateClosestArucoPosition(position_t currentPos){
+position_t calculateClosestArucoPosition(position_t currentPos, position_t& outPos){
+    outPos = currentPos;
     position_t arucoPos_20 = {-400.0, -900.0, 0.0};
     position_t arucoPos_21 = {-400.0, 900.0, 0.0};
     position_t arucoPos_22 = {400.0, -900.0, 0.0};
@@ -97,10 +98,19 @@ position_t calculateClosestArucoPosition(position_t currentPos){
         minDistance = dist23;
         closestPos = arucoPos_23;
     }
-    // TODO Check if we are above the aruco marker
-    if (minDistance < 200.0){ // 20 cm
+    // Check if we are above the aruco marker
+    const double minimal_distance = 200.0; // 20cm
+    if (minDistance < minimal_distance){
         LOG_WARNING("Above aruco marker, need to move away first");
+        double displacement = minimal_distance - minDistance + 1; //+margin
+        position_t tmp = position_vector(closestPos, currentPos);
+        position_normalize(tmp);
+        tmp.x *= displacement;
+        tmp.y *= displacement;
+        outPos.x += tmp.x;
+        outPos.y += tmp.y;
     }
+    outPos.a = position_angle(drive.position, closestPos);
 
     return closestPos;
 }
@@ -112,10 +122,9 @@ ReturnFSM_t ActionFSM::Calibrate(){
     case FSM_CALIBRATION_NAV:
     {
         // Look towards the closest aruco marker by only spinning in place
-        position_t pos = drive.position;
-        position_t arucoPos = calculateClosestArucoPosition(pos);
-        pos.a = position_angle(pos, arucoPos);
-        nav_ret = navigationGoTo(pos, true, false);
+        position_t target_;
+        position_t arucoPos = calculateClosestArucoPosition(drive.position, target_);
+        nav_ret = navigationGoTo(target_, true, true);
         if (nav_ret == NAV_DONE){
             calibrationState = FSM_CALIBRATION_CALIBRATE;
             LOG_INFO("Nav done for FSM_CALIBRATION_NAV, going to FSM_CALIBRATION_CALIBRATE");
