@@ -36,6 +36,7 @@ SRC_NO_MAIN = $(filter-out $(SRCDIR)/main.cpp \
 			$(SRCDIR)/actions/revolver.cpp \
 			$(SRCDIR)/lidar/Lidar.cpp \
 			$(SRCDIR)/defs/tableState.cpp \
+			$(SRCDIR)/navigation/pathfind.cpp \
 		, $(SRC) )
 SRC_TEST = $(wildcard $(SRCDIR_TEST)/*.cpp)
 OBJ_NO_MAIN = $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR_MAIN)/%.o,$(SRC_NO_MAIN))
