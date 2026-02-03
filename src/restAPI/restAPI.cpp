@@ -2,6 +2,10 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
+#include <ifaddrs.h>
+#include <arpa/inet.h>
+#include <net/if.h>
 
 #include "utils/logger.hpp"
 #include "main.hpp" //for static variables
@@ -19,6 +23,29 @@ using json = nlohmann::json;
 
 crow::response readHtmlFile(const std::string& path);
 std::string getContentType(const std::string& path);
+
+static std::vector<std::string> getLocalIPv4Addresses(){
+    std::vector<std::string> ips;
+    ifaddrs* ifaddr = nullptr;
+    if (getifaddrs(&ifaddr) == -1 || !ifaddr) {
+        return ips;
+    }
+
+    for (ifaddrs* ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+        if (!ifa->ifa_addr) continue;
+        if (ifa->ifa_addr->sa_family != AF_INET) continue;
+        if (ifa->ifa_flags & IFF_LOOPBACK) continue;
+
+        char buffer[INET_ADDRSTRLEN];
+        void* addr_ptr = &reinterpret_cast<sockaddr_in*>(ifa->ifa_addr)->sin_addr;
+        if (inet_ntop(AF_INET, addr_ptr, buffer, sizeof(buffer)) != nullptr) {
+            ips.emplace_back(buffer);
+        }
+    }
+
+    freeifaddrs(ifaddr);
+    return ips;
+}
 
 crow::SimpleApp app;
 
@@ -150,6 +177,21 @@ void StartAPIServer(){
         response["time"] = (tableStatus.startTime == 0) ? 0 : (_millis() - tableStatus.startTime);
         response["strategy"] = tableStatus.strategy;
         response["runid"] =  log_asserv()->getLogID();
+        return crow::response(response.dump(4));
+    });
+
+    // Define a route to return the local IP address(es)
+    CROW_ROUTE(app, "/get_ip")
+    ([](){
+        json response;
+        auto ips = getLocalIPv4Addresses();
+        if (ips.empty()){
+            response["ip"] = "127.0.0.1";
+            response["ips"] = json::array();
+        } else {
+            response["ip"] = ips.front();
+            response["ips"] = ips;
+        }
         return crow::response(response.dump(4));
     });
 

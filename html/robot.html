@@ -37,6 +37,12 @@
             font-size: 2rem;
         }
 
+        .ip-label {
+            margin-top: 8px;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
         .home-icon {
             font-size: 2rem;
             width: 52px;
@@ -185,6 +191,9 @@
                 <div id="status-label" class="label-section text-center">
                     Placeholder for a label here
                 </div>
+                <div id="ip-label" class="ip-label text-center">
+                    IP: --
+                </div>
             </div>
         </div>
     </div>
@@ -250,6 +259,31 @@
         }
         // Start the continuous fetching loop
         startContinuousRobotFetch();
+
+        async function getIP() {
+            try {
+                let response = await fetch('/get_ip');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                let data = await response.json();
+                const ipLabel = document.getElementById("ip-label");
+                if (data["ips"] && data["ips"].length > 1) {
+                    ipLabel.innerHTML = "IPs: " + data["ips"].join(", ");
+                } else {
+                    ipLabel.innerHTML = "IP: " + (data["ip"] || "127.0.0.1");
+                }
+            } catch (error) {
+                console.error('Failed to fetch IP:', error);
+            }
+        }
+
+        function startIpFetch(){
+            getIP();
+            setInterval(getIP, 5000);
+        }
+
+        startIpFetch();
 
 
         function sendColor(color) {
