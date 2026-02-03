@@ -459,7 +459,7 @@ void StartAPIServer(){
         LOG_INFO("Manual ctrl : Requested set_move, value=", req_value);
 
         // Apply the value
-        position_t pos = {newXvalue, newYvalue, 0};
+        position_t pos = {newXvalue, newYvalue, drive.position.a};
         navigationGoTo(pos, false);
 
         json response;
