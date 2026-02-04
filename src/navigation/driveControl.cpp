@@ -47,8 +47,17 @@ bool DriveControl::drive(position_t pos[], int n) {
     position_t pos_target;
 
     // Calculate a distance along the path
-    const double looking_distance = is_slow_mode ? 40.0 : 100.0; // 40 to 100mm (turn radius)
-    const double looking_angle = is_slow_mode ? 8.0 : 30.0; // 8 to 30 degrees
+    double min_looking_distance = is_slow_mode ? 25.0 : 25.0; // mm
+    double looking_distance_accel = is_slow_mode ? 0.1 : 0.2; // s
+    double looking_distance_decel = 0.1; // s
+    double looking_distance = position_length(velocity) * looking_distance_accel + min_looking_distance;
+    
+    double min_looking_angle = is_slow_mode ? 4.0 : 4.0; // degrees
+    double looking_angle_accel = is_slow_mode ? 0.35 : 0.5; // s
+    double looking_angle_decel = 0.3; // s
+    double looking_angle = fabs(velocity.a) * looking_angle_accel + min_looking_angle;
+
+    
     double total_distance = position_distance(position, pos[0]);
     position_t from = position;
     int i = 0;
@@ -64,8 +73,19 @@ bool DriveControl::drive(position_t pos[], int n) {
     double error_heading = pos_target.a - from.a;
     while (error_heading > 180.0) error_heading -= 360.0;
     while (error_heading < -180.0) error_heading += 360.0;
+    if (fabs(error_heading) < looking_angle){
+        looking_angle -= fabs(velocity.a) * looking_angle_decel; // Reduce a bit the angle
+        if (looking_angle < min_looking_angle)
+            looking_angle = min_looking_angle;
+    }
     pos_target.a = position.a + MIN(MAX(error_heading, -looking_angle), looking_angle);
     // Use the angle to the target
+
+    if (total_distance < looking_distance){
+        looking_distance -= position_length(velocity) * looking_distance_decel; // Reduce a bit the distance
+        if (looking_distance < min_looking_distance)
+            looking_distance = min_looking_distance;
+    }
 
     if (total_distance > looking_distance){
         double resulting_displ = looking_distance - total_distance + position_distance(from, pos_target);
