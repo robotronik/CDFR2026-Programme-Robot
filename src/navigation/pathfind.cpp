@@ -13,13 +13,13 @@ void pathfindInit(){
 int convert_x_to_index(double x) {
     int offset = 1000; // Décalage pour convertir [-1000:1000] en [0:2000]
     int index = round((x + offset) / RESOLUTION);
-    index = CLAMP(index, 0, AS_WIDTH - 1); // Clamp pour éviter les erreurs
+    index = CLAMP(index, 0, AS_HEIGHT - 1); // Clamp pour éviter les erreurs
     return index;
 }
 int convert_y_to_index(double y) {
     int offset = 1500; // Décalage pour convertir [-1500:1500] en [0:3000]
     int index = round((y + offset) / RESOLUTION);
-    index = CLAMP(index, 0, AS_HEIGHT - 1); // Clamp pour éviter les erreurs
+    index = CLAMP(index, 0, AS_WIDTH - 1); // Clamp pour éviter les erreurs
     return index;
 }
 void convert_pos_to_index(position_t pos, int& ix, int& iy){

@@ -24,7 +24,7 @@ void DriveControl::reset() {
     velocity = {0.0, 0.0, 0.0};
     acceleration = {0.0, 0.0, 0.0};
     is_enabled = false;
-    is_slow_mode = true;
+    is_slow_mode = false;
     drive_interface::disable();
     drive_interface::set_target(convertPositionToPacked(target));
     drive_interface::set_coordinates(convertPositionToPacked(position));
@@ -44,20 +44,9 @@ bool DriveControl::drive(position_t pos[], int n) {
     }
 
     // Calculate the target point along the path
+    double looking_distance = is_slow_mode ? 40.0 : 80.0; // Radius (mm)
+    
     position_t pos_target;
-
-    // Calculate a distance along the path
-    double min_looking_distance = is_slow_mode ? 25.0 : 25.0; // mm
-    double looking_distance_accel = is_slow_mode ? 0.1 : 0.2; // s
-    double looking_distance_decel = 0.1; // s
-    double looking_distance = position_length(velocity) * looking_distance_accel + min_looking_distance;
-    
-    double min_looking_angle = is_slow_mode ? 4.0 : 4.0; // degrees
-    double looking_angle_accel = is_slow_mode ? 0.35 : 0.5; // s
-    double looking_angle_decel = 0.3; // s
-    double looking_angle = fabs(velocity.a) * looking_angle_accel + min_looking_angle;
-
-    
     double total_distance = position_distance(position, pos[0]);
     position_t from = position;
     int i = 0;
@@ -70,21 +59,63 @@ bool DriveControl::drive(position_t pos[], int n) {
     // Use the position at the looking distance
     pos_target = pos[i];
 
-    double error_heading = pos_target.a - from.a;
+    // Calculate angle_speed with acceleration, top speed, and deceleration
+    double angle_acceleration = is_slow_mode ? 15.0 : 150.0; // deg/s
+    double angle_top_speed = is_slow_mode ? 100.0 : 800.0; // deg/s
+    double angle_deceleration = is_slow_mode ? 150.0 : 600.0; // deg/s²
+    
+    double current_angular_velocity = fabs(velocity.a); // deg/s
+    double angle_speed;
+    
+    double error_heading = pos_target.a - position.a;
     while (error_heading > 180.0) error_heading -= 360.0;
     while (error_heading < -180.0) error_heading += 360.0;
-    if (fabs(error_heading) < looking_angle){
-        looking_angle -= fabs(velocity.a) * looking_angle_decel; // Reduce a bit the angle
-        if (looking_angle < min_looking_angle)
-            looking_angle = min_looking_angle;
+    
+    // Calculate stopping distance: distance = v² / (2 * a)
+    double angular_stopping_distance = (current_angular_velocity * current_angular_velocity) / (2.0 * angle_deceleration);
+    
+    // Accelerate if below top speed, decelerate if close to target
+    if (fabs(error_heading) <= angular_stopping_distance) {
+        // Deceleration phase - calculate target speed based on remaining distance
+        double target_speed = sqrt(2.0 * angle_deceleration * fabs(error_heading));
+        angle_speed = MAX(MIN(target_speed, current_angular_velocity), 5.0);
+    } else if (current_angular_velocity < angle_top_speed) {
+        // Acceleration phase
+        angle_speed = MIN(current_angular_velocity + angle_acceleration, angle_top_speed);
+    } else {
+        // Maintain top speed
+        angle_speed = angle_top_speed;
     }
-    pos_target.a = position.a + MIN(MAX(error_heading, -looking_angle), looking_angle);
-    // Use the angle to the target
 
-    if (total_distance < looking_distance){
-        looking_distance -= position_length(velocity) * looking_distance_decel; // Reduce a bit the distance
-        if (looking_distance < min_looking_distance)
-            looking_distance = min_looking_distance;
+    const double kP_ang = 8.0;  // Gain for angular speed (deg/s per deg error) (Defined in drive)
+    pos_target.a = position.a + MIN(MAX(error_heading, -angle_speed/kP_ang), angle_speed/kP_ang);
+
+    // Calculate position_speed with acceleration, top speed, and deceleration
+    double position_acceleration = is_slow_mode ? 70.0 : 100.0; // mm/s
+    double position_top_speed = is_slow_mode ? 500.0 : 2000.0; // mm/s
+    double position_deceleration = is_slow_mode ? 800.0 : 1200.0; // mm/s²
+    
+    double current_linear_velocity = position_length(velocity); // mm/s
+    double position_speed; // mm/s
+    
+    // Distance to final target
+    double distance_to_target = position_distance(position, pos[n - 1]);
+    
+    // Calculate stopping distance: distance = v² / (2 * a)
+    double linear_stopping_distance = (current_linear_velocity * current_linear_velocity) / (2.0 * position_deceleration);
+    
+    // Accelerate if below top speed, decelerate if close to target
+    if (distance_to_target <= linear_stopping_distance) {
+        // Deceleration phase - calculate target speed based on remaining distance
+        double target_speed = sqrt(2.0 * position_deceleration * distance_to_target);
+        position_speed = MAX(MIN(target_speed, current_linear_velocity), 10.0);
+        position_speed = MIN(position_speed, current_linear_velocity);
+    } else if (current_linear_velocity < position_top_speed) {
+        // Acceleration phase
+        position_speed = MIN(current_linear_velocity + position_acceleration, position_top_speed);
+    } else {
+        // Maintain top speed
+        position_speed = position_top_speed;
     }
 
     if (total_distance > looking_distance){
@@ -96,8 +127,16 @@ bool DriveControl::drive(position_t pos[], int n) {
 
         from.x += displacement.x;
         from.y += displacement.y;
-        from.a = pos_target.a; // Use the last angle in the path
-        drive_interface::set_target(convertPositionToPacked(from));
+        position_t vec;
+        vec.x = from.x - position.x;
+        vec.y = from.y - position.y;
+        position_normalize(vec);
+        const double kP_lin = 6.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
+        vec.x *= position_speed / kP_lin;
+        vec.y *= position_speed / kP_lin;
+        pos_target.x = position.x + vec.x;
+        pos_target.y = position.y + vec.y;
+        drive_interface::set_target(convertPositionToPacked(pos_target));
     }
     else{
         drive_interface::set_target(convertPositionToPacked(pos_target));

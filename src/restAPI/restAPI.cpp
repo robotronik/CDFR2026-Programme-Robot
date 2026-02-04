@@ -357,8 +357,10 @@ void StartAPIServer(){
         if (req_data.contains("a"))
             req_a_value = req_data["a"];
 
-        //Apply the values TODO
-        drive.setCoordinates({req_x_value, req_y_value, req_a_value});
+        //Apply the values
+        position_t pos = {req_x_value, req_y_value, req_a_value};
+        drive.setCoordinates(pos);
+        navigationGoTo(pos, false, false);
 
         json response;
         response["message"] = "Successfull";
