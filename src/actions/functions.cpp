@@ -13,21 +13,21 @@
 // ------------------------------------------------------
 
 // Function to deploy the banner (example)
-bool deployBanner(){
+bool rotateBlocks(){
     static int state = 1;
     switch (state){
         case 1:
-            if (moveBannerDeploy(2))
+            if (resetSpinClaws() & openClaws())
                 state++;
             break;
         case 2:
-            if (moveBannerDeploy(0))
+            if (closeClaws())
                 state++;
             break;
         case 3:
-            if (moveBannerDeploy(2)){
+            if (spinAllClaws()){
                 state = 1;
-                moveBannerDeploy(0);
+                openClaws();
                 return true;
             }
             break;
@@ -39,27 +39,74 @@ bool deployBanner(){
 //                   SERVO CONTROL
 // ------------------------------------------------------
 
-// 0 : Fully inside
-// 1 : Locked in
-// 2 : Fully outside
-bool moveBannerDeploy(int position){
-    static int prevPos = !position;
-    int target;
-    switch (position)
-    {
-        case 0:
-            target = 0; break;
-        case 1:
-            target = 25; break;
-        case 2:
-            target = 110; break;
-    }
-    if (prevPos != position){
-        arduino.moveServoSpeed(SERVO_NUM_1, target, 200);
+
+bool closeClaws(){
+    return snapClaws(true);
+}
+bool openClaws(){
+    return snapClaws(false);
+}
+
+bool snapClaws(bool closed){
+    static bool prevState = !closed;
+    int target = closed ? 16 : 90;
+    if (prevState != closed){
+        arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 100);
+        prevState = closed;
     }
     int current = 0;
-    if (!arduino.getServo(SERVO_NUM_1, current)) return false;
+    if (!arduino.getServo(SERVO_CLAW_CLOSE_1, current)) return false;
     return current == target;
+}
+
+bool resetSpinClaws(){
+    return spinClaws(false, false, false, false);
+}
+bool spinAllClaws(){
+    return spinClaws(true, true, true, true);
+}
+
+bool spinClaws(bool spin1, bool spin2, bool spin3, bool spin4){
+    const int speed = 100;
+    static bool prevSpin1 = !spin1;
+    static bool prevSpin2 = !spin2;
+    static bool prevSpin3 = !spin3;
+    static bool prevSpin4 = !spin4;
+    int target1 = spin1 ? 180 : 0;
+    int target2 = spin2 ? 0 : 180;
+    int target3 = spin3 ? 180 : 0;
+    int target4 = spin4 ? 0 : 180;
+    if (prevSpin1 != spin1){
+        arduino.moveServoSpeed(SERVO_SPIN_1, target1, speed);
+        prevSpin1 = spin1;
+    }
+    if (prevSpin2 != spin2){
+        arduino.moveServoSpeed(SERVO_SPIN_2, target2, speed);
+        prevSpin2 = spin2;
+    }
+    if (prevSpin3 != spin3){
+        arduino.moveServoSpeed(SERVO_SPIN_3, target3, speed);
+        prevSpin3 = spin3;
+    }
+    if (prevSpin4 != spin4){
+        arduino.moveServoSpeed(SERVO_SPIN_4, target4, speed);
+        prevSpin4 = spin4;
+    }
+    bool done1 = true, done2 = true, done3 = true, done4 = true;
+    int current = 0;
+    if (!arduino.getServo(SERVO_SPIN_1, current)) 
+        return false; 
+    done1 = (current == target1);
+    if (!arduino.getServo(SERVO_SPIN_2, current)) 
+        return false; 
+    done2 = (current == target2);
+    if (!arduino.getServo(SERVO_SPIN_3, current)) 
+        return false; 
+    done3 = (current == target3);
+    if (!arduino.getServo(SERVO_SPIN_4, current)) 
+        return false; 
+    done4 = (current == target4);
+    return (done1 && done2 && done3 && done4);
 }
 
 // ------------------------------------------------------
@@ -114,7 +161,7 @@ void stopTribuneElevator(){
 
 // Returns true if actuators are home
 bool homeActuators(){
-    return ( moveBannerDeploy(0) );
+    return ( resetSpinClaws() & openClaws());
 }
 void enableActuators(){
     for (int i = 0; i < 4; i++){

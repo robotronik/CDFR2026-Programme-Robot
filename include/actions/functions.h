@@ -13,10 +13,15 @@ void switchTeamSide(colorTeam_t color);
 void switchStrategy(int strategy);
 
 // Basic functions (FSM)
-bool deployBanner();
+bool rotateBlocks();
 
 // Servo Control
-bool moveBannerDeploy(int position); // Example
+bool closeClaws();
+bool openClaws();
+bool snapClaws(bool closed);
+bool resetSpinClaws();
+bool spinAllClaws();
+bool spinClaws(bool spin1, bool spin2, bool spin3, bool spin4);
 
 // Stepper Control
 bool moveColumnsElevator(int level); // Example

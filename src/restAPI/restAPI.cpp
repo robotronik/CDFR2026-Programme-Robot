@@ -552,7 +552,10 @@ void StartAPIServer(){
         std::string req_value = req_data["value"];
 
         // Apply the value
-        if      (req_value == "deployBanner")     manual_currentFunc = deployBanner;
+        if      (req_value == "closeClaws")       manual_currentFunc = closeClaws;
+        else if (req_value == "openClaws")        manual_currentFunc = openClaws;
+        else if (req_value == "resetSpinClaws")   manual_currentFunc = resetSpinClaws;
+        else if (req_value == "spinAllClaws")     manual_currentFunc = spinAllClaws;
         else {
             json response;
             response["message"] = "Invalid action requested";

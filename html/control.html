@@ -107,13 +107,13 @@
             </div>
             <div class="col">
                 <select id="servo-select" class="form-select" aria-label="Servo Number">
-                    <option value=1>Tribunes Push (1)</option>
-                    <option value=2>Platforms Lift Left (2)</option>
-                    <option value=3>Platforms List Right (3)</option>
-                    <option value=4>Tribunes Claws (4)</option>
-                    <option value=5>Banner Release (5)</option>
-                    <option value=6>Columns Lift Left (6)</option>
-                    <option value=7>Columns Lift Right (7)</option>
+                    <option value=1>Claws Close (1)</option>
+                    <option value=2>Claws Spin 1 (2)</option>
+                    <option value=3>Claws Spin 2 (3)</option>
+                    <option value=4>Claws Spin 3 (4)</option>
+                    <option value=5>Claws Spin 4 (5)</option>
+                    <option value=6>Servo 6 (6)</option>
+                    <option value=7>Servo 7 (7)</option>
                 </select>
             </div>
             <div class="col">
@@ -146,28 +146,16 @@
         </div>
         <div class="row mb-3">
             <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('takeStockPlatforms')">Take Stock Platforms</button>
+                <button type="button" class="btn btn-success w-100" onclick="sendAction('closeClaws')">Close Claws</button>
             </div>
             <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('constructSingleTribune')">Construct Single Tribune</button>
+                <button type="button" class="btn btn-success w-100" onclick="sendAction('openClaws')">Open Claws</button>
             </div>
             <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('liftSingleTribune')">Lift Single Tribune</button>
+                <button type="button" class="btn btn-success w-100" onclick="sendAction('resetSpinClaws')">Reset Spin Claws</button>
             </div>
             <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('lowerSingleTribune')">Lower Single Tribune</button>
-            </div>
-            <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('deployBannerFront')">Deploy Front Banner</button>
-            </div>
-            <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('deployBannerBack')">Deploy Back Banner</button>
-            </div>
-            <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('liftAllColumns')">Lift All Columns</button>
-            </div>
-            <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('releaseAllColumns')">Release All Columns</button>
+                <button type="button" class="btn btn-success w-100" onclick="sendAction('spinAllClaws')">Spin All Claws</button>
             </div>
         </div>
     </div>

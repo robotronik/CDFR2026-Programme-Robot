@@ -21,11 +21,11 @@ const int STOCK_HEIGHT_MM = 400;
 #define STEPPER_NUM_4        4
 
 // Define the nums of the arduino for the SERVOS
-#define SERVO_NUM_1          1
-#define SERVO_NUM_2          2
-#define SERVO_NUM_3          3
-#define SERVO_NUM_4          4
-#define SERVO_NUM_5          5
+#define SERVO_CLAW_CLOSE_1   1
+#define SERVO_SPIN_1         2
+#define SERVO_SPIN_2         3
+#define SERVO_SPIN_3         4
+#define SERVO_SPIN_4         5
 #define SERVO_NUM_6          6
 #define SERVO_NUM_7          7
 
