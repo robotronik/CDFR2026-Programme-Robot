@@ -187,14 +187,14 @@ void Arduino::SetLidarPWM(uint8_t val){
 }
 
 
-void Arduino::moveMotorDC(uint8_t speed, uint8_t holding){
+void Arduino::moveMotorDC(uint8_t speed, bool forward){
     //LOG_DEBUG("Moving DC Motor ");
     if (i2cFile == -1) return; // Emulation
     uint8_t message [3];
     uint8_t *ptr = message;
     WriteUInt8(&ptr, 1);
     WriteUInt8(&ptr, speed);
-    WriteUInt8(&ptr, holding);
+    WriteUInt8(&ptr, forward);
     I2cSendData(i2cFile, CMD_MOVE_DC_MOTOR, message, 3);
     LOG_DEBUG("DC Motor moved");
 }

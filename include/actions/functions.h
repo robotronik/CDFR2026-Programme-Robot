@@ -14,6 +14,9 @@ void switchStrategy(int strategy);
 
 // Basic functions (FSM)
 bool rotateBlocks();
+bool lowerClaws();
+bool raiseClaws();
+bool raiseLittleClaws();
 
 // Servo Control
 bool closeClaws();
@@ -33,5 +36,7 @@ void stopTribuneElevator();
 // Input sensors
 bool readButtonSensor();
 bool readLatchSensor();
+bool readLimitSwitchBottom();
+bool readLimitSwitchTop();
 
 #endif // MYFUNCTION_H

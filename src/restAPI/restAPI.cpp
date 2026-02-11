@@ -548,6 +548,11 @@ void StartAPIServer(){
             response["message"] = "Cannot test actions when not in MANUAL mode";
             return crow::response(400, response.dump(4));
         }
+        if (manual_currentFunc != nullptr){
+            json response;
+            response["message"] = "Another action is currently running, cannot execute the requested action";
+            return crow::response(400, response.dump(4));
+        }
 
         std::string req_value = req_data["value"];
 
@@ -556,6 +561,9 @@ void StartAPIServer(){
         else if (req_value == "openClaws")        manual_currentFunc = openClaws;
         else if (req_value == "resetSpinClaws")   manual_currentFunc = resetSpinClaws;
         else if (req_value == "spinAllClaws")     manual_currentFunc = spinAllClaws;
+        else if (req_value == "lowerClaws")       manual_currentFunc = lowerClaws;
+        else if (req_value == "raiseClaws")       manual_currentFunc = raiseClaws;
+        else if (req_value == "raiseLittleClaws") manual_currentFunc = raiseLittleClaws;
         else {
             json response;
             response["message"] = "Invalid action requested";

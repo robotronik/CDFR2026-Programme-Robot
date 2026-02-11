@@ -35,6 +35,60 @@ bool rotateBlocks(){
     return false;
 }
 
+bool lowerClaws(){
+    static int state = 1;
+    switch (state){
+        case 1:
+            arduino.moveMotorDC(80, true);
+            state++;
+            break;
+        case 2:
+            if (readLimitSwitchBottom()){
+                arduino.stopMotorDC();
+                state = 1;
+                return true;
+            }
+            break;
+    }
+    return false;
+}
+
+bool raiseClaws(){
+    static int state = 1;
+    switch (state){
+        case 1:
+            arduino.moveMotorDC(80, false);
+            state++;
+            break;
+        case 2:
+            if (readLimitSwitchTop()){
+                arduino.stopMotorDC();
+                state = 1;
+                return true;
+            }
+            break;
+    }
+    return false;
+}
+
+bool raiseLittleClaws(){
+    static int state = 1;
+    switch (state){
+        case 1:
+            arduino.moveMotorDC(128, false);
+            state++;
+            break;
+        case 2:
+            if (!readLimitSwitchBottom()){
+                arduino.stopMotorDC();
+                state = 1;
+                return true;
+            }
+            break;
+    }
+    return false;
+}
+
 // ------------------------------------------------------
 //                   SERVO CONTROL
 // ------------------------------------------------------
@@ -67,7 +121,7 @@ bool spinAllClaws(){
 }
 
 bool spinClaws(bool spin1, bool spin2, bool spin3, bool spin4){
-    const int speed = 100;
+    const int speed = 200;
     static bool prevSpin1 = !spin1;
     static bool prevSpin2 = !spin2;
     static bool prevSpin3 = !spin3;
@@ -281,4 +335,16 @@ bool readLatchSensor(){
         count = 0;    
     prev_state = state;
     return (count >= 5);
+}
+
+bool readLimitSwitchBottom(){
+    bool state;
+    if (!arduino.readSensor(LS_BOTTOM_NUM, state)) return false;
+    return state;
+}
+
+bool readLimitSwitchTop(){
+    bool state;
+    if (!arduino.readSensor(LS_TOP_NUM, state)) return false;
+    return state;
 }

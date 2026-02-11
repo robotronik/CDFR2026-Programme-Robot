@@ -33,8 +33,8 @@ const int STOCK_HEIGHT_MM = 400;
 #define BUTTON_SENSOR_NUM    1
 #define LATCH_SENSOR_NUM     2
 #define SENSOR_NUM_3         3
-#define SENSOR_NUM_4         4
-#define SENSOR_NUM_5         5
+#define LS_TOP_NUM           4
+#define LS_BOTTOM_NUM        5
 #define SENSOR_NUM_6         6
 #define SENSOR_NUM_7         7
 #define SENSOR_NUM_8         8

@@ -25,7 +25,7 @@ public:
     void RGB_Blinking(uint8_t R, uint8_t G, uint8_t B, int LED_ID = 1);
     void RGB_Rainbow(int LED_ID = 1);
     void SetLidarPWM(uint8_t val);
-    void moveMotorDC(uint8_t speed, uint8_t holding);
+    void moveMotorDC(uint8_t speed, bool forward);
     void stopMotorDC();
 private:
     int i2cFile;

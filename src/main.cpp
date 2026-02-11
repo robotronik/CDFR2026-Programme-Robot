@@ -141,7 +141,6 @@ int main(int argc, char *argv[])
                 tableStatus.reset();
                 tableStatus.startTime = _millis();
                 action.Reset();
-                moveColumnsElevator(1);
             }
             bool finished = action.RunFSM();
 
@@ -322,7 +321,7 @@ void EndSequence()
     arduino.RGB_Solid(0, 0, 0); // OFF
 
     for(int i = 0; i < 60; i++){
-        if (homeActuators() & moveColumnsElevator(0))
+        if (homeActuators())
             break;
         delay(100);
     };
