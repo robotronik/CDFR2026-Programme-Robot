@@ -93,18 +93,26 @@ bool rotateTwoBlocks(){
     static int state = 1;
     switch (state){
         case 1:
-            if (lowerClaws() & closeClaws())
-                state++;
-            break;
-        case 2:
-            if (raiseLittleClaws() & spinClaws(true, false, true, false))
-                state++;
-            break;
-        case 3:
             if (lowerClaws())
                 state++;
             break;
+        case 2 :
+            if (closeClaws())
+                state++;
+            break;
+        case 3:
+            if (raiseClaws())
+                state++;
+            break;
         case 4:
+            if (spinClaws(true, false, true, false))
+                state++;
+            break;
+        case 5:
+            if (lowerClaws())
+                state++;
+            break;
+        case 6:
             if (raiseLittleClaws() & openClaws()){
                 state = 1;
                 return true;
