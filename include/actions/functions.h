@@ -17,6 +17,7 @@ bool rotateBlocks();
 bool lowerClaws();
 bool raiseClaws();
 bool raiseLittleClaws();
+bool rotateTwoBlocks();
 
 // Servo Control
 bool closeClaws();
