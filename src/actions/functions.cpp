@@ -39,7 +39,7 @@ bool lowerClaws(){
     static int state = 1;
     switch (state){
         case 1:
-            arduino.moveMotorDC(50, true);
+            arduino.moveMotorDC(80, true);
             state++;
             break;
         case 2:
@@ -57,7 +57,7 @@ bool raiseClaws(){
     static int state = 1;
     switch (state){
         case 1:
-            arduino.moveMotorDC(50, false);
+            arduino.moveMotorDC(80, false);
             state++;
             break;
         case 2:
@@ -75,7 +75,7 @@ bool raiseLittleClaws(){
     static int state = 1;
     switch (state){
         case 1:
-            arduino.moveMotorDC(50, false);
+            arduino.moveMotorDC(128, false);
             state++;
             break;
         case 2:
@@ -237,31 +237,6 @@ void disableActuators(){
 // ------------------------------------------------------
 //                        OTHER
 // ------------------------------------------------------
-
-bool rotateTwoBlocks(){
-    static int state = 1;
-    switch (state){
-        case 1:
-            if (lowerClaws() & closeClaws())
-                state++;
-            break;
-        case 2:
-            if (raiseLittleClaws() & spinClaws(true, false, true, false))
-                state++;
-            break;
-        case 3:
-            if (lowerClaws())
-                state++;
-            break;
-        case 4:
-            if (raiseLittleClaws() & openClaws()){
-                state = 1;
-                return true;
-            }
-            break;
-    }
-    return false;
-}
 
 bool returnToHome(){
     unsigned long time = _millis() - tableStatus.startTime;
