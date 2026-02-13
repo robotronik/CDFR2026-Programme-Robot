@@ -103,7 +103,7 @@ ARM_CXX = $(CROSS_COMPILE_PREFIX)-g++
 
 # Raspberry Pi Deployment Info
 PI_USER = robotronik
-PI_HOST = 192.168.0.102
+PI_HOST = 10.120.207.146
 PI_DIR = /home/$(PI_USER)/CDFR
 
 # Define the ARM target and object directory for cross-compilation
