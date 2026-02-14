@@ -39,7 +39,7 @@ bool lowerClaws(){
     static int state = 1;
     switch (state){
         case 1:
-            arduino.moveMotorDC(50, true);
+            arduino.moveMotorDC(100, true);
             state++;
             break;
         case 2:
@@ -57,7 +57,7 @@ bool raiseClaws(){
     static int state = 1;
     switch (state){
         case 1:
-            arduino.moveMotorDC(50, false);
+            arduino.moveMotorDC(80, false);
             state++;
             break;
         case 2:
@@ -75,7 +75,7 @@ bool raiseLittleClaws(){
     static int state = 1;
     switch (state){
         case 1:
-            arduino.moveMotorDC(50, false);
+            arduino.moveMotorDC(80, false);
             state++;
             break;
         case 2:
@@ -92,28 +92,24 @@ bool raiseLittleClaws(){
 bool rotateTwoBlocks(){
     static int state = 1;
     switch (state){
-        case 1:
-            if (lowerClaws())
-                state++;
-            break;
-        case 2 :
+        case 1 :
             if (closeClaws())
                 state++;
             break;
-        case 3:
+        case 2:
             if (raiseClaws())
                 state++;
             break;
-        case 4:
+        case 3:
             if (spinClaws(true, false, true, false))
                 state++;
             break;
-        case 5:
+        case 4:
             if (lowerClaws())
                 state++;
             break;
-        case 6:
-            if (raiseLittleClaws() & openClaws()){
+        case 5:
+            if (openClaws() & resetSpinClaws()){
                 state = 1;
                 return true;
             }
