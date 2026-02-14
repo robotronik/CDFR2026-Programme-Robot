@@ -19,6 +19,9 @@ bool raiseClaws();
 bool raiseLittleClaws();
 bool rotateTwoBlocks();
 
+// Related to stock management
+int getBestStockPositionOff(int stockN, position_t fromPos); //TODO
+
 // Servo Control
 bool closeClaws();
 bool openClaws();
