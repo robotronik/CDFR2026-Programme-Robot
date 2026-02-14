@@ -37,13 +37,20 @@ bool rotateBlocks(){
 
 bool lowerClaws(){
     static int state = 1;
+    static unsigned long startTime = 0;
     switch (state){
         case 1:
-            arduino.moveMotorDC(100, true);
+            arduino.moveMotorDC(30, true);
             state++;
             break;
         case 2:
             if (readLimitSwitchBottom()){
+                startTime = _millis();
+                state++;
+            }
+            break;
+        case 3:
+            if (_millis() >= startTime + 500){
                 arduino.stopMotorDC();
                 state = 1;
                 return true;
@@ -57,7 +64,7 @@ bool raiseClaws(){
     static int state = 1;
     switch (state){
         case 1:
-            arduino.moveMotorDC(80, false);
+            arduino.moveMotorDC(100, false);
             state++;
             break;
         case 2:
@@ -91,18 +98,27 @@ bool raiseLittleClaws(){
 
 bool rotateTwoBlocks(){
     static int state = 1;
+    static int choice;
     switch (state){
         case 1 :
-            if (closeClaws())
+            if (closeClaws()){
+                choice = rand() % 6;
                 state++;
+            }
             break;
         case 2:
             if (raiseClaws())
                 state++;
             break;
         case 3:
-            if (spinClaws(true, false, true, false))
-                state++;
+            switch(choice){
+                case 0: if (spinClaws(true,  true,  false, false)) state++; break;
+                case 1: if (spinClaws(true,  false, true,  false)) state++; break;
+                case 2: if (spinClaws(true,  false, false, true )) state++; break;
+                case 3: if (spinClaws(false, true,  true,  false)) state++; break;
+                case 4: if (spinClaws(false, true,  false, true )) state++; break;
+                case 5: if (spinClaws(false, false, true,  true )) state++; break;
+            }
             break;
         case 4:
             if (lowerClaws())
@@ -117,6 +133,7 @@ bool rotateTwoBlocks(){
     }
     return false;
 }
+
 
 // ------------------------------------------------------
 //                   SERVO CONTROL

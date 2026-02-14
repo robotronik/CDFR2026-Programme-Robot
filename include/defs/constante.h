@@ -38,3 +38,6 @@ const int STOCK_HEIGHT_MM = 400;
 #define SENSOR_NUM_6         6
 #define SENSOR_NUM_7         7
 #define SENSOR_NUM_8         8
+
+const int STOCK_COUNT = 8;
+const int PANTRY_COUNT = 10;

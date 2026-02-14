@@ -22,6 +22,15 @@ public:
     int strategy;
 
     /* data Winter is comming */
+    bool avail_stocks[STOCK_COUNT];     // Is stock available
+    typedef enum
+    {
+        PANTRY_EMPTY,
+        PANTRY_YELLOW,
+        PANTRY_BLUE
+    } pantry_state_t;
+
+    pantry_state_t pantry_states[PANTRY_COUNT];
 };
 
 // Serialize tableState
