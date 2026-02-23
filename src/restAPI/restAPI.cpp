@@ -96,6 +96,12 @@ void StartAPIServer(){
         return readHtmlFile("html/control.html");
     });
 
+    // Define a simple route for the camera page
+    CROW_ROUTE(app, "/camera")
+    ([](){
+        return readHtmlFile("html/camera.html");
+    });
+
     // ------------------------------- GET Routes -------------------------------
 
     // Define a route for a simple GET request that returns the status

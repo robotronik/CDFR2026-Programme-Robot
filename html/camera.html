@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Placeholder for the navbar -->
+    <div id="navbar-placeholder"></div>
+
+    <div class="container main-container mt-4">
+        <div class="d-flex justify-content-center align-items-center">
+            <h1 class="text-white mb-0">Camera Control</h1>
+            <span class="status-dot ms-3" id="statusDot"></span>
+        </div>
+
+        <div id="status-label" class="label-section mt-2">
+            Camera API base: <code id="apiBaseLabel"></code>
+        </div>
+
+        <div class="row mb-3 mt-2">
+            <div class="col">
+                <button type="button" class="btn btn-primary w-100" onclick="apiStart()">Start</button>
+            </div>
+            <div class="col">
+                <button type="button" class="btn btn-danger w-100" onclick="apiStop()">Stop</button>
+            </div>
+            <div class="col">
+                <button type="button" class="btn btn-success w-100" onclick="fetchPosition()">Fetch Position</button>
+            </div>
+            <div class="col">
+                <button type="button" class="btn btn-success w-100" onclick="fetchObjects()">Fetch Objects</button>
+            </div>
+            <div class="col">
+                <button type="button" class="btn btn-success w-100" onclick="fetchPreview()">Fetch Preview</button>
+            </div>
+        </div>
+
+        <div class="label-section">Position response</div>
+        <pre id="positionOutput" class="p-3 rounded border bg-body-tertiary mb-3">{}</pre>
+
+        <div class="label-section">Objects response</div>
+        <pre id="objectsOutput" class="p-3 rounded border bg-body-tertiary mb-3">{}</pre>
+
+        <div class="label-section">Preview</div>
+        <div class="p-3 rounded border bg-body-tertiary mb-3 text-center">
+            <img id="previewImage" class="img-fluid rounded d-none" alt="Camera preview">
+            <div id="previewPlaceholder" class="text-secondary">No preview fetched yet.</div>
+        </div>
+    </div>
+
+    <!-- Error/info messages -->
+    <div id="alertPlaceholder"></div>
+
+    <script>
+        const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000`;
+        document.getElementById("apiBaseLabel").textContent = API_BASE;
+
+        const statusLabel = document.getElementById("status-label");
+        const statusDot = document.getElementById("statusDot");
+        const positionOutput = document.getElementById("positionOutput");
+        const objectsOutput = document.getElementById("objectsOutput");
+        const previewImage = document.getElementById("previewImage");
+        const previewPlaceholder = document.getElementById("previewPlaceholder");
+
+        function setStatus(text, type = "secondary") {
+            statusLabel.innerHTML = `${text} | Camera API base: <code>${API_BASE}</code>`;
+            statusDot.className = `status-dot ms-3 bg-${type}`;
+        }
+
+        function jsonPretty(data) {
+            return JSON.stringify(data, null, 2);
+        }
+
+        async function getJson(path) {
+            const response = await fetch(`${API_BASE}${path}`, { method: "GET" });
+            const contentType = response.headers.get("content-type") || "";
+            const payload = contentType.includes("application/json") ? await response.json() : { message: await response.text() };
+
+            if (!response.ok) {
+                throw new Error(payload.message || `HTTP ${response.status}`);
+            }
+            return payload;
+        }
+
+        async function apiStart() {
+            try {
+                const data = await getJson("/start");
+                setStatus(data.message || "Camera started", "success");
+            } catch (error) {
+                appendAlert(error.message, "danger");
+                setStatus(error.message, "danger");
+            }
+        }
+
+        async function apiStop() {
+            try {
+                const data = await getJson("/stop");
+                setStatus(data.message || "Camera stopped", "warning");
+            } catch (error) {
+                appendAlert(error.message, "danger");
+                setStatus(error.message, "danger");
+            }
+        }
+
+        async function fetchPosition() {
+            try {
+                const data = await getJson("/position");
+                positionOutput.textContent = jsonPretty(data);
+                setStatus("Position fetched", "success");
+            } catch (error) {
+                appendAlert(error.message, "danger");
+                setStatus(error.message, "danger");
+            }
+        }
+
+        async function fetchObjects() {
+            try {
+                const data = await getJson("/objects");
+                objectsOutput.textContent = jsonPretty(data);
+                setStatus("Objects fetched", "success");
+            } catch (error) {
+                appendAlert(error.message, "danger");
+                setStatus(error.message, "danger");
+            }
+        }
+
+        async function fetchPreview() {
+            try {
+                const response = await fetch(`${API_BASE}/preview`, { method: "GET" });
+                if (!response.ok) {
+                    let message = `HTTP ${response.status}`;
+                    try {
+                        const errJson = await response.json();
+                        if (errJson.message) message = errJson.message;
+                    } catch (_) {}
+                    throw new Error(message);
+                }
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+
+                previewImage.src = url;
+                previewImage.classList.remove("d-none");
+                previewPlaceholder.classList.add("d-none");
+
+                setStatus("Preview fetched", "success");
+            } catch (error) {
+                appendAlert(error.message, "danger");
+                setStatus(error.message, "danger");
+            }
+        }
+
+        // Live alert implementation
+        const alertPlaceholder = document.getElementById("alertPlaceholder");
+        function appendAlert(message, type) {
+            const wrapper = document.createElement("div");
+            wrapper.innerHTML = [
+                `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+                `   <div>${message}</div>`,
+                '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                "</div>"
+            ].join("");
+
+            setTimeout(function() {
+                wrapper.classList.add("fade");
+                setTimeout(function() { wrapper.remove(); }, 1000);
+            }, 5000);
+
+            alertPlaceholder.append(wrapper);
+        }
+
+        setStatus("Ready", "secondary");
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Load navbar from external file
+        fetch("navbar.html")
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById("navbar-placeholder").innerHTML = data;
+            });
+    </script>
+</body>
+</html>
