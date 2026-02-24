@@ -1,5 +1,5 @@
 #pragma once
-#include "defs/structs.hpp"
+//#include "defs/structs.hpp" // IS IT NEEDED ?
 #define SIZEDATALIDAR 15000
 
 #define LOOP_TIME_MS 20
@@ -11,6 +11,8 @@
 
 #define ROBOT_WIDTH 400
 #define OPPONENT_ROBOT_RADIUS 250
+
+// TODO: is it deprecated value ?
 const int STOCK_WIDTH_MM = 100;
 const int STOCK_HEIGHT_MM = 400;
 
@@ -54,7 +56,7 @@ typedef struct
 }STOCK_POSITION_T;
 
 // Define the positions of the stocks 
-STOCK_POSITION_T STOCK_POSITIONS_TABLE[] = {STOCK_POSITION_T{.x = -200, .y = -1300, .rotation = 90}, \
+const STOCK_POSITION_T STOCK_POSITIONS_TABLE[] = {STOCK_POSITION_T{.x = -200, .y = -1300, .rotation = 90}, \
     STOCK_POSITION_T{.x = -200, .y = 1300, .rotation = 90}, \
     STOCK_POSITION_T{.x = 600, .y = -1300, .rotation = 90}, \
     STOCK_POSITION_T{.x = 600, .y = 1300, .rotation = 90},\
@@ -76,7 +78,7 @@ typedef struct
 }DROPZONE_POSITION_T;
 
 //Define the positions of the Dropzone
-DROPZONE_POSITION_T DROPZONE_POSITIONS_TABLE[] = {DROPZONE_POSITION_T{.x = 200, .y = -1400}, \
+const DROPZONE_POSITION_T DROPZONE_POSITIONS_TABLE[] = {DROPZONE_POSITION_T{.x = 200, .y = -1400}, \
     DROPZONE_POSITION_T{.x = 200, .y = 1400}, \
     DROPZONE_POSITION_T{.x = 200, .y = -700}, \
     DROPZONE_POSITION_T{.x = 200, .y = 700}, \
