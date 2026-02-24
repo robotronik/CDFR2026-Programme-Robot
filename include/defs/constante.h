@@ -54,14 +54,14 @@ typedef struct
 }STOCK_POSITION_T;
 
 // Define the positions of the stocks 
-#define STOCK_POSITIONS_TABLE [STOCK_POSITION_T{.x = -200, .y = -1300, .rotation = 90}, \
+STOCK_POSITION_T STOCK_POSITIONS_TABLE[] = {STOCK_POSITION_T{.x = -200, .y = -1300, .rotation = 90}, \
     STOCK_POSITION_T{.x = -200, .y = 1300, .rotation = 90}, \
     STOCK_POSITION_T{.x = 600, .y = -1300, .rotation = 90}, \
     STOCK_POSITION_T{.x = 600, .y = 1300, .rotation = 90},\
     STOCK_POSITION_T{.x = 200, .y = -350, .rotation = 0}, \
     STOCK_POSITION_T{.x = 200, .y = 350, .rotation = 0}, \
     STOCK_POSITION_T{.x = 800, .y = -400, .rotation = 0}, \
-    STOCK_POSITION_T{.x = 800, .y = 400, .rotation = 0} ]
+    STOCK_POSITION_T{.x = 800, .y = 400, .rotation = 0}};
 // The stock table is ordered following symetry of the table, could be ordered by proximity
 
 // Define the dimensions of the Dropzone
@@ -76,7 +76,7 @@ typedef struct
 }DROPZONE_POSITION_T;
 
 //Define the positions of the Dropzone
-#define DROPZONE_POSITIONS_TABLE [DROPZONE_POSITION_T{.x = 200, .y = -1400}, \
+DROPZONE_POSITION_T DROPZONE_POSITIONS_TABLE[] = {DROPZONE_POSITION_T{.x = 200, .y = -1400}, \
     DROPZONE_POSITION_T{.x = 200, .y = 1400}, \
     DROPZONE_POSITION_T{.x = 200, .y = -700}, \
     DROPZONE_POSITION_T{.x = 200, .y = 700}, \
@@ -85,5 +85,5 @@ typedef struct
     DROPZONE_POSITION_T{.x = -450, .y = -250}, \
     DROPZONE_POSITION_T{.x = -450, .y = 250}, \
     DROPZONE_POSITION_T{.x = 200, .y = 0}, \
-    DROPZONE_POSITION_T{.x = 900, .y = 0} ]
+    DROPZONE_POSITION_T{.x = 900, .y = 0} };
 // The dropzone table is ordered following symetry of the table, could be ordered by proximity
