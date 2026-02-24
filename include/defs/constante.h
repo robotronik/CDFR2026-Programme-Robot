@@ -38,3 +38,53 @@
 #define SENSOR_NUM_6         6
 #define SENSOR_NUM_7         7
 #define SENSOR_NUM_8         8
+
+// Define the dimensions of the stocks
+#define STOCKS_WIDTH 200
+#define STOCKS_LENGTH 250
+
+typedef struct 
+{
+    // Structure equal to position_t inside structs.hpp, 
+    // could include position_t but weird to include structs.hpp inside constante.h
+    // NAME is caps because it should only contain constants
+    int  x;
+    int  y;
+    int  rotation; // 0 or 90, 0 for facing x and 90 for facing y 
+}STOCK_POSITION_T;
+
+// Define the positions of the stocks 
+#define STOCK_POSITIONS_TABLE [STOCK_POSITION_T{.x = -200, .y = -1300, .rotation = 90}, \
+    STOCK_POSITION_T{.x = -200, .y = 1300, .rotation = 90}, \
+    STOCK_POSITION_T{.x = 600, .y = -1300, .rotation = 90}, \
+    STOCK_POSITION_T{.x = 600, .y = 1300, .rotation = 90},\
+    STOCK_POSITION_T{.x = 200, .y = -350, .rotation = 0}, \
+    STOCK_POSITION_T{.x = 200, .y = 350, .rotation = 0}, \
+    STOCK_POSITION_T{.x = 800, .y = -400, .rotation = 0}, \
+    STOCK_POSITION_T{.x = 800, .y = 400, .rotation = 0} ]
+// The stock table is ordered following symetry of the table, could be ordered by proximity
+
+// Define the dimensions of the Dropzone
+#define DROPZONE_WIDTH 200
+#define DROPZONE_LENGTH 200
+
+typedef struct 
+{
+    //Structure name in caps because it should only contain constants
+    int x;
+    int y;
+}DROPZONE_POSITION_T;
+
+//Define the positions of the Dropzone
+#define DROPZONE_POSITIONS_TABLE [DROPZONE_POSITION_T{.x = 200, .y = -1400}, \
+    DROPZONE_POSITION_T{.x = 200, .y = 1400}, \
+    DROPZONE_POSITION_T{.x = 200, .y = -700}, \
+    DROPZONE_POSITION_T{.x = 200, .y = 700}, \
+    DROPZONE_POSITION_T{.x = 900, .y = -800}, \
+    DROPZONE_POSITION_T{.x = 900, .y = 800}, \
+    DROPZONE_POSITION_T{.x = -450, .y = -250}, \
+    DROPZONE_POSITION_T{.x = -450, .y = 250}, \
+    DROPZONE_POSITION_T{.x = 200, .y = 0}, \
+    DROPZONE_POSITION_T{.x = 900, .y = 0} ]
+// The dropzone table is ordered following symetry of the table, could be ordered by proximity
+
