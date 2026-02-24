@@ -45,17 +45,48 @@ bool ActionFSM::RunFSM(){
     return false;
 }
 
+/*
+ReturnFSM_t ActionFSM::TakeStock(){
+    static int num = -1;
+    static int offset;
+    if (num == -1){
+        if (!StratRun(num, offset)){
+            LOG_INFO("No more stocks to take, exiting GatherStock");
+            num = -1;
+            gatherStockState = FSM_GATHER_NAV;
+            return FSM_RETURN_DONE;
+        }
+    }
+
+    position_t stockPos = STOCK_POSITION_ARRAY[num];
+    int off = STOCK_OFFSET_MAPPING[num][offset];
+    if (off < 0) return FSM_RETURN_ERROR;
+    position_t stockOff = STOCK_OFFSETS[off];
+    stock_direction_t stock_dir = STOCK_DIRECTION[num][offset]; // FORWARDS OR BACKWARDS
+    Direction stock_nav_dir      = (stock_dir == FORWARDS) ? Direction::FORWARD : Direction::BACKWARD;
+    direction_t stock_intake_dir = (stock_dir == FORWARDS) ? FROM_LEFT : FROM_RIGHT;
+    nav_return_t nav_ret;
+    static unsigned long startTime; // Start time of revolverLoading
+    static unsigned long startTime2;
+    
+    // TODO
+    return FSM_RETURN_DONE;
+}
+*/
 
 ReturnFSM_t ActionFSM::GatherStock(){
     nav_return_t nav_ret;
     switch (gatherStockState){
     case FSM_GATHER_NAV:
         // TODO Astarts should be enabled for some takes
-        position_t pos;
+        //getBestStockPositionOff(stockNum, drive.position);
+        position_t pos; //TODO
         nav_ret = navigationGoTo(pos, false);
         if (nav_ret == NAV_DONE){
             gatherStockState = FSM_GATHER_COLLECT;
-            LOG_INFO("Nav done and RevolverPrepareLowBarrel done for FSM_GATHER_NAV, going to FSM_GATHER_MOVE");
+            LOG_INFO("Actual pro : ", drive.position.x, ", ", drive.position.y);
+            LOG_INFO("NOv to pos : ", pos.x, ", ", pos.y);
+            LOG_INFO("go to nav test");
         }
         else if (nav_ret == NAV_ERROR){
             // TODO get another stock
@@ -66,7 +97,7 @@ ReturnFSM_t ActionFSM::GatherStock(){
         // Collect the stock
         if (true){ //takeStockPlatforms()
             gatherStockState = FSM_GATHER_NAV;
-            LOG_INFO("taking stock for FSM_GATHER_COLLECT");
+            LOG_INFO("END");
             return FSM_RETURN_DONE;
         }
         break;
