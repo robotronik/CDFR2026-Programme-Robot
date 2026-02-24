@@ -31,6 +31,7 @@ private:
     typedef enum
     {
         FSM_GATHER_NAV,
+        FSM_GATHER_MOVE,
         FSM_GATHER_COLLECT
     } StateGatherStock_t;
 

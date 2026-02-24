@@ -20,13 +20,13 @@ inline position_t StratStartingPos(){
     switch (strategy)
     {
     case 1:
-        pos = {125, -1400, 0}; break;
+        pos = {-775, -1175, 0}; break;
     case 2:
-        pos = {0,0,0}; break;
+        pos = {-775, -1175, 0}; break;
     case 3:
-        pos = {125, -1400, 0}; break;
+        pos = {-775, -1175, 0}; break;
     case 4:
-        pos = {1000, 100, 0}; break;
+        pos = {-775, -1175, 0}; break;
     }
     if (color == YELLOW)
         position_robot_flip(pos);
@@ -60,7 +60,7 @@ inline bool StratRun(int& stockNum, int& stockOffset){
     while (i < num){
         if (tableStatus.avail_stocks[todo_stocks[i]]){
             stockNum = todo_stocks[i];
-            stockOffset = getBestStockPositionOff(stockNum, drive.position);
+            stockOffset = 0; // TODO getBestStockPositionOff(stockNum, drive.position);
             return true;
         }
         i++;
