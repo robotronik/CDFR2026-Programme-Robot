@@ -303,7 +303,7 @@ bool m_isPointInsideRectangle(float px, float py, float cx, float cy, float w, f
 
 void opponentInAction(position_t position){
     for(int i = 0; i < STOCK_COUNT; i++){
-        STOCK_POSITION_T stock_pos = STOCK_POSITIONS_TABLE[i];
+        position_t stock_pos = STOCK_POSITIONS_TABLE[i];
         if (m_isPointInsideRectangle(position.x, position.y, stock_pos.x, stock_pos.y, OPPONENT_ROBOT_RADIUS * 2 + STOCKS_WIDTH, OPPONENT_ROBOT_RADIUS * 2 + STOCKS_LENGTH))
         {
             LOG_INFO("Opponent in action at stock %d at position (%d,%d)", i, position.x, position.y);
@@ -312,7 +312,7 @@ void opponentInAction(position_t position){
         }
     }
     for(int i = 0; i < DROPZONE_COUNT; i++){
-        DROPZONE_POSITION_T dropzone_pos = DROPZONE_POSITIONS_TABLE[i];
+        position_t dropzone_pos = DROPZONE_POSITIONS_TABLE[i];
         if (m_isPointInsideRectangle(position.x, position.y, dropzone_pos.x, dropzone_pos.y, OPPONENT_ROBOT_RADIUS * 2 + DROPZONE_WIDTH, OPPONENT_ROBOT_RADIUS * 2 + DROPZONE_LENGTH))
         {
             LOG_INFO("Opponent at dropzone %d at position (%d,%d)", i, position.x, position.y);
