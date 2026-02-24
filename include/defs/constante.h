@@ -1,5 +1,5 @@
 #pragma once
-//#include "defs/structs.hpp" // IS IT NEEDED ?
+#include "defs/structs.hpp"
 #define SIZEDATALIDAR 15000
 
 #define LOOP_TIME_MS 20
@@ -48,47 +48,30 @@ const int DROPZONE_COUNT = 10;
 #define STOCKS_WIDTH 200
 #define STOCKS_LENGTH 250
 
-typedef struct 
-{
-    // Structure equal to position_t inside structs.hpp, 
-    // could include position_t but weird to include structs.hpp inside constante.h
-    // NAME is caps because it should only contain constants
-    int  x;
-    int  y;
-    int  rotation; // 0 or 90, 0 for facing x and 90 for facing y 
-}STOCK_POSITION_T;
-
 // Define the positions of the stocks 
-const STOCK_POSITION_T STOCK_POSITIONS_TABLE[] = {STOCK_POSITION_T{.x = -200, .y = -1300, .rotation = 90}, \
-    STOCK_POSITION_T{.x = -200, .y = 1300, .rotation = 90}, \
-    STOCK_POSITION_T{.x = 600, .y = -1300, .rotation = 90}, \
-    STOCK_POSITION_T{.x = 600, .y = 1300, .rotation = 90},\
-    STOCK_POSITION_T{.x = 200, .y = -350, .rotation = 0}, \
-    STOCK_POSITION_T{.x = 200, .y = 350, .rotation = 0}, \
-    STOCK_POSITION_T{.x = 800, .y = -400, .rotation = 0}, \
-    STOCK_POSITION_T{.x = 800, .y = 400, .rotation = 0}};
+const position_t STOCK_POSITIONS_TABLE[] = {position_t{.x = -200, .y = -1300, .a = 90}, \
+    position_t{.x = -200, .y = 1300, .a = 90}, \
+    position_t{.x = 600, .y = -1300, .a = 90}, \
+    position_t{.x = 600, .y = 1300, .a = 90},\
+    position_t{.x = 200, .y = -350, .a = 0}, \
+    position_t{.x = 200, .y = 350, .a = 0}, \
+    position_t{.x = 800, .y = -400, .a = 0}, \
+    position_t{.x = 800, .y = 400, .a = 0}};
 // The stock table is ordered following symetry of the table, could be ordered by proximity
 
 // Define the dimensions of the Dropzone
 #define DROPZONE_WIDTH 200
 #define DROPZONE_LENGTH 200
 
-typedef struct 
-{
-    //Structure name in caps because it should only contain constants
-    int x;
-    int y;
-}DROPZONE_POSITION_T;
-
 //Define the positions of the Dropzone
-const DROPZONE_POSITION_T DROPZONE_POSITIONS_TABLE[] = {DROPZONE_POSITION_T{.x = 200, .y = -1400}, \
-    DROPZONE_POSITION_T{.x = 200, .y = 1400}, \
-    DROPZONE_POSITION_T{.x = 200, .y = -700}, \
-    DROPZONE_POSITION_T{.x = 200, .y = 700}, \
-    DROPZONE_POSITION_T{.x = 900, .y = -800}, \
-    DROPZONE_POSITION_T{.x = 900, .y = 800}, \
-    DROPZONE_POSITION_T{.x = -450, .y = -250}, \
-    DROPZONE_POSITION_T{.x = -450, .y = 250}, \
-    DROPZONE_POSITION_T{.x = 200, .y = 0}, \
-    DROPZONE_POSITION_T{.x = 900, .y = 0} };
+const position_t DROPZONE_POSITIONS_TABLE[] = {position_t{.x = 200, .y = -1400}, \
+    position_t{.x = 200, .y = 1400}, \
+    position_t{.x = 200, .y = -700}, \
+    position_t{.x = 200, .y = 700}, \
+    position_t{.x = 900, .y = -800}, \
+    position_t{.x = 900, .y = 800}, \
+    position_t{.x = -450, .y = -250}, \
+    position_t{.x = -450, .y = 250}, \
+    position_t{.x = 200, .y = 0}, \
+    position_t{.x = 900, .y = 0} };
 // The dropzone table is ordered following symetry of the table, could be ordered by proximity
