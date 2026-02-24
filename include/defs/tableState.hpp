@@ -25,12 +25,12 @@ public:
     bool avail_stocks[STOCK_COUNT];     // Is stock available
     typedef enum
     {
-        PANTRY_EMPTY,
-        PANTRY_YELLOW,
-        PANTRY_BLUE
-    } pantry_state_t;
+        DROPZONE_EMPTY,
+        DROPZONE_YELLOW,
+        DROPZONE_BLUE
+    } dropzone_state_t;
 
-    pantry_state_t pantry_states[PANTRY_COUNT];
+    dropzone_state_t dropzone_states[DROPZONE_COUNT];
 };
 
 // Serialize tableState

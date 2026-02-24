@@ -42,7 +42,7 @@ const int STOCK_HEIGHT_MM = 400;
 #define SENSOR_NUM_8         8
 
 const int STOCK_COUNT = 8;
-const int PANTRY_COUNT = 10;
+const int DROPZONE_COUNT = 10;
 
 // Define the dimensions of the stocks
 #define STOCKS_WIDTH 200

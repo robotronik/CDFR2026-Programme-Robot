@@ -284,31 +284,6 @@ void disableActuators(){
 //                        OTHER
 // ------------------------------------------------------
 
-bool rotateTwoBlocks(){
-    static int state = 1;
-    switch (state){
-        case 1:
-            if (lowerClaws() & closeClaws())
-                state++;
-            break;
-        case 2:
-            if (raiseLittleClaws() & spinClaws(true, false, true, false))
-                state++;
-            break;
-        case 3:
-            if (lowerClaws())
-                state++;
-            break;
-        case 4:
-            if (raiseLittleClaws() & openClaws()){
-                state = 1;
-                return true;
-            }
-            break;
-    }
-    return false;
-}
-
 bool returnToHome(){
     unsigned long time = _millis() - tableStatus.startTime;
     position_t homePos;
