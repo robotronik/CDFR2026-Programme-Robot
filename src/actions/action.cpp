@@ -86,7 +86,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
         }
             break;
         case FSM_GATHER_MOVE:
-            nav_ret = navigationGoTo(position_t {stockPos.x + int(stockOff.x * 0.5), stockPos.y + int(stockOff.y * 0.5), angle}, true);
+            nav_ret = navigationGoTo(position_t {stockPos.x + int(stockOff.x * 0.7), stockPos.y + int(stockOff.y * 0.7), angle}, true);
             if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_COLLECT;
                 LOG_INFO("Nav done FSM_GATHER_MOVE, going to FSM_GATHER_COLLECT");
@@ -94,16 +94,14 @@ ReturnFSM_t ActionFSM::TakeStock(){
             break;
         case FSM_GATHER_COLLECT:
             // Collect the stock
-            if (rotateTwoBlocks()){ //rotateTwoBlocks()
+            if (rotateTwoBlocks()){
                 LOG_INFO("Stock %d collected", num);
                 num = -1; // Reset for next stock
                 // TODO set stock as taken
                 gatherStockState = FSM_GATHER_NAV;
-                return FSM_RETURN_WORKING; // Continue to next stock
             }
             break;
     }
-    // TODO
     return FSM_RETURN_WORKING;
 }
 
