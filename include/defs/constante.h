@@ -1,5 +1,5 @@
 #pragma once
-#include "defs/structs.hpp"
+//#include "defs/structs.hpp" // IS IT NEEDED ?
 #define SIZEDATALIDAR 15000
 
 #define LOOP_TIME_MS 20
@@ -11,6 +11,8 @@
 
 #define ROBOT_WIDTH 400
 #define OPPONENT_ROBOT_RADIUS 250
+
+// TODO: is it deprecated value ?
 const int STOCK_WIDTH_MM = 100;
 const int STOCK_HEIGHT_MM = 400;
 
@@ -40,4 +42,53 @@ const int STOCK_HEIGHT_MM = 400;
 #define SENSOR_NUM_8         8
 
 const int STOCK_COUNT = 8;
-const int PANTRY_COUNT = 10;
+const int DROPZONE_COUNT = 10;
+
+// Define the dimensions of the stocks
+#define STOCKS_WIDTH 200
+#define STOCKS_LENGTH 250
+
+typedef struct 
+{
+    // Structure equal to position_t inside structs.hpp, 
+    // could include position_t but weird to include structs.hpp inside constante.h
+    // NAME is caps because it should only contain constants
+    int  x;
+    int  y;
+    int  rotation; // 0 or 90, 0 for facing x and 90 for facing y 
+}STOCK_POSITION_T;
+
+// Define the positions of the stocks 
+const STOCK_POSITION_T STOCK_POSITIONS_TABLE[] = {STOCK_POSITION_T{.x = -200, .y = -1300, .rotation = 90}, \
+    STOCK_POSITION_T{.x = -200, .y = 1300, .rotation = 90}, \
+    STOCK_POSITION_T{.x = 600, .y = -1300, .rotation = 90}, \
+    STOCK_POSITION_T{.x = 600, .y = 1300, .rotation = 90},\
+    STOCK_POSITION_T{.x = 200, .y = -350, .rotation = 0}, \
+    STOCK_POSITION_T{.x = 200, .y = 350, .rotation = 0}, \
+    STOCK_POSITION_T{.x = 800, .y = -400, .rotation = 0}, \
+    STOCK_POSITION_T{.x = 800, .y = 400, .rotation = 0}};
+// The stock table is ordered following symetry of the table, could be ordered by proximity
+
+// Define the dimensions of the Dropzone
+#define DROPZONE_WIDTH 200
+#define DROPZONE_LENGTH 200
+
+typedef struct 
+{
+    //Structure name in caps because it should only contain constants
+    int x;
+    int y;
+}DROPZONE_POSITION_T;
+
+//Define the positions of the Dropzone
+const DROPZONE_POSITION_T DROPZONE_POSITIONS_TABLE[] = {DROPZONE_POSITION_T{.x = 200, .y = -1400}, \
+    DROPZONE_POSITION_T{.x = 200, .y = 1400}, \
+    DROPZONE_POSITION_T{.x = 200, .y = -700}, \
+    DROPZONE_POSITION_T{.x = 200, .y = 700}, \
+    DROPZONE_POSITION_T{.x = 900, .y = -800}, \
+    DROPZONE_POSITION_T{.x = 900, .y = 800}, \
+    DROPZONE_POSITION_T{.x = -450, .y = -250}, \
+    DROPZONE_POSITION_T{.x = -450, .y = 250}, \
+    DROPZONE_POSITION_T{.x = 200, .y = 0}, \
+    DROPZONE_POSITION_T{.x = 900, .y = 0} };
+// The dropzone table is ordered following symetry of the table, could be ordered by proximity
