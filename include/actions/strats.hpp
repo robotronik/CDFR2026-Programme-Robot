@@ -20,13 +20,13 @@ inline position_t StratStartingPos(){
     switch (strategy)
     {
     case 1:
-        pos = {-775, -1175, 0}; break;
+        pos = {-775, 1175, 0}; break;
     case 2:
-        pos = {-775, -1175, 0}; break;
+        pos = {-775, 1175, 0}; break;
     case 3:
-        pos = {-775, -1175, 0}; break;
+        pos = {-775, 1175, 0}; break;
     case 4:
-        pos = {-775, -1175, 0}; break;
+        pos = {-775, 1175, 0}; break;
     }
     if (color == YELLOW)
         position_robot_flip(pos);
