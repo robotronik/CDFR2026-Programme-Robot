@@ -17,6 +17,8 @@ TableState::~TableState(){}
 void TableState::reset(){
     
     /* data Winter is comming */
+    for (int i = 0; i < STOCK_COUNT; i++)
+        avail_stocks[i] = true;
 }
 
 int TableState::getScore()

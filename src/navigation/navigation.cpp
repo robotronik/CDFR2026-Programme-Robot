@@ -21,6 +21,7 @@ nav_hash createHash(position_t pos);
 nav_return_t navigationGo(){
     if (currentPathLenght == 0 || pointAlongPathIndex >= currentPathLenght)
         return NAV_DONE;
+    //LOG_DEBUG("Driving to point ", pointAlongPathIndex, " / ", currentPathLenght, " at position (", currentPath[pointAlongPathIndex].x, ", ", currentPath[pointAlongPathIndex].y, ", " , currentPath[pointAlongPathIndex].a, ")");
     bool done = drive.drive(currentPath + pointAlongPathIndex, currentPathLenght - pointAlongPathIndex);
 
     if (done){
@@ -73,6 +74,7 @@ nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd){
         currentPathLenght = pathLenght;
         currentInstructionHash = hashValue;
         pointAlongPathIndex = 0;
+        LOG_DEBUG("New navigation instruction, hash: ", hashValue, " path length: ", pathLenght);
     }
     return navigationGo();
 }

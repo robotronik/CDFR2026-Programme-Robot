@@ -51,23 +51,27 @@ ReturnFSM_t ActionFSM::TakeStock(){
     static int num = -1;
     static int offset = 0;
     if (num == -1){
+        LOG_DEBUG("Getting next stock to take");
         if (!StratRun(num, offset)){
             LOG_INFO("No more stocks to take, exiting GatherStock");
             num = -1;
             gatherStockState = FSM_GATHER_NAV;
             return FSM_RETURN_DONE;
         }
+        LOG_INFO("Next stock to take: ", num, " offset: ", offset);
     }
 
     position_t stockPos = STOCK_POSITIONS_TABLE[num];
-    int angle = stockPos.a;
     position_t stockOff = STOCK_OFFSETS[STOCK_OFFSET_MAPPING[num][offset]];
+    double angle = RAD_TO_DEG*  position_angle(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a} , stockPos);
     nav_return_t nav_ret;
 
     switch (gatherStockState){
         case FSM_GATHER_NAV:
+        {
             // TODO Highways should be enabled for some takes
-            nav_ret = navigationGoTo(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a}, false);
+            position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
+            nav_ret = navigationGoTo(targetPos, true);
             if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_MOVE;
                 LOG_INFO("Nav done FSM_GATHER_NAV, going to FSM_GATHER_MOVE");
@@ -75,12 +79,14 @@ ReturnFSM_t ActionFSM::TakeStock(){
             else if (nav_ret == NAV_ERROR){
                 num = -1;
                 gatherStockState = FSM_GATHER_NAV;
+                LOG_WARNING("Navigation error while going to stock ", num);
                 // TODO get another stock
                 return FSM_RETURN_ERROR;
             }
+        }
             break;
         case FSM_GATHER_MOVE:
-        nav_ret = navigationGoTo(position_t {stockPos.x + int(stockOff.x * 0.8), stockPos.y + int(stockOff.y * 0.8), stockOff.a}, false);
+            nav_ret = navigationGoTo(position_t {stockPos.x + int(stockOff.x * 0.5), stockPos.y + int(stockOff.y * 0.5), angle}, true);
             if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_COLLECT;
                 LOG_INFO("Nav done FSM_GATHER_MOVE, going to FSM_GATHER_COLLECT");
@@ -91,45 +97,13 @@ ReturnFSM_t ActionFSM::TakeStock(){
             if (rotateTwoBlocks()){ //rotateTwoBlocks()
                 LOG_INFO("Stock %d collected", num);
                 num = -1; // Reset for next stock
+                // TODO set stock as taken
                 gatherStockState = FSM_GATHER_NAV;
                 return FSM_RETURN_WORKING; // Continue to next stock
             }
             break;
     }
     // TODO
-    return FSM_RETURN_DONE;
-}
-
-
-
-ReturnFSM_t ActionFSM::GatherStock(){
-    nav_return_t nav_ret;
-    switch (gatherStockState){
-    case FSM_GATHER_NAV:
-        // TODO Astarts should be enabled for some takes
-        //getBestStockPositionOff(stockNum, drive.position);
-        position_t pos; //TODO
-        nav_ret = navigationGoTo(pos, false);
-        if (nav_ret == NAV_DONE){
-            gatherStockState = FSM_GATHER_COLLECT;
-            LOG_INFO("Actual pro : ", drive.position.x, ", ", drive.position.y);
-            LOG_INFO("NOv to pos : ", pos.x, ", ", pos.y);
-            LOG_INFO("go to nav test");
-        }
-        else if (nav_ret == NAV_ERROR){
-            // TODO get another stock
-            return FSM_RETURN_ERROR;
-        }
-        break;
-    case FSM_GATHER_COLLECT:
-        // Collect the stock
-        if (true){ //takeStockPlatforms()
-            gatherStockState = FSM_GATHER_NAV;
-            LOG_INFO("END");
-            return FSM_RETURN_DONE;
-        }
-        break;
-    }
     return FSM_RETURN_WORKING;
 }
 

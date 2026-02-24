@@ -50,14 +50,17 @@ const int DROPZONE_COUNT = 10;
 #define STOCKS_LENGTH 250
 
 // Define the positions of the stocks 
-const position_t STOCK_POSITIONS_TABLE[] = {position_t{.x = -200, .y = -1300, .a = 90}, \
-    position_t{.x = -200, .y = 1300, .a = 90}, \
-    position_t{.x = 600, .y = -1300, .a = 90}, \
+const position_t STOCK_POSITIONS_TABLE[] = {position_t{.x = -200, .y = 1300, .a = 90}, \
     position_t{.x = 600, .y = 1300, .a = 90},\
-    position_t{.x = 200, .y = -350, .a = 0}, \
+    position_t{.x = 800, .y = 400, .a = 0}, \
     position_t{.x = 200, .y = 350, .a = 0}, \
+
+    position_t{.x = -200, .y = -1300, .a = 90}, \
+    position_t{.x = 600, .y = -1300, .a = 90}, \
     position_t{.x = 800, .y = -400, .a = 0}, \
-    position_t{.x = 800, .y = 400, .a = 0}};
+    position_t{.x = 200, .y = -350, .a = 0}};
+    
+    
 // The stock table is ordered following symetry of the table, could be ordered by proximity
 
 const position_t STOCK_OFFSETS[] = {
@@ -84,14 +87,16 @@ const int STOCK_OFFSET_MAPPING[10][2] = {
 #define DROPZONE_LENGTH 200
 
 //Define the positions of the Dropzone
-const position_t DROPZONE_POSITIONS_TABLE[] = {position_t{.x = 200, .y = -1400}, \
+const position_t DROPZONE_POSITIONS_TABLE[] = {
     position_t{.x = 200, .y = 1400}, \
-    position_t{.x = 200, .y = -700}, \
-    position_t{.x = 200, .y = 700}, \
-    position_t{.x = 900, .y = -800}, \
     position_t{.x = 900, .y = 800}, \
-    position_t{.x = -450, .y = -250}, \
+    position_t{.x = 200, .y = 700}, \
     position_t{.x = -450, .y = 250}, \
     position_t{.x = 200, .y = 0}, \
-    position_t{.x = 900, .y = 0} };
-// The dropzone table is ordered following symetry of the table, could be ordered by proximity
+
+    position_t{.x = 200, .y = -1400}, \
+    position_t{.x = 900, .y = -800}, \
+    position_t{.x = 200, .y = -700}, \
+    position_t{.x = -450, .y = -250}, \
+    position_t{.x = 900, .y = 0}}; \
+    // The dropzone table is ordered following symetry of the table, could be ordered by proximity

@@ -48,10 +48,7 @@ double normalize_angle(double angle) {
 
 void position_robot_flip(position_t& pos){
     pos.y = -pos.y;
-    if (pos.a >= 0)
-        pos.a = 180 - pos.a;
-    else
-        pos.a = -180 - pos.a;
+    pos.a = -pos.a;
 }
 
 
