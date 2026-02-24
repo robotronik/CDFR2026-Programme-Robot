@@ -18,6 +18,7 @@ ActionFSM::~ActionFSM(){}
 void ActionFSM::Reset(){
     runState = FSM_ACTION_GATHER;
     gatherStockState = FSM_GATHER_NAV;
+    // TODO reset other states (num,offset, etc.)
 }
 
 bool ActionFSM::RunFSM(){
@@ -26,7 +27,7 @@ bool ActionFSM::RunFSM(){
     {
     //****************************************************************
     case FSM_ACTION_GATHER:
-        ret = GatherStock();
+        ret = TakeStock();
         if (ret == FSM_RETURN_DONE)
             runState = FSM_ACTION_NAV_HOME;
         else if (ret == FSM_RETURN_ERROR){
@@ -45,10 +46,10 @@ bool ActionFSM::RunFSM(){
     return false;
 }
 
-/*
+
 ReturnFSM_t ActionFSM::TakeStock(){
     static int num = -1;
-    static int offset;
+    static int offset = 0;
     if (num == -1){
         if (!StratRun(num, offset)){
             LOG_INFO("No more stocks to take, exiting GatherStock");
@@ -58,21 +59,48 @@ ReturnFSM_t ActionFSM::TakeStock(){
         }
     }
 
-    position_t stockPos = STOCK_POSITION_ARRAY[num];
-    int off = STOCK_OFFSET_MAPPING[num][offset];
-    if (off < 0) return FSM_RETURN_ERROR;
-    position_t stockOff = STOCK_OFFSETS[off];
-    stock_direction_t stock_dir = STOCK_DIRECTION[num][offset]; // FORWARDS OR BACKWARDS
-    Direction stock_nav_dir      = (stock_dir == FORWARDS) ? Direction::FORWARD : Direction::BACKWARD;
-    direction_t stock_intake_dir = (stock_dir == FORWARDS) ? FROM_LEFT : FROM_RIGHT;
+    position_t stockPos = STOCK_POSITIONS_TABLE[num];
+    int angle = stockPos.a;
+    position_t stockOff = STOCK_OFFSETS[STOCK_OFFSET_MAPPING[num][offset]];
     nav_return_t nav_ret;
-    static unsigned long startTime; // Start time of revolverLoading
-    static unsigned long startTime2;
-    
+
+    switch (gatherStockState){
+        case FSM_GATHER_NAV:
+            // TODO Highways should be enabled for some takes
+            nav_ret = navigationGoTo(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a}, false);
+            if (nav_ret == NAV_DONE){
+                gatherStockState = FSM_GATHER_MOVE;
+                LOG_INFO("Nav done FSM_GATHER_NAV, going to FSM_GATHER_MOVE");
+            }
+            else if (nav_ret == NAV_ERROR){
+                num = -1;
+                gatherStockState = FSM_GATHER_NAV;
+                // TODO get another stock
+                return FSM_RETURN_ERROR;
+            }
+            break;
+        case FSM_GATHER_MOVE:
+        nav_ret = navigationGoTo(position_t {stockPos.x + int(stockOff.x * 0.8), stockPos.y + int(stockOff.y * 0.8), stockOff.a}, false);
+            if (nav_ret == NAV_DONE){
+                gatherStockState = FSM_GATHER_COLLECT;
+                LOG_INFO("Nav done FSM_GATHER_MOVE, going to FSM_GATHER_COLLECT");
+            }
+            break;
+        case FSM_GATHER_COLLECT:
+            // Collect the stock
+            if (rotateTwoBlocks()){ //rotateTwoBlocks()
+                LOG_INFO("Stock %d collected", num);
+                num = -1; // Reset for next stock
+                gatherStockState = FSM_GATHER_NAV;
+                return FSM_RETURN_WORKING; // Continue to next stock
+            }
+            break;
+    }
     // TODO
     return FSM_RETURN_DONE;
 }
-*/
+
+
 
 ReturnFSM_t ActionFSM::GatherStock(){
     nav_return_t nav_ret;
