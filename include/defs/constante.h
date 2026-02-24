@@ -41,7 +41,7 @@ const int STOCK_HEIGHT_MM = 400;
 #define SENSOR_NUM_7         7
 #define SENSOR_NUM_8         8
 
-#define OFFSET_STOCK 100 // Offset to be in the middle of the stock, could be changed if we want to take the stock from the top or the bottom
+#define OFFSET_STOCK 250 // Offset to be in the middle of the stock, could be changed if we want to take the stock from the top or the bottom
 const int STOCK_COUNT = 8;
 const int DROPZONE_COUNT = 10;
 

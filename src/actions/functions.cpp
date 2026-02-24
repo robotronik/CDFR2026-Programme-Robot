@@ -40,7 +40,7 @@ bool lowerClaws(){
     static unsigned long startTime = 0;
     switch (state){
         case 1:
-            arduino.moveMotorDC(50, true);
+            arduino.moveMotorDC(40, true);
             state++;
             break;
         case 2:
@@ -64,7 +64,7 @@ bool raiseClaws(){
     static int state = 1;
     switch (state){
         case 1:
-            arduino.moveMotorDC(130, false);
+            arduino.moveMotorDC(110, false);
             state++;
             break;
         case 2:
@@ -97,9 +97,13 @@ bool raiseLittleClaws(){
 }
 
 bool rotateTwoBlocks(){
-    static int state = 1;
+    static int state = 0;
     static int choice;
     switch (state){
+        case 0:
+            if (lowerClaws())
+                state++;
+            break;
         case 1 :
             if (closeClaws()){
                 choice = rand() % 6;
@@ -126,7 +130,7 @@ bool rotateTwoBlocks(){
             break;
         case 5:
             if (openClaws() & resetSpinClaws()){
-                state = 1;
+                state = 0;
                 return true;
             }
             break;
