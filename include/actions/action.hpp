@@ -16,6 +16,7 @@ public:
     bool RunFSM();
 
 private:
+    ReturnFSM_t TakeStock();
     ReturnFSM_t GatherStock();
     ReturnFSM_t Calibrate();
 
