@@ -369,7 +369,7 @@ void opponentInAction(position_t position){
         if (m_isPointInsideRectangle(position.x, position.y, stock_pos.x, stock_pos.y, OPPONENT_ROBOT_RADIUS * 2 + STOCKS_WIDTH, OPPONENT_ROBOT_RADIUS * 2 + STOCKS_LENGTH))
         {
             LOG_INFO("Opponent in action at stock %d at position (%d,%d)", i, position.x, position.y);
-            //TODO: remove action from table state for this stock
+            tableStatus.avail_stocks[i] = false;
             return;
         }
     }
@@ -378,7 +378,7 @@ void opponentInAction(position_t position){
         if (m_isPointInsideRectangle(position.x, position.y, dropzone_pos.x, dropzone_pos.y, OPPONENT_ROBOT_RADIUS * 2 + DROPZONE_WIDTH, OPPONENT_ROBOT_RADIUS * 2 + DROPZONE_LENGTH))
         {
             LOG_INFO("Opponent at dropzone %d at position (%d,%d)", i, position.x, position.y);
-            //TODO: remove action from table state for this dropzone
+            tableStatus.dropzone_states[i] = (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE;
             return;
         }
     }
