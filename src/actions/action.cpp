@@ -76,8 +76,10 @@ ReturnFSM_t ActionFSM::TakeStock(){
             LOG_INFO("Navigating to stock ", stock_num, " at position (", targetPos.x, ",", targetPos.y, ") with angle ", targetPos.a);
             nav_ret = navigationGoTo(targetPos, true);
             if (nav_ret == NAV_DONE){
-                gatherStockState = FSM_GATHER_MOVE;
-                LOG_INFO("Nav done FSM_GATHER_NAV, going to FSM_GATHER_MOVE");
+                if (lowerClaws()){
+                    gatherStockState = FSM_GATHER_MOVE;
+                    LOG_INFO("Nav done FSM_GATHER_NAV, going to FSM_GATHER_MOVE");
+                }
             }
             else if (nav_ret == NAV_ERROR){
                 gatherStockState = FSM_GATHER_NAV;
@@ -96,10 +98,9 @@ ReturnFSM_t ActionFSM::TakeStock(){
             break;
         case FSM_GATHER_COLLECT:
             // Collect the stock
-            if (rotateTwoBlocks(false)){
+            if (rotateTwoBlocks(false)){ // TODO fermer claw puis partir sans attendre fin rotateTwoBlocks (timer)
                 LOG_INFO("Stock %d collected", stock_num);
                 setStockAsRemoved(stock_num);
-                
                 gatherStockState = FSM_DROP_NAV;
                 dropzone_num = GetBestDropZone(drive.position);
                 LOG_INFO("best drop zone for stock ", stock_num, " is ", dropzone_num);
