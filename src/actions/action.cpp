@@ -103,9 +103,8 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 gatherStockState = FSM_DROP_NAV;
                 dropzone_num = GetBestDropZone(drive.position);
                 LOG_INFO("best drop zone for stock ", stock_num, " is ", dropzone_num);
-                dropzonePos = DROPZONE_POSITIONS_TABLE[dropzone_num];
-                dropzonePos.a = position_angle(drive.position, dropzonePos);
-            
+                dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
+                LOG_INFO("Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ",", dropzonePos.y, ")");
             }
             break;
         case FSM_DROP_NAV:
@@ -119,10 +118,10 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 gatherStockState = FSM_DROP;
             }
             else if (nav_ret == NAV_ERROR){
-                
-                gatherStockState = FSM_DROP_NAV;
+
                 LOG_WARNING("Navigation error while going to dropzone for stock ", stock_num);
                 setDropzoneAsError(dropzone_num);
+                
                 int dropzone_temp = GetBestDropZone(drive.position);
                 if(dropzone_temp == -1){
                     LOG_ERROR("No more dropzone available, cannot drop stock ", stock_num);
@@ -130,8 +129,11 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 }else{
                     setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
                     dropzone_num = dropzone_temp;
-                    dropzonePos = DROPZONE_POSITIONS_TABLE[dropzone_num];
+                    dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
+                    LOG_INFO("Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ",", dropzonePos.y, ")");
                 }
+
+                gatherStockState = FSM_DROP_NAV;
                 return FSM_RETURN_ERROR;
             }
         }
