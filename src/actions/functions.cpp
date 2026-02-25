@@ -340,6 +340,14 @@ int getBestStockPositionOff(int stockNum, position_t fromPos){
     return bestOff;
 }
 
+position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos){
+    position_t dropzonePos = DROPZONE_POSITIONS_TABLE[dropzoneNum];
+    position_t vect = position_vector(dropzonePos, fromPos);
+    position_normalize(vect);
+    position_t bestPoss = position_t{dropzonePos.x + int(vect.x * OFFSET_DROPZONE), dropzonePos.y + int(vect.y * OFFSET_DROPZONE), position_angle(fromPos, dropzonePos)};
+    return bestPoss;
+}
+
 void setStockAsRemoved(int num){
     tableStatus.avail_stocks[num] = false;
     LOG_INFO("Removed stock ", num);
