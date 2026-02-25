@@ -14,26 +14,15 @@ inline position_t StratStartingPos(){
     colorTeam_t color = tableStatus.colorTeam;
     int strategy = tableStatus.strategy;
     check(color, strategy);
-    position_t pos = {0, 0, 0};
+    position_t pos = {-775, 1125, 0};
 
-    // First set the position as blue
-    switch (strategy)
-    {
-    case 1:
-        pos = {-775, 1175, 0}; break;
-    case 2:
-        pos = {-775, 1175, 0}; break;
-    case 3:
-        pos = {-775, 1175, 0}; break;
-    case 4:
-        pos = {-775, 1175, 0}; break;
-    }
     if (color == YELLOW)
         position_robot_flip(pos);
     return pos;
 }
 
 inline bool chooseStockStrategy(int& stockNum, int& stockOffset){
+    // TODO check if stock is available
     // Returns true if the robot can take a stock
     colorTeam_t color = tableStatus.colorTeam;
     int strategy = tableStatus.strategy;
@@ -53,7 +42,7 @@ inline bool chooseStockStrategy(int& stockNum, int& stockOffset){
     }
     if (color == YELLOW){
         for (int i = 0; i < num; i++){
-            if (i != 4 && i != 9) // inverse pas les stocks 4 et 9 qui sont au milieu
+            if (i != 4 && i != 8) // inverse pas les stocks 4 et 8 qui sont au milieu
             todo_stocks[i] = (todo_stocks[i] + STOCK_COUNT/2) % STOCK_COUNT;
         }
     }
