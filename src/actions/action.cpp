@@ -107,14 +107,17 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_COLLECT:
             // Collect the stock
             if (rotateTwoBlocks(false)){ // TODO fermer claw puis partir sans attendre fin rotateTwoBlocks (timer)
-                LOG_INFO("Stock %d collected", stock_num);
+                LOG_INFO("Stock", stock_num, " collected");
                 setStockAsRemoved(stock_num);
                 gatherStockState = FSM_GATHER_COLLECTED;
                 dropStockState = FSM_DROP_NAV;
+                return FSM_RETURN_DONE;
             }
             break;
         case FSM_GATHER_COLLECTED:
             // Wait for the stock to be collected before doing anything else (like navigating to dropzone), to avoid dropping the stock on the way
+            LOG_INFO("GATHER_COLLEDTED");
+            return FSM_RETURN_DONE;
             break;
     }
     return FSM_RETURN_WORKING;
@@ -131,7 +134,7 @@ ReturnFSM_t ActionFSM::DropStock(){
             dropzone_num = GetBestDropZone(drive.position);
             LOG_DEBUG("best drop zone for stock ", stock_num, " is ", dropzone_num);
             dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
-            LOG_DEBUG("Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ",", dropzonePos.y, ")");
+            LOG_DEBUG("Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ",", dropzonePos.y, dropzonePos.a, ")");
 
             nav_ret = navigationGoTo(dropzonePos, true);
             if (nav_ret == NAV_DONE or position_distance(drive.position, dropzonePos) < OFFSET_STOCK){ // We consider that we are at the dropzone if we are close enough, to avoid navigation errors
@@ -164,7 +167,7 @@ ReturnFSM_t ActionFSM::DropStock(){
         case FSM_DROP:
             // Drop the stock
             if (dropBlock()){
-                LOG_INFO("Stock %d dropped", stock_num);
+                LOG_INFO("Stock ", stock_num, "dropped");
                 gatherStockState = FSM_GATHER_NAV;
                 dropStockState = FSM_DROP_NONE;
                 return FSM_RETURN_DONE; 
