@@ -314,6 +314,33 @@ int GetBestDropZone(position_t fromPos){
     return bestDropZone;
 }
 
+bool getBestStockPositionOff(int stockNum, position_t fromPos){
+    int bestOff = -1;
+    double bestDist2 = 1000000;
+
+    position_t stockPos = STOCK_POSITIONS_TABLE[stockNum];
+
+    for (int i = 0; i < 2; i++){
+        int offNum = STOCK_OFFSET_MAPPING[stockNum][i];
+        if (offNum == -1)
+            continue;
+
+        position_t stockOff = STOCK_OFFSETS[offNum];
+        position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, 0};
+
+        double dx = fromPos.x - targetPos.x;
+        double dy = fromPos.y - targetPos.y;
+        double dist2 = dx*dx + dy*dy;
+
+        if (dist2 < bestDist2){
+            bestDist2 = dist2;
+            bestOff = offNum;
+        }
+    }
+
+    return bestOff;
+}
+
 void setStockAsRemoved(int num){
     tableStatus.avail_stocks[num] = false;
     LOG_INFO("Removed stock ", num);

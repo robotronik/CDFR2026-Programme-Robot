@@ -33,7 +33,7 @@ inline position_t StratStartingPos(){
     return pos;
 }
 
-inline bool StratRun(int& stockNum, int& stockOffset){
+inline bool chooseStockStrategy(int& stockNum, int& stockOffset){
     // Returns true if the robot can take a stock
     colorTeam_t color = tableStatus.colorTeam;
     int strategy = tableStatus.strategy;
@@ -52,15 +52,16 @@ inline bool StratRun(int& stockNum, int& stockOffset){
     
     }
     if (color == YELLOW){
-        //TODO Invert the stocks, attention à 8 et 9
-        for (int i = 0; i < num; i++)
+        for (int i = 0; i < num; i++){
+            if (i != 4 && i != 9) // inverse pas les stocks 4 et 9 qui sont au milieu
             todo_stocks[i] = (todo_stocks[i] + STOCK_COUNT/2) % STOCK_COUNT;
+        }
     }
     int i = 0;
     while (i < num){
         if (tableStatus.avail_stocks[todo_stocks[i]]){
             stockNum = todo_stocks[i];
-            stockOffset = 0; // TODO getBestStockPositionOff(stockNum, drive.position);
+            stockOffset = getBestStockPositionOff(stockNum, drive.position);
             return true;
         }
         i++;
