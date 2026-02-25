@@ -73,6 +73,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
         {
             // TODO Highways should be enabled for some takes
             position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
+            LOG_INFO("Navigating to stock ", stock_num, " at position (", targetPos.x, ",", targetPos.y, ") with angle ", targetPos.a);
             nav_ret = navigationGoTo(targetPos, true);
             if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_MOVE;
@@ -99,25 +100,26 @@ ReturnFSM_t ActionFSM::TakeStock(){
             if (rotateTwoBlocks(false)){
                 LOG_INFO("Stock %d collected", stock_num);
                 setStockAsRemoved(stock_num);
-                stock_num = -1; // Reset for next stock
+                
                 gatherStockState = FSM_DROP_NAV;
                 dropzone_num = GetBestDropZone(drive.position);
                 LOG_INFO("best drop zone for stock ", stock_num, " is ", dropzone_num);
                 dropzonePos = DROPZONE_POSITIONS_TABLE[dropzone_num];
+            
             }
             break;
         case FSM_DROP_NAV:
         {
             // Navigate to dropzone
-            LOG_INFO("Navigating to dropzone at position (", dropzonePos.x, ",", dropzonePos.y, ")");
+            //LOG_INFO("Navigating to dropzone at position (", dropzonePos.x, ",", dropzonePos.y, ")");
             nav_ret = navigationGoTo(dropzonePos, true);
             if (nav_ret == NAV_DONE){
                 LOG_INFO("Nav done FSM_DROP_NAV, going to FSM_DROP");
                 gatherStockState = FSM_DROP;
             }
              else if (nav_ret == NAV_ERROR){
-                stock_num = -1;
-                gatherStockState = FSM_GATHER_NAV;
+                
+                gatherStockState = FSM_DROP_NAV;
                 LOG_WARNING("Navigation error while going to dropzone for stock ", stock_num);
                 setDropzoneAsError(dropzone_num);
                 // TODO get another stock
@@ -131,7 +133,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 LOG_INFO("Stock %d dropped", stock_num);
                 stock_num = -1; // Reset for next stock
                 gatherStockState = FSM_GATHER_NAV;
-                return FSM_RETURN_DONE; 
+                return FSM_RETURN_WORKING; 
             }
             break;
     }
