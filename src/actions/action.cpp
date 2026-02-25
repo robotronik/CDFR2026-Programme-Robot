@@ -115,22 +115,27 @@ ReturnFSM_t ActionFSM::TakeStock(){
             nav_ret = navigationGoTo(dropzonePos, true);
             if (nav_ret == NAV_DONE){
                 LOG_INFO("Nav done FSM_DROP_NAV, going to FSM_DROP");
+                setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE); // Mark dropzone as occupied
                 gatherStockState = FSM_DROP;
             }
-             else if (nav_ret == NAV_ERROR){
+            else if (nav_ret == NAV_ERROR){
                 
                 gatherStockState = FSM_DROP_NAV;
                 LOG_WARNING("Navigation error while going to dropzone for stock ", stock_num);
                 setDropzoneAsError(dropzone_num);
-                dropzone_num = GetBestDropZone(drive.position);
-                if(dropzone_num == -1){
+                int dropzone_temp = GetBestDropZone(drive.position);
+                if(dropzone_temp == -1){
                     LOG_ERROR("No more dropzone available, cannot drop stock ", stock_num);
                     return FSM_RETURN_ERROR;
+                }else{
+                    setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
+                    dropzone_num = dropzone_temp;
+                    dropzonePos = DROPZONE_POSITIONS_TABLE[dropzone_num];
                 }
                 return FSM_RETURN_ERROR;
             }
         }
-        break;
+            break;
         case FSM_DROP:
             // Drop the stock
             if (dropBlock()){

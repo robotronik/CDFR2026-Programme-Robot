@@ -2,6 +2,7 @@
 #define MYFUNCTION_H
 
 #include "defs/structs.hpp"
+#include "main.hpp"
 
 bool returnToHome();
 bool homeActuators();
@@ -23,6 +24,7 @@ bool dropBlock();
 // Related to stock management
 int GetBestDropZone(position_t fromPos);
 void setStockAsRemoved(int num);
+void setDropzoneState(int dropzoneNum, TableState::dropzone_state_t state);
 void setDropzoneAsError(int dropzoneNum);
 bool getBestStockPositionOff(int stockNum, position_t fromPos);
 
