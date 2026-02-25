@@ -58,3 +58,25 @@ inline bool chooseStockStrategy(int& stockNum, int& stockOffset){
     LOG_GREEN_INFO("No stock available");
     return false;
 }
+
+inline int chooseNextStock(){
+    // Returns the number of the closest available stock to be taken
+    double min = INFINITY;
+    int closest_stock = -1;
+    for (int i = 0; i < STOCK_COUNT; i++){
+        if (tableStatus.avail_stocks[i]){
+            double dist = position_distance(drive.position, STOCK_POSITIONS_TABLE[i]);
+            if (dist < min){
+                min = dist;
+                closest_stock = i;
+            }
+        }
+    }
+    if (closest_stock == -1){
+        LOG_GREEN_INFO("No next stock available");
+        return -1;
+    }else{
+        LOG_INFO("Next stock to take: ", closest_stock);
+        return closest_stock;
+    }
+}
