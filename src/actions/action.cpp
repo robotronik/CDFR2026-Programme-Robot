@@ -122,7 +122,11 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 gatherStockState = FSM_DROP_NAV;
                 LOG_WARNING("Navigation error while going to dropzone for stock ", stock_num);
                 setDropzoneAsError(dropzone_num);
-                // TODO get another stock
+                dropzone_num = GetBestDropZone(drive.position);
+                if(dropzone_num == -1){
+                    LOG_ERROR("No more dropzone available, cannot drop stock ", stock_num);
+                    return FSM_RETURN_ERROR;
+                }
                 return FSM_RETURN_ERROR;
             }
         }
