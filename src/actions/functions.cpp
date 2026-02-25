@@ -317,7 +317,7 @@ int GetBestDropZone(position_t fromPos){
 
 bool getBestStockPositionOff(int stockNum, position_t fromPos){
     int bestOff = -1;
-    double bestDist2 = 1000000;
+    double bestDist2 = INFINITY;
 
     position_t stockPos = STOCK_POSITIONS_TABLE[stockNum];
 
@@ -329,9 +329,7 @@ bool getBestStockPositionOff(int stockNum, position_t fromPos){
         position_t stockOff = STOCK_OFFSETS[offNum];
         position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, 0};
 
-        double dx = fromPos.x - targetPos.x;
-        double dy = fromPos.y - targetPos.y;
-        double dist2 = dx*dx + dy*dy;
+        double dist2 = position_distance(stockOff,targetPos);
 
         if (dist2 < bestDist2){
             bestDist2 = dist2;
