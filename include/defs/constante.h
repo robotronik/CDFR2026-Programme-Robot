@@ -44,6 +44,7 @@ const int STOCK_HEIGHT_MM = 400;
 #define OFFSET_STOCK 250 // Offset to be in the middle of the stock, could be changed if we want to take the stock from the top or the bottom
 #define STOCK_COUNT  8
 #define DROPZONE_COUNT 10
+#define OFFSET_DROPZONE 250 // Offset to be in the middle of the dropzone, could be tweaked
 
 // Define the dimensions of the stocks
 #define STOCKS_WIDTH 200
