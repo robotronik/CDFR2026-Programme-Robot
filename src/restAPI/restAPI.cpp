@@ -569,7 +569,6 @@ void StartAPIServer(){
         else if (req_value == "spinAllClaws")     manual_currentFunc = spinAllClaws;
         else if (req_value == "lowerClaws")       manual_currentFunc = lowerClaws;
         else if (req_value == "raiseClaws")       manual_currentFunc = raiseClaws;
-        else if (req_value == "raiseLittleClaws") manual_currentFunc = raiseLittleClaws;
         else if (req_value == "rotateTwoBlocks")  manual_currentFunc = rotateTwoBlocks;
         else {
             json response;

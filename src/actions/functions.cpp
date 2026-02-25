@@ -78,25 +78,7 @@ bool raiseClaws(){
     return false;
 }
 
-bool raiseLittleClaws(){
-    static int state = 1;
-    switch (state){
-        case 1:
-            arduino.moveMotorDC(80, false);
-            state++;
-            break;
-        case 2:
-            if (!readLimitSwitchBottom()){
-                arduino.stopMotorDC();
-                state = 1;
-                return true;
-            }
-            break;
-    }
-    return false;
-}
-
-bool rotateTwoBlocks(){
+bool rotateTwoBlocks(bool endWithlower = true){
     static int state = 0;
     static int choice;
     switch (state){
