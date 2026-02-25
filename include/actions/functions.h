@@ -23,6 +23,7 @@ bool dropBlock();
 // Related to stock management
 int GetBestDropZone(position_t fromPos);
 void setStockAsRemoved(int num);
+void setDropzoneAsError(int dropzoneNum);
 bool getBestStockPositionOff(int stockNum, position_t fromPos);
 
 // Servo Control
