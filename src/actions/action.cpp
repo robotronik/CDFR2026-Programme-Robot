@@ -167,7 +167,7 @@ ReturnFSM_t ActionFSM::DropStock(){
                 LOG_INFO("Stock %d dropped", stock_num);
                 gatherStockState = FSM_GATHER_NAV;
                 dropStockState = FSM_DROP_NONE;
-                return FSM_RETURN_WORKING; 
+                return FSM_RETURN_DONE; 
             }
             break;
     }
