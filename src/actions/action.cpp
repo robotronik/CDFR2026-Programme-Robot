@@ -48,8 +48,8 @@ bool ActionFSM::RunFSM(){
 
 
 ReturnFSM_t ActionFSM::TakeStock(){
-    static int num = -1;
-    static int offset = 0;
+    static int num = -1;// Num of stock
+    static int offset = 0;// Offset  is direction to take the stock from
     if (num == -1){
         LOG_DEBUG("Getting next stock to take");
         if (!chooseStockStrategy(num, offset)){

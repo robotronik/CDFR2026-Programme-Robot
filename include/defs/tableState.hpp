@@ -27,7 +27,8 @@ class TableState
         {
             DROPZONE_EMPTY,
             DROPZONE_YELLOW,
-            DROPZONE_BLUE
+            DROPZONE_BLUE,
+            DROPZONE_ERROR
         } dropzone_state_t;
 
         dropzone_state_t dropzone_states[DROPZONE_COUNT];
