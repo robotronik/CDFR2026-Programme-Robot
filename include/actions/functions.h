@@ -16,6 +16,7 @@ void switchStrategy(int strategy);
 bool rotateBlocks();
 bool lowerClaws();
 bool raiseClaws();
+bool rotateTwoBlocksEnd();
 bool rotateTwoBlocks(bool endWithlower);
 bool dropBlock();
 

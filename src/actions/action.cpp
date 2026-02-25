@@ -65,6 +65,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
     position_t stockOff = STOCK_OFFSETS[STOCK_OFFSET_MAPPING[num][offset]];
     double angle = RAD_TO_DEG*  position_angle(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a} , stockPos);
     nav_return_t nav_ret;
+    static position_t dropzonePos;
 
     switch (gatherStockState){
         case FSM_GATHER_NAV:
@@ -86,7 +87,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
         }
             break;
         case FSM_GATHER_MOVE:
-            nav_ret = navigationGoTo(position_t {stockPos.x + int(stockOff.x * 0.7), stockPos.y + int(stockOff.y * 0.7), angle}, true);
+            nav_ret = navigationGoTo(position_t {stockPos.x + int(stockOff.x * 0.9), stockPos.y + int(stockOff.y * 0.9), angle}, true);
             if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_COLLECT;
                 LOG_INFO("Nav done FSM_GATHER_MOVE, going to FSM_GATHER_COLLECT");
@@ -96,19 +97,21 @@ ReturnFSM_t ActionFSM::TakeStock(){
             // Collect the stock
             if (rotateTwoBlocks(false)){
                 LOG_INFO("Stock %d collected", num);
+                setStockAsRemoved(num);
                 num = -1; // Reset for next stock
-                setStockAsRemoved(num); // TODO set stock as taken
                 gatherStockState = FSM_DROP_NAV;
+                LOG_INFO("best drop zone for stock ", num, " is ", GetBestDropZone(drive.position));
+                dropzonePos = DROPZONE_POSITIONS_TABLE[GetBestDropZone(drive.position)];
             }
             break;
         case FSM_DROP_NAV:
+        {
             // Navigate to dropzone
-            position_t dropzonePos = DROPZONE_POSITIONS_TABLE[GetBestDropZone(drive.position)];
+            LOG_INFO("Navigating to dropzone at position (", dropzonePos.x, ",", dropzonePos.y, ")");
             nav_ret = navigationGoTo(dropzonePos, true);
             if (nav_ret == NAV_DONE){
                 LOG_INFO("Nav done FSM_DROP_NAV, going to FSM_DROP");
                 gatherStockState = FSM_DROP;
-                return FSM_RETURN_DONE; 
             }
              else if (nav_ret == NAV_ERROR){
                 num = -1;
@@ -117,7 +120,8 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 // TODO get another stock
                 return FSM_RETURN_ERROR;
             }
-            break;
+        }
+        break;
         case FSM_DROP:
             // Drop the stock
             if (dropBlock()){

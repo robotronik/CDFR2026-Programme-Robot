@@ -77,6 +77,9 @@ bool raiseClaws(){
     }
     return false;
 }
+bool rotateTwoBlocksEnd(){
+    return rotateTwoBlocks(true);
+}
 
 bool rotateTwoBlocks(bool endWithlower = true){
     static int state = 0;
@@ -107,7 +110,7 @@ bool rotateTwoBlocks(bool endWithlower = true){
             }
             break;
         case 4:
-            if (endWithlower){
+            if (!endWithlower){
                 state = 0;
                 return true;
             } 
@@ -156,7 +159,7 @@ bool openClaws(){
 
 bool snapClaws(bool closed){
     static bool prevState = !closed;
-    int target = closed ? 16 : 90;
+    int target = closed ? 16 : 130;
     if (prevState != closed){
         arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 100);
         prevState = closed;
