@@ -105,6 +105,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 dropzone_num = GetBestDropZone(drive.position);
                 LOG_INFO("best drop zone for stock ", stock_num, " is ", dropzone_num);
                 dropzonePos = DROPZONE_POSITIONS_TABLE[dropzone_num];
+                dropzonePos.a = position_angle(drive.position, dropzonePos);
             
             }
             break;
@@ -113,7 +114,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             // Navigate to dropzone
             //LOG_INFO("Navigating to dropzone at position (", dropzonePos.x, ",", dropzonePos.y, ")");
             nav_ret = navigationGoTo(dropzonePos, true);
-            if (nav_ret == NAV_DONE){
+            if (nav_ret == NAV_DONE or position_distance(drive.position, dropzonePos) < OFFSET_STOCK){ // We consider that we are at the dropzone if we are close enough, to avoid navigation errors
                 LOG_INFO("Nav done FSM_DROP_NAV, going to FSM_DROP");
                 setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE); // Mark dropzone as occupied
                 gatherStockState = FSM_DROP;

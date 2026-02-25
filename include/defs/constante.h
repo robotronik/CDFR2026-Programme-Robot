@@ -42,12 +42,12 @@ const int STOCK_HEIGHT_MM = 400;
 #define SENSOR_NUM_8         8
 
 #define OFFSET_STOCK 250 // Offset to be in the middle of the stock, could be changed if we want to take the stock from the top or the bottom
-const int STOCK_COUNT = 8;
-const int DROPZONE_COUNT = 10;
+#define STOCK_COUNT  8
+#define DROPZONE_COUNT 10
 
 // Define the dimensions of the stocks
 #define STOCKS_WIDTH 200
-#define STOCKS_LENGTH 250
+#define STOCKS_LENGTH 150
 
 // Define the positions of the stocks 
 const position_t STOCK_POSITIONS_TABLE[] = {
@@ -65,22 +65,22 @@ const position_t STOCK_POSITIONS_TABLE[] = {
 // The stock table is ordered following symetry of the table, could be ordered by proximity
 
 const position_t STOCK_OFFSETS[] = {
-    { 0, OFFSET_STOCK, -90},  //0 : Offset droite
-    {0, - OFFSET_STOCK, 90},  //1 : Offset gauche
-    { OFFSET_STOCK,0, 0 },  //2 : Offset bas
-    { - OFFSET_STOCK,0, 180},  //3 : Offset haut
+    { 0, OFFSET_STOCK, -90},  //0 : Offset depuis droite
+    {0, - OFFSET_STOCK, 90},  //1 : Offset depuis gauche
+    { OFFSET_STOCK,0, 180 },  //2 : Offset depuis bas
+    { - OFFSET_STOCK,0, 0},  //3 : Offset depuis haut
 }; 
 
-const int STOCK_OFFSET_MAPPING[10][2] = {
+const int STOCK_OFFSET_MAPPING[STOCK_COUNT][2] = {
     {1,-1}, // Stock 0 utilise les offsets 1
-    {1,-1}, // Stock 1 utilise les offsets 3
-    {3,-1}, // Stock 2 utilise les offsets 7
-    {2, 3}, // Stock 3 utilise les offsets 1 et 3
+    {1,-1}, // Stock 1 utilise les offsets 1
+    {3,-1}, // Stock 2 utilise les offsets 3
+    {2, 3}, // Stock 3 utilise les offsets 2 et 3
 
-    {0, -1}, // Stock 4 utilise les offsets 0
-    {0,-1}, // Stock 5 utilise les offsets 2
-    {3,-1}, // Stock 6 utilise les offsets 4
-    {2,3}, // Stock 7 utilise les offsets 5
+    {0,-1}, // Stock 4 utilise les offsets 0
+    {0,-1}, // Stock 5 utilise les offsets 0
+    {3,-1}, // Stock 6 utilise les offsets 3
+    {2,3}, // Stock 7 utilise les offsets 2,3
 };
 
 // Define the dimensions of the Dropzone

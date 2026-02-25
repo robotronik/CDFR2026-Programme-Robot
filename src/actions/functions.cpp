@@ -315,7 +315,7 @@ int GetBestDropZone(position_t fromPos){
     return bestDropZone;
 }
 
-bool getBestStockPositionOff(int stockNum, position_t fromPos){
+int getBestStockPositionOff(int stockNum, position_t fromPos){
     int bestOff = -1;
     double bestDist2 = INFINITY;
 
