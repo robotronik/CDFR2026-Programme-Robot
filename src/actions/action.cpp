@@ -94,11 +94,37 @@ ReturnFSM_t ActionFSM::TakeStock(){
             break;
         case FSM_GATHER_COLLECT:
             // Collect the stock
-            if (rotateTwoBlocks()){
+            if (rotateTwoBlocks(false)){
                 LOG_INFO("Stock %d collected", num);
                 num = -1; // Reset for next stock
-                // TODO set stock as taken
+                setStockAsRemoved(num); // TODO set stock as taken
+                gatherStockState = FSM_DROP_NAV;
+            }
+            break;
+        case FSM_DROP_NAV:
+            // Navigate to dropzone
+            position_t dropzonePos = DROPZONE_POSITIONS_TABLE[GetBestDropZone(drive.position)];
+            nav_ret = navigationGoTo(dropzonePos, true);
+            if (nav_ret == NAV_DONE){
+                LOG_INFO("Nav done FSM_DROP_NAV, going to FSM_DROP");
+                gatherStockState = FSM_DROP;
+                return FSM_RETURN_DONE; 
+            }
+             else if (nav_ret == NAV_ERROR){
+                num = -1;
                 gatherStockState = FSM_GATHER_NAV;
+                LOG_WARNING("Navigation error while going to dropzone for stock ", num);
+                // TODO get another stock
+                return FSM_RETURN_ERROR;
+            }
+            break;
+        case FSM_DROP:
+            // Drop the stock
+            if (dropBlock()){
+                LOG_INFO("Stock %d dropped", num);
+                num = -1; // Reset for next stock
+                gatherStockState = FSM_GATHER_NAV;
+                return FSM_RETURN_DONE; 
             }
             break;
     }

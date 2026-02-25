@@ -16,11 +16,12 @@ void switchStrategy(int strategy);
 bool rotateBlocks();
 bool lowerClaws();
 bool raiseClaws();
-bool raiseLittleClaws();
-bool rotateTwoBlocks();
+bool rotateTwoBlocks(bool endWithlower);
+bool dropBlock();
 
 // Related to stock management
-int getBestStockPositionOff(int stockN, position_t fromPos); //TODO
+int GetBestDropZone(position_t fromPos);
+void setStockAsRemoved(int num);
 
 // Servo Control
 bool closeClaws();
