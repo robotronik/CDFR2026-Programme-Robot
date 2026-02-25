@@ -79,7 +79,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_NAV:
             {
             position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
-            LOG_INFO("Navigating to stock ", stock_num, " at position (", targetPos.x, ",", targetPos.y, ") with angle ", targetPos.a);
+            //LOG_INFO("Navigating to stock ", stock_num, " at position (", targetPos.x, ",", targetPos.y, ") with angle ", targetPos.a);
 
             nav_ret = navigationGoTo(targetPos, true);
             if (nav_ret == NAV_DONE){
@@ -128,14 +128,14 @@ ReturnFSM_t ActionFSM::DropStock(){
             dropzone_num = GetBestDropZone(drive.position);
             LOG_DEBUG("best drop zone for stock ", stock_num, " is ", dropzone_num);
             dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
-            LOG_DEBUG("Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ", ", dropzonePos.y, ", ", dropzonePos.a * RAD_TO_DEG, ")");
+            LOG_DEBUG("Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ", ", dropzonePos.y, ", ", dropzonePos.a , ")");
             dropStockState = FSM_DROP_NAV;
             break;
         case FSM_DROP_NAV:
             {   
             // Navigate to dropzone
             nav_ret = navigationGoTo(dropzonePos, true);
-            LOG_INFO("Navigating to stock ", stock_num, " at position (", dropzonePos.x, ",", dropzonePos.y, ") with angle ", dropzonePos.a);
+            //LOG_INFO("Navigating to stock ", stock_num, " at position (", dropzonePos.x, ",", dropzonePos.y, ") with angle ", dropzonePos.a);
 
             if (nav_ret == NAV_DONE){ // We consider that we are at the dropzone if we are close enough, to avoid navigation errors
                 LOG_INFO("Nav done FSM_DROP_NAV, going to FSM_DROP");
