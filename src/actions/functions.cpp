@@ -1,5 +1,4 @@
 #include "actions/functions.h"
-#include "main.hpp"
 #include "navigation/navigation.h"
 #include "lidar/lidarAnalize.h"
 #include "lidar/Lidar.hpp"
@@ -7,7 +6,6 @@
 #include "i2c/Arduino.hpp"
 #include "actions/strats.hpp"
 #include <math.h>
-
 // ------------------------------------------------------
 //                   BASIC FSM CONTROL
 // ------------------------------------------------------
@@ -349,9 +347,13 @@ void setStockAsRemoved(int num){
     LOG_INFO("Removed stock ", num);
 }
 
+void setDropzoneState(int dropzoneNum, TableState::dropzone_state_t state){
+    tableStatus.dropzone_states[dropzoneNum] = state;
+    LOG_INFO("Set dropzone ", dropzoneNum, " state to ", state);
+}
+
 void setDropzoneAsError(int dropzoneNum){
-    tableStatus.dropzone_states[dropzoneNum] = TableState::DROPZONE_ERROR;
-    LOG_INFO("Set dropzone ", dropzoneNum, " state to ERROR");
+    setDropzoneState(dropzoneNum, TableState::DROPZONE_ERROR);
 }
 
 bool returnToHome(){
