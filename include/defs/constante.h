@@ -50,7 +50,8 @@ const int DROPZONE_COUNT = 10;
 #define STOCKS_LENGTH 250
 
 // Define the positions of the stocks 
-const position_t STOCK_POSITIONS_TABLE[] = {position_t{.x = -200, .y = 1325, .a = 90}, \
+const position_t STOCK_POSITIONS_TABLE[] = {
+    position_t{.x = -200, .y = 1325, .a = 90},\
     position_t{.x = 600, .y = 1325, .a = 90},\
     position_t{.x = 825, .y = 400, .a = 0}, \
     position_t{.x = 200, .y = 350, .a = 0}, \
@@ -76,7 +77,7 @@ const int STOCK_OFFSET_MAPPING[10][2] = {
     {3,-1}, // Stock 2 utilise les offsets 7
     {2, 3}, // Stock 3 utilise les offsets 1 et 3
 
-    {0, -1}, // Stock 4 utilise les offsets 0,1,2 et 3
+    {0, -1}, // Stock 4 utilise les offsets 0
     {0,-1}, // Stock 5 utilise les offsets 2
     {3,-1}, // Stock 6 utilise les offsets 4
     {2,3}, // Stock 7 utilise les offsets 5
