@@ -391,7 +391,7 @@ void opponentInAction(position_t position){
             OPPONENT_ROBOT_RADIUS * 2 + (stock_pos.a == 90 ? STOCKS_LENGTH : STOCKS_WIDTH), 
             OPPONENT_ROBOT_RADIUS * 2 + (stock_pos.a == 90 ? STOCKS_WIDTH : STOCKS_LENGTH)) )// we  consider stock orientation
         {
-            LOG_INFO("Opponent in action at stock %d at position (%d,%d)", i, position.x, position.y);
+            LOG_INFO("Opponent in action at stock ", i, " at position ", position.x, " / ", position.y);
             tableStatus.avail_stocks[i] = false;
             return;
         }
@@ -400,7 +400,7 @@ void opponentInAction(position_t position){
         position_t dropzone_pos = DROPZONE_POSITIONS_TABLE[i];
         if (tableStatus.dropzone_states[i] == TableState::DROPZONE_EMPTY && m_isPointInsideRectangle(position.x, position.y, dropzone_pos.x, dropzone_pos.y, OPPONENT_ROBOT_RADIUS * 2 + DROPZONE_WIDTH, OPPONENT_ROBOT_RADIUS * 2 + DROPZONE_LENGTH))
         {
-            LOG_INFO("Opponent at dropzone %d at position (%d,%d)", i, position.x, position.y);
+            LOG_INFO("Opponent at dropzone ", i ," at position ", position.x, position.y);
             tableStatus.dropzone_states[i] = (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE;
             return;
         }
