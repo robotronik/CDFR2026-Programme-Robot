@@ -107,12 +107,33 @@ bool rotateTwoBlocks(bool endWithlower = true){
             }
             break;
         case 4:
-            if (lowerClaws())
+            if (endWithlower){
+                state = 0;
+                return true;
+            } 
+            else if (lowerClaws())
                 state++;
             break;
         case 5:
-            if (openClaws() & resetSpinClaws()){
+            if (openClaws() & resetSpinClaws() & raiseClaws()){
                 state = 0;
+                return true;
+            }
+            break;
+    }
+    return false;
+}
+
+bool dropBlock(){
+    static int state = 1;
+    switch (state){
+        case 1:
+            if (lowerClaws())
+                state++;
+            break;
+        case 2:
+            if (openClaws() & resetSpinClaws() & raiseClaws()){
+                state = 1;
                 return true;
             }
             break;
@@ -269,6 +290,34 @@ void disableActuators(){
 // ------------------------------------------------------
 //                        OTHER
 // ------------------------------------------------------
+
+int GetBestDropZone(position_t fromPos){
+    int bestDropZone = -1;
+    double bestDist2 = 1000000;
+
+    for (int i = 0; i < DROPZONE_COUNT; i++){
+        if (tableStatus.dropzone_states[i] != TableState::DROPZONE_EMPTY)
+            continue;
+
+        position_t dropzonePos = DROPZONE_POSITIONS_TABLE[i];
+
+        double dx = fromPos.x - dropzonePos.x;
+        double dy = fromPos.y - 0.5 * dropzonePos.y - (tableStatus.colorTeam == BLUE ? 750 : -750); // We want to favor the dropzones on our side of the table
+        double dist2 = dx*dx + dy*dy;
+
+        if (dist2 < bestDist2){
+            bestDist2 = dist2;
+            bestDropZone = i;
+        }
+    }
+
+    return bestDropZone;
+}
+
+void setStockAsRemoved(int num){
+    tableStatus.avail_stocks[num] = false;
+    LOG_INFO("Removed stock ", num);
+}
 
 bool returnToHome(){
     unsigned long time = _millis() - tableStatus.startTime;

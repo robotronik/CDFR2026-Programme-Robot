@@ -32,7 +32,9 @@ private:
     {
         FSM_GATHER_NAV,
         FSM_GATHER_MOVE,
-        FSM_GATHER_COLLECT
+        FSM_GATHER_COLLECT,
+        FSM_DROP_NAV,
+        FSM_DROP
     } StateGatherStock_t;
 
     StateGatherStock_t gatherStockState = FSM_GATHER_NAV;
