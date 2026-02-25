@@ -51,7 +51,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
     static int stock_num = -1;// Num of stock
     static int dropzone_num = -1;// Num of dropzone to drop the stock
     static int offset = 0;// Offset  is direction to take the stock from
-    if (stock_num == -1){
+    if (stock_num == -1 || gatherStockState == FSM_GATHER_NAV){
         LOG_DEBUG("Getting next stock to take");
         if (!chooseStockStrategy(stock_num, offset)){
             LOG_INFO("No more stocks to take, exiting GatherStock");
@@ -80,7 +80,6 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 LOG_INFO("Nav done FSM_GATHER_NAV, going to FSM_GATHER_MOVE");
             }
             else if (nav_ret == NAV_ERROR){
-                stock_num = -1;
                 gatherStockState = FSM_GATHER_NAV;
                 LOG_WARNING("Navigation error while going to stock ", stock_num);
                 // TODO get another stock
@@ -141,7 +140,6 @@ ReturnFSM_t ActionFSM::TakeStock(){
             // Drop the stock
             if (dropBlock()){
                 LOG_INFO("Stock %d dropped", stock_num);
-                stock_num = -1; // Reset for next stock
                 gatherStockState = FSM_GATHER_NAV;
                 return FSM_RETURN_WORKING; 
             }
