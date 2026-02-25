@@ -117,6 +117,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 num = -1;
                 gatherStockState = FSM_GATHER_NAV;
                 LOG_WARNING("Navigation error while going to dropzone for stock ", num);
+                setDropZoneAsError(/*TODO*/);
                 // TODO get another stock
                 return FSM_RETURN_ERROR;
             }

@@ -349,6 +349,11 @@ void setStockAsRemoved(int num){
     LOG_INFO("Removed stock ", num);
 }
 
+void setDropZoneAsError(int dropzoneNum){
+    tableStatus.dropzone_states[dropzoneNum] = TableState::DROPZONE_ERROR;
+    LOG_INFO("Set dropzone ", dropzoneNum, " state to ERROR");
+}
+
 bool returnToHome(){
     unsigned long time = _millis() - tableStatus.startTime;
     position_t homePos;
