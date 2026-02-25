@@ -126,15 +126,20 @@ bool rotateTwoBlocks(bool endWithlower = true){
 }
 
 bool dropBlock(){
-    static int state = 1;
+    static int state = 0;
+    static unsigned long startTime = 0;
     switch (state){
+        case 0:
+            startTime = _millis();
+            state++;
+            break;
         case 1:
-            if (lowerClaws())
+            if (lowerClaws() || (_millis() - startTime > 1000)) // Si pinces bloquées
                 state++;
             break;
         case 2:
             if (openClaws() & resetSpinClaws() & raiseClaws()){
-                state = 1;
+                state = 0;
                 return true;
             }
             break;
