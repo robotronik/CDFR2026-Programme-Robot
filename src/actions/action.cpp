@@ -12,6 +12,7 @@ ActionFSM::~ActionFSM(){}
 void ActionFSM::Reset(){
     runState = FSM_ACTION_GATHER;
     gatherStockState = FSM_GATHER_NAV;
+    dropStockState = FSM_DROP_NONE;
     stock_num = -1;
     offset = 0;
     
@@ -76,7 +77,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             {
             position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
             LOG_INFO("Navigating to stock ", stock_num, " at position (", targetPos.x, ",", targetPos.y, ") with angle ", targetPos.a);
-            
+
             nav_ret = navigationGoTo(targetPos, true);
             if (nav_ret == NAV_DONE){
                 if (lowerClaws()){
