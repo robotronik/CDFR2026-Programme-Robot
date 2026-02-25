@@ -28,6 +28,7 @@ bool ActionFSM::RunFSM(){
         ret = TakeStock();
         if (ret == FSM_RETURN_DONE){
             runState = FSM_ACTION_DROP;
+            LOG_INFO("Finished gathering stock ", stock_num, ", going to FSM_ACTION_DROP");
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("Couldn't gather");
@@ -37,8 +38,10 @@ bool ActionFSM::RunFSM(){
     //****************************************************************
     case FSM_ACTION_DROP:
         ret = DropStock();
-        if (ret == FSM_RETURN_DONE)
+        if (ret == FSM_RETURN_DONE){
             runState = FSM_ACTION_NAV_HOME;
+            LOG_INFO("Finished dropping stock ", stock_num, ", going to FSM_ACTION_NAV_HOME");
+        }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("Couldn't drop");
             // TODO Handle error
@@ -123,7 +126,7 @@ ReturnFSM_t ActionFSM::DropStock(){
             // Wait until the stock is collected before trying to drop it, to avoid dropping the stock on the way
             break;
         case FSM_DROP_NAV:
-        {   
+            {   
             // Navigate to dropzone
             dropzone_num = GetBestDropZone(drive.position);
             LOG_DEBUG("best drop zone for stock ", stock_num, " is ", dropzone_num);
@@ -155,8 +158,9 @@ ReturnFSM_t ActionFSM::DropStock(){
                 dropStockState = FSM_DROP_NAV;
                 return FSM_RETURN_ERROR;
             }
-        }
+            }
             break;
+
         case FSM_DROP:
             // Drop the stock
             if (dropBlock()){
@@ -167,6 +171,7 @@ ReturnFSM_t ActionFSM::DropStock(){
             }
             break;
     }
+    return FSM_RETURN_WORKING;
 }
 
 position_t calculateClosestArucoPosition(position_t currentPos, position_t& outPos){
