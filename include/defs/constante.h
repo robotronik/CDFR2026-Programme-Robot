@@ -50,14 +50,14 @@ const int DROPZONE_COUNT = 10;
 #define STOCKS_LENGTH 250
 
 // Define the positions of the stocks 
-const position_t STOCK_POSITIONS_TABLE[] = {position_t{.x = -200, .y = 1300, .a = 90}, \
-    position_t{.x = 600, .y = 1300, .a = 90},\
-    position_t{.x = 800, .y = 400, .a = 0}, \
+const position_t STOCK_POSITIONS_TABLE[] = {position_t{.x = -200, .y = 1325, .a = 90}, \
+    position_t{.x = 600, .y = 1325, .a = 90},\
+    position_t{.x = 825, .y = 400, .a = 0}, \
     position_t{.x = 200, .y = 350, .a = 0}, \
 
-    position_t{.x = -200, .y = -1300, .a = 90}, \
-    position_t{.x = 600, .y = -1300, .a = 90}, \
-    position_t{.x = 800, .y = -400, .a = 0}, \
+    position_t{.x = -200, .y = -1325, .a = 90}, \
+    position_t{.x = 600, .y = -1325, .a = 90}, \
+    position_t{.x = 825, .y = -400, .a = 0}, \
     position_t{.x = 200, .y = -350, .a = 0}};
     
     

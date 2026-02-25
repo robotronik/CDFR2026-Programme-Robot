@@ -52,7 +52,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
     static int offset = 0;
     if (num == -1){
         LOG_DEBUG("Getting next stock to take");
-        if (!StratRun(num, offset)){
+        if (!chooseStockStrategy(num, offset)){
             LOG_INFO("No more stocks to take, exiting GatherStock");
             num = -1;
             gatherStockState = FSM_GATHER_NAV;
