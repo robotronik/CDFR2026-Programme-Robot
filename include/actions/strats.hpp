@@ -2,14 +2,14 @@
 #include "main.hpp"
 #include "utils/logger.hpp"
 
-void check(colorTeam_t color, int strategy){
+inline void check(colorTeam_t color, int strategy){
     // Check if the color and strategy are valid
     if (color == NONE || strategy < 1 || strategy > 4)
         LOG_ERROR("Invalid color (", color, ") or strategy (", strategy, ")");
 }
 
 // Function to handle the strategy
-position_t StratStartingPos(){
+inline position_t StratStartingPos(){
     // Returns the starting position of the robot
     colorTeam_t color = tableStatus.colorTeam;
     int strategy = tableStatus.strategy;
@@ -21,7 +21,7 @@ position_t StratStartingPos(){
     return pos;
 }
 
-int chooseNextStock(){
+inline int chooseNextStock(){
     // Returns the number of the closest available stock to be taken
     double min = INFINITY;
     int closest_stock = -1;
@@ -43,7 +43,7 @@ int chooseNextStock(){
     }
 }
 
-bool chooseStockStrategy(int& stockNum, int& stockOffset){
+inline bool chooseStockStrategy(int& stockNum, int& stockOffset){
     // TODO check if stock is available
     // Returns true if the robot can take a stock
     colorTeam_t color = tableStatus.colorTeam;
