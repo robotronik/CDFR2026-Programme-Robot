@@ -62,7 +62,7 @@ bool raiseClaws(){
     static int state = 1;
     switch (state){
         case 1:
-            arduino.moveMotorDC(110, false);
+            arduino.moveMotorDC(90, false);
             state++;
             break;
         case 2:
@@ -306,10 +306,7 @@ int GetBestDropZone(position_t fromPos){
             continue;
 
         position_t dropzonePos = DROPZONE_POSITIONS_TABLE[i];
-
-        double dx = fromPos.x - dropzonePos.x;
-        double dy = fromPos.y - 0.5 * dropzonePos.y - (tableStatus.colorTeam == BLUE ? 750 : -750); // We want to favor the dropzones on our side of the table
-        double dist2 = dx*dx + dy*dy;
+        double dist2 = position_distance(fromPos, dropzonePos) + abs( tableStatus.colorTeam == BLUE ? dropzonePos.y - 1500 : dropzonePos.y + 1500); // We want to favor the dropzones on our side of the table
 
         if (dist2 < bestDist2){
             bestDist2 = dist2;
