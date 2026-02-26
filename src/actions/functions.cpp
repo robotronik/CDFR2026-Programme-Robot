@@ -38,11 +38,12 @@ bool lowerClaws(){
     static unsigned long startTime = 0;
     switch (state){
         case 1:
-            arduino.moveMotorDC(40, true);
+            arduino.moveMotorDC(50, true);
+            startTime = _millis();
             state++;
             break;
         case 2:
-            if (readLimitSwitchBottom()){
+            if (readLimitSwitchBottom() || (_millis() >= startTime + 2000)){ // Si pinces bloquées ou après 2s
                 startTime = _millis();
                 state++;
             }
