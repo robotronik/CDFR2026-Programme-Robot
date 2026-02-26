@@ -9,7 +9,6 @@ ActionFSM::ActionFSM(){
 
 ActionFSM::~ActionFSM(){}
 
-static inline int sign(double v){return (v > 0) - (v < 0);}
 
 void ActionFSM::Reset(){
     runState = FSM_ACTION_GATHER;
@@ -74,7 +73,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
     }
 
     position_t stockPos = STOCK_POSITIONS_TABLE[stock_num];
-    position_t stockOff = STOCK_OFFSETS[STOCK_OFFSET_MAPPING[stock_num][offset]];
+    position_t stockOff = STOCK_OFFSETS[offset];
     double angle = RAD_TO_DEG*  position_angle(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a} , stockPos);
 
     switch (gatherStockState){
@@ -100,9 +99,8 @@ ReturnFSM_t ActionFSM::TakeStock(){
             break;
 
         case FSM_GATHER_MOVE:
-        
-        nav_ret = navigationGoTo(position_t {stockPos.x + stockOff.x - sign(stockOff.x) * 100.0,stockPos.y + stockOff.y - sign(stockOff.y) * 100.0,angle}, true);            
-        LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + stockOff.x - sign(stockOff.x) * 100.0, ",", stockPos.y + stockOff.y - sign(stockOff.y) * 100.0, ") with angle ", angle);
+            nav_ret = navigationGoTo(position_t {stockPos.x + int(stockOff.x * 0.66), stockPos.y + int(stockOff.y * 0.66), angle}, true);
+            //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
         if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_COLLECT;
                 LOG_INFO("Nav done FSM_GATHER_MOVE, going to FSM_GATHER_COLLECT");
