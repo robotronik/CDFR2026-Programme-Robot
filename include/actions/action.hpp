@@ -6,14 +6,7 @@
 #include "actions/strats.hpp"
 #include "defs/tableState.hpp"
 #include "defs/constante.h"
-
-// Consider using enum class for better type safety
-typedef enum
-{
-    FSM_RETURN_WORKING =0x0,
-    FSM_RETURN_DONE    =0x1,
-    FSM_RETURN_ERROR   =0x2
-} ReturnFSM_t;
+#include "actions/actionInterface.hpp"
 
 class ActionFSM{
     public:
@@ -30,10 +23,10 @@ class ActionFSM{
         nav_return_t nav_ret;
         position_t dropzonePos;
 
-        ReturnFSM_t TakeStock();
-        ReturnFSM_t DropStock();
-        ReturnFSM_t GatherStock();
-        ReturnFSM_t Calibrate();
+        ActionInterface::ReturnFSM_t TakeStock();
+        ActionInterface::ReturnFSM_t DropStock();
+        ActionInterface::ReturnFSM_t GatherStock();
+        ActionInterface::ReturnFSM_t Calibrate();
 
         typedef enum
         {

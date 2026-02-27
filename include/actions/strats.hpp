@@ -106,3 +106,25 @@ inline bool chooseStockStrategy(int& stockNum, int& stockOffset){
     return false;
 }
 
+int GetBestDropZone(position_t fromPos){
+    int bestDropZone = -1;
+    double bestDist2 = 1000000;
+
+    for (int i = 0; i < DROPZONE_COUNT; i++){
+        if (tableStatus.dropzone_states[i] != TableState::DROPZONE_EMPTY)
+            continue;
+
+        position_t dropzonePos = DROPZONE_POSITIONS_TABLE[i];
+
+        double dx = fromPos.x - dropzonePos.x;
+        double dy = fromPos.y - 0.5 * dropzonePos.y - (tableStatus.colorTeam == BLUE ? 750 : -750); // We want to favor the dropzones on our side of the table
+        double dist2 = dx*dx + dy*dy;
+
+        if (dist2 < bestDist2){
+            bestDist2 = dist2;
+            bestDropZone = i;
+        }
+    }
+
+    return bestDropZone;
+}
