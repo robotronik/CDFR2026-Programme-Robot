@@ -65,7 +65,6 @@ nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd){
         }
         currentPathLenght = pathLenght;
         pointAlongPathIndex = 0;
-        LOG_DEBUG("New navigation instruction, hash: ", hashValue, " path length: ", pathLenght);
     }
     return navigationGo();
 }
