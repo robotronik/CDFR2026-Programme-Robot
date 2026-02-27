@@ -4,6 +4,8 @@
 
 
 ActionFSM::ActionFSM(){
+    gatherAction = GatherAction();
+    dropAction = DropAction();
     Reset();
 }
 
@@ -11,39 +13,40 @@ ActionFSM::~ActionFSM(){}
 
 
 void ActionFSM::Reset(){
-    runState = FSM_ACTION_GATHER;
-    gatherStockState = FSM_GATHER_NAV;
-    dropStockState = FSM_DROP_NONE;
-    stock_num = -1;
-    offset = 0;
-    
+    gatherAction.reset();
+    dropAction.reset();
+    runState = getBestAction();
     // TODO reset other states (num,offset, etc.)
 }
 
 bool ActionFSM::RunFSM(){
-    ReturnFSM_t ret;
+    ActionInterface::ReturnFSM_t ret;
     switch (runState)
     {
     //****************************************************************
     case FSM_ACTION_GATHER:
-        ret = TakeStock();
-        if (ret == FSM_RETURN_DONE){
-            runState = FSM_ACTION_DROP;
-            LOG_INFO("Finished gathering stock ", stock_num, ", going to FSM_ACTION_DROP");
+        ret = gatherAction.FSM_run();
+        if (ret == ActionInterface::FSM_RETURN_DONE){
+            dropAction.setDropState(DropAction::FSM_DROP_NAV);
+            dropAction.setActionState(ActionInterface::FSM_RETURN_READY); // Set drop action as ready to navigate to dropzone
+            runState = getBestAction();
+            LOG_INFO("Finished gathering stock ", gatherAction.getActionID(), ", going to FSM_ACTION_DROP");
         }
-        else if (ret == FSM_RETURN_ERROR){
+        else if (ret == ActionInterface::FSM_RETURN_ERROR){
             LOG_ERROR("Couldn't gather");
             // TODO Handle error
         }
         break;
     //****************************************************************
     case FSM_ACTION_DROP:
-        ret = DropStock();
-        if (ret == FSM_RETURN_DONE){
-            runState = FSM_ACTION_GATHER;//TODO fct strategy choosing action
-            LOG_INFO("Finished dropping stock ", stock_num, ", going to FSM_ACTION_NAV_HOME");
+        ret = dropAction.FSM_run();
+        if (ret == ActionInterface::FSM_RETURN_DONE){
+            gatherAction.setGatherStockState(GatherAction::FSM_GATHER_NAV);
+            gatherAction.setActionState(ActionInterface::FSM_RETURN_READY); // Set gather action as ready to gather another stock
+            runState = getBestAction();
+            LOG_INFO("Finished dropping stock ", gatherAction.getActionID(), ", going to FSM_ACTION_NAV_HOME");
         }
-        else if (ret == FSM_RETURN_ERROR){
+        else if (ret == ActionInterface::FSM_RETURN_ERROR){
             LOG_ERROR("Couldn't drop");
             // TODO Handle error
         }
@@ -51,7 +54,6 @@ bool ActionFSM::RunFSM(){
     //****************************************************************
     case FSM_ACTION_NAV_HOME:
         if (returnToHome()){
-            runState = FSM_ACTION_GATHER;
             return true; // Robot is done
         }
         break;
@@ -59,59 +61,14 @@ bool ActionFSM::RunFSM(){
     return false;
 }
 
-ReturnFSM_t ActionFSM::DropStock(){
-    switch (dropStockState){
-        case FSM_DROP_NONE:
-            dropzone_num = GetBestDropZone(drive.position);
-            LOG_DEBUG("best drop zone for stock ", stock_num, " is ", dropzone_num);
-            dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
-            LOG_DEBUG("Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ", ", dropzonePos.y, ", ", dropzonePos.a , ")");
-            dropStockState = FSM_DROP_NAV;
-            break;
-        case FSM_DROP_NAV:
-            {   
-            // Navigate to dropzone
-            nav_ret = navigationGoTo(dropzonePos, true);
-            //LOG_INFO("Navigating to stock ", stock_num, " at position (", dropzonePos.x, ",", dropzonePos.y, ") with angle ", dropzonePos.a);
-
-            if (nav_ret == NAV_DONE){ // We consider that we are at the dropzone if we are close enough, to avoid navigation errors
-                LOG_INFO("Nav done FSM_DROP_NAV, going to FSM_DROP");
-                setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE); // Mark dropzone as occupied
-                dropStockState = FSM_DROP;
-            }
-            else if (nav_ret == NAV_ERROR){
-
-                LOG_WARNING("Navigation error while going to dropzone for stock ", stock_num);
-                setDropzoneAsError(dropzone_num);
-                
-                int dropzone_temp = GetBestDropZone(drive.position);
-                if(dropzone_temp == -1){
-                    LOG_ERROR("No more dropzone available, cannot drop stock ", stock_num);
-                    return FSM_RETURN_ERROR;
-                }else{
-                    setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
-                    dropzone_num = dropzone_temp;
-                    dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
-                    LOG_INFO("Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ",", dropzonePos.y, ")");
-                }
-
-                dropStockState = FSM_DROP_NAV;
-                return FSM_RETURN_ERROR;
-            }
-            }
-            break;
-
-        case FSM_DROP:
-            // Drop the stock
-            if (dropBlock()){
-                LOG_INFO("Stock ", stock_num, "dropped");
-                gatherStockState = FSM_GATHER_NAV;
-                dropStockState = FSM_DROP_NONE;
-                return FSM_RETURN_DONE; 
-            }
-            break;
+ActionFSM::StateRun_t ActionFSM::getBestAction(){
+    if (gatherAction.getActionID() != -1 && gatherAction.getActionState() != ActionInterface::FSM_RETURN_READY){
+        return FSM_ACTION_GATHER;
     }
-    return FSM_RETURN_WORKING;
+    if (dropAction.getActionID() != -1 && dropAction.getActionState() != ActionInterface::FSM_RETURN_READY){
+        return FSM_ACTION_DROP;
+    }
+    return FSM_ACTION_NAV_HOME;
 }
 
 position_t calculateClosestArucoPosition(position_t currentPos, position_t& outPos){
@@ -155,7 +112,7 @@ position_t calculateClosestArucoPosition(position_t currentPos, position_t& outP
     return closestPos;
 }
 
-ReturnFSM_t ActionFSM::Calibrate(){
+ActionInterface::ReturnFSM_t ActionFSM::Calibrate(){
     nav_return_t nav_ret;
     static unsigned long start_time;
     switch (calibrationState){
@@ -171,7 +128,7 @@ ReturnFSM_t ActionFSM::Calibrate(){
             start_time = _millis();
         }
         else if (nav_ret == NAV_ERROR){
-            return FSM_RETURN_ERROR;
+            return ActionInterface::FSM_RETURN_ERROR;
         }
     }
     break;
@@ -180,16 +137,16 @@ ReturnFSM_t ActionFSM::Calibrate(){
         // Calibrate
         if (_millis() > start_time + 1000){ // Timeout after 1s
             LOG_ERROR("Calibration timeout");
-            return FSM_RETURN_ERROR;
+            return ActionInterface::FSM_RETURN_ERROR;
         }
         position_t pos_;
         if (arucoCam1.getPos(pos_.x, pos_.y, pos_.a)){
             drive.setCoordinates(pos_);
             calibrationState = FSM_CALIBRATION_NAV;
             LOG_INFO("Calibrating for FSM_CALIBRATION_CALIBRATE");
-            return FSM_RETURN_DONE;
+            return ActionInterface::FSM_RETURN_DONE;
         }
     break;
     }
-    return FSM_RETURN_WORKING;
+    return ActionInterface::FSM_RETURN_WORKING;
 }

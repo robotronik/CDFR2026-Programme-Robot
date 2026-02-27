@@ -22,12 +22,7 @@ bool rotateTwoBlocks(bool endWithlower);
 bool dropBlock();
 
 // Related to stock management
-int GetBestDropZone(position_t fromPos);
-void setStockAsRemoved(int num);
-void setDropzoneState(int dropzoneNum, TableState::dropzone_state_t state);
-void setDropzoneAsError(int dropzoneNum);
-int getBestStockPositionOff(int stockNum, position_t fromPos);
-position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos);
+
 // Servo Control
 bool closeClaws();
 bool openClaws();

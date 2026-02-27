@@ -1,8 +1,6 @@
 #pragma once
 #include "defs/structs.hpp"
-#include "utils/logger.hpp"
 #include "navigation/navigation.h"
-#include "actions/functions.h"
 
 class ActionInterface
 {
@@ -13,9 +11,10 @@ class ActionInterface
         typedef enum
         {   
             FSM_RETURN_NONE = 0x0,
-            FSM_RETURN_WORKING =0x1,
-            FSM_RETURN_DONE    =0x2,
-            FSM_RETURN_ERROR   =0x3
+            FSM_RETURN_READY   = 0x1,
+            FSM_RETURN_WORKING =0x2,
+            FSM_RETURN_DONE    =0x3,
+            FSM_RETURN_ERROR   =0x4
         } ReturnFSM_t;
 
         virtual ReturnFSM_t FSM_run() = 0;
@@ -26,12 +25,28 @@ class ActionInterface
             return actionState;
         };
 
+        void setActionState(ReturnFSM_t state){
+            actionState = state;
+        }
+
         void setActionID(int id){
             action_id = id;
         }
 
         int getActionID(){
             return action_id;
+        }
+
+        int* getActionIDPtr(){
+            return &action_id;
+        }
+        
+        void setNavRet(nav_return_t ret){
+            nav_ret = ret;
+        }
+
+        nav_return_t getNavRet(){
+            return nav_ret;
         }
     
     private:
