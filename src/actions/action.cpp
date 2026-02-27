@@ -41,7 +41,7 @@ bool ActionFSM::RunFSM(){
         ret = DropStock();
         if (ret == FSM_RETURN_DONE){
             runState = FSM_ACTION_GATHER;//TODO fct strategy choosing action
-            LOG_INFO("Finished dropping stock ", stock_num, ", going to FSM_ACTION_NAV_HOME");
+            LOG_INFO("Finished dropping stock ", stock_num, ", going to FSM_ACTION_GATHER");
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("Couldn't drop");
@@ -61,15 +61,16 @@ bool ActionFSM::RunFSM(){
 
 
 ReturnFSM_t ActionFSM::TakeStock(){
+    //LOG_INFO("TakeStock state: ", gatherStockState, " stock_num: ", stock_num);
     if (stock_num == -1 || gatherStockState == FSM_GATHER_NAV){
-        LOG_DEBUG("Getting next stock to take");
+        //LOG_DEBUG("Getting next stock to take");
         if (!chooseStockStrategy(stock_num, offset)){
             LOG_INFO("No more stocks to take, exiting GatherStock");
             stock_num = -1;
             gatherStockState = FSM_GATHER_NAV;
             return FSM_RETURN_DONE;
         }
-        LOG_INFO("Next stock to take: ", stock_num, " offset: ", offset);
+        //LOG_INFO("Next stock to take: ", stock_num, " offset: ", offset);
     }
 
     position_t stockPos = STOCK_POSITIONS_TABLE[stock_num];
@@ -80,11 +81,11 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_NAV:
             {
             position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
-            LOG_INFO("Navigating to stock ", stock_num, " at position (", targetPos.x, ",", targetPos.y, ") with angle ", targetPos.a);
-
             nav_ret = navigationGoTo(targetPos, true);
             if (nav_ret == NAV_DONE){
+                //LOG_INFO("Nov Done to stock ", stock_num, "lowering claws");
                 if (lowerClaws()){
+                    LOG_INFO("Claws lowered for stock ", stock_num);
                     gatherStockState = FSM_GATHER_MOVE;
                     LOG_INFO("Nav done FSM_GATHER_NAV, going to FSM_GATHER_MOVE");
                 }
@@ -101,14 +102,14 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_MOVE:
             nav_ret = navigationGoTo(position_t {stockPos.x + int(stockOff.x * 0.66), stockPos.y + int(stockOff.y * 0.66), angle}, true);
             //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
-        if (nav_ret == NAV_DONE){
+            if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_COLLECT;
                 LOG_INFO("Nav done FSM_GATHER_MOVE, going to FSM_GATHER_COLLECT");
             }
             break;
         case FSM_GATHER_COLLECT:
             // Collect the stock
-            if (rotateTwoBlocks(false)){ // TODO fermer claw puis partir sans attendre fin rotateTwoBlocks (timer)
+            if (rotateTwoBlocks()){ // TODO fermer claw puis partir sans attendre fin rotateTwoBlocks (timer)
                 LOG_INFO("Stock", stock_num, " collected");
                 setStockAsRemoved(stock_num);
                 gatherStockState = FSM_GATHER_COLLECTED;
@@ -172,6 +173,8 @@ ReturnFSM_t ActionFSM::DropStock(){
                 LOG_INFO("Stock ", stock_num, "dropped");
                 gatherStockState = FSM_GATHER_NAV;
                 dropStockState = FSM_DROP_NONE;
+                stock_num = -1;
+                offset = 0;  
                 return FSM_RETURN_DONE; 
             }
             break;

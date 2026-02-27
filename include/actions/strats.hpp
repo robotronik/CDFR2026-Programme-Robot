@@ -38,7 +38,7 @@ inline int chooseNextStock(){
         LOG_GREEN_INFO("No next stock available");
         return -1;
     }else{
-        LOG_INFO("Next stock to take: ", closest_stock);
+        //LOG_INFO("Next stock to take: ", closest_stock);
         return closest_stock;
     }
 }
