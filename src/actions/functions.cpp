@@ -35,6 +35,7 @@ bool rotateBlocks(){
 
 bool lowerClaws(){
     static int state = 1;
+    //LOG_INFO("lowerClaws state = ", state);
     static unsigned long startTime = 0;
     switch (state){
         case 1:
@@ -63,7 +64,7 @@ bool raiseClaws(){
     static int state = 1;
     switch (state){
         case 1:
-            arduino.moveMotorDC(90, false);
+            arduino.moveMotorDC(110, false);
             state++;
             break;
         case 2:
@@ -76,18 +77,12 @@ bool raiseClaws(){
     }
     return false;
 }
-bool rotateTwoBlocksEnd(){
-    return rotateTwoBlocks(true);
-}
 
-bool rotateTwoBlocks(bool endWithlower = true){
-    static int state = 0;
+
+bool rotateTwoBlocks(){
+    static int state = 1;
     static int choice;
     switch (state){
-        case 0:
-            if (lowerClaws())
-                state++;
-            break;
         case 1 :
             if (closeClaws()){
                 choice = rand() % 6;
@@ -109,18 +104,8 @@ bool rotateTwoBlocks(bool endWithlower = true){
             }
             break;
         case 4:
-            if (!endWithlower){
-                state = 0;
-                return true;
-            } 
-            else if (lowerClaws())
-                state++;
-            break;
-        case 5:
-            if (openClaws() & resetSpinClaws() & raiseClaws()){
-                state = 0;
-                return true;
-            }
+            state = 1;
+            return true;
             break;
     }
     return false;
@@ -135,7 +120,7 @@ bool dropBlock(){
             state++;
             break;
         case 1:
-            if (lowerClaws() || (_millis() - startTime > 1000)) // Si pinces bloquées
+            if (lowerClaws()) // Si pinces bloquées
                 state++;
             break;
         case 2:
