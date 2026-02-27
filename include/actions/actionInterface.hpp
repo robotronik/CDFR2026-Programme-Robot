@@ -1,6 +1,11 @@
 #pragma once
 #include "defs/structs.hpp"
+#include "defs/constante.h"
+#include "defs/tableState.hpp"
 #include "navigation/navigation.h"
+#include "drive_interface.h"
+#include "actions/strats.hpp"
+#include "main.hpp"
 
 class ActionInterface
 {

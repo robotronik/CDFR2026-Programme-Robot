@@ -1,9 +1,6 @@
 #include "actions/actionInterface.hpp"
-#include "defs/constante.h"
-#include "defs/tableState.hpp"
 #include "utils/logger.hpp"
 #include "actions/functions.h"
-#include "actions/strats.hpp"
 
 class GatherAction : public ActionInterface
 {

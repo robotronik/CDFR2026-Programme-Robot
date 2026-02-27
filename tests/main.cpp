@@ -1,4 +1,23 @@
 #include "utils/logger.hpp"
+#include "main.hpp"
+#include "defs/tableState.hpp"
+#include "navigation/driveControl.h"
+#include "lidar/Lidar.hpp"
+#include "vision/ArucoCam.hpp"
+#include "i2c/Arduino.hpp"
+
+// Instanciation des objets globaux pour que le linker les trouve
+TableState tableStatus;
+DriveControl drive;
+Arduino arduino;
+Lidar lidar;
+ArucoCam arucoCam1(-1, "");
+
+main_State_t currentState;
+main_State_t nextState;
+
+bool manual_ctrl = false;
+bool (*manual_currentFunc)() = nullptr;
 
 bool testLogger();
 bool test_lidar_opponent();

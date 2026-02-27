@@ -1,10 +1,7 @@
 #include "actions/actionInterface.hpp"
-#include "defs/constante.h"
-#include "defs/tableState.hpp"
 #include "utils/logger.hpp"
-#include "navigation/navigation.h"
 #include "actions/functions.h"
-#include "actions/strats.hpp"
+
 
 class DropAction : public ActionInterface
 {

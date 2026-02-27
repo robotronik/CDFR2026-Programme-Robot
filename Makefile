@@ -28,16 +28,20 @@ SRC = $(shell find $(SRCDIR) -name "*.cpp")
 # Generate corresponding object files
 OBJ = $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR_MAIN)/%.o,$(SRC))
 
-SRC_NO_MAIN = $(filter-out $(SRCDIR)/main.cpp \
-			$(SRCDIR)/restAPI/restAPI.cpp \
-			$(SRCDIR)/navigation/navigation.cpp \
-			$(SRCDIR)/actions/functions.cpp \
-			$(SRCDIR)/actions/action.cpp \
-			$(SRCDIR)/actions/revolver.cpp \
-			$(SRCDIR)/lidar/Lidar.cpp \
-			$(SRCDIR)/defs/tableState.cpp \
-			$(SRCDIR)/navigation/pathfind.cpp \
-		, $(SRC) )
+# On ne filtre QUE le main.cpp original pour ne pas avoir deux fonctions main()
+SRC_NO_MAIN = $(filter-out $(SRCDIR)/main.cpp, $(SRC))
+
+# SRC_NO_MAIN = $(filter-out $(SRCDIR)/main.cpp \
+# 			$(SRCDIR)/restAPI/restAPI.cpp \
+# 			$(SRCDIR)/navigation/navigation.cpp \
+# 			$(SRCDIR)/actions/functions.cpp \
+# 			$(SRCDIR)/actions/action.cpp \
+# 			$(SRCDIR)/actions/revolver.cpp \
+# 			$(SRCDIR)/lidar/Lidar.cpp \
+# 			$(SRCDIR)/defs/tableState.cpp \
+# 			$(SRCDIR)/navigation/pathfind.cpp \
+# 		, $(SRC) )
+
 SRC_TEST = $(wildcard $(SRCDIR_TEST)/*.cpp)
 OBJ_NO_MAIN = $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR_MAIN)/%.o,$(SRC_NO_MAIN))
 TEST_OBJ = $(patsubst $(SRCDIR_TEST)/%.cpp,$(OBJDIR_TEST)/%.o,$(SRC_TEST))
