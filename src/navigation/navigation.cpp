@@ -1,4 +1,3 @@
-#include <functional> // For std::hash
 #include "navigation/navigation.h"
 #include "main.hpp"
 #include "defs/constante.h" // DISTANCESTOP and DISTANCESTART
@@ -9,14 +8,10 @@
 
 static bool is_robot_stalled = false;
 static unsigned long robot_stall_start_time;
-typedef std::size_t nav_hash;
-static nav_hash currentInstructionHash;
 
 static position_t currentPath[1024];
 static int currentPathLenght = 0;
 static int pointAlongPathIndex = 0;
-
-nav_hash createHash(position_t pos);
 
 nav_return_t navigationGo(){
     if (currentPathLenght == 0 || pointAlongPathIndex >= currentPathLenght)
@@ -58,23 +53,18 @@ nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
 }
 
 nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd){
-    nav_hash hashValue = 0;
-    for (int i = 0; i < pathLenght; i++){
-        hashValue += createHash(path[i]);
-    }
-    if (hashValue == currentInstructionHash && is_robot_stalled){
+    bool is_same_path = memcmp(currentPath, path, sizeof(position_t) * pathLenght) == 0;
+    if (is_same_path && is_robot_stalled){
         // Drive Break
         return NAV_PAUSED;
     }
 
-    if (hashValue != currentInstructionHash){
+    if (!is_same_path){
         for (int i = 0; i < pathLenght; i++){
             currentPath[i] = path[i];
         }
         currentPathLenght = pathLenght;
-        currentInstructionHash = hashValue;
         pointAlongPathIndex = 0;
-        LOG_DEBUG("New navigation instruction, hash: ", hashValue, " path length: ", pathLenght);
     }
     return navigationGo();
 }
@@ -118,10 +108,4 @@ void navigationOpponentDetection(){
         LOG_GREEN_INFO("Opponent is no longer in the way, resuming the robot");
         is_robot_stalled = false;
     }
-}
-
-// Function to calculate the hash of the navigation instruction
-nav_hash createHash(position_t pos) {
-    // Combine all values simply by adding their hashes
-    return std::hash<int>{}(pos.x) + std::hash<int>{}(pos.y) + std::hash<int>{}(pos.a);
 }

@@ -35,14 +35,16 @@ bool rotateBlocks(){
 
 bool lowerClaws(){
     static int state = 1;
+    //LOG_INFO("lowerClaws state = ", state);
     static unsigned long startTime = 0;
     switch (state){
         case 1:
-            arduino.moveMotorDC(40, true);
+            arduino.moveMotorDC(50, true);
+            startTime = _millis();
             state++;
             break;
         case 2:
-            if (readLimitSwitchBottom()){
+            if (readLimitSwitchBottom() || (_millis() >= startTime + 1500)){ // Si pinces bloquées ou après 2s
                 startTime = _millis();
                 state++;
             }
@@ -60,13 +62,15 @@ bool lowerClaws(){
 
 bool raiseClaws(){
     static int state = 1;
+    static unsigned long startTime = 0;
     switch (state){
         case 1:
             arduino.moveMotorDC(110, false);
+            startTime = _millis();
             state++;
             break;
         case 2:
-            if (readLimitSwitchTop()){
+            if (readLimitSwitchTop() || (_millis() >= startTime + 2000)){ // Si pinces bloquées ou après 3s
                 arduino.stopMotorDC();
                 state = 1;
                 return true;
@@ -75,18 +79,12 @@ bool raiseClaws(){
     }
     return false;
 }
-bool rotateTwoBlocksEnd(){
-    return rotateTwoBlocks(true);
-}
 
-bool rotateTwoBlocks(bool endWithlower = true){
-    static int state = 0;
+
+bool rotateTwoBlocks(){
+    static int state = 1;
     static int choice;
     switch (state){
-        case 0:
-            if (lowerClaws())
-                state++;
-            break;
         case 1 :
             if (closeClaws()){
                 choice = rand() % 6;
@@ -108,18 +106,8 @@ bool rotateTwoBlocks(bool endWithlower = true){
             }
             break;
         case 4:
-            if (!endWithlower){
-                state = 0;
-                return true;
-            } 
-            else if (lowerClaws())
-                state++;
-            break;
-        case 5:
-            if (openClaws() & resetSpinClaws() & raiseClaws()){
-                state = 0;
-                return true;
-            }
+            state = 1;
+            return true;
             break;
     }
     return false;
@@ -134,7 +122,7 @@ bool dropBlock(){
             state++;
             break;
         case 1:
-            if (lowerClaws() || (_millis() - startTime > 1000)) // Si pinces bloquées
+            if (lowerClaws()) // Si pinces bloquées
                 state++;
             break;
         case 2:
@@ -306,10 +294,7 @@ int GetBestDropZone(position_t fromPos){
             continue;
 
         position_t dropzonePos = DROPZONE_POSITIONS_TABLE[i];
-
-        double dx = fromPos.x - dropzonePos.x;
-        double dy = fromPos.y - 0.5 * dropzonePos.y - (tableStatus.colorTeam == BLUE ? 750 : -750); // We want to favor the dropzones on our side of the table
-        double dist2 = dx*dx + dy*dy;
+        double dist2 = position_distance(fromPos, dropzonePos) + abs( tableStatus.colorTeam == BLUE ? dropzonePos.y - 1500 : dropzonePos.y + 1500); // We want to favor the dropzones on our side of the table
 
         if (dist2 < bestDist2){
             bestDist2 = dist2;
@@ -349,7 +334,7 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos){
     position_t dropzonePos = DROPZONE_POSITIONS_TABLE[dropzoneNum];
     position_t vect = position_vector(dropzonePos, fromPos);
     position_normalize(vect);
-    position_t bestPoss = position_t{dropzonePos.x + int(vect.x * OFFSET_DROPZONE), dropzonePos.y + int(vect.y * OFFSET_DROPZONE), position_angle(fromPos, dropzonePos)};
+    position_t bestPoss = position_t{dropzonePos.x + int(vect.x * OFFSET_DROPZONE), dropzonePos.y + int(vect.y * OFFSET_DROPZONE), RAD_TO_DEG * position_angle(fromPos, dropzonePos)};
     return bestPoss;
 }
 
@@ -391,7 +376,7 @@ void opponentInAction(position_t position){
             OPPONENT_ROBOT_RADIUS * 2 + (stock_pos.a == 90 ? STOCKS_LENGTH : STOCKS_WIDTH), 
             OPPONENT_ROBOT_RADIUS * 2 + (stock_pos.a == 90 ? STOCKS_WIDTH : STOCKS_LENGTH)) )// we  consider stock orientation
         {
-            LOG_INFO("Opponent in action at stock %d at position (%d,%d)", i, position.x, position.y);
+            LOG_INFO("Opponent in action at stock ", i, " at position ", position.x, " / ", position.y);
             tableStatus.avail_stocks[i] = false;
             return;
         }
@@ -400,7 +385,7 @@ void opponentInAction(position_t position){
         position_t dropzone_pos = DROPZONE_POSITIONS_TABLE[i];
         if (tableStatus.dropzone_states[i] == TableState::DROPZONE_EMPTY && m_isPointInsideRectangle(position.x, position.y, dropzone_pos.x, dropzone_pos.y, OPPONENT_ROBOT_RADIUS * 2 + DROPZONE_WIDTH, OPPONENT_ROBOT_RADIUS * 2 + DROPZONE_LENGTH))
         {
-            LOG_INFO("Opponent at dropzone %d at position (%d,%d)", i, position.x, position.y);
+            LOG_INFO("Opponent at dropzone ", i ," at position ", position.x, position.y);
             tableStatus.dropzone_states[i] = (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE;
             return;
         }
