@@ -13,7 +13,22 @@ NC='\033[0m'
 
 # --- Fonctions ---
 
+function build_lidar_sdk() {
+    if [ ! -f "rplidar_sdk/output/Linux/Release/libsl_lidar_sdk.a" ]; then
+        echo -e "${BLUE}[INFO] Compilation du SDK RPLidar...${NC}"
+        make -C rplidar_sdk
+    fi
+    echo -e "${GREEN}[DONE] SDK RPLidar prêt.${NC}"
+}
+
+function build_lidar_sdk_arm() { 
+    echo -e "${BLUE}[INFO] Compilation du SDK RPLidar pour ARM...${NC}"
+    cd rplidar_sdk && chmod +x ./cross_compile.sh && ./cross_compile.sh && cd ..
+    echo -e "${GREEN}[DONE] SDK RPLidar ARM prêt.${NC}"
+}
+
 function build_local() {
+    build_lidar_sdk
     echo -e "${BLUE}[INFO] Build local (x86_64)...${NC}"
     mkdir -p build && cd build
     cmake ..
@@ -32,6 +47,7 @@ function run_tests_local() {
 }
 
 function deploy_pi() {
+    build_lidar_sdk_arm
     echo -e "${BLUE}[INFO] Build pour Raspberry Pi (ARM64)...${NC}"
     mkdir -p build_arm && cd build_arm
     cmake .. -DCMAKE_TOOLCHAIN_FILE=../pi_toolchain.cmake
