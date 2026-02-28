@@ -28,8 +28,8 @@ bool ActionFSM::RunFSM(){
     case FSM_ACTION_GATHER:
         ret = TakeStock();
         if (ret == FSM_RETURN_DONE){
-            runState = FSM_CALIBRATION;
-            LOG_INFO("Finished gathering stock ", stock_num, ", going to FSM_CALIBRATION");
+            runState = FSM_ACTION_DROP;
+            LOG_INFO("Finished gathering stock ", stock_num, ", going to FSM_ACTION_DROP");
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("Couldn't gather");
@@ -42,6 +42,9 @@ bool ActionFSM::RunFSM(){
         if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("Couldn't drop");
             // TODO Handle error
+        }else if (ret == FSM_RETURN_DONE){
+            LOG_INFO("Finished dropping stock ", stock_num);
+            runState = FSM_CALIBRATION;
         }
         break;
     //****************************************************************
@@ -56,7 +59,7 @@ bool ActionFSM::RunFSM(){
         ret = Calibrate();
         if (ret == FSM_RETURN_DONE){
             LOG_INFO("Finished calibration step ", calibrationState);
-            runState = FSM_ACTION_DROP;
+            runState = FSM_ACTION_GATHER;
         }   
     }
     return false;
@@ -217,7 +220,7 @@ position_t calculateClosestArucoPosition(position_t currentPos, position_t& outP
         outPos.x += tmp.x;
         outPos.y += tmp.y;
     }
-    outPos.a = position_angle(drive.position, closestPos);
+    outPos.a = RAD_TO_DEG * position_angle(drive.position, closestPos) + OFFSET_ANGLE_CAM;
 
     return closestPos;
 }
@@ -231,7 +234,7 @@ ReturnFSM_t ActionFSM::Calibrate(){
         // Look towards the closest aruco marker by only spinning in place
         position_t target_;
         position_t arucoPos = calculateClosestArucoPosition(drive.position, target_);
-        nav_ret = navigationGoTo(target_, true, true);
+        nav_ret = navigationGoTo(target_, true);
         if (nav_ret == NAV_DONE){
             calibrationState = FSM_CALIBRATION_CALIBRATE;
             LOG_INFO("Nav done for FSM_CALIBRATION_NAV, going to FSM_CALIBRATION_CALIBRATE");
