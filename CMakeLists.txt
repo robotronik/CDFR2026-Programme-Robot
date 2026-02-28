@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 project(ProgramCDFR2026 LANGUAGES CXX)
-find_package(Crow)
+add_subdirectory(crow)
 
 # ------------------------------------------------------------------------------
 # 1. Configuration Globale
@@ -8,6 +8,13 @@ find_package(Crow)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Forcer les couleurs
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(-fdiagnostics-color=always)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_compile_options(-fcolor-diagnostics)
+endif()
 
 # Options de compilation de base
 add_compile_options(-Wall -Wextra -g -O0)
