@@ -15,7 +15,7 @@
 #include "navigation/astar.h" //for static variable
 #include "actions/functions.h" //for state machine functions
 
-#include "restAPI/crow.hpp"
+#include <crow.h>
 #include "utils/json.hpp" // For handling JSON
 using json = nlohmann::json;
 
