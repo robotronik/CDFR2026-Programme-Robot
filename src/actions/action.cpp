@@ -49,6 +49,17 @@ bool ActionFSM::RunFSM(){
         }
         break;
     //****************************************************************
+    case FSM_ACTION_CURSOR:
+        ret = Cursor();
+        if (ret == FSM_RETURN_DONE){
+            runState = FSM_ACTION_NAV_HOME;
+            LOG_INFO("Finished cursor action, going to FSM_ACTION_GATHER");
+        }
+        else if (ret == FSM_RETURN_ERROR){
+            LOG_ERROR("Couldn't do cursor action");
+            // TODO Handle error
+        }
+        break;
     case FSM_ACTION_NAV_HOME:
         if (returnToHome()){
             runState = FSM_ACTION_GATHER;
@@ -178,6 +189,59 @@ ReturnFSM_t ActionFSM::DropStock(){
                 return FSM_RETURN_DONE; 
             }
             break;
+    }
+    return FSM_RETURN_WORKING;
+}
+
+ReturnFSM_t ActionFSM::Cursor(){
+    int sign = (tableStatus.colorTeam == BLUE) ? 1 : -1;
+    position_t targetPos = {625, 1220 * sign,  45*sign };
+
+    switch (CursorState){
+        case FSM_CURSOR_NAV:
+            {
+            nav_ret = navigationGoTo(targetPos, true);
+            if (nav_ret == NAV_DONE){
+                if (lowerClaws()){
+                LOG_INFO("Nav done FSM_CURSOR_NAV, going to FSM_CURSOR");
+                CursorState = FSM_CURSOR_MOVE;
+                }
+            }
+            else if (nav_ret == NAV_ERROR){
+                LOG_WARNING("Navigation error while going to cursor position");
+                return FSM_RETURN_ERROR;
+            }
+            }
+            break;
+        case FSM_CURSOR_MOVE:
+            nav_ret = navigationGoTo(position_t {targetPos.x, targetPos.y -sign * 330, 0}, true);
+            LOG_INFO("Claws lowered at cursor position");
+            if (nav_ret == NAV_DONE){
+                if (raiseClaws()){
+                    LOG_INFO("Nav done FSM_CURSOR_MOVE, going to FSM_CURSOR");
+                    CursorState = FSM_CURSOR_END;
+                }
+            }
+            else if (nav_ret == NAV_ERROR){
+                LOG_WARNING("Navigation error while moving to cursor position");
+                return FSM_RETURN_ERROR;
+            }
+            
+            break;
+
+        case FSM_CURSOR_END:
+            nav_ret = navigationGoTo(position_t {targetPos.x - 200, targetPos.y - sign * 280, 0}, true);
+            LOG_INFO("Claws raised at cursor position");
+            if (nav_ret == NAV_DONE){
+                LOG_INFO("Nav done FSM_CURSOR_END, cursor action complete");
+                CursorState = FSM_CURSOR_NAV;
+                return FSM_RETURN_DONE;
+            }
+            else if (nav_ret == NAV_ERROR){
+                LOG_WARNING("Navigation error while moving to final cursor position");
+                return FSM_RETURN_ERROR;
+            }
+
     }
     return FSM_RETURN_WORKING;
 }
