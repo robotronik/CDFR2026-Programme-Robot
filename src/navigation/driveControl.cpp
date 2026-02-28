@@ -24,7 +24,7 @@ void DriveControl::reset() {
     velocity = {0.0, 0.0, 0.0};
     acceleration = {0.0, 0.0, 0.0};
     is_enabled = false;
-    is_slow_mode = false;
+    is_slow_mode = true;
     drive_interface::disable();
     drive_interface::set_target(convertPositionToPacked(target));
     drive_interface::set_coordinates(convertPositionToPacked(position));
