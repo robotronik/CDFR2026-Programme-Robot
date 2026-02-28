@@ -19,7 +19,7 @@ This program enables the robot to perform various tasks such as navigation, data
 Before running the program, make sure you have installed the following dependencies:
 
 ```bash
-sudo apt-get install make gcc g++ python3-venv libasio-dev crow
+sudo apt-get install make gcc g++ python3-venv
 ```
 
 For ARM (Raspberry Pi) compilation, install:

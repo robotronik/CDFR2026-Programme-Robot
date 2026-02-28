@@ -66,7 +66,9 @@ deploy_pi() {
     scp -q autoRunInstaller.sh $PI_USER@$PI_HOST:$PI_DIR/
 
     step "$BG_BLU" "$F_BLU" "SERVICE" "Installation et démarrage auto..."
-    ssh -t $PI_USER@$PI_HOST "cd $PI_DIR && chmod +x autoRunInstaller.sh && sudo ./autoRunInstaller.sh --install $PI_DIR/programCDFR"
+    ssh -t $PI_USER@$PI_HOST "cd $PI_DIR && chmod +x autoRunInstaller.sh && \
+        sudo ./autoRunInstaller.sh --uninstall $PI_DIR/programCDFR >/dev/null 2>&1 || true && \
+        sudo ./autoRunInstaller.sh --install $PI_DIR/programCDFR"
     
     step "$BG_GRN" "$F_GRN" "DONE" "Robot flashé et programme lancé !"
 }
@@ -106,11 +108,14 @@ run_timed() {
 
 case "$1" in
     build)        run_timed "Build Local" build_local ;;
-    deploy)       run_timed "Déploiement Pi" deploy_pi ;;
-    run)          step "$BG_BLU" "$F_BLU" "SSH" "Lancement..."; ssh -t $PI_USER@$PI_HOST "cd $PI_DIR && sudo ./programCDFR" ;;
+    deploy)    
+               run_timed "Déploiement Complet" deploy_pi 
+               echo -e "${WHT}--------------------------------------------------------${NC}"
+               step "$BG_BLU" "$F_BLU" "LOGS" "En direct du robot (Ctrl+C pour quitter l'affichage)..." 
+               ssh -t $PI_USER@$PI_HOST "journalctl -u programCDFR.service -f -n 50"
+               ;;
     setup-ide)    run_timed "Setup IDE" setup_ide ;;
-    tests)        run_timed "Tests Locaux" build_local; [ -f "build/robot_tests" ] && ./build/robot_tests || step "$BG_RED" "$F_RED" "ERROR" "Test introuvable" ;;
-    deploy-tests) run_timed "Tests Distants" deploy_pi; ssh -t $PI_USER@$PI_HOST "cd $PI_DIR && ./robot_tests" ;;
+    tests)        run_timed "Tests Locaux" build_local; [ -f "build/robot_tests" ] && ./build/robot_tests || step "$BG_RED" "$F_RED" "ERROR" "Test introuvable" ;; 
     clean)        rm -rf build build_arm compile_commands.json; step "$BG_GRN" "$F_GRN" "CLEAN" "Dossiers supprimés." ;;
-    *)            echo -e "${BOLD}Usage:${NC} $0 {build|deploy|run|setup-ide|tests|deploy-tests|clean}"; exit 1 ;;
+    *)            echo -e "${BOLD}Usage:${NC} $0 {build|deploy|setup-ide|tests|clean}"; exit 1 ;;
 esac
