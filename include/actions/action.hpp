@@ -39,7 +39,8 @@ class ActionFSM{
         {
             FSM_ACTION_GATHER,
             FSM_ACTION_DROP,
-            FSM_ACTION_NAV_HOME
+            FSM_ACTION_NAV_HOME,
+            FSM_CALIBRATION
         } StateRun_t;
 
         StateRun_t runState = FSM_ACTION_NAV_HOME;
