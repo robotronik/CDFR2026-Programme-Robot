@@ -53,7 +53,7 @@ bool ActionFSM::RunFSM(){
         ret = Cursor();
         if (ret == FSM_RETURN_DONE){
             runState = FSM_ACTION_NAV_HOME;
-            LOG_INFO("Finished cursor action, going to FSM_ACTION_GATHER");
+            LOG_INFO("Finished cursor action, going to FSM_ACTION_NAV_HOME");
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("Couldn't do cursor action");
@@ -118,22 +118,22 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 LOG_INFO("Nav done FSM_GATHER_MOVE, going to FSM_GATHER_COLLECT");
             }
             break;
-        case FSM_GATHER_COLLECT:
-            // Collect the stock
-            if (rotateTwoBlocks()){ // TODO fermer claw puis partir sans attendre fin rotateTwoBlocks (timer)
-                LOG_INFO("Stock", stock_num, " collected");
-                setStockAsRemoved(stock_num);
-                gatherStockState = FSM_GATHER_COLLECTED;
-                return FSM_RETURN_DONE;
+            case FSM_GATHER_COLLECT:
+
+            if (!collectingInProgress){
+                collectingInProgress = true;
+                LOG_INFO("Starting rotation for stock ", stock_num);
             }
-            break;
-        case FSM_GATHER_COLLECTED:
-            // Wait for the stock to be collected before doing anything else (like navigating to dropzone), to avoid dropping the stock on the way
-            LOG_INFO("GATHER_COLLEDTED");
-            return FSM_RETURN_DONE;
-            break;
+        
+            if (rotateTwoBlocks()){
+                LOG_INFO("Stock ", stock_num, " collected");
+                setStockAsRemoved(stock_num);
+                collectingInProgress = false;
+                gatherStockState = FSM_GATHER_COLLECTED;
+            }
+        
+            return FSM_RETURN_WORKING;
     }
-    return FSM_RETURN_WORKING;
 }
 
 ReturnFSM_t ActionFSM::DropStock(){
