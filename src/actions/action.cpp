@@ -28,8 +28,8 @@ bool ActionFSM::RunFSM(){
     case FSM_ACTION_GATHER:
         ret = TakeStock();
         if (ret == FSM_RETURN_DONE){
-            runState = FSM_ACTION_DROP;
-            LOG_INFO("Finished gathering stock ", stock_num, ", going to FSM_ACTION_DROP");
+            runState = FSM_CALIBRATION;
+            LOG_INFO("Finished gathering stock ", stock_num, ", going to FSM_CALIBRATION");
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("Couldn't gather");
@@ -39,11 +39,7 @@ bool ActionFSM::RunFSM(){
     //****************************************************************
     case FSM_ACTION_DROP:
         ret = DropStock();
-        if (ret == FSM_RETURN_DONE){
-            runState = FSM_ACTION_GATHER;//TODO fct strategy choosing action
-            LOG_INFO("Finished dropping stock ", stock_num, ", going to FSM_ACTION_GATHER");
-        }
-        else if (ret == FSM_RETURN_ERROR){
+        if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("Couldn't drop");
             // TODO Handle error
         }
@@ -55,6 +51,13 @@ bool ActionFSM::RunFSM(){
             return true; // Robot is done
         }
         break;
+    
+    case FSM_CALIBRATION:
+        ret = Calibrate();
+        if (ret == FSM_RETURN_DONE){
+            LOG_INFO("Finished calibration step ", calibrationState);
+            runState = FSM_ACTION_DROP;
+        }   
     }
     return false;
 }
@@ -184,27 +187,23 @@ ReturnFSM_t ActionFSM::DropStock(){
 
 position_t calculateClosestArucoPosition(position_t currentPos, position_t& outPos){
     outPos = currentPos;
-    position_t arucoPos_20 = {-400.0, -900.0, 0.0};
-    position_t arucoPos_21 = {-400.0, 900.0, 0.0};
-    position_t arucoPos_22 = {400.0, -900.0, 0.0};
-    position_t arucoPos_23 = {400.0, 900.0, 0.0};
-    position_t closestPos = arucoPos_20;
-    double dist20 = position_distance(currentPos, arucoPos_20);
-    double dist21 = position_distance(currentPos, arucoPos_21);
-    double dist22 = position_distance(currentPos, arucoPos_22);
-    double dist23 = position_distance(currentPos, arucoPos_23);
+    position_t closestPos = ARUCO_POSITIONS_TABLE[0];
+    double dist20 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[0]);
+    double dist21 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[1]);
+    double dist22 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[2]);
+    double dist23 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[3]);
     double minDistance = dist20;
     if (dist21 < minDistance){
         minDistance = dist21;
-        closestPos = arucoPos_21;
+        closestPos = ARUCO_POSITIONS_TABLE[1];
     }
     if (dist22 < minDistance){
         minDistance = dist22;
-        closestPos = arucoPos_22;
+        closestPos = ARUCO_POSITIONS_TABLE[2];
     }
     if (dist23 < minDistance){
         minDistance = dist23;
-        closestPos = arucoPos_23;
+        closestPos = ARUCO_POSITIONS_TABLE[3];
     }
     // Check if we are above the aruco marker
     const double minimal_distance = 200.0; // 20cm
