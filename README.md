@@ -19,7 +19,7 @@ This program enables the robot to perform various tasks such as navigation, data
 Before running the program, make sure you have installed the following dependencies:
 
 ```bash
-sudo apt-get install make gcc g++ python3-venv libasio-dev
+sudo apt-get install make gcc g++ python3-venv libasio-dev crow
 ```
 
 For ARM (Raspberry Pi) compilation, install:
@@ -61,19 +61,19 @@ sudo apt install gdbserver
 To compile the program on your machine, simply run:
 
 ```bash
-make
+bash build.sh build
 ```
 
 To run tests:
 
 ```bash
-make tests
+bash build.sh tests
 ```
 
 To clean the build files:
 
 ```bash
-make clean
+bash build.sh clean
 ```
 
 ## 🛠️ Compilation for Raspberry Pi
@@ -89,13 +89,13 @@ ssh-copy-id pi@192.168.1.47
 Then compile and deploy with:
 
 ```bash
-make deploy
+bash build.sh deploy
 ```
 
 To clean up, run:
 
 ```bash
-make clean-all
+bash build.sh clean
 ```
 
 On a new Raspberry Pi, configure I2C and serial communication via:
