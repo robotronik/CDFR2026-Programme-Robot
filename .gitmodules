@@ -3,3 +3,6 @@
 [Submodule "rplidar_sdk"]
     path = rplidar_sdk
     url = git@github.com:Slamtec/rplidar_sdk.git
+[submodule "crow"]
+	path = crow
+	url = https://github.com/CrowCpp/Crow.git

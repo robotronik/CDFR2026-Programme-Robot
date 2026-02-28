@@ -1,105 +1,106 @@
 #!/bin/bash
 
-# --- Configuration ---
-PI_USER="robotronik"
-PI_HOST="192.168.0.102"
-PI_DIR="/home/robotronik/CDFR"
+# --- Config Raspi ---
+PI_USER="robotronik"; PI_HOST="192.168.0.102"; PI_DIR="/home/robotronik/CDFR"
 
-# Couleurs
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-RED='\033[0;31m'
-NC='\033[0m'
+# --- Palette ---
+ESC=$'\033'
+NC="${ESC}[0m"; BOLD="${ESC}[1m"; WHT="${ESC}[37m"
+F_GRN="${ESC}[38;5;107m"; BG_GRN="${ESC}[30;48;5;107m" # Succès / Zéro erreur
+F_RED="${ESC}[38;5;124m"; BG_RED="${ESC}[30;48;5;124m" # Erreur
+F_ORG="${ESC}[38;5;172m"; BG_ORG="${ESC}[30;48;5;172m" # Warning
+F_BLU="${ESC}[38;5;72m";  BG_BLU="${ESC}[30;48;5;72m"  # Info / Exec / Build
 
-# --- Fonctions ---
+export NINJA_STATUS="${F_GRN}[%p]${NC} ${F_BLU}[%es]${NC} "
 
-function build_lidar_sdk() {
-    if [ ! -f "rplidar_sdk/output/Linux/Release/libsl_lidar_sdk.a" ]; then
-        echo -e "${BLUE}[INFO] Compilation du SDK RPLidar...${NC}"
-        make -C rplidar_sdk
-    fi
-    echo -e "${GREEN}[DONE] SDK RPLidar prêt.${NC}"
+# Helper d'affichage compact
+step() { printf "${1}${BOLD} %-10s ${NC} ${2}%s${NC}\n" "$3" "$4"; }
+
+# --- Fonctions de Build ---
+
+build_lidar() {
+    [ ! -f "rplidar_sdk/output/Linux/Release/libsl_lidar_sdk.a" ] && \
+        step "$BG_BLU" "$F_BLU" "INFO" "Compilation SDK RPLidar..." && make -C rplidar_sdk -s >/dev/null
+    step "$BG_GRN" "$F_GRN" "DONE" "SDK RPLidar (Local) prêt."
 }
 
-function build_lidar_sdk_arm() { 
-    echo -e "${BLUE}[INFO] Compilation du SDK RPLidar pour ARM...${NC}"
-    cd rplidar_sdk && chmod +x ./cross_compile.sh && ./cross_compile.sh && cd ..
-    echo -e "${GREEN}[DONE] SDK RPLidar ARM prêt.${NC}"
+build_lidar_arm() { 
+    step "$BG_BLU" "$F_BLU" "INFO" "Compilation SDK RPLidar (ARM)..."
+    (cd rplidar_sdk && chmod +x cross_compile.sh && ./cross_compile.sh >/dev/null)
+    step "$BG_GRN" "$F_GRN" "DONE" "SDK RPLidar (ARM) prêt."
 }
 
-function build_local() {
-    build_lidar_sdk
-    echo -e "${BLUE}[INFO] Build local (x86_64)...${NC}"
-    mkdir -p build && cd build
-    cmake ..
-    make -j$(nproc)
-    cd ..
+build_local() {
+    build_lidar
+    local GEN=""; local OPT="-- -j$(nproc)"
+    command -v ninja >/dev/null 2>&1 && { GEN="-G Ninja"; OPT=""; step "$BG_BLU" "$F_BLU" "CONFIG" "Ninja détecté."; } \
+                                     || step "$BG_ORG" "$F_ORG" "WARN" "Make utilisé (Ninja absent)."
+    
+    step "$BG_BLU" "$F_BLU" "BUILD" "Compilation locale (x86_64)..."
+    cmake $GEN -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-fdiagnostics-color=always" >/dev/null
+    cmake --build build $OPT
+    step "$BG_GRN" "$F_GRN" "DONE" "Binaire compilé."
 }
 
-function setup_ide() {
-    echo -e "${BLUE}[INFO] Setup de la base de données de compilation (LSP)...${NC}"
-    # On force un coup de cmake si le fichier n'existe pas
-    if [ ! -f "build/compile_commands.json" ]; then
-        mkdir -p build && cd build && cmake .. && cd ..
-    fi
-
-    if [ -f "build/compile_commands.json" ]; then
-        ln -sf build/compile_commands.json compile_commands.json
-        echo -e "${GREEN}[DONE] Lien créé.${NC}"
-    else
-        echo -e "${RED}[ERROR] Fichier compile_commands.json introuvable. Vérifie ton CMakeLists.txt.${NC}"
-    fi
+setup_ide() {
+    step "$BG_BLU" "$F_BLU" "SETUP" "Génération LSP..."
+    cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null
+    [ -f "build/compile_commands.json" ] && { ln -sf build/compile_commands.json .; step "$BG_GRN" "$F_GRN" "DONE" "Lien créé."; } \
+                                         || step "$BG_RED" "$F_RED" "ERROR" "Échec LSP."
 }
 
-function run_tests_local() {
-    build_local
-    if [ -f "build/robot_tests" ]; then
-        echo -e "${GREEN}[RUN] Lancement des tests locaux...${NC}"
-        ./build/robot_tests
-    else
-        echo -e "${RED}[ERROR] Exécutable 'robot_tests' introuvable dans build/.${NC}"
-    fi
-}
+deploy_pi() {
+    build_lidar_arm
+    step "$BG_BLU" "$F_BLU" "BUILD" "Cross-compilation ARM64..."
+    cmake -B build_arm -DCMAKE_TOOLCHAIN_FILE=../pi_toolchain.cmake >/dev/null
+    cmake --build build_arm -- -j$(nproc)
 
-function deploy_pi() {
-    build_lidar_sdk_arm
-    echo -e "${BLUE}[INFO] Build pour Raspberry Pi (ARM64)...${NC}"
-    mkdir -p build_arm && cd build_arm
-    cmake .. -DCMAKE_TOOLCHAIN_FILE=../pi_toolchain.cmake
-    make -j$(nproc)
-    cd ..
-
-    echo -e "${BLUE}[INFO] Transfert vers $PI_HOST...${NC}"
+    step "$BG_BLU" "$F_BLU" "SYNC" "Rsync vers $PI_HOST..."
     ssh $PI_USER@$PI_HOST "mkdir -p $PI_DIR"
-    # rsync synchronise tout le contenu de build_arm (binaires + ressources copiées par CMake)
-    rsync -avz --progress ./build_arm/ $PI_USER@$PI_HOST:$PI_DIR
+    rsync -az --delete ./build_arm/ $PI_USER@$PI_HOST:$PI_DIR | grep -v "/$"
+    step "$BG_GRN" "$F_GRN" "DONE" "Robot synchronisé."
 }
 
-function run_tests_remote() {
-    deploy_pi
-    echo -e "${GREEN}[RUN] Lancement des tests sur la Raspberry Pi...${NC}"
-    ssh -t $PI_USER@$PI_HOST "cd $PI_DIR && ./robot_tests"
-}
+# --- Wrapper de Temps & Analyseur ---
 
-function run_robot() {
-    echo -e "${BLUE}[INFO] Lancement du programme principal sur la Pi...${NC}"
-    ssh -t $PI_USER@$PI_HOST "cd $PI_DIR && sudo ./programCDFR"
+run_timed() {
+    local task="$1"; shift; local t0=$(date +%s.%N); local log="/tmp/cdfr_build.log"
+    
+    step "$BG_BLU" "$F_BLU" "EXEC" "${BOLD}$task"
+    echo -e "${WHT}--------------------------------------------------------${NC}"
+    
+    # Exécution avec redirection propre
+    "$@" 2>&1 | tee "$log"
+    local st=${PIPESTATUS[0]}
+    
+    local dur=$(LC_NUMERIC=C printf "%.2f" $(echo "$(date +%s.%N) - $t0" | bc))
+    echo -e "${WHT}--------------------------------------------------------${NC}"
+    
+    # Comptage des erreurs et warnings
+    local clean=$(sed -E 's/\x1B\[[0-9;]*[mK]//g' "$log")
+    local w_cnt=$(echo "$clean" | grep -ic "warning:")
+    local e_cnt=$(echo "$clean" | grep -ic "error:")
+    
+    # Formatage dynamique des couleurs pour les stats
+    local w_col="$F_GRN"; [ "$w_cnt" -gt 0 ] && w_col="$F_ORG"
+    local e_col="$F_GRN"; [ "$e_cnt" -gt 0 ] && e_col="$F_RED"
+    local c_base="$F_GRN"; [ $st -ne 0 ] && c_base="$F_RED"
+    
+    local stats=" | ${w_col}${w_cnt} Warn(s)${c_base} | ${e_col}${e_cnt} Err(s)${c_base}"
+    
+    [ $st -eq 0 ] && step "$BG_GRN" "$F_GRN" "SUCCESS" "$task terminé en ${dur}s${stats}" \
+                  || { step "$BG_RED" "$F_RED" "FAIL" "$task échoué en ${dur}s${stats}"; exit $st; }
 }
 
 # --- Menu ---
 
 case "$1" in
-    build)        build_local ;;
-    deploy)       deploy_pi ;;
-    run)          run_robot ;;
-    setup-ide)    setup_ide ;;
-    tests)        run_tests_local ;;
-    deploy-tests) run_tests_remote ;;
-    clean)
-        rm -rf build build_arm
-        echo -e "${GREEN}[DONE] Clean terminé${NC}"
-        ;;
-    *)
-        echo "Usage: $0 {build|deploy|run|setup-ide|tests|deploy-tests|clean}"
-        exit 1
+    build)        run_timed "Build Local" build_local ;;
+    deploy)       run_timed "Déploiement Pi" deploy_pi ;;
+    run)          step "$BG_BLU" "$F_BLU" "SSH" "Lancement..."; ssh -t $PI_USER@$PI_HOST "cd $PI_DIR && sudo ./programCDFR" ;;
+    setup-ide)    run_timed "Setup IDE" setup_ide ;;
+    tests)        run_timed "Tests Locaux" build_local; [ -f "build/robot_tests" ] && ./build/robot_tests || step "$BG_RED" "$F_RED" "ERROR" "Test introuvable" ;;
+    deploy-tests) run_timed "Tests Distants" deploy_pi; ssh -t $PI_USER@$PI_HOST "cd $PI_DIR && ./robot_tests" ;;
+    clean)        rm -rf build build_arm compile_commands.json; step "$BG_GRN" "$F_GRN" "CLEAN" "Dossiers supprimés." ;;
+    *)            echo -e "${BOLD}Usage:${NC} $0 {build|deploy|run|setup-ide|tests|deploy-tests|clean}"; exit 1 ;;
 esac
