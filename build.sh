@@ -4,6 +4,8 @@
 PI_USER="robotronik"; PI_HOST="192.168.0.102"; PI_DIR="/home/robotronik/CDFR"
 
 # --- Palette ---
+export CLICOLOR_FORCE=1
+export FORCE_COLOR=1
 ESC=$'\033'
 NC="${ESC}[0m"; BOLD="${ESC}[1m"; WHT="${ESC}[37m"
 F_GRN="${ESC}[38;5;107m"; BG_GRN="${ESC}[30;48;5;107m" # Succès / Zéro erreur
@@ -19,14 +21,14 @@ step() { printf "${1}${BOLD} %-10s ${NC} ${2}%s${NC}\n" "$3" "$4"; }
 # --- Fonctions de Build ---
 
 build_lidar() {
-    [ ! -f "rplidar_sdk/output/Linux/Release/libsl_lidar_sdk.a" ] && \
-        step "$BG_BLU" "$F_BLU" "INFO" "Compilation SDK RPLidar..." && make -C rplidar_sdk -s >/dev/null
+    step "$BG_BLU" "$F_BLU" "INFO" "Compilation SDK RPLidar (x86_64)..."
+    (cd rplidar_sdk && make clean >/dev/null 2>&1 && make -s >/dev/null)
     step "$BG_GRN" "$F_GRN" "DONE" "SDK RPLidar (Local) prêt."
 }
 
 build_lidar_arm() { 
-    step "$BG_BLU" "$F_BLU" "INFO" "Compilation SDK RPLidar (ARM)..."
-    (cd rplidar_sdk && chmod +x cross_compile.sh && ./cross_compile.sh >/dev/null)
+    step "$BG_BLU" "$F_BLU" "INFO" "Compilation SDK RPLidar (ARM)..." 
+    (cd rplidar_sdk && make clean >/dev/null 2>&1 && make CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ AR=aarch64-linux-gnu-ar >/dev/null)
     step "$BG_GRN" "$F_GRN" "DONE" "SDK RPLidar (ARM) prêt."
 }
 
@@ -51,14 +53,22 @@ setup_ide() {
 
 deploy_pi() {
     build_lidar_arm
-    step "$BG_BLU" "$F_BLU" "BUILD" "Cross-compilation ARM64..."
-    cmake -B build_arm -DCMAKE_TOOLCHAIN_FILE=../pi_toolchain.cmake >/dev/null
-    cmake --build build_arm -- -j$(nproc)
+    local GEN=""; local OPT="-- -j$(nproc)"
+    command -v ninja >/dev/null 2>&1 && { GEN="-G Ninja"; OPT=""; }
 
-    step "$BG_BLU" "$F_BLU" "SYNC" "Rsync vers $PI_HOST..."
+    step "$BG_BLU" "$F_BLU" "BUILD" "Cross-compilation ARM64..."
+    cmake $GEN -B build_arm -DCMAKE_TOOLCHAIN_FILE=../pi_toolchain.cmake >/dev/null
+    cmake --build build_arm $OPT
+
+    step "$BG_BLU" "$F_BLU" "SYNC" "Transfert vers le robot ($PI_HOST)..."
     ssh $PI_USER@$PI_HOST "mkdir -p $PI_DIR"
     rsync -az --delete ./build_arm/ $PI_USER@$PI_HOST:$PI_DIR | grep -v "/$"
-    step "$BG_GRN" "$F_GRN" "DONE" "Robot synchronisé."
+    scp -q autoRunInstaller.sh $PI_USER@$PI_HOST:$PI_DIR/
+
+    step "$BG_BLU" "$F_BLU" "SERVICE" "Installation et démarrage auto..."
+    ssh -t $PI_USER@$PI_HOST "cd $PI_DIR && chmod +x autoRunInstaller.sh && sudo ./autoRunInstaller.sh --install $PI_DIR/programCDFR"
+    
+    step "$BG_GRN" "$F_GRN" "DONE" "Robot flashé et programme lancé !"
 }
 
 # --- Wrapper de Temps & Analyseur ---

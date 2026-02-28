@@ -1,6 +1,23 @@
 cmake_minimum_required(VERSION 3.15)
 project(ProgramCDFR2026 LANGUAGES CXX)
-add_subdirectory(crow)
+
+include(FetchContent)
+FetchContent_Declare(
+    asio
+    GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+    GIT_TAG asio-1-30-2
+)
+FetchContent_MakeAvailable(asio)
+
+set(ASIO_INCLUDE_DIR ${asio_SOURCE_DIR}/asio/include CACHE PATH "Asio include dir" FORCE)
+
+
+FetchContent_Declare(
+    Crow
+    GIT_REPOSITORY https://github.com/CrowCpp/Crow.git
+    GIT_TAG v1.2.0 # 
+)
+FetchContent_MakeAvailable(Crow)
 
 # ------------------------------------------------------------------------------
 # 1. Configuration Globale
@@ -43,7 +60,15 @@ target_include_directories(robot_core PUBLIC
 # ------------------------------------------------------------------------------
 # 4. Librairies externes
 # ------------------------------------------------------------------------------
+
 target_link_directories(robot_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rplidar_sdk/output/Linux/Release)
+
+if(CMAKE_CROSSCOMPILING)
+    target_link_directories(robot_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/aarch64-linux-gnu)
+else()
+    target_link_directories(robot_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/x86_64-linux-gnu)
+endif()
+
 target_link_libraries(robot_core PUBLIC Crow::Crow pthread i2c rt sl_lidar_sdk)
 
 # ------------------------------------------------------------------------------
@@ -65,4 +90,6 @@ target_link_libraries(robot_tests PRIVATE robot_core)
 add_custom_command(TARGET programCDFR POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/html $<TARGET_FILE_DIR:programCDFR>/html
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/tests/lidar $<TARGET_FILE_DIR:programCDFR>/tests/lidar
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../PythonArucoOpenCV/data $<TARGET_FILE_DIR:programCDFR>/data
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/../PythonArucoOpenCV/pi_detect_aruco.py $<TARGET_FILE_DIR:programCDFR>/
 )
