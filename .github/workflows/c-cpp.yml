@@ -27,5 +27,5 @@ jobs:
 
     - name: Build and run tests
       run: |
-        make tests
-        make
+        bash build.sh tests
+        bash build.sh build
