@@ -102,3 +102,10 @@ const position_t DROPZONE_POSITIONS_TABLE[] = {
     position_t{.x = -450, .y = -250}, \
     position_t{.x = 900, .y = 0}}; \
     // The dropzone table is ordered following symetry of the table, could be ordered by proximity
+
+
+const position_t ARUCO_POSITIONS_TABLE[] = {
+    position_t{.x = -400, .y = -900, .a = 0}, \
+    position_t{.x = -400, .y = 900, .a = 0}, \
+    position_t{.x = 400, .y = -900, .a = 0}, \
+    position_t{.x = 400, .y = 900, .a = 0}};
