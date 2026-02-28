@@ -7,6 +7,7 @@
 #include "vision/ArucoCam.hpp"
 #include "utils/logger.hpp"
 #include "utils/json.hpp" // For handling JSON
+#include "defs/constante.h"
 
 using json = nlohmann::json;
 
@@ -104,7 +105,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     json position = response["position"];
     x = position.value("x", 0);
     y = position.value("y", 0);
-    a = position.value("a", 0);
+    a = position.value("a", 0) + OFFSET_ANGLE_CAM;
     LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted
     stop();

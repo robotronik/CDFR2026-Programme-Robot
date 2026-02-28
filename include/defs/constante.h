@@ -11,6 +11,7 @@
 
 #define ROBOT_WIDTH 400
 #define OPPONENT_ROBOT_RADIUS 250
+#define OFFSET_ANGLE_CAM -120 // Offset angle of the camera in degrees
 
 // TODO: is it deprecated value ?
 const int STOCK_WIDTH_MM = 100;
