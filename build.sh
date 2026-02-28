@@ -36,6 +36,21 @@ function build_local() {
     cd ..
 }
 
+function setup_ide() {
+    echo -e "${BLUE}[INFO] Setup de la base de données de compilation (LSP)...${NC}"
+    # On force un coup de cmake si le fichier n'existe pas
+    if [ ! -f "build/compile_commands.json" ]; then
+        mkdir -p build && cd build && cmake .. && cd ..
+    fi
+
+    if [ -f "build/compile_commands.json" ]; then
+        ln -sf build/compile_commands.json compile_commands.json
+        echo -e "${GREEN}[DONE] Lien créé.${NC}"
+    else
+        echo -e "${RED}[ERROR] Fichier compile_commands.json introuvable. Vérifie ton CMakeLists.txt.${NC}"
+    fi
+}
+
 function run_tests_local() {
     build_local
     if [ -f "build/robot_tests" ]; then
@@ -77,6 +92,7 @@ case "$1" in
     build)        build_local ;;
     deploy)       deploy_pi ;;
     run)          run_robot ;;
+    setup-ide)    setup_ide ;;
     tests)        run_tests_local ;;
     deploy-tests) run_tests_remote ;;
     clean)
@@ -84,6 +100,6 @@ case "$1" in
         echo -e "${GREEN}[DONE] Clean terminé${NC}"
         ;;
     *)
-        echo "Usage: $0 {build|deploy|run|tests|deploy-tests|clean}"
+        echo "Usage: $0 {build|deploy|run|setup-ide|tests|deploy-tests|clean}"
         exit 1
 esac
