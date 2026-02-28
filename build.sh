@@ -20,16 +20,37 @@ step() { printf "${1}${BOLD} %-10s ${NC} ${2}%s${NC}\n" "$3" "$4"; }
 
 # --- Fonctions de Build ---
 
-build_lidar() {
-    step "$BG_BLU" "$F_BLU" "INFO" "Compilation SDK RPLidar (x86_64)..."
-    (cd rplidar_sdk && make clean >/dev/null 2>&1 && make -s >/dev/null)
-    step "$BG_GRN" "$F_GRN" "DONE" "SDK RPLidar (Local) prêt."
+LIDAR_LIB="rplidar_sdk/output/Linux/Release/libsl_lidar_sdk.a"
+
+check_lidar_arch() {
+    local target=$(echo "$1" | tr '[:lower:]' '[:upper:]')
+    if [ ! -f "$LIDAR_LIB" ]; then return 1; fi
+    local machine_line=$(readelf -h "$LIDAR_LIB" 2>/dev/null | grep "Machine:" | head -n 1 | tr '[:lower:]' '[:upper:]')
+    if [[ "$machine_line" == *"$target"* ]]; then
+        return 0
+    fi
+    return 1
 }
 
-build_lidar_arm() { 
-    step "$BG_BLU" "$F_BLU" "INFO" "Compilation SDK RPLidar (ARM)..." 
-    (cd rplidar_sdk && make clean >/dev/null 2>&1 && make CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ AR=aarch64-linux-gnu-ar >/dev/null)
-    step "$BG_GRN" "$F_GRN" "DONE" "SDK RPLidar (ARM) prêt."
+build_lidar() { 
+    if check_lidar_arch "X86-64"; then
+        step "$BG_GRN" "$F_GRN" "SKIP" "SDK RPLidar (x86_64) déjà à jour."
+    else
+        step "$BG_BLU" "$F_BLU" "INFO" "Compilation SDK RPLidar (x86_64)..."
+        (cd rplidar_sdk && make clean >/dev/null 2>&1 && make -s >/dev/null)
+        step "$BG_GRN" "$F_GRN" "DONE" "SDK RPLidar (Local) prêt."
+    fi
+}
+
+build_lidar_arm() {  
+    if check_lidar_arch "AArch64"; then
+        step "$BG_GRN" "$F_GRN" "SKIP" "SDK RPLidar (ARM64) déjà à jour."
+    else
+        step "$BG_BLU" "$F_BLU" "INFO" "Compilation SDK RPLidar (ARM)..."
+        (cd rplidar_sdk && make clean >/dev/null 2>&1 && \
+         make CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ AR=aarch64-linux-gnu-ar -s >/dev/null)
+        step "$BG_GRN" "$F_GRN" "DONE" "SDK RPLidar (ARM) prêt."
+    fi
 }
 
 build_local() {
@@ -37,7 +58,6 @@ build_local() {
     local GEN=""; local OPT="-- -j$(nproc)"
     command -v ninja >/dev/null 2>&1 && { GEN="-G Ninja"; OPT=""; step "$BG_BLU" "$F_BLU" "CONFIG" "Ninja détecté."; } \
                                      || step "$BG_ORG" "$F_ORG" "WARN" "Make utilisé (Ninja absent)."
-    
     step "$BG_BLU" "$F_BLU" "BUILD" "Compilation locale (x86_64)..."
     cmake $GEN -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-fdiagnostics-color=always" >/dev/null
     cmake --build build $OPT
