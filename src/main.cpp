@@ -270,11 +270,7 @@ int StartSequence()
     manual_ctrl = false;
     manual_currentFunc = NULL;
 
-    pathfindInit();
-
-    // TODO REMOVE
-    pathfind_place_obstacle_rect_with_inflation(400, 0, 100, 100, 200);
-
+    pathfind_setup();
 
     drive.reset();
 
