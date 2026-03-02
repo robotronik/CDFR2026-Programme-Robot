@@ -64,7 +64,7 @@ bool ActionFSM::RunFSM(){
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("Error during calibration step ", calibrationState);
-            // TODO Handle error
+            runState = FSM_ACTION_GATHER; // We try to continue anyway, maybe the error is not critical
         }
         break;
     
@@ -246,42 +246,50 @@ position_t calculateClosestArucoPosition(position_t currentPos, position_t& outP
 ReturnFSM_t ActionFSM::Calibrate(){
     nav_return_t nav_ret;
     static unsigned long start_time;
+    static position_t target_;
+    static position_t arucoPos;
+
     switch (calibrationState){
-    case FSM_CALIBRATION_NAV:
-        {
-        // Look towards the closest aruco marker by only spinning in place
-        position_t target_;
-        position_t arucoPos = calculateClosestArucoPosition(drive.position, target_);
-        LOG_DEBUG("Calibrating, closest aruco marker is at (", arucoPos.x, ", ", arucoPos.y, ", ", arucoPos.a, ")");
-        nav_ret = navigationGoTo(target_, true);
-        if (nav_ret == NAV_DONE){
-            calibrationState = FSM_CALIBRATION_CALIBRATE;
-            LOG_INFO("Nav done for FSM_CALIBRATION_NAV, going to FSM_CALIBRATION_CALIBRATE");
-            start_time = _millis();
-        }
-        else if (nav_ret == NAV_ERROR){
-            return FSM_RETURN_ERROR;
-        }
-        }
-        break;
-    
-    case FSM_CALIBRATION_CALIBRATE:
-        // Calibrate
-        if (_millis() > start_time + 1000){ // Timeout after 1s
-            LOG_ERROR("Calibration timeout");
-            return FSM_RETURN_ERROR;
-        }
-        position_t pos_;
-        if (arucoCam1.getPos(pos_.x, pos_.y, pos_.a)){
-            pos_.x += cos(pos_.a * DEG_TO_RAD) * OFFSET_CAM_X - sin(pos_.a * DEG_TO_RAD) * OFFSET_CAM_Y;
-            pos_.y += sin(pos_.a * DEG_TO_RAD) * OFFSET_CAM_X + cos(pos_.a * DEG_TO_RAD) * OFFSET_CAM_Y;
-            LOG_INFO("Calibration successful, new position: (", pos_.x, ", ", pos_.y, ", ", pos_.a, ")");
-            drive.setCoordinates(pos_);
+        case FSM_CALCULATION:
+            arucoPos = calculateClosestArucoPosition(drive.position, target_);
+            LOG_DEBUG("Calibrating, closest aruco marker is at (", arucoPos.x, ", ", arucoPos.y, ", ", arucoPos.a, ")");
             calibrationState = FSM_CALIBRATION_NAV;
-            LOG_INFO("Calibrating for FSM_CALIBRATION_CALIBRATE");
-            return FSM_RETURN_DONE;
-        }
-        break;
+            LOG_INFO("Going to FSM_CALIBRATION_NAV with target position (", target_.x, ", ", target_.y, ", ", target_.a, ")");
+            break;
+        case FSM_CALIBRATION_NAV:
+            {
+            // Look towards the closest aruco marker by only spinning in place
+            nav_ret = navigationGoTo(target_, true);
+            if (nav_ret == NAV_DONE){
+                calibrationState = FSM_CALIBRATION_CALIBRATE;
+                LOG_INFO("Nav done for FSM_CALIBRATION_NAV, going to FSM_CALIBRATION_CALIBRATE");
+                start_time = _millis();
+            }
+            else if (nav_ret == NAV_ERROR){
+                return FSM_RETURN_ERROR;
+            }
+            }
+            break;
+        
+        case FSM_CALIBRATION_CALIBRATE:
+            // Calibrate
+            if (_millis() > start_time + 1000){ // Timeout after 1s
+                LOG_ERROR("Calibration timeout");
+                return FSM_RETURN_ERROR;
+            }
+            position_t pos_;
+            if (arucoCam1.getPos(pos_.x, pos_.y, pos_.a)){
+                LOG_DEBUG("Calibration successful, raw position from aruco: (", pos_.x, ", ", pos_.y, ", ", pos_.a, ")");
+                pos_.x -= cos(pos_.a * DEG_TO_RAD) * OFFSET_CAM_X - sin(pos_.a * DEG_TO_RAD) * OFFSET_CAM_Y;
+                pos_.y -= sin(pos_.a * DEG_TO_RAD) * OFFSET_CAM_X + cos(pos_.a * DEG_TO_RAD) * OFFSET_CAM_Y;
+                pos_.a += OFFSET_ANGLE_CAM;
+                LOG_DEBUG("Calibration successful, new position: (", pos_.x, ", ", pos_.y, ", ", pos_.a, ")");
+                drive.setCoordinates(pos_);
+                calibrationState = FSM_CALIBRATION_NAV;
+                LOG_INFO("Calibrating for FSM_CALIBRATION_CALIBRATE");
+                return FSM_RETURN_DONE;
+            }
+            break;
     }
     return FSM_RETURN_WORKING;
 }

@@ -94,7 +94,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a) {
     json position = response["position"];
     x = position.value("x", 0);
     y = position.value("y", 0);
-    a = position.value("a", 0) + OFFSET_ANGLE_CAM;
+    a = position.value("a", 0);
     LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted
     stop();
