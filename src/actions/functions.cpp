@@ -44,7 +44,7 @@ bool lowerClaws(){
             state++;
             break;
         case 2:
-            if (readLimitSwitchBottom() || (_millis() >= startTime + 1500)){ // Si pinces bloquées ou après 2s
+            if (readLimitSwitchBottom() || (_millis() >= startTime + 1000)){ // Si pinces bloquées ou après 2s
                 startTime = _millis();
                 state++;
             }
@@ -70,7 +70,7 @@ bool raiseClaws(){
             state++;
             break;
         case 2:
-            if (readLimitSwitchTop() || (_millis() >= startTime + 2000)){ // Si pinces bloquées ou après 3s
+            if (readLimitSwitchTop() || (_millis() >= startTime + 1500)){ // Si pinces bloquées ou après 3s
                 arduino.stopMotorDC();
                 state = 1;
                 return true;
