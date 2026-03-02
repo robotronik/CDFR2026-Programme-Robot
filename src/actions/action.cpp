@@ -11,7 +11,7 @@ ActionFSM::~ActionFSM(){}
 
 
 void ActionFSM::Reset(){
-    runState = FSM_CALIBRATION_CAMERA;
+    runState = FSM_CALIBRATION;
     gatherStockState = FSM_GATHER_NAV;
     dropStockState = FSM_DROP_NONE;
     stock_num = -1;
@@ -44,6 +44,7 @@ bool ActionFSM::RunFSM(){
             // TODO Handle error
         }else if (ret == FSM_RETURN_DONE){
             LOG_INFO("Finished dropping stock ", stock_num);
+            LOG_INFO("Going back to FSM_ACTION_CALIBRATION");
             runState = FSM_CALIBRATION;
         }
         break;
@@ -60,8 +61,14 @@ bool ActionFSM::RunFSM(){
         if (ret == FSM_RETURN_DONE){
             LOG_INFO("Finished calibration step ", calibrationState);
             runState = FSM_ACTION_GATHER;
-        }   
-    case FSM_CALIBRATION_CAMERA:
+        }
+        else if (ret == FSM_RETURN_ERROR){
+            LOG_ERROR("Error during calibration step ", calibrationState);
+            // TODO Handle error
+        }
+        break;
+    
+    case FSM_CENTER_CALIBRATION:
         ret = GetRobotCenter();
         if(ret == FSM_RETURN_DONE){
             LOG_INFO("Finished camera calibration step ", calibrationCameraState);
@@ -241,10 +248,11 @@ ReturnFSM_t ActionFSM::Calibrate(){
     static unsigned long start_time;
     switch (calibrationState){
     case FSM_CALIBRATION_NAV:
-    {
+        {
         // Look towards the closest aruco marker by only spinning in place
         position_t target_;
         position_t arucoPos = calculateClosestArucoPosition(drive.position, target_);
+        LOG_DEBUG("Calibrating, closest aruco marker is at (", arucoPos.x, ", ", arucoPos.y, ", ", arucoPos.a, ")");
         nav_ret = navigationGoTo(target_, true);
         if (nav_ret == NAV_DONE){
             calibrationState = FSM_CALIBRATION_CALIBRATE;
@@ -254,8 +262,8 @@ ReturnFSM_t ActionFSM::Calibrate(){
         else if (nav_ret == NAV_ERROR){
             return FSM_RETURN_ERROR;
         }
-    }
-    break;
+        }
+        break;
     
     case FSM_CALIBRATION_CALIBRATE:
         // Calibrate
@@ -272,7 +280,7 @@ ReturnFSM_t ActionFSM::Calibrate(){
             LOG_INFO("Calibrating for FSM_CALIBRATION_CALIBRATE");
             return FSM_RETURN_DONE;
         }
-    break;
+        break;
     }
     return FSM_RETURN_WORKING;
 }
