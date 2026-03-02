@@ -5,29 +5,47 @@
 #include "main.hpp"
 
 int pathfind(position_t start, position_t goal, position_t path[]) {
-    int RayonRobot=150;
-    LOG_INFO("start : ", start.x, start.y, "goal : ", goal.x, goal.y);
-    int sx=(start.x+1000)/SCALE;
-    int sy=(start.y+1500)/SCALE;
-    int gx=(goal.x+1000)/SCALE;
-    int gy=(goal.y+1500)/SCALE;
+    int RayonRobot = 150;
 
-    
-    astar_pathfind(&sx,&sy,&gx,&gy);
-    int len=reconstruct_path(sx,sy,gx,gy,path);
-    if (len == -1) return len;
+    // Toujours réinitialiser la costmap
+    astar_initialize_costmap();
+    pathfind_setup();
 
-    //print_costmap_with_path(path,len);
-    int smooth_len=smooth_path(path,len,path);
- 
-    print_costmap_with_path(path,smooth_len,position_t {(start.x+1000)/SCALE,(start.y+1500)/SCALE}, position_t {(goal.x+1000)/SCALE,(goal.y+1500)/SCALE});
+    // Ajouter les obstacles du lidar
+    pathfind_fill_lidar();
+
+    LOG_INFO("Original start : ", start.x, " / ", start.y, 
+             " goal : ", goal.x, " / ", goal.y);
+
+    int sx = (start.x + 1000) / SCALE;
+    int sy = (start.y + 1500) / SCALE;
+    int gx = (goal.x + 1000) / SCALE;
+    int gy = (goal.y + 1500) / SCALE;
+
+    LOG_INFO("Converted start : ", sx, " / ", sy, " goal : ", gx, " / ", gy);
+
+    astar_pathfind(&sx, &sy, &gx, &gy);
+
+    LOG_INFO("After escape start : ", sx, " / ", sy, " goal : ", gx, " / ", gy);
+
+    int len = reconstruct_path(sx, sy, gx, gy, path);
+    print_costmap_with_path(path, len, position_int_t{sx, sy}, position_int_t{gx, gy});
+    if (len == 0) {
+        LOG_WARNING("Goal unreachable, printing costmap with path:");
+        return 0;
+    }
+
+    int smooth_len = smooth_path(path, len, path);
+    print_costmap_with_path(path, smooth_len, position_int_t{sx, sy}, position_int_t{gx, gy});
     for(int i = 0; i < smooth_len; i++){
         path[i].x = path[i].x * SCALE - 1000;
         path[i].y = path[i].y * SCALE - 1500;
+        path[i].a = goal.a;
     }
-    path[smooth_len] = (position_t){goal.x, goal.y};
-    smooth_len ++;
-    return smooth_len;}
+    path[smooth_len] = (position_t){goal.x, goal.y, goal.a};
+    smooth_len++;
+    return smooth_len;
+}
 
 void pathfind_setup() {
     astar_initialize_costmap();

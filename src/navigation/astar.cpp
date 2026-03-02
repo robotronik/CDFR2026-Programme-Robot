@@ -11,11 +11,6 @@ typedef struct {
     bool visited;
 } Node;
 
-typedef struct {
-    int x;
-    int y;
-} position_int_t;
-
 unsigned char costmap[AS_HEIGHT][AS_WIDTH];
 Node nodes[AS_HEIGHT][AS_WIDTH];
 
@@ -129,10 +124,9 @@ void astar_pathfind(int *sx,int *sy,int *gx,int *gy){
                 best=i;
 
         position_int_t current=open[best];
-        open[best]=open[--open_size];
-
         int cx = open[best].x;
         int cy = open[best].y;
+        open[best]=open[--open_size];
         if(cx==goal_x && cy==goal_y) return;
 
         nodes[cx][cy].visited=true;
@@ -240,7 +234,8 @@ int smooth_path(position_t *in,int in_len,position_t *out){
     return out_len;
 }
 
-void print_costmap_with_path(position_t *path, int len, position_t start, position_t goal) {
+void print_costmap_with_path(position_t *path, int len, position_int_t start, position_int_t goal) {
+    LOG_INFO("start : ", start.x, " / ", start.y, "goal : ", goal.x, " / " , goal.y);
     for(int x=0; x<AS_HEIGHT; x++){
         for(int y=0; y<AS_WIDTH; y++){
             if(x == start.x && y == start.y) {printf(" S");continue;}
