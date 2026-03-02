@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <math.h>
 #include "utils/httplib.h"
 #include "vision/ArucoCam.hpp"
 #include "utils/logger.hpp"
@@ -12,6 +13,10 @@ using json = nlohmann::json;
 #define PORT_OFFSET 5000
 #define SCAN_FAIL_FRAMES_NUM 10
 #define SCAN_DONE_FRAMES_NUM 20
+
+#define OFFSET_CAM_X 109 // Offset of the camera in mm on the x axis
+#define OFFSET_CAM_Y 2.5 // Offset of the camera in mm on the y axis
+#define OFFSET_CAM_A -120 // Offset angle of the camera in degrees
 
 pid_t startPythonProgram(char** args);
 void stopPythonProgram(pid_t pid);
@@ -54,9 +59,13 @@ ArucoCam::~ArucoCam(){
     if (pid > 0)
         stopPythonProgram(pid);
 }
-bool ArucoCam::getPos(double & x, double & y, double & a) {
+
+
+// Returns true when done
+bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
+    success = false;
     if (status == false) {
-        LOG_ERROR("ArucoCam ", id, " is not running, will start it now");
+        LOG_WARNING("ArucoCam ", id, " is not running, will start it now");
         start();
         return false;
     }
@@ -66,12 +75,12 @@ bool ArucoCam::getPos(double & x, double & y, double & a) {
     // Returns true if the call was successful, false otherwise
     if (id < 0) {
         // TODO change this to return a random position
-        return false;
+        return true;
     }
     json response;
     if (restAPI_GET(url, "/position", response) == false) {
         LOG_ERROR("ArucoCam::getPos() - Failed to fetch position");
-        return false;
+        return true;
     }
     int failedFrames = response.value("failedFrames", -1);
     int sucessFrames = response.value("sucessFrames", -1);
@@ -79,17 +88,19 @@ bool ArucoCam::getPos(double & x, double & y, double & a) {
     if (failedFrames == -1 || sucessFrames == -1) {
         LOG_ERROR("ArucoCam::getPos() - Invalid response data, camera might not be running");
         status = false;
-        return false;
+        return true;
     }
-    /*if (failedFrames > SCAN_FAIL_FRAMES_NUM) {
+    if (failedFrames > SCAN_FAIL_FRAMES_NUM) {
         LOG_WARNING("Cam has too many failed frames : ", failedFrames);
-        return false;
-    }*/
+        stop();
+        return true;
+    }
     if (sucessFrames < SCAN_DONE_FRAMES_NUM) {
-        LOG_WARNING("Cam has not enough good success frames : ", sucessFrames);
+        //LOG_WARNING("Cam has not enough good success frames : ", sucessFrames);
         return false;
     }
     // Extract the values from the JSON object
+    success = true;
     json position = response["position"];
     x = position.value("x", 0);
     y = position.value("y", 0);
@@ -116,6 +127,24 @@ void ArucoCam::stop() {
     }
 }
 
+bool ArucoCam::getRobotPos(double & x, double & y, double & a, bool& success) {
+    // Camera offset from robot center in mm and degrees
+    bool result = getPos(x, y, a, success);
+    if (result && success) {
+        // Convert camera position to robot position
+        double cam_a_rad = a * M_PI / 180.0;
+        double cos_a = cos(cam_a_rad);
+        double sin_a = sin(cam_a_rad);
+        x -= OFFSET_CAM_X * cos_a - OFFSET_CAM_Y * sin_a;
+        y -= OFFSET_CAM_X * sin_a + OFFSET_CAM_Y * cos_a;
+        a += OFFSET_CAM_A;
+        // Normalize angle to ]-180;180]
+        if (a > 180.0) a -= 360.0;
+        else if (a <= -180.0) a += 360.0;
+    }
+    return result;    
+}
+
 bool restAPI_GET(const std::string &url, const std::string &resquest, json &response) {
     // HTTP
     httplib::Client cli(url);
@@ -125,7 +154,7 @@ bool restAPI_GET(const std::string &url, const std::string &resquest, json &resp
         LOG_ERROR("Failed to fetch response from ", url, resquest);
         return false;
     }
-    LOG_GREEN_INFO("HTML Status is ", res->status);
+    // LOG_GREEN_INFO("HTML Status is ", res->status);
     // LOG_GREEN_INFO("HTML Body is ", res->body);
 
     // Check if the response code is 200 (OK)
@@ -136,7 +165,7 @@ bool restAPI_GET(const std::string &url, const std::string &resquest, json &resp
     try {
         // Parse JSON response
         response = json::parse(res->body);
-        LOG_GREEN_INFO("API Response: ", response.dump(4));
+        // LOG_GREEN_INFO("API Response: ", response.dump(4));
         return true;
     } catch (const json::parse_error& e) {
         LOG_ERROR("JSON parse error: ", e.what());
