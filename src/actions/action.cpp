@@ -61,6 +61,17 @@ bool ActionFSM::RunFSM(){
             LOG_INFO("Finished calibration step ", calibrationState);
             runState = FSM_ACTION_GATHER;
         }   
+    case FSM_CALIBRATION_CAMERA:
+        ret = GetRobotCenter();
+        if(ret == FSM_RETURN_DONE){
+            LOG_INFO("Finished camera calibration step ", calibrationCameraState);
+            runState = FSM_ACTION_NAV_HOME;
+        }
+        else if (ret == FSM_RETURN_ERROR){
+            LOG_ERROR("Error during camera calibration step ", calibrationCameraState);
+            // TODO Handle error
+        }
+        break;
     }
     return false;
 }
@@ -254,12 +265,54 @@ ReturnFSM_t ActionFSM::Calibrate(){
         }
         position_t pos_;
         if (arucoCam1.getPos(pos_.x, pos_.y, pos_.a)){
+            pos_ = {pos_.x + OFFSET_CAM_X, pos_.y + OFFSET_CAM_Y, pos_.a};
+            LOG_INFO("Calibration successful, new position: (", pos_.x, ", ", pos_.y, ", ", pos_.a, ")");
             drive.setCoordinates(pos_);
             calibrationState = FSM_CALIBRATION_NAV;
             LOG_INFO("Calibrating for FSM_CALIBRATION_CALIBRATE");
             return FSM_RETURN_DONE;
         }
     break;
+    }
+    return FSM_RETURN_WORKING;
+}
+
+ReturnFSM_t ActionFSM::GetRobotCenter(){
+    nav_return_t nav_ret;
+    static unsigned long start_time;
+    static position_t aruco1 = {0, 0, 0};
+    static position_t aruco2 = {0, 0, 0};
+    switch (calibrationCameraState){
+        case FSM_ARUCO_1:
+            {
+            if(arucoCam1.getPos(aruco1.x, aruco1.y, aruco1.a)){
+                position_t target_ = drive.position;
+                target_.a += 180;
+                nav_ret = navigationGoTo(target_, true);
+                if (nav_ret == NAV_DONE){
+                    calibrationCameraState = FSM_ARUCO_2;
+                    LOG_INFO("Nav done for FSM_ARUCO_1, going to FSM_ARUCO_2");
+                }
+                else if (nav_ret == NAV_ERROR){
+                    return FSM_RETURN_ERROR;
+                }
+                }
+            }
+            break;
+        
+        case FSM_ARUCO_2:
+            {
+            // Look towards the next aruco marker by only spinning in place
+            if (arucoCam1.getPos(aruco2.x, aruco2.y, aruco2.a)){
+                position_t center = {(aruco1.x + aruco2.x) / 2, (aruco1.y + aruco2.y) / 2, 0};
+                position_t offset = {aruco1.x - center.x, aruco1.y - center.y, 0};
+                LOG_INFO("Calculated offset between cam and center for aruco1: (", offset.x, ", ", offset.y, ")");
+                offset = {aruco2.x - center.x, aruco2.y - center.y, 0};
+                LOG_INFO("Calculated offset between cam and center for aruco2: (", offset.x, ", ", offset.y, ")");
+                return FSM_RETURN_DONE;
+            }
+            }
+            break;
     }
     return FSM_RETURN_WORKING;
 }

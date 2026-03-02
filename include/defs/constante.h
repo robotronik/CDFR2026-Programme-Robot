@@ -13,6 +13,10 @@
 #define OPPONENT_ROBOT_RADIUS 250
 #define OFFSET_ANGLE_CAM -120 // Offset angle of the camera in degrees
 
+// TODO: Set these values following the getCenter calibration
+#define OFFSET_CAM_X 0 // Offset of the camera in mm on the x axis
+#define OFFSET_CAM_Y 0 // Offset of the camera in mm on the y axis
+
 // TODO: is it deprecated value ?
 const int STOCK_WIDTH_MM = 100;
 const int STOCK_HEIGHT_MM = 400;
