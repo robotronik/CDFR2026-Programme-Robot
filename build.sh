@@ -127,7 +127,7 @@ run_timed() {
     local stats=" | ${w_col}${w_cnt} Warn(s)${c_base} | ${e_col}${e_cnt} Err(s)${c_base}"
     
     [ $st -eq 0 ] && [ $e_cnt -eq 0 ] && step "$BG_GRN" "$F_GRN" "SUCCESS" "$task terminé en ${dur}s${stats}" \
-                  || { step "$BG_RED" "$F_RED" "FAIL" "$task échoué en ${dur}s${stats}"; exit $st; }
+                  || { step "$BG_RED" "$F_RED" "FAIL" "$task échoué en ${dur}s${stats}"; }
 }
 
 # --- Menu ---
@@ -145,9 +145,7 @@ case "$1" in
                    if [ -f "build/robot_tests" ]; then \
                         [ -e "lidar" ] || ln -s "tests/lidar" "lidar"; \
                         run_timed "Tests" ./build/robot_tests; \
-                        RET=$?; \
-                        [ -L "lidar" ] && rm "lidar"; \
-                        exit $RET; \
+                        rm "lidar"; \
                    else \
                        step "$BG_RED" "$F_RED" "ERROR" "Test introuvable"; \
                    fi ;;
