@@ -313,6 +313,7 @@ ReturnFSM_t ActionFSM::GetRobotCenter(){
                 LOG_INFO("Calculated offset between cam and center for aruco1: (", offset.x, ", ", offset.y, ")");
                 offset = {aruco2.x - center.x, aruco2.y - center.y, 0};
                 LOG_INFO("Calculated offset between cam and center for aruco2: (", offset.x, ", ", offset.y, ")");
+                drive.setCoordinates(center);
                 return FSM_RETURN_DONE;
             }
             }
