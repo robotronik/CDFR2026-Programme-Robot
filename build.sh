@@ -145,6 +145,9 @@ case "$1" in
                    if [ -f "build/robot_tests" ]; then \
                        [ -e "lidar" ] || ln -s "tests/lidar" "lidar"; \
                        ./build/robot_tests; \
+                        RET=$?; \
+                        [ -L "lidar" ] && rm "lidar"; \
+                        exit $RET; \
                    else \
                        step "$BG_RED" "$F_RED" "ERROR" "Test introuvable"; \
                    fi ;;
