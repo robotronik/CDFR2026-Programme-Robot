@@ -116,8 +116,8 @@ run_timed() {
     
     # Comptage des erreurs et warnings
     local clean=$(sed -E 's/\x1B\[[0-9;]*[mK]//g' "$log")
-    local w_cnt=$(echo "$clean" | grep -ic "warning:")
-    local e_cnt=$(echo "$clean" | grep -ic "error:")
+    local w_cnt=$(echo "$clean" | grep -icE "warning:|\[WARNING\]")
+    local e_cnt=$(echo "$clean" | grep -icE "error:|\[ERROR\]")
     
     # Formatage dynamique des couleurs pour les stats
     local w_col="$F_GRN"; [ "$w_cnt" -gt 0 ] && w_col="$F_ORG"
@@ -126,7 +126,7 @@ run_timed() {
     
     local stats=" | ${w_col}${w_cnt} Warn(s)${c_base} | ${e_col}${e_cnt} Err(s)${c_base}"
     
-    [ $st -eq 0 ] && step "$BG_GRN" "$F_GRN" "SUCCESS" "$task terminé en ${dur}s${stats}" \
+    [ $st -eq 0 ] && [ $e_cnt -eq 0 ] && step "$BG_GRN" "$F_GRN" "SUCCESS" "$task terminé en ${dur}s${stats}" \
                   || { step "$BG_RED" "$F_RED" "FAIL" "$task échoué en ${dur}s${stats}"; exit $st; }
 }
 
@@ -141,10 +141,10 @@ case "$1" in
                ssh -t $PI_USER@$PI_HOST "journalctl -u programCDFR.service -f -n 50"
                ;;
     setup-ide)    run_timed "Setup IDE" setup_ide ;;
-    tests)        run_timed "Tests Locaux" build_local; \
+    tests)        run_timed "Build local" build_local; \
                    if [ -f "build/robot_tests" ]; then \
-                       [ -e "lidar" ] || ln -s "tests/lidar" "lidar"; \
-                       ./build/robot_tests; \
+                        [ -e "lidar" ] || ln -s "tests/lidar" "lidar"; \
+                        run_timed "Tests" ./build/robot_tests; \
                         RET=$?; \
                         [ -L "lidar" ] && rm "lidar"; \
                         exit $RET; \
