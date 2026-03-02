@@ -291,7 +291,7 @@ ReturnFSM_t ActionFSM::GetRobotCenter(){
         case FSM_ARUCO_1:
             {
             if(arucoCam1.getPos(aruco1.x, aruco1.y, aruco1.a)){
-                calibrationCameraState = FSM_ARUCO_2;
+                calibrationCameraState = FSM_ARUCO_NAV;
                 LOG_INFO("Found first aruco marker at (", aruco1.x, ", ", aruco1.y, ", ", aruco1.a, "), going to FSM_ARUCO_2");
             }
             }
