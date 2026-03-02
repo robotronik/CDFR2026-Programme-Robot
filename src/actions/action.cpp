@@ -149,12 +149,11 @@ ReturnFSM_t ActionFSM::Calibrate(){
                 drive.setCoordinates(pos_);
                 calibrationState = FSM_CALIBRATION_NAV;
                 LOG_INFO("Calibrating for FSM_CALIBRATION_CALIBRATE");
-                return FSM_RETURN_DONE;
             }
             else{
                 LOG_WARNING("Camera did not have a good position estimate, skipping calibration");
-                return FSM_RETURN_ERROR;
             }
+            return FSM_RETURN_DONE;
         }
     break;
     }

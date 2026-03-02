@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
+#include <math.h>
 #include "utils/httplib.h"
 #include "vision/ArucoCam.hpp"
 #include "utils/logger.hpp"
@@ -79,7 +80,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     json response;
     if (restAPI_GET(url, "/position", response) == false) {
         LOG_ERROR("ArucoCam::getPos() - Failed to fetch position");
-        return false;
+        return true;
     }
     int failedFrames = response.value("failedFrames", -1);
     int sucessFrames = response.value("sucessFrames", -1);
@@ -87,7 +88,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     if (failedFrames == -1 || sucessFrames == -1) {
         LOG_ERROR("ArucoCam::getPos() - Invalid response data, camera might not be running");
         status = false;
-        return false;
+        return true;
     }
     if (failedFrames > SCAN_FAIL_FRAMES_NUM) {
         LOG_WARNING("Cam has too many failed frames : ", failedFrames);
