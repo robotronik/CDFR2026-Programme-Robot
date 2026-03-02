@@ -182,11 +182,11 @@ ReturnFSM_t ActionFSM::DropStock(){
                     setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
                     dropzone_num = dropzone_temp;
                     dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
-                    LOG_INFO("Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ",", dropzonePos.y, ")");
+                    LOG_INFO("New dropzone position for stock ", stock_num, " is (", dropzonePos.x, ",", dropzonePos.y, ")");
                 }
 
                 dropStockState = FSM_DROP_NAV;
-                return FSM_RETURN_ERROR;
+                return FSM_RETURN_WORKING;
             }
             }
             break;
