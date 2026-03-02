@@ -284,23 +284,16 @@ ReturnFSM_t ActionFSM::Calibrate(){
 ReturnFSM_t ActionFSM::GetRobotCenter(){
     nav_return_t nav_ret;
     static unsigned long start_time;
-    static position_t aruco1 = {0, 0, 0};
-    static position_t aruco2 = {0, 0, 0};
+    static position_t aruco1;
+    static position_t aruco2;
+    static position_t target_ = {drive.position.x, drive.position.y, drive.position.a + 180}; // Look in the opposite direction to find the second aruco marker
     switch (calibrationCameraState){
         case FSM_ARUCO_1:
             {
             if(arucoCam1.getPos(aruco1.x, aruco1.y, aruco1.a)){
-                position_t target_ = drive.position;
-                target_.a += 180;
-                nav_ret = navigationGoTo(target_, true);
-                if (nav_ret == NAV_DONE){
-                    calibrationCameraState = FSM_ARUCO_2;
-                    LOG_INFO("Nav done for FSM_ARUCO_1, going to FSM_ARUCO_2");
-                }
-                else if (nav_ret == NAV_ERROR){
-                    return FSM_RETURN_ERROR;
-                }
-                }
+                calibrationCameraState = FSM_ARUCO_2;
+                LOG_INFO("Found first aruco marker at (", aruco1.x, ", ", aruco1.y, ", ", aruco1.a, "), going to FSM_ARUCO_2");
+            }
             }
             break;
         
@@ -318,6 +311,18 @@ ReturnFSM_t ActionFSM::GetRobotCenter(){
             }
             }
             break;
+        case FSM_ARUCO_NAV:
+            {
+            nav_ret = navigationGoTo(target_, true);
+            if (nav_ret == NAV_DONE){
+                LOG_INFO("Nav done for FSM_ARUCO_NAV, going to FSM_ARUCO_2");
+                calibrationCameraState = FSM_ARUCO_2;
+            }
+            else if (nav_ret == NAV_ERROR){
+                return FSM_RETURN_ERROR;
+            }
+            }
+             break;
     }
     return FSM_RETURN_WORKING;
 }
