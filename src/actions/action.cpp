@@ -11,7 +11,7 @@ ActionFSM::~ActionFSM(){}
 
 
 void ActionFSM::Reset(){
-    runState = FSM_ACTION_GATHER;
+    runState = FSM_CALIBRATION_CAMERA;
     gatherStockState = FSM_GATHER_NAV;
     dropStockState = FSM_DROP_NONE;
     stock_num = -1;
