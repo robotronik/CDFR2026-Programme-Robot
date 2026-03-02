@@ -13,6 +13,10 @@ using json = nlohmann::json;
 #define SCAN_FAIL_FRAMES_NUM 10
 #define SCAN_DONE_FRAMES_NUM 20
 
+#define OFFSET_CAM_X 109 // Offset of the camera in mm on the x axis
+#define OFFSET_CAM_Y 2.5 // Offset of the camera in mm on the y axis
+#define OFFSET_CAM_A -120 // Offset angle of the camera in degrees
+
 pid_t startPythonProgram(char** args);
 void stopPythonProgram(pid_t pid);
 bool restAPI_GET(const std::string &url, const std::string &resquest, json &response);
@@ -91,7 +95,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
         return true;
     }
     if (sucessFrames < SCAN_DONE_FRAMES_NUM) {
-        LOG_WARNING("Cam has not enough good success frames : ", sucessFrames);
+        //LOG_WARNING("Cam has not enough good success frames : ", sucessFrames);
         return false;
     }
     // Extract the values from the JSON object
@@ -124,21 +128,18 @@ void ArucoCam::stop() {
 
 bool ArucoCam::getRobotPos(double & x, double & y, double & a, bool& success) {
     // Camera offset from robot center in mm and degrees
-    const double cam_off_x = -60.0, cam_off_y = 104.0, cam_off_a = 120.0; 
-    double cam_x, cam_y, cam_a;
-    bool result = getPos(cam_x, cam_y, cam_a, success);
+    bool result = getPos(x, y, a, success);
     if (result && success) {
         // Convert camera position to robot position
-        double cam_a_rad = cam_a * M_PI / 180.0;
+        double cam_a_rad = a * M_PI / 180.0;
         double cos_a = cos(cam_a_rad);
         double sin_a = sin(cam_a_rad);
-        x = cam_x - cam_off_x * cos_a + cam_off_y * sin_a;
-        y = cam_y + cam_off_x * sin_a + cam_off_y * cos_a;
-        a = cam_a - cam_off_a;
+        x -= OFFSET_CAM_X * cos_a - OFFSET_CAM_Y * sin_a;
+        y -= OFFSET_CAM_X * sin_a + OFFSET_CAM_Y * cos_a;
+        a += OFFSET_CAM_A;
         // Normalize angle to ]-180;180]
         if (a > 180.0) a -= 360.0;
         else if (a <= -180.0) a += 360.0;
-        LOG_GREEN_INFO("ArucoCam ", id, " robot position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     }
     return result;    
 }
