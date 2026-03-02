@@ -301,7 +301,7 @@ ReturnFSM_t ActionFSM::GetRobotCenter(){
             {
             // Look towards the next aruco marker by only spinning in place
             if (arucoCam1.getPos(aruco2.x, aruco2.y, aruco2.a)){
-                position_t center = {(aruco1.x + aruco2.x) / 2, (aruco1.y + aruco2.y) / 2, 0};
+                position_t center = {(aruco1.x + aruco2.x) / 2, (aruco1.y + aruco2.y) / 2, aruco2.a};
                 position_t offset = {aruco1.x - center.x, aruco1.y - center.y, 0};
                 LOG_INFO("Calculated offset between cam and center for aruco1: (", offset.x, ", ", offset.y, ")");
                 offset = {aruco2.x - center.x, aruco2.y - center.y, 0};
