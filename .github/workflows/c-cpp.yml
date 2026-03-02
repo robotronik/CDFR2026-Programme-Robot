@@ -16,7 +16,7 @@ jobs:
     - name: Cache and Install APT Packages
       uses: awalsh128/cache-apt-pkgs-action@v1.4.3
       with:
-        packages: make gcc g++ libasio-dev libi2c-dev
+        packages: make gcc g++ cmake
 
     - name: Clone CDFR2026-Program-DriveControl
       run: git clone https://github.com/robotronik/CDFR2026-Program-DriveControl.git ../CDFR2026-Program-DriveControl
@@ -26,6 +26,5 @@ jobs:
       run: git clone https://github.com/robotronik/cdfr2024-programme-Actionneur ../cdfr2024-programme-Actionneur
 
     - name: Build and run tests
-      run: |
-        bash build.sh build
+      run: | 
         bash build.sh tests
