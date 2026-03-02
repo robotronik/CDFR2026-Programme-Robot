@@ -18,5 +18,4 @@ void astar_pathfind(int *sx,int *sy,int *gx,int *gy);
 int reconstruct_path(int sx,int sy,int gx,int gy,position_t *path);
 int smooth_path(position_t *in,int in_len,position_t *out);
 void print_costmap_with_path(position_t *path, int len, position_t start, position_t goal);
-void astar_print_costmap_with_path(position_t *path, int path_len);
 json astar_get_costmap_json();

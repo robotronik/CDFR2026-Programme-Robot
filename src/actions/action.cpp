@@ -92,7 +92,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_NAV:
             {
             position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
-            nav_ret = navigationGoTo(targetPos, true);
+            nav_ret = navigationGoTo(targetPos, true, true);
             if (nav_ret == NAV_DONE){
                 //LOG_INFO("Nov Done to stock ", stock_num, "lowering claws");
                 if (lowerClaws()){
@@ -148,7 +148,7 @@ ReturnFSM_t ActionFSM::DropStock(){
         case FSM_DROP_NAV:
             {   
             // Navigate to dropzone
-            nav_ret = navigationGoTo(dropzonePos, true);
+            nav_ret = navigationGoTo(dropzonePos, true, true);
             //LOG_INFO("Navigating to stock ", stock_num, " at position (", dropzonePos.x, ",", dropzonePos.y, ") with angle ", dropzonePos.a);
 
             if (nav_ret == NAV_DONE){ // We consider that we are at the dropzone if we are close enough, to avoid navigation errors

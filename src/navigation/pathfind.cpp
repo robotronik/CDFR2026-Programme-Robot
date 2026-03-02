@@ -1,11 +1,12 @@
 #include "navigation/pathfind.h"
 #include "navigation/astar.h"
 #include "defs/constante.h"
+#include "utils/logger.hpp"
 #include "main.hpp"
 
 int pathfind(position_t start, position_t goal, position_t path[]) {
     int RayonRobot=150;
-
+    LOG_INFO("start : ", start.x, start.y, "goal : ", goal.x, goal.y);
     int sx=(start.x+1000)/SCALE;
     int sy=(start.y+1500)/SCALE;
     int gx=(goal.x+1000)/SCALE;
@@ -14,16 +15,17 @@ int pathfind(position_t start, position_t goal, position_t path[]) {
     
     astar_pathfind(&sx,&sy,&gx,&gy);
     int len=reconstruct_path(sx,sy,gx,gy,path);
+    if (len == -1) return len;
 
     //print_costmap_with_path(path,len);
     int smooth_len=smooth_path(path,len,path);
-    path[smooth_len] = (position_t){goal.x, goal.y};
-
+ 
     print_costmap_with_path(path,smooth_len,position_t {(start.x+1000)/SCALE,(start.y+1500)/SCALE}, position_t {(goal.x+1000)/SCALE,(goal.y+1500)/SCALE});
     for(int i = 0; i < smooth_len; i++){
         path[i].x = path[i].x * SCALE - 1000;
         path[i].y = path[i].y * SCALE - 1500;
     }
+    path[smooth_len] = (position_t){goal.x, goal.y};
     smooth_len ++;
     return smooth_len;}
 
@@ -53,6 +55,7 @@ void pathfind_setup() {
 
 void pathfind_fill_lidar(){
     // Reset the costmap, pourquoi ?
+    astar_initialize_costmap();
     pathfind_setup();
 
     for (int i = 0; i < lidar.count; i++){
