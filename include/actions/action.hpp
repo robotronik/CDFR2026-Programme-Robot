@@ -77,6 +77,8 @@ class ActionFSM{
         {
             FSM_ARUCO_1,
             FSM_ARUCO_2,
+            FSM_ARUCO_NAV
+
         } StateCalibrationCamera_t;
 
         StateCalibrationCamera_t calibrationCameraState = FSM_ARUCO_1;
