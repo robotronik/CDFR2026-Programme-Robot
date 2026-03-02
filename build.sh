@@ -64,6 +64,7 @@ build_local() {
     step "$BG_GRN" "$F_GRN" "DONE" "Binaire compilé."
 }
 
+# Fonction pour setup LSP (compile_commands.json et link)
 setup_ide() {
     step "$BG_BLU" "$F_BLU" "SETUP" "Génération LSP..."
     cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null
@@ -77,12 +78,17 @@ deploy_pi() {
     command -v ninja >/dev/null 2>&1 && { GEN="-G Ninja"; OPT=""; }
 
     step "$BG_BLU" "$F_BLU" "BUILD" "Cross-compilation ARM64..."
-    cmake $GEN -B build_arm -DCMAKE_TOOLCHAIN_FILE=../pi_toolchain.cmake >/dev/null
+    cmake $GEN -B build_arm -DCMAKE_TOOLCHAIN_FILE=pi_toolchain.cmake >/dev/null
     cmake --build build_arm $OPT
 
     step "$BG_BLU" "$F_BLU" "SYNC" "Transfert vers le robot ($PI_HOST)..."
     ssh $PI_USER@$PI_HOST "mkdir -p $PI_DIR"
     rsync -az --delete ./build_arm/ $PI_USER@$PI_HOST:$PI_DIR | grep -v "/$"
+    rsync_status=${PIPESTATUS[0]}
+    if [ "$rsync_status" -ne 0 ]; then
+        step "$BG_RED" "$F_RED" "ERROR" "Échec du transfert (rsync)."
+        return "$rsync_status"
+    fi    
     scp -q autoRunInstaller.sh $PI_USER@$PI_HOST:$PI_DIR/
 
     step "$BG_BLU" "$F_BLU" "SERVICE" "Installation et démarrage auto..."
