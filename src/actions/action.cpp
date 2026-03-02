@@ -273,7 +273,8 @@ ReturnFSM_t ActionFSM::Calibrate(){
         }
         position_t pos_;
         if (arucoCam1.getPos(pos_.x, pos_.y, pos_.a)){
-            pos_ = {pos_.x + OFFSET_CAM_X, pos_.y + OFFSET_CAM_Y, pos_.a};
+            pos_.x += cos(pos_.a * DEG_TO_RAD) * OFFSET_CAM_X - sin(pos_.a * DEG_TO_RAD) * OFFSET_CAM_Y;
+            pos_.y += sin(pos_.a * DEG_TO_RAD) * OFFSET_CAM_X + cos(pos_.a * DEG_TO_RAD) * OFFSET_CAM_Y;
             LOG_INFO("Calibration successful, new position: (", pos_.x, ", ", pos_.y, ", ", pos_.a, ")");
             drive.setCoordinates(pos_);
             calibrationState = FSM_CALIBRATION_NAV;
