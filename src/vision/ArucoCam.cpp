@@ -54,9 +54,13 @@ ArucoCam::~ArucoCam(){
     if (pid > 0)
         stopPythonProgram(pid);
 }
-bool ArucoCam::getPos(double & x, double & y, double & a) {
+
+
+// Returns true when done
+bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
+    success = false;
     if (status == false) {
-        LOG_ERROR("ArucoCam ", id, " is not running, will start it now");
+        LOG_WARNING("ArucoCam ", id, " is not running, will start it now");
         start();
         return false;
     }
@@ -66,7 +70,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a) {
     // Returns true if the call was successful, false otherwise
     if (id < 0) {
         // TODO change this to return a random position
-        return false;
+        return true;
     }
     json response;
     if (restAPI_GET(url, "/position", response) == false) {
@@ -81,15 +85,17 @@ bool ArucoCam::getPos(double & x, double & y, double & a) {
         status = false;
         return false;
     }
-    /*if (failedFrames > SCAN_FAIL_FRAMES_NUM) {
+    if (failedFrames > SCAN_FAIL_FRAMES_NUM) {
         LOG_WARNING("Cam has too many failed frames : ", failedFrames);
-        return false;
-    }*/
+        stop();
+        return true;
+    }
     if (sucessFrames < SCAN_DONE_FRAMES_NUM) {
         LOG_WARNING("Cam has not enough good success frames : ", sucessFrames);
         return false;
     }
     // Extract the values from the JSON object
+    success = true;
     json position = response["position"];
     x = position.value("x", 0);
     y = position.value("y", 0);
@@ -116,6 +122,27 @@ void ArucoCam::stop() {
     }
 }
 
+bool ArucoCam::getRobotPos(double & x, double & y, double & a, bool& success) {
+    // Camera offset from robot center in mm and degrees
+    const double cam_off_x = -60.0, cam_off_y = 104.0, cam_off_a = 120.0; 
+    double cam_x, cam_y, cam_a;
+    bool result = getPos(cam_x, cam_y, cam_a, success);
+    if (result && success) {
+        // Convert camera position to robot position
+        double cam_a_rad = cam_a * M_PI / 180.0;
+        double cos_a = cos(cam_a_rad);
+        double sin_a = sin(cam_a_rad);
+        x = cam_x - cam_off_x * cos_a + cam_off_y * sin_a;
+        y = cam_y + cam_off_x * sin_a + cam_off_y * cos_a;
+        a = cam_a - cam_off_a;
+        // Normalize angle to ]-180;180]
+        if (a > 180.0) a -= 360.0;
+        else if (a <= -180.0) a += 360.0;
+        LOG_GREEN_INFO("ArucoCam ", id, " robot position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+    }
+    return result;    
+}
+
 bool restAPI_GET(const std::string &url, const std::string &resquest, json &response) {
     // HTTP
     httplib::Client cli(url);
@@ -125,7 +152,7 @@ bool restAPI_GET(const std::string &url, const std::string &resquest, json &resp
         LOG_ERROR("Failed to fetch response from ", url, resquest);
         return false;
     }
-    LOG_GREEN_INFO("HTML Status is ", res->status);
+    // LOG_GREEN_INFO("HTML Status is ", res->status);
     // LOG_GREEN_INFO("HTML Body is ", res->body);
 
     // Check if the response code is 200 (OK)
@@ -136,7 +163,7 @@ bool restAPI_GET(const std::string &url, const std::string &resquest, json &resp
     try {
         // Parse JSON response
         response = json::parse(res->body);
-        LOG_GREEN_INFO("API Response: ", response.dump(4));
+        // LOG_GREEN_INFO("API Response: ", response.dump(4));
         return true;
     } catch (const json::parse_error& e) {
         LOG_ERROR("JSON parse error: ", e.what());

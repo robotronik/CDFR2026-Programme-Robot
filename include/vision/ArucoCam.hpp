@@ -10,7 +10,8 @@ private:
 public:
     ArucoCam(int cam_number, const char* calibration_file_path);
     ~ArucoCam();
-    bool getPos(double & x, double & y, double & a);
+    bool getPos(double & x, double & y, double & a, bool& success);
+    bool getRobotPos(double & x, double & y, double & a, bool& success);
 private:
     std::string url;
     void start();
