@@ -141,7 +141,13 @@ case "$1" in
                ssh -t $PI_USER@$PI_HOST "journalctl -u programCDFR.service -f -n 50"
                ;;
     setup-ide)    run_timed "Setup IDE" setup_ide ;;
-    tests)        run_timed "Tests Locaux" build_local; [ -f "build/robot_tests" ] && ./build/robot_tests || step "$BG_RED" "$F_RED" "ERROR" "Test introuvable" ;; 
+    tests)        run_timed "Tests Locaux" build_local; \
+                   if [ -f "build/robot_tests" ]; then \
+                       [ -e "lidar" ] || ln -s "tests/lidar" "lidar"; \
+                       ./build/robot_tests; \
+                   else \
+                       step "$BG_RED" "$F_RED" "ERROR" "Test introuvable"; \
+                   fi ;;
     clean)        rm -rf build build_arm compile_commands.json; step "$BG_GRN" "$F_GRN" "CLEAN" "Dossiers supprimés." ;;
     *)            echo -e "${BOLD}Usage:${NC} $0 {build|deploy|setup-ide|tests|clean}"; exit 1 ;;
 esac
