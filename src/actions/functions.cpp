@@ -44,7 +44,7 @@ bool lowerClaws(){
             state++;
             break;
         case 2:
-            if (readLimitSwitchBottom() || (_millis() >= startTime + 1000)){ // Si pinces bloquées ou après 2s
+            if (readLimitSwitchBottom() || (_millis() >= startTime + 1000)){ // Si pinces bloquées ou après 1s
                 startTime = _millis();
                 state++;
             }
