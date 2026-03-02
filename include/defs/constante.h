@@ -15,7 +15,7 @@
 
 // TODO: Set these values following the getCenter calibration
 #define OFFSET_CAM_X 92.23 // Offset of the camera in mm on the x axis
-#define OFFSET_CAM_Y 55.75 // Offset of the camera in mm on the y axis
+#define OFFSET_CAM_Y -55.75 // Offset of the camera in mm on the y axis
 
 // TODO: is it deprecated value ?
 const int STOCK_WIDTH_MM = 100;
