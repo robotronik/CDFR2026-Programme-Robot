@@ -29,7 +29,7 @@ bool ActionFSM::RunFSM(){
     case FSM_ACTION_GATHER:
         ret = TakeStock();
         if (ret == FSM_RETURN_DONE){
-            runState = GetBestAction(drive.position);
+            SetBestAction(drive.position);
             LOG_INFO("Finished gathering stock ", stock_num, ", going to FSM_ACTION_DROP");
         }
         else if (ret == FSM_RETURN_ERROR){
@@ -45,7 +45,7 @@ bool ActionFSM::RunFSM(){
             // TODO Handle error
         }else if (ret == FSM_RETURN_DONE){
             LOG_INFO("Finished dropping stock ", stock_num);
-            runState = GetBestAction(drive.position);
+            SetBestAction(drive.position);
         }
         break;
     //****************************************************************
@@ -54,7 +54,7 @@ bool ActionFSM::RunFSM(){
     case FSM_ACTION_CURSOR:
         ret = Cursor();
         if (ret == FSM_RETURN_DONE){
-            runState = GetBestAction(drive.position);
+            SetBestAction(drive.position);
             LOG_INFO("Finished cursor action, going to state ", runState);
         }
         else if (ret == FSM_RETURN_ERROR){
@@ -302,12 +302,14 @@ position_t calculateClosestArucoPosition(position_t currentPos, position_t& outP
     return closestPos;
 }
 
-ActionFSM::StateRun_t ActionFSM::GetBestAction(position_t position){
+void ActionFSM::SetBestAction(position_t position){
     if(runState == FSM_ACTION_GATHER){
-        return FSM_ACTION_DROP;
+        runState = FSM_ACTION_DROP;
+        LOG_INFO("Best action for position (", position.x, ", ", position.y, ") is to drop a stock, going to FSM_ACTION_DROP");
     }
     if(runState == FSM_ACTION_DROP){
-        return FSM_ACTION_GATHER;
+        runState = FSM_ACTION_GATHER;
+        LOG_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
     }
 }     
 ReturnFSM_t ActionFSM::Calibrate(){

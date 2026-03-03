@@ -21,6 +21,7 @@ class ActionFSM{
         ~ActionFSM();
         void Reset();
         bool RunFSM();
+        void SetBestAction(position_t position);
 
     private:
 
@@ -83,7 +84,5 @@ class ActionFSM{
         } StateCalibrationCamera_t;
 
         StateCalibrationCamera_t calibrationCameraState = FSM_ARUCO_1;
-
-        StateRun_t ActionFSM::GetBestAction(position_t position);
 
 };
