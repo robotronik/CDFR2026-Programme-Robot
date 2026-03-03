@@ -34,13 +34,15 @@ class ActionFSM{
         ReturnFSM_t DropStock();
         ReturnFSM_t GatherStock();
         ReturnFSM_t Calibrate();
+        ReturnFSM_t GetRobotCenter();
 
         typedef enum
         {
             FSM_ACTION_GATHER,
             FSM_ACTION_DROP,
             FSM_ACTION_NAV_HOME,
-            FSM_CALIBRATION
+            FSM_CALIBRATION,
+            FSM_CALIBRATION_CAMERA
         } StateRun_t;
 
         StateRun_t runState = FSM_ACTION_NAV_HOME;
@@ -70,4 +72,12 @@ class ActionFSM{
         } StateCalibration_t;
 
         StateCalibration_t calibrationState = FSM_CALIBRATION_NAV;
+
+        typedef enum
+        {
+            FSM_ARUCO_1,
+            FSM_ARUCO_2,
+        } StateCalibrationCamera_t;
+
+        StateCalibrationCamera_t calibrationCameraState = FSM_ARUCO_1;
 };
