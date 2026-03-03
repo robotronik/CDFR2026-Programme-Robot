@@ -3,8 +3,8 @@
 #include "defs/structs.hpp"
 
 #define SCALE 50
-#define AS_HEIGHT (2000 / SCALE)
-#define AS_WIDTH  (3000 / SCALE)
+#define AS_HEIGHT ((2000 / SCALE) + 1)
+#define AS_WIDTH  ((3000 / SCALE) + 1)
 
 #define OBSTACLE_COST 255
 #define MARGIN_COST   200
