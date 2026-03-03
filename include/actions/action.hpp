@@ -43,7 +43,6 @@ class ActionFSM{
             FSM_ACTION_DROP,
             FSM_ACTION_CURSOR,
             FSM_ACTION_NAV_HOME,
-            FSM_CALIBRATION,
             FSM_CENTER_CALIBRATION
         } StateRun_t;
 
