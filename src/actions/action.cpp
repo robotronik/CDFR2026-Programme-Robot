@@ -25,10 +25,11 @@ bool ActionFSM::RunFSM(){
     switch (runState)
     {
     //****************************************************************
+    // ACTION PRINCIPALE *************************************************
     case FSM_ACTION_GATHER:
         ret = TakeStock();
         if (ret == FSM_RETURN_DONE){
-            runState = FSM_ACTION_DROP;
+            runState = GetBestAction(drive.position);
             LOG_INFO("Finished gathering stock ", stock_num, ", going to FSM_ACTION_DROP");
         }
         else if (ret == FSM_RETURN_ERROR){
@@ -44,29 +45,31 @@ bool ActionFSM::RunFSM(){
             // TODO Handle error
         }else if (ret == FSM_RETURN_DONE){
             LOG_INFO("Finished dropping stock ", stock_num);
-            LOG_INFO("Going back to FSM_ACTION_GATHER");
-            runState = FSM_ACTION_GATHER;
+            runState = GetBestAction(drive.position);
         }
         break;
     //****************************************************************
+    //****************************************************************
+
     case FSM_ACTION_CURSOR:
         ret = Cursor();
         if (ret == FSM_RETURN_DONE){
-            runState = FSM_ACTION_NAV_HOME;
-            LOG_INFO("Finished cursor action, going to FSM_ACTION_GATHER");
+            runState = GetBestAction(drive.position);
+            LOG_INFO("Finished cursor action, going to state ", runState);
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("Couldn't do cursor action");
             // TODO Handle error
         }
         break;
+
     case FSM_ACTION_NAV_HOME:
         if (returnToHome()){
             runState = FSM_ACTION_GATHER;
             return true; // Robot is done
         }
         break;
-    
+    //*******************************************************************
     case FSM_CENTER_CALIBRATION:
         ret = GetRobotCenter();
         if(ret == FSM_RETURN_DONE){
@@ -299,6 +302,14 @@ position_t calculateClosestArucoPosition(position_t currentPos, position_t& outP
     return closestPos;
 }
 
+ActionFSM::StateRun_t ActionFSM::GetBestAction(position_t position){
+    if(runState == FSM_ACTION_GATHER){
+        return FSM_ACTION_DROP;
+    }
+    if(runState == FSM_ACTION_DROP){
+        return FSM_ACTION_GATHER;
+    }
+}     
 ReturnFSM_t ActionFSM::Calibrate(){
     nav_return_t nav_ret;
     static unsigned long start_time;

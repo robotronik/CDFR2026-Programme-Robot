@@ -83,4 +83,7 @@ class ActionFSM{
         } StateCalibrationCamera_t;
 
         StateCalibrationCamera_t calibrationCameraState = FSM_ARUCO_1;
+
+        StateRun_t ActionFSM::GetBestAction(position_t position);
+
 };
