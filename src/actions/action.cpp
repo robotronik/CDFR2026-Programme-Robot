@@ -347,7 +347,7 @@ ReturnFSM_t ActionFSM::Calibrate(){
         if (arucoCam1.getRobotPos(pos_.x, pos_.y, pos_.a, cam_success)){
             if (cam_success){
                 drive.setCoordinates(pos_);
-                calibrationState = FSM_CALIBRATION_NAV;
+                calibrationState = FSM_CALCULATION;
                 LOG_INFO("Calibrating for FSM_CALIBRATION_CALIBRATE");
             }
             else{
