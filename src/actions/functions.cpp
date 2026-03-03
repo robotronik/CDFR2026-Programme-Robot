@@ -148,8 +148,7 @@ bool openClaws(){
     return snapClaws(false);
 }
 
-bool snapClaws(bool closed){
-    bool small = true; // TODO determine if we need small or big snap based on the stock size
+bool snapClaws(bool closed, bool small){
     static bool prevState = !closed;
     int target = closed ? 16 : (small ? 40 : 130);
     if (prevState != closed){
