@@ -64,7 +64,7 @@ bool ActionFSM::RunFSM(){
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("Error during calibration step ", calibrationState);
-            // TODO Handle error
+            runState = FSM_ACTION_GATHER; // We try to continue anyway, maybe the error is not critical
         }
         break;
     
@@ -246,6 +246,9 @@ position_t calculateClosestArucoPosition(position_t currentPos, position_t& outP
 ReturnFSM_t ActionFSM::Calibrate(){
     nav_return_t nav_ret;
     static unsigned long start_time;
+    static position_t target_;
+    static position_t arucoPos;
+
     switch (calibrationState){
     case FSM_CALIBRATION_NAV:
         {
