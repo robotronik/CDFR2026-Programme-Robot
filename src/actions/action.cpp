@@ -303,13 +303,28 @@ position_t calculateClosestArucoPosition(position_t currentPos, position_t& outP
 }
 
 void ActionFSM::SetBestAction(position_t position){
+    int sign = (tableStatus.colorTeam == BLUE) ? 1 : -1;
+    position_t targetPos = {625, 1220 * sign,  45*sign };
+    if(_millis() > tableStatus.startTime + 95000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
+        LOG_INFO("95 seconds passed, switching to NAV_HOME");
+        runState = FSM_ACTION_NAV_HOME;
+        return;
+    }
+    if( position_distance(position, targetPos) < 300){
+        LOG_INFO("In cursor area");
+        runState = FSM_ACTION_CURSOR;
+        return;
+    }
+
     if(runState == FSM_ACTION_GATHER){
         runState = FSM_ACTION_DROP;
         LOG_INFO("Best action for position (", position.x, ", ", position.y, ") is to drop a stock, going to FSM_ACTION_DROP");
+        return;
     }
     if(runState == FSM_ACTION_DROP){
         runState = FSM_ACTION_GATHER;
         LOG_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
+        return;
     }
 }     
 ReturnFSM_t ActionFSM::Calibrate(){
