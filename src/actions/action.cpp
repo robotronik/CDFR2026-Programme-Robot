@@ -310,7 +310,7 @@ void ActionFSM::SetBestAction(position_t position){
         runState = FSM_ACTION_NAV_HOME;
         return;
     }
-    if( position_distance(position, targetPos) < 300){
+    if( position_distance(position, targetPos) < 300 || stock_num == 1){ // If we are close to the cursor position or if we are at stock 
         LOG_INFO("In cursor area");
         runState = FSM_ACTION_CURSOR;
         return;
