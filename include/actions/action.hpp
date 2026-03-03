@@ -37,6 +37,7 @@ class ActionFSM{
         ReturnFSM_t Cursor();
         ReturnFSM_t GatherStock();
         ReturnFSM_t GetRobotCenter();
+        ReturnFSM_t Calibrate();
 
         typedef enum
         {
@@ -83,6 +84,15 @@ class ActionFSM{
             FSM_ARUCO_NAV
 
         } StateCalibrationCamera_t;
+
+        typedef enum
+        {
+            FSM_CALIBRATION_NAV,
+            FSM_CALIBRATION_CALIBRATE,
+            FSM_CALCULATION
+        } StateCalibration_t;
+
+        StateCalibration_t calibrationState = FSM_CALCULATION;
 
         StateCalibrationCamera_t calibrationCameraState = FSM_ARUCO_1;
 

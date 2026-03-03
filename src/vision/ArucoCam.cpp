@@ -61,12 +61,6 @@ ArucoCam::~ArucoCam(){
         stopPythonProgram(pid);
 }
 
-
-// Returns true when done
-bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
-    success = false;
-
-
 // Returns true when done
 bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     success = false;

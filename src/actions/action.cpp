@@ -331,7 +331,8 @@ void ActionFSM::SetBestAction(position_t position){
         LOG_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
         return;
     }
-}     
+}
+   
 ReturnFSM_t ActionFSM::Calibrate(){
     nav_return_t nav_ret;
     static unsigned long start_time;
