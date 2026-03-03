@@ -11,6 +11,11 @@
 
 #define ROBOT_WIDTH 400
 #define OPPONENT_ROBOT_RADIUS 250
+#define OFFSET_ANGLE_CAM -120 // Offset angle of the camera in degrees
+
+// TODO: Set these values following the getCenter calibration
+#define OFFSET_CAM_X 109 // Offset of the camera in mm on the x axis
+#define OFFSET_CAM_Y 2.5 // Offset of the camera in mm on the y axis
 
 // TODO: is it deprecated value ?
 const int STOCK_WIDTH_MM = 100;
@@ -102,3 +107,10 @@ const position_t DROPZONE_POSITIONS_TABLE[] = {
     position_t{.x = -450, .y = -250}, \
     position_t{.x = 900, .y = 0}}; \
     // The dropzone table is ordered following symetry of the table, could be ordered by proximity
+
+
+const position_t ARUCO_POSITIONS_TABLE[] = {
+    position_t{.x = -400, .y = -900, .a = 0}, \
+    position_t{.x = -400, .y = 900, .a = 0}, \
+    position_t{.x = 400, .y = -900, .a = 0}, \
+    position_t{.x = 400, .y = 900, .a = 0}};

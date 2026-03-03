@@ -19,6 +19,10 @@ void TableState::reset(){
     /* data Winter is comming */
     for (int i = 0; i < STOCK_COUNT; i++)
         avail_stocks[i] = true;
+
+    // Initialize all drop zones to the empty state
+    for (int i = 0; i < DROPZONE_COUNT; i++)
+        dropzone_states[i] = DROPZONE_EMPTY;
 }
 
 int TableState::getScore()

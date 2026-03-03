@@ -44,7 +44,7 @@ bool lowerClaws(){
             state++;
             break;
         case 2:
-            if (readLimitSwitchBottom() || (_millis() >= startTime + 1000)){ // Si pinces bloquées ou après 2s
+            if (readLimitSwitchBottom() || (_millis() >= startTime + 1000)){ // Si pinces bloquées ou après 1s
                 startTime = _millis();
                 state++;
             }
@@ -70,7 +70,7 @@ bool raiseClaws(){
             state++;
             break;
         case 2:
-            if (readLimitSwitchTop() || (_millis() >= startTime + 1500)){ // Si pinces bloquées ou après 3s
+            if (readLimitSwitchTop() || (_millis() >= startTime + 1500)){ // Si pinces bloquées ou après 1.5s
                 arduino.stopMotorDC();
                 state = 1;
                 return true;
@@ -149,8 +149,9 @@ bool openClaws(){
 }
 
 bool snapClaws(bool closed){
+    bool small = true; // TODO determine if we need small or big snap based on the stock size
     static bool prevState = !closed;
-    int target = closed ? 16 : 130;
+    int target = closed ? 16 : (small ? 40 : 130);
     if (prevState != closed){
         arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 100);
         prevState = closed;
@@ -294,7 +295,7 @@ int GetBestDropZone(position_t fromPos){
             continue;
 
         position_t dropzonePos = DROPZONE_POSITIONS_TABLE[i];
-        double dist2 = position_distance(fromPos, dropzonePos) + abs( tableStatus.colorTeam == BLUE ? dropzonePos.y - 1500 : dropzonePos.y + 1500); // We want to favor the dropzones on our side of the table
+        double dist2 = position_distance(fromPos, dropzonePos) + fabs( tableStatus.colorTeam == BLUE ? dropzonePos.y - 1500 : dropzonePos.y + 1500); // We want to favor the dropzones on our side of the table
 
         if (dist2 < bestDist2){
             bestDist2 = dist2;

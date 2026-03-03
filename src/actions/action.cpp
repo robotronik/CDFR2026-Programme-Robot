@@ -12,10 +12,13 @@ ActionFSM::~ActionFSM(){}
 
 void ActionFSM::Reset(){
     runState = FSM_ACTION_GATHER;
+    SetBestAction(drive.position);
     gatherStockState = FSM_GATHER_NAV;
     dropStockState = FSM_DROP_NONE;
+    CursorState = FSM_CURSOR_NAV;
     stock_num = -1;
     offset = 0;
+    setCursorIsDone(false);
     
     // TODO reset other states (num,offset, etc.)
 }
@@ -25,10 +28,11 @@ bool ActionFSM::RunFSM(){
     switch (runState)
     {
     //****************************************************************
+    // ACTION PRINCIPALE *************************************************
     case FSM_ACTION_GATHER:
         ret = TakeStock();
         if (ret == FSM_RETURN_DONE){
-            runState = FSM_ACTION_DROP;
+            SetBestAction(drive.position);
             LOG_INFO("Finished gathering stock ", stock_num, ", going to FSM_ACTION_DROP");
         }
         else if (ret == FSM_RETURN_ERROR){
@@ -39,31 +43,46 @@ bool ActionFSM::RunFSM(){
     //****************************************************************
     case FSM_ACTION_DROP:
         ret = DropStock();
-        if (ret == FSM_RETURN_DONE){
-            runState = FSM_ACTION_GATHER;//TODO fct strategy choosing action
-            LOG_INFO("Finished dropping stock ", stock_num, ", going to FSM_ACTION_GATHER");
-        }
-        else if (ret == FSM_RETURN_ERROR){
+        if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("Couldn't drop");
             // TODO Handle error
+        }else if (ret == FSM_RETURN_DONE){
+            LOG_INFO("Finished dropping stock ", stock_num);
+            SetBestAction(drive.position);
         }
         break;
     //****************************************************************
+    //****************************************************************
+
     case FSM_ACTION_CURSOR:
         ret = Cursor();
         if (ret == FSM_RETURN_DONE){
-            runState = FSM_ACTION_NAV_HOME;
-            LOG_INFO("Finished cursor action, going to FSM_ACTION_GATHER");
+            setCursorIsDone(true);
+            SetBestAction(drive.position);
+            LOG_INFO("Finished cursor action, going to state ", runState);
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("Couldn't do cursor action");
             // TODO Handle error
         }
         break;
+
     case FSM_ACTION_NAV_HOME:
         if (returnToHome()){
             runState = FSM_ACTION_GATHER;
             return true; // Robot is done
+        }
+        break;
+    //*******************************************************************
+    case FSM_CENTER_CALIBRATION:
+        ret = GetRobotCenter();
+        if(ret == FSM_RETURN_DONE){
+            LOG_INFO("Finished camera calibration step ", calibrationCameraState);
+            runState = FSM_ACTION_NAV_HOME;
+        }
+        else if (ret == FSM_RETURN_ERROR){
+            LOG_ERROR("Error during camera calibration step ", calibrationCameraState);
+            // TODO Handle error
         }
         break;
     }
@@ -93,10 +112,10 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_NAV:
             {
             position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
-            nav_ret = navigationGoTo(targetPos, true, true);
+            nav_ret = navigationGoTo(targetPos, true);
             if (nav_ret == NAV_DONE){
                 //LOG_INFO("Nov Done to stock ", stock_num, "lowering claws");
-                if (lowerClaws()){
+                if (lowerClaws() && snapClaws(true)){
                     LOG_INFO("Claws lowered for stock ", stock_num);
                     gatherStockState = FSM_GATHER_MOVE;
                     LOG_INFO("Nav done FSM_GATHER_NAV, going to FSM_GATHER_MOVE");
@@ -142,6 +161,10 @@ ReturnFSM_t ActionFSM::DropStock(){
         case FSM_DROP_NONE:
             dropzone_num = GetBestDropZone(drive.position);
             LOG_DEBUG("best drop zone for stock ", stock_num, " is ", dropzone_num);
+            if (dropzone_num == -1) {
+                LOG_ERROR("No more dropzone available, cannot drop stock ", stock_num);
+                return FSM_RETURN_ERROR;
+            }
             dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
             LOG_DEBUG("Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ", ", dropzonePos.y, ", ", dropzonePos.a , ")");
             dropStockState = FSM_DROP_NAV;
@@ -170,11 +193,11 @@ ReturnFSM_t ActionFSM::DropStock(){
                     setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
                     dropzone_num = dropzone_temp;
                     dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
-                    LOG_INFO("Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ",", dropzonePos.y, ")");
+                    LOG_INFO("New dropzone position for stock ", stock_num, " is (", dropzonePos.x, ",", dropzonePos.y, ")");
                 }
 
                 dropStockState = FSM_DROP_NAV;
-                return FSM_RETURN_ERROR;
+                return FSM_RETURN_WORKING;
             }
             }
             break;
@@ -216,7 +239,7 @@ ReturnFSM_t ActionFSM::Cursor(){
             break;
         case FSM_CURSOR_MOVE:
             nav_ret = navigationGoTo(position_t {targetPos.x, targetPos.y -sign * 330, 0}, true);
-            LOG_INFO("Claws lowered at cursor position");
+            //LOG_INFO("Claws lowered at cursor position");
             if (nav_ret == NAV_DONE){
                 if (raiseClaws()){
                     LOG_INFO("Nav done FSM_CURSOR_MOVE, going to FSM_CURSOR");
@@ -232,7 +255,7 @@ ReturnFSM_t ActionFSM::Cursor(){
 
         case FSM_CURSOR_END:
             nav_ret = navigationGoTo(position_t {targetPos.x - 200, targetPos.y - sign * 280, 0}, true);
-            LOG_INFO("Claws raised at cursor position");
+            //LOG_INFO("Claws raised at cursor position");
             if (nav_ret == NAV_DONE){
                 LOG_INFO("Nav done FSM_CURSOR_END, cursor action complete");
                 CursorState = FSM_CURSOR_NAV;
@@ -249,27 +272,23 @@ ReturnFSM_t ActionFSM::Cursor(){
 
 position_t calculateClosestArucoPosition(position_t currentPos, position_t& outPos){
     outPos = currentPos;
-    position_t arucoPos_20 = {-400.0, -900.0, 0.0};
-    position_t arucoPos_21 = {-400.0, 900.0, 0.0};
-    position_t arucoPos_22 = {400.0, -900.0, 0.0};
-    position_t arucoPos_23 = {400.0, 900.0, 0.0};
-    position_t closestPos = arucoPos_20;
-    double dist20 = position_distance(currentPos, arucoPos_20);
-    double dist21 = position_distance(currentPos, arucoPos_21);
-    double dist22 = position_distance(currentPos, arucoPos_22);
-    double dist23 = position_distance(currentPos, arucoPos_23);
+    position_t closestPos = ARUCO_POSITIONS_TABLE[0];
+    double dist20 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[0]);
+    double dist21 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[1]);
+    double dist22 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[2]);
+    double dist23 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[3]);
     double minDistance = dist20;
     if (dist21 < minDistance){
         minDistance = dist21;
-        closestPos = arucoPos_21;
+        closestPos = ARUCO_POSITIONS_TABLE[1];
     }
     if (dist22 < minDistance){
         minDistance = dist22;
-        closestPos = arucoPos_22;
+        closestPos = ARUCO_POSITIONS_TABLE[2];
     }
     if (dist23 < minDistance){
         minDistance = dist23;
-        closestPos = arucoPos_23;
+        closestPos = ARUCO_POSITIONS_TABLE[3];
     }
     // Check if we are above the aruco marker
     const double minimal_distance = 200.0; // 20cm
@@ -283,21 +302,52 @@ position_t calculateClosestArucoPosition(position_t currentPos, position_t& outP
         outPos.x += tmp.x;
         outPos.y += tmp.y;
     }
-    outPos.a = position_angle(drive.position, closestPos);
+    outPos.a = RAD_TO_DEG * position_angle(drive.position, closestPos) + OFFSET_ANGLE_CAM;
 
     return closestPos;
 }
 
+void ActionFSM::SetBestAction(position_t position){
+    int sign = (tableStatus.colorTeam == BLUE) ? 1 : -1;
+    position_t targetPos = {625, 1220 * sign,  45*sign };
+    if(_millis() > tableStatus.startTime + 95000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
+        LOG_INFO("95 seconds passed, switching to NAV_HOME");
+        runState = FSM_ACTION_NAV_HOME;
+        return;
+    }
+    if((!cursorIsDone()) && (position_distance(position, targetPos) < 300 || stock_num == 1)){ // If we are close to the cursor position or if we are at stock 
+        LOG_INFO("In cursor area");
+        setCursorIsDone(true);
+        runState = FSM_ACTION_CURSOR;
+        return;
+    }
+
+    if(runState == FSM_ACTION_GATHER){
+        runState = FSM_ACTION_DROP;
+        LOG_INFO("Best action for position (", position.x, ", ", position.y, ") is to drop a stock, going to FSM_ACTION_DROP");
+        return;
+    }
+    if(runState == FSM_ACTION_DROP){
+        runState = FSM_ACTION_GATHER;
+        LOG_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
+        return;
+    }
+}
+   
 ReturnFSM_t ActionFSM::Calibrate(){
     nav_return_t nav_ret;
     static unsigned long start_time;
+    static position_t target_;
+    static position_t arucoPos;
+
     switch (calibrationState){
     case FSM_CALIBRATION_NAV:
-    {
+        {
         // Look towards the closest aruco marker by only spinning in place
         position_t target_;
         position_t arucoPos = calculateClosestArucoPosition(drive.position, target_);
-        nav_ret = navigationGoTo(target_, true, true);
+        LOG_DEBUG("Calibrating, closest aruco marker is at (", arucoPos.x, ", ", arucoPos.y, ", ", arucoPos.a, ")");
+        nav_ret = navigationGoTo(target_, true);
         if (nav_ret == NAV_DONE){
             calibrationState = FSM_CALIBRATION_CALIBRATE;
             LOG_INFO("Nav done for FSM_CALIBRATION_NAV, going to FSM_CALIBRATION_CALIBRATE");
@@ -306,8 +356,8 @@ ReturnFSM_t ActionFSM::Calibrate(){
         else if (nav_ret == NAV_ERROR){
             return FSM_RETURN_ERROR;
         }
-    }
-    break;
+        }
+        break;
     
     case FSM_CALIBRATION_CALIBRATE:
         // Calibrate
@@ -316,13 +366,67 @@ ReturnFSM_t ActionFSM::Calibrate(){
             return FSM_RETURN_ERROR;
         }
         position_t pos_;
-        if (arucoCam1.getPos(pos_.x, pos_.y, pos_.a)){
-            drive.setCoordinates(pos_);
-            calibrationState = FSM_CALIBRATION_NAV;
-            LOG_INFO("Calibrating for FSM_CALIBRATION_CALIBRATE");
+        bool cam_success;
+        if (arucoCam1.getRobotPos(pos_.x, pos_.y, pos_.a, cam_success)){
+            if (cam_success){
+                drive.setCoordinates(pos_);
+                calibrationState = FSM_CALCULATION;
+                LOG_INFO("Calibrating for FSM_CALIBRATION_CALIBRATE");
+            }
+            else{
+                LOG_WARNING("Camera did not have a good position estimate, skipping calibration");
+            }
             return FSM_RETURN_DONE;
         }
-    break;
+        break;
+    }
+    return FSM_RETURN_WORKING;
+}
+
+ReturnFSM_t ActionFSM::GetRobotCenter(){
+    nav_return_t nav_ret;
+    static unsigned long start_time;
+    static position_t aruco1;
+    static position_t aruco2;
+    static position_t target_ = {drive.position.x, drive.position.y, drive.position.a + 180}; // Look in the opposite direction to find the second aruco marker
+    switch (calibrationCameraState){
+        case FSM_ARUCO_1:
+            {
+            bool sucess;
+            if(arucoCam1.getPos(aruco1.x, aruco1.y, aruco1.a, sucess) && sucess){
+                calibrationCameraState = FSM_ARUCO_NAV;
+                LOG_INFO("Found first aruco marker at (", aruco1.x, ", ", aruco1.y, ", ", aruco1.a, "), going to FSM_ARUCO_2");
+            }
+            }
+            break;
+        
+        case FSM_ARUCO_2:
+            {
+            // Look towards the next aruco marker by only spinning in place
+            bool sucess;
+            if (arucoCam1.getPos(aruco2.x, aruco2.y, aruco2.a, sucess) && sucess){
+                position_t center = {(aruco1.x + aruco2.x) / 2, (aruco1.y + aruco2.y) / 2, aruco2.a};
+                position_t offset = {aruco1.x - center.x, aruco1.y - center.y, 0};
+                LOG_INFO("Calculated offset between cam and center for aruco1: (", offset.x, ", ", offset.y, ")");
+                offset = {aruco2.x - center.x, aruco2.y - center.y, 0};
+                LOG_INFO("Calculated offset between cam and center for aruco2: (", offset.x, ", ", offset.y, ")");
+                drive.setCoordinates(center);
+                return FSM_RETURN_DONE;
+            }
+            }
+            break;
+        case FSM_ARUCO_NAV:
+            {
+            nav_ret = navigationGoTo(target_, true);
+            if (nav_ret == NAV_DONE){
+                LOG_INFO("Nav done for FSM_ARUCO_NAV, going to FSM_ARUCO_2");
+                calibrationCameraState = FSM_ARUCO_2;
+            }
+            else if (nav_ret == NAV_ERROR){
+                return FSM_RETURN_ERROR;
+            }
+            }
+             break;
     }
     return FSM_RETURN_WORKING;
 }

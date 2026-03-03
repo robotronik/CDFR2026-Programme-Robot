@@ -21,7 +21,9 @@ class ActionFSM{
         ~ActionFSM();
         void Reset();
         bool RunFSM();
-
+        void SetBestAction(position_t position);
+        inline bool cursorIsDone(){ return cursorStatus; }
+        inline void setCursorIsDone(bool val){ cursorStatus = val; }
     private:
 
         int stock_num;// Num of stock
@@ -34,6 +36,7 @@ class ActionFSM{
         ReturnFSM_t DropStock();
         ReturnFSM_t Cursor();
         ReturnFSM_t GatherStock();
+        ReturnFSM_t GetRobotCenter();
         ReturnFSM_t Calibrate();
 
         typedef enum
@@ -41,10 +44,11 @@ class ActionFSM{
             FSM_ACTION_GATHER,
             FSM_ACTION_DROP,
             FSM_ACTION_CURSOR,
-            FSM_ACTION_NAV_HOME
+            FSM_ACTION_NAV_HOME,
+            FSM_CENTER_CALIBRATION
         } StateRun_t;
 
-        StateRun_t runState = FSM_ACTION_NAV_HOME;
+        StateRun_t runState = FSM_ACTION_GATHER;
 
         typedef enum
         {
@@ -71,12 +75,25 @@ class ActionFSM{
         StateGatherStock_t gatherStockState = FSM_GATHER_NAV;
         StateDropStock_t dropStockState = FSM_DROP_NONE;
         StateCursor_t CursorState = FSM_CURSOR_NAV;
+        bool cursorStatus = false;
+
+        typedef enum
+        {
+            FSM_ARUCO_1,
+            FSM_ARUCO_2,
+            FSM_ARUCO_NAV
+
+        } StateCalibrationCamera_t;
 
         typedef enum
         {
             FSM_CALIBRATION_NAV,
-            FSM_CALIBRATION_CALIBRATE
+            FSM_CALIBRATION_CALIBRATE,
+            FSM_CALCULATION
         } StateCalibration_t;
 
-        StateCalibration_t calibrationState = FSM_CALIBRATION_NAV;
+        StateCalibration_t calibrationState = FSM_CALCULATION;
+
+        StateCalibrationCamera_t calibrationCameraState = FSM_ARUCO_1;
+
 };
