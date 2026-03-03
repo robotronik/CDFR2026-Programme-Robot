@@ -11,7 +11,7 @@ ActionFSM::~ActionFSM(){}
 
 
 void ActionFSM::Reset(){
-    runState = FSM_ACTION_GATHER;
+    runState = FSM_ACTION_NAV_HOME;
     SetBestAction(drive.position);
     gatherStockState = FSM_GATHER_NAV;
     dropStockState = FSM_DROP_NONE;
@@ -326,7 +326,7 @@ void ActionFSM::SetBestAction(position_t position){
         LOG_INFO("Best action for position (", position.x, ", ", position.y, ") is to drop a stock, going to FSM_ACTION_DROP");
         return;
     }
-    if(runState == FSM_ACTION_DROP){
+    if(runState == FSM_ACTION_DROP || runState == FSM_ACTION_CURSOR || runState == FSM_ACTION_NAV_HOME){
         runState = FSM_ACTION_GATHER;
         LOG_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
         return;
