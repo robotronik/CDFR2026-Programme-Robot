@@ -76,7 +76,7 @@ To compile the program on your machine, simply run:
 bash build.sh build
 ```
 
-To compile for ARM (Raspbery Pi) :
+To compile for ARM (Raspberry Pi) :
 
 ```bash
 bash build.sh build_arm
