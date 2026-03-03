@@ -192,5 +192,5 @@ case "$1" in
                    fi ;;
     clean-all)    rm -rf build build_arm compile_commands.json; step "$BG_GRN" "$F_GRN" "CLEAN ALL" "Dossiers supprimés." ;;
     clean)        clean ;; 
-    *)            echo -e "${BOLD}Usage:${NC} $0 {build|build_arm|deploy|setup-ide|tests|clean|clean-all}"; exit 1 ;;
+    *)            echo -e "${BOLD}Usage:${NC} $0 {build|build_arm|deploy|setup-lsp|tests|clean|clean-all}"; exit 1 ;;
 esac
