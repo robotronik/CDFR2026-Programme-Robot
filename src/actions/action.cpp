@@ -79,6 +79,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             LOG_INFO("No more stocks to take, exiting GatherStock");
             stock_num = -1;
             gatherStockState = FSM_GATHER_NAV;
+            runState = FSM_ACTION_NAV_HOME; // si plus de stock, on return home
             return FSM_RETURN_DONE;
         }
         //LOG_INFO("Next stock to take: ", stock_num, " offset: ", offset);
@@ -102,9 +103,9 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 }
             }
             else if (nav_ret == NAV_ERROR){
-                gatherStockState = FSM_GATHER_NAV;
                 LOG_WARNING("Navigation error while going to stock ", stock_num);
-                // TODO get another stock
+                stock_num = -1;
+                gatherStockState = FSM_GATHER_NAV;
                 return FSM_RETURN_ERROR;
             }
             }
