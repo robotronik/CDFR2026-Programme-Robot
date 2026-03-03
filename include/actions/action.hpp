@@ -22,7 +22,8 @@ class ActionFSM{
         void Reset();
         bool RunFSM();
         void SetBestAction(position_t position);
-
+        inline bool cursorIsDone(){ return cursorStatus; }
+        inline void setCursorIsDone(bool val){ cursorStatus = val; }
     private:
 
         int stock_num;// Num of stock
@@ -73,6 +74,7 @@ class ActionFSM{
         StateGatherStock_t gatherStockState = FSM_GATHER_NAV;
         StateDropStock_t dropStockState = FSM_DROP_NONE;
         StateCursor_t CursorState = FSM_CURSOR_NAV;
+        bool cursorStatus = false;
 
         typedef enum
         {

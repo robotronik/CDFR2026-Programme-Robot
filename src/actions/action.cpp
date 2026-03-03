@@ -12,10 +12,13 @@ ActionFSM::~ActionFSM(){}
 
 void ActionFSM::Reset(){
     runState = FSM_ACTION_GATHER;
+    SetBestAction(drive.position);
     gatherStockState = FSM_GATHER_NAV;
     dropStockState = FSM_DROP_NONE;
+    CursorState = FSM_CURSOR_NAV;
     stock_num = -1;
     offset = 0;
+    setCursorIsDone(false);
     
     // TODO reset other states (num,offset, etc.)
 }
@@ -54,6 +57,7 @@ bool ActionFSM::RunFSM(){
     case FSM_ACTION_CURSOR:
         ret = Cursor();
         if (ret == FSM_RETURN_DONE){
+            setCursorIsDone(true);
             SetBestAction(drive.position);
             LOG_INFO("Finished cursor action, going to state ", runState);
         }
@@ -110,7 +114,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             nav_ret = navigationGoTo(targetPos, true);
             if (nav_ret == NAV_DONE){
                 //LOG_INFO("Nov Done to stock ", stock_num, "lowering claws");
-                if (lowerClaws()){
+                if (lowerClaws() && snapClaws(true)){
                     LOG_INFO("Claws lowered for stock ", stock_num);
                     gatherStockState = FSM_GATHER_MOVE;
                     LOG_INFO("Nav done FSM_GATHER_NAV, going to FSM_GATHER_MOVE");
@@ -234,7 +238,7 @@ ReturnFSM_t ActionFSM::Cursor(){
             break;
         case FSM_CURSOR_MOVE:
             nav_ret = navigationGoTo(position_t {targetPos.x, targetPos.y -sign * 330, 0}, true);
-            LOG_INFO("Claws lowered at cursor position");
+            //LOG_INFO("Claws lowered at cursor position");
             if (nav_ret == NAV_DONE){
                 if (raiseClaws()){
                     LOG_INFO("Nav done FSM_CURSOR_MOVE, going to FSM_CURSOR");
@@ -250,7 +254,7 @@ ReturnFSM_t ActionFSM::Cursor(){
 
         case FSM_CURSOR_END:
             nav_ret = navigationGoTo(position_t {targetPos.x - 200, targetPos.y - sign * 280, 0}, true);
-            LOG_INFO("Claws raised at cursor position");
+            //LOG_INFO("Claws raised at cursor position");
             if (nav_ret == NAV_DONE){
                 LOG_INFO("Nav done FSM_CURSOR_END, cursor action complete");
                 CursorState = FSM_CURSOR_NAV;
@@ -310,8 +314,9 @@ void ActionFSM::SetBestAction(position_t position){
         runState = FSM_ACTION_NAV_HOME;
         return;
     }
-    if( position_distance(position, targetPos) < 300 || stock_num == 1){ // If we are close to the cursor position or if we are at stock 
+    if((!cursorIsDone()) && (position_distance(position, targetPos) < 300 || stock_num == 1)){ // If we are close to the cursor position or if we are at stock 
         LOG_INFO("In cursor area");
+        setCursorIsDone(true);
         runState = FSM_ACTION_CURSOR;
         return;
     }

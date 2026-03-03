@@ -149,8 +149,9 @@ bool openClaws(){
 }
 
 bool snapClaws(bool closed){
+    bool small = true; // TODO determine if we need small or big snap based on the stock size
     static bool prevState = !closed;
-    int target = closed ? 16 : 130;
+    int target = closed ? 16 : (small ? 40 : 130);
     if (prevState != closed){
         arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 100);
         prevState = closed;
