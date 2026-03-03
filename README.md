@@ -22,6 +22,12 @@ Before running the program, make sure you have installed the following dependenc
 sudo apt-get install cmake make gcc g++ python3-venv ninja
 ```
 
+To speed up compilation times massively, you can install CCache:
+
+```bash
+sudo apt-get install ccache
+```
+
 For ARM (Raspberry Pi) compilation, install:
 
 ```bash
