@@ -11,7 +11,7 @@ ActionFSM::~ActionFSM(){}
 
 
 void ActionFSM::Reset(){
-    runState = FSM_CALIBRATION;
+    runState = FSM_ACTION_GATHER;
     gatherStockState = FSM_GATHER_NAV;
     dropStockState = FSM_DROP_NONE;
     stock_num = -1;
@@ -44,8 +44,8 @@ bool ActionFSM::RunFSM(){
             // TODO Handle error
         }else if (ret == FSM_RETURN_DONE){
             LOG_INFO("Finished dropping stock ", stock_num);
-            LOG_INFO("Going back to FSM_ACTION_CALIBRATION");
-            runState = FSM_CALIBRATION;
+            LOG_INFO("Going back to FSM_ACTION_GATHER");
+            runState = FSM_ACTION_GATHER;
         }
         break;
     //****************************************************************
@@ -64,18 +64,6 @@ bool ActionFSM::RunFSM(){
         if (returnToHome()){
             runState = FSM_ACTION_GATHER;
             return true; // Robot is done
-        }
-        break;
-    
-    case FSM_CALIBRATION:
-        ret = Calibrate();
-        if (ret == FSM_RETURN_DONE){
-            LOG_INFO("Finished calibration step ", calibrationState);
-            runState = FSM_ACTION_GATHER;
-        }
-        else if (ret == FSM_RETURN_ERROR){
-            LOG_ERROR("Error during calibration step ", calibrationState);
-            runState = FSM_ACTION_GATHER; // We try to continue anyway, maybe the error is not critical
         }
         break;
     
