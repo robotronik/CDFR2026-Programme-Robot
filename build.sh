@@ -35,7 +35,7 @@ setup_generator() {
         OPT=""
     else
         step "$BG_ORG" "$F_ORG" "WARN" "Make utilisé (Ninja absent)."
-        GEN="-G 'Unix Makefiles'"
+        GEN="-G Unix\ Makefiles"
         OPT="-- -j$(nproc)"
     fi
 }
