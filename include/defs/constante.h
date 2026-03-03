@@ -11,15 +11,6 @@
 
 #define ROBOT_WIDTH 400
 #define OPPONENT_ROBOT_RADIUS 250
-#define OFFSET_ANGLE_CAM 0 // Offset angle of the camera in degrees
-
-// TODO: Set these values following the getCenter calibration
-#define OFFSET_CAM_X 129 // Offset of the camera in mm on the x axis
-#define OFFSET_CAM_Y 6.5 // Offset of the camera in mm on the y axis
-
-// TODO: is it deprecated value ?
-const int STOCK_WIDTH_MM = 100;
-const int STOCK_HEIGHT_MM = 400;
 
 // Define the nums of the arduino for the STEPPERS
 #define STEPPER_NUM_1        1

@@ -1,6 +1,12 @@
 #include <string>
 #include <exception>
 #include "actions/action.hpp"
+#include "actions/functions.h"
+#include "actions/strats.hpp"
+#include "defs/tableState.hpp"
+#include "utils/logger.hpp"
+#include "main.hpp"
+#include "defs/constante.h"
 
 
 ActionFSM::ActionFSM(){
@@ -218,27 +224,36 @@ ReturnFSM_t ActionFSM::DropStock(){
 }
 
 ReturnFSM_t ActionFSM::Cursor(){
-    int sign = (tableStatus.colorTeam == BLUE) ? 1 : -1;
-    position_t targetPos = {625, 1220 * sign,  45*sign };
+    position_t navTarget = {625.0, 1220.0,  45.0};
+    if (tableStatus.colorTeam == YELLOW) position_robot_flip(navTarget);
+
+    position_t moveTarget = navTarget;
+    moveTarget.x -= 330.0;
+    moveTarget.a = 0.0;
+    if (tableStatus.colorTeam == YELLOW) position_robot_flip(moveTarget);
+
+    position_t endTarget = navTarget;
+    endTarget.x -= 200.0;
+    endTarget.y -= 280.0;
+    endTarget.a = 0.0;
+    if (tableStatus.colorTeam == YELLOW) position_robot_flip(endTarget);
 
     switch (CursorState){
         case FSM_CURSOR_NAV:
-            {
-            nav_ret = navigationGoTo(targetPos, true);
+            nav_ret = navigationGoTo(navTarget, true);
             if (nav_ret == NAV_DONE){
                 if (lowerClaws()){
-                LOG_INFO("Nav done FSM_CURSOR_NAV, going to FSM_CURSOR");
-                CursorState = FSM_CURSOR_MOVE;
+                    LOG_INFO("Nav done FSM_CURSOR_NAV, going to FSM_CURSOR");
+                    CursorState = FSM_CURSOR_MOVE;
                 }
             }
             else if (nav_ret == NAV_ERROR){
                 LOG_WARNING("Navigation error while going to cursor position");
                 return FSM_RETURN_ERROR;
             }
-            }
             break;
         case FSM_CURSOR_MOVE:
-            nav_ret = navigationGoTo(position_t {targetPos.x, targetPos.y -sign * 330, 0}, true);
+            nav_ret = navigationGoTo(moveTarget, true);
             //LOG_INFO("Claws lowered at cursor position");
             if (nav_ret == NAV_DONE){
                 if (raiseClaws()){
@@ -250,11 +265,10 @@ ReturnFSM_t ActionFSM::Cursor(){
                 LOG_WARNING("Navigation error while moving to cursor position");
                 return FSM_RETURN_ERROR;
             }
-            
             break;
 
         case FSM_CURSOR_END:
-            nav_ret = navigationGoTo(position_t {targetPos.x - 200, targetPos.y - sign * 280, 0}, true);
+            nav_ret = navigationGoTo(endTarget, true);
             //LOG_INFO("Claws raised at cursor position");
             if (nav_ret == NAV_DONE){
                 LOG_INFO("Nav done FSM_CURSOR_END, cursor action complete");
@@ -302,14 +316,15 @@ position_t calculateClosestArucoPosition(position_t currentPos, position_t& outP
         outPos.x += tmp.x;
         outPos.y += tmp.y;
     }
-    outPos.a = RAD_TO_DEG * position_angle(drive.position, closestPos) + OFFSET_ANGLE_CAM;
+    outPos.a = RAD_TO_DEG * position_angle(drive.position, closestPos) + OFFSET_CAM_A;
 
     return closestPos;
 }
 
 void ActionFSM::SetBestAction(position_t position){
-    int sign = (tableStatus.colorTeam == BLUE) ? 1 : -1;
-    position_t targetPos = {625, 1220 * sign,  45*sign };
+    position_t targetPos = {625, 1220, 45};
+    if (tableStatus.colorTeam == YELLOW) position_robot_flip(targetPos);
+
     if(_millis() > tableStatus.startTime + 95000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
         LOG_INFO("95 seconds passed, switching to NAV_HOME");
         runState = FSM_ACTION_NAV_HOME;
@@ -344,8 +359,7 @@ ReturnFSM_t ActionFSM::Calibrate(){
     case FSM_CALIBRATION_NAV:
         {
         // Look towards the closest aruco marker by only spinning in place
-        position_t target_;
-        position_t arucoPos = calculateClosestArucoPosition(drive.position, target_);
+        arucoPos = calculateClosestArucoPosition(drive.position, target_);
         LOG_DEBUG("Calibrating, closest aruco marker is at (", arucoPos.x, ", ", arucoPos.y, ", ", arucoPos.a, ")");
         nav_ret = navigationGoTo(target_, true);
         if (nav_ret == NAV_DONE){
@@ -385,7 +399,6 @@ ReturnFSM_t ActionFSM::Calibrate(){
 
 ReturnFSM_t ActionFSM::GetRobotCenter(){
     nav_return_t nav_ret;
-    static unsigned long start_time;
     static position_t aruco1;
     static position_t aruco2;
     static position_t target_ = {drive.position.x, drive.position.y, drive.position.a + 180}; // Look in the opposite direction to find the second aruco marker
@@ -393,7 +406,7 @@ ReturnFSM_t ActionFSM::GetRobotCenter(){
         case FSM_ARUCO_1:
             {
             bool sucess;
-            if(arucoCam1.getPos(aruco1.x, aruco1.y, aruco1.a, sucess) && sucess){
+            if (arucoCam1.getPos(aruco1.x, aruco1.y, aruco1.a, sucess) && sucess){
                 calibrationCameraState = FSM_ARUCO_NAV;
                 LOG_INFO("Found first aruco marker at (", aruco1.x, ", ", aruco1.y, ", ", aruco1.a, "), going to FSM_ARUCO_2");
             }

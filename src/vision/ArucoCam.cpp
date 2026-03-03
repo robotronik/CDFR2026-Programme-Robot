@@ -15,10 +15,6 @@ using json = nlohmann::json;
 #define SCAN_FAIL_FRAMES_NUM 10
 #define SCAN_DONE_FRAMES_NUM 20
 
-#define OFFSET_CAM_X 129 // Offset of the camera in mm on the x axis
-#define OFFSET_CAM_Y 0 // Offset of the camera in mm on the y axis
-#define OFFSET_CAM_A 0 // Offset angle of the camera in degrees
-
 pid_t startPythonProgram(char** args);
 void stopPythonProgram(pid_t pid);
 bool restAPI_GET(const std::string &url, const std::string &resquest, json &response);

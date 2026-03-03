@@ -1,11 +1,7 @@
 #pragma once
-#include "utils/logger.hpp"
-#include "main.hpp"
-#include "navigation/navigation.h"
-#include "actions/functions.h"
-#include "actions/strats.hpp"
-#include "defs/tableState.hpp"
-#include "defs/constante.h"
+
+#include "drive_interface.h" // For position_t
+#include "navigation/navigation.h" // For nav_return_t
 
 // Consider using enum class for better type safety
 typedef enum
