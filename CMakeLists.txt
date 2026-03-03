@@ -33,10 +33,21 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(-fcolor-diagnostics)
 endif()
 
+# Opti 1: CCache
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
     set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
     set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+endif()
+
+# Opti 2: Linker rapide
+find_program(MOLD_PATH NAMES mold)
+find_program(LLD_PATH NAMES ld.lld)
+
+if(MOLD_PATH)
+    add_link_options("-fuse-ld=mold")
+elseif(LLD_PATH)
+    add_link_options("-fuse-ld=lld")
 endif()
 
 # Options de compilation de base
