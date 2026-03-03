@@ -165,6 +165,10 @@ ReturnFSM_t ActionFSM::DropStock(){
         case FSM_DROP_NONE:
             dropzone_num = GetBestDropZone(drive.position);
             LOG_DEBUG("best drop zone for stock ", stock_num, " is ", dropzone_num);
+            if (dropzone_num == -1) {
+                LOG_ERROR("No more dropzone available, cannot drop stock ", stock_num);
+                return FSM_RETURN_ERROR;
+            }
             dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
             LOG_DEBUG("Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ", ", dropzonePos.y, ", ", dropzonePos.a , ")");
             dropStockState = FSM_DROP_NAV;
