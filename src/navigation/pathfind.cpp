@@ -5,7 +5,7 @@
 #include "main.hpp"
 
 int pathfind(position_t start, position_t goal, position_t path[]) {
-    int RayonRobot = 150;
+
 
     // Toujours réinitialiser la costmap
     astar_initialize_costmap();
@@ -22,6 +22,27 @@ int pathfind(position_t start, position_t goal, position_t path[]) {
     int gx = (goal.x + 1000) / SCALE;
     int gy = (goal.y + 1500) / SCALE;
 
+    // Clamp grid indices to valid costmap bounds to avoid out-of-bounds access.
+    if (sx < 0) {
+        sx = 0;
+    } else if (sx >= AS_WIDTH) {
+        sx = AS_WIDTH - 1;
+    }
+    if (gx < 0) {
+        gx = 0;
+    } else if (gx >= AS_WIDTH) {
+        gx = AS_WIDTH - 1;
+    }
+    if (sy < 0) {
+        sy = 0;
+    } else if (sy >= AS_HEIGHT) {
+        sy = AS_HEIGHT - 1;
+    }
+    if (gy < 0) {
+        gy = 0;
+    } else if (gy >= AS_HEIGHT) {
+        gy = AS_HEIGHT - 1;
+    }
     LOG_INFO("Converted start : ", sx, " / ", sy, " goal : ", gx, " / ", gy);
 
     astar_pathfind(&sx, &sy, &gx, &gy);

@@ -61,6 +61,14 @@ void escape_from_obstacle(int *x,int *y){
 // Récupère le chemin dans points[], retourne la longueur
 int reconstruct_path(int sx,int sy,int gx,int gy,position_t *path){
 
+    // Validate start and goal indices to avoid out-of-bounds access on nodes[][]
+    if (sx < 0 || sx >= AS_HEIGHT ||
+        sy < 0 || sy >= AS_WIDTH  ||
+        gx < 0 || gx >= AS_HEIGHT ||
+        gy < 0 || gy >= AS_WIDTH) {
+        printf("reconstruct_path: invalid indices (sx=%d, sy=%d, gx=%d, gy=%d)\n", sx, sy, gx, gy);
+        return 0;
+    }
     if(nodes[gx][gy].g==INT_MAX){
         printf("Goal jamais atteint\n");
         return 0;
@@ -123,7 +131,7 @@ void astar_pathfind(int *sx,int *sy,int *gx,int *gy){
                nodes[open[best].x][open[best].y].f)
                 best=i;
 
-        position_int_t current=open[best];
+
         int cx = open[best].x;
         int cy = open[best].y;
         open[best]=open[--open_size];
