@@ -6,6 +6,7 @@
 
 
 /build/
+/build_arm/
 /bin/
 /obj/
 /arm_bin/
