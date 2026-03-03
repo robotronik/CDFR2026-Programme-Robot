@@ -65,7 +65,13 @@ ArucoCam::~ArucoCam(){
 // Returns true when done
 bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     success = false;
+
+
+// Returns true when done
+bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
+    success = false;
     if (status == false) {
+        LOG_WARNING("ArucoCam ", id, " is not running, will start it now");
         LOG_WARNING("ArucoCam ", id, " is not running, will start it now");
         start();
         return false;
@@ -76,6 +82,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     // Returns true if the call was successful, false otherwise
     if (id < 0) {
         // TODO change this to return a random position
+        return true;
         return true;
     }
     json response;
