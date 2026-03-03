@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # --- Config Raspi ---
-PI_USER="robotronik"; PI_HOST="192.168.0.102"; PI_DIR="/home/robotronik/CDFR"
+PI_USER="robotronik"; PI_HOST="raspitronik.local"; PI_DIR="/home/$PI_USER/CDFR"; PI_DEST="arm_bin"
 
 # --- Config build ---
 GEN=""; OPT=""
@@ -104,8 +104,8 @@ deploy_pi() {
     run_timed "Build ARM" build_arm
 
     step "$BG_BLU" "$F_BLU" "SYNC" "Transfert vers le robot ($PI_HOST)..."
-    ssh $PI_USER@$PI_HOST "mkdir -p $PI_DIR"
-    rsync -az --delete ./build_arm/ $PI_USER@$PI_HOST:$PI_DIR | grep -v "/$"
+    ssh $PI_USER@$PI_HOST "mkdir -p $PI_DIR/$PI_DEST"
+    rsync -az --progress --delete ./build_arm/data ./build_arm/html autoRunInstaller.sh ./build_arm/programCDFR ./build_arm/pi_detect_aruco.py $PI_USER@$PI_HOST:$PI_DIR/$PI_DEST | grep -v "/$"
     rsync_status=${PIPESTATUS[0]}
     if [ "$rsync_status" -ne 0 ]; then
         step "$BG_RED" "$F_RED" "ERROR" "Échec du transfert (rsync)."
@@ -115,8 +115,8 @@ deploy_pi() {
 
     step "$BG_BLU" "$F_BLU" "SERVICE" "Installation et démarrage auto..."
     ssh -t $PI_USER@$PI_HOST "cd $PI_DIR && chmod +x autoRunInstaller.sh && \
-        sudo ./autoRunInstaller.sh --uninstall $PI_DIR/programCDFR >/dev/null 2>&1 || true && \
-        sudo ./autoRunInstaller.sh --install $PI_DIR/programCDFR"
+        sudo ./autoRunInstaller.sh --uninstall $PI_DIR/$PI_DEST/programCDFR >/dev/null 2>&1 || true && \
+        sudo ./autoRunInstaller.sh --install $PI_DIR/$PI_DEST/programCDFR"
     
     step "$BG_GRN" "$F_GRN" "DONE" "Robot flashé et programme lancé !"
 }
