@@ -111,11 +111,11 @@ deploy_pi() {
         step "$BG_RED" "$F_RED" "ERROR" "Échec du transfert (rsync)."
         return "$rsync_status"
     fi    
-    scp -q autoRunInstaller.sh $PI_USER@$PI_HOST:$PI_DIR/
+    scp -q autoRunInstaller.sh $PI_USER@$PI_HOST:$PI_DIR/$PI_DEST
 
     step "$BG_BLU" "$F_BLU" "SERVICE" "Installation et démarrage auto..."
-    ssh -t $PI_USER@$PI_HOST "cd $PI_DIR && chmod +x autoRunInstaller.sh && \
-        sudo ./autoRunInstaller.sh --uninstall $PI_DIR/$PI_DEST/programCDFR >/dev/null 2>&1 || true && \
+    ssh -t $PI_USER@$PI_HOST "cd $PI_DIR/$PI_DEST && chmod +x autoRunInstaller.sh && \
+        sudo ./autoRunInstaller.sh --uninstall $PI_DIR/$PI_DEST/programCDFR && \
         sudo ./autoRunInstaller.sh --install $PI_DIR/$PI_DEST/programCDFR"
     
     step "$BG_GRN" "$F_GRN" "DONE" "Robot flashé et programme lancé !"
