@@ -15,12 +15,28 @@ F_BLU="${ESC}[38;5;72m";  BG_BLU="${ESC}[30;48;5;72m"  # Info / Exec / Build
 
 export NINJA_STATUS="${F_GRN}[%p]${NC} ${F_BLU}[%es]${NC} "
 
+# --- Config build ---
+GEN=""; OPT=""
+LIDAR_LIB="rplidar_sdk/output/Linux/Release/libsl_lidar_sdk.a"
+
 # Helper d'affichage compact
 step() { printf "${1}${BOLD} %-10s ${NC} ${2}%s${NC}\n" "$3" "$4"; }
 
 # --- Fonctions de Build ---
 
-LIDAR_LIB="rplidar_sdk/output/Linux/Release/libsl_lidar_sdk.a"
+# Helpers de build
+
+setup_generator() {
+    if command -v ninja >/dev/null 2>&1; then
+        step "$BG_BLU" "$F_BLU" "CONFIG" "Ninja détecté."
+        GEN="-G Ninja"
+        OPT=""
+    else
+        step "$BG_ORG" "$F_ORG" "WARN" "Make utilisé (Ninja absent)."
+        GEN="-G 'Unix Makefiles'"
+        OPT="-- -j$(nproc)"
+    fi
+}
 
 check_lidar_arch() {
     local target=$(echo "$1" | tr '[:lower:]' '[:upper:]')
@@ -31,6 +47,8 @@ check_lidar_arch() {
     fi
     return 1
 }
+
+# Compilation complète (génération cmake + build)
 
 build_lidar() { 
     if check_lidar_arch "X86-64"; then
@@ -54,14 +72,21 @@ build_lidar_arm() {
 }
 
 build_local() {
+    setup_generator
     build_lidar
-    local GEN=""; local OPT="-- -j$(nproc)"
-    command -v ninja >/dev/null 2>&1 && { GEN="-G Ninja"; OPT=""; step "$BG_BLU" "$F_BLU" "CONFIG" "Ninja détecté."; } \
-                                     || step "$BG_ORG" "$F_ORG" "WARN" "Make utilisé (Ninja absent)."
     step "$BG_BLU" "$F_BLU" "BUILD" "Compilation locale (x86_64)..."
     cmake $GEN -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-fdiagnostics-color=always" >/dev/null
     cmake --build build $OPT
     step "$BG_GRN" "$F_GRN" "DONE" "Binaire compilé."
+}
+
+build_arm() {
+    setup_generator
+    build_lidar_arm 
+    step "$BG_BLU" "$F_BLU" "BUILD" "Cross-compilation ARM64..."
+    cmake $GEN -B build_arm -DCMAKE_TOOLCHAIN_FILE=pi_toolchain.cmake >/dev/null
+    cmake --build build_arm $OPT
+    step "$BG_GRN" "$F_GRN" "DONE" "Binaire ARM compilé."
 }
 
 # Fonction pour setup LSP (compile_commands.json et link)
@@ -72,14 +97,9 @@ setup_ide() {
                                          || step "$BG_RED" "$F_RED" "ERROR" "Échec LSP."
 }
 
+# Sync sur la pi
 deploy_pi() {
-    build_lidar_arm
-    local GEN=""; local OPT="-- -j$(nproc)"
-    command -v ninja >/dev/null 2>&1 && { GEN="-G Ninja"; OPT=""; }
-
-    step "$BG_BLU" "$F_BLU" "BUILD" "Cross-compilation ARM64..."
-    cmake $GEN -B build_arm -DCMAKE_TOOLCHAIN_FILE=pi_toolchain.cmake >/dev/null
-    cmake --build build_arm $OPT
+    run_timed "Build ARM" build_arm
 
     step "$BG_BLU" "$F_BLU" "SYNC" "Transfert vers le robot ($PI_HOST)..."
     ssh $PI_USER@$PI_HOST "mkdir -p $PI_DIR"
@@ -130,10 +150,29 @@ run_timed() {
                   || { step "$BG_RED" "$F_RED" "FAIL" "$task échoué en ${dur}s${stats}"; }
 }
 
+clean() {
+    if [ -d "build" ]; then
+        cmake --build build --target clean
+        step "$BG_GRN" "$F_GRN" "DONE" "Build local nettoyé."
+    else
+        step "$BG_BLU" "$F_BLU" "INFO" "Pas de build local."
+    fi
+    
+    if [ -d "build_arm" ]; then
+        cmake --build build_arm --target clean
+        step "$BG_GRN" "$F_GRN" "DONE" "Build ARM nettoyé." 
+    else
+        step "$BG_BLU" "$F_BLU" "INFO" "Pas de build ARM."
+    fi
+
+    step "$BG_GRN" "$F_GRN" "CLEAN" "Fichiers de build nettoyés."
+}
+
 # --- Menu ---
 
 case "$1" in
     build)        run_timed "Build Local" build_local ;;
+    build_arm)    run_timed "Build ARM" build_arm ;;
     deploy)    
                run_timed "Déploiement Complet" deploy_pi 
                echo -e "${WHT}--------------------------------------------------------${NC}"
@@ -149,6 +188,7 @@ case "$1" in
                    else \
                        step "$BG_RED" "$F_RED" "ERROR" "Test introuvable"; \
                    fi ;;
-    clean)        rm -rf build build_arm compile_commands.json; step "$BG_GRN" "$F_GRN" "CLEAN" "Dossiers supprimés." ;;
-    *)            echo -e "${BOLD}Usage:${NC} $0 {build|deploy|setup-ide|tests|clean}"; exit 1 ;;
+    clean-all)    rm -rf build build_arm compile_commands.json; step "$BG_GRN" "$F_GRN" "CLEAN ALL" "Dossiers supprimés." ;;
+    clean)        clean ;; 
+    *)            echo -e "${BOLD}Usage:${NC} $0 {build|build_arm|deploy|setup-ide|tests|clean|clean-all}"; exit 1 ;;
 esac
