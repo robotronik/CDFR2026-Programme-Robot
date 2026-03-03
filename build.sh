@@ -3,6 +3,10 @@
 # --- Config Raspi ---
 PI_USER="robotronik"; PI_HOST="192.168.0.102"; PI_DIR="/home/robotronik/CDFR"
 
+# --- Config build ---
+GEN=""; OPT=""
+LIDAR_LIB="rplidar_sdk/output/Linux/Release/libsl_lidar_sdk.a"
+
 # --- Palette ---
 export CLICOLOR_FORCE=1
 export FORCE_COLOR=1
@@ -15,14 +19,12 @@ F_BLU="${ESC}[38;5;72m";  BG_BLU="${ESC}[30;48;5;72m"  # Info / Exec / Build
 
 export NINJA_STATUS="${F_GRN}[%p]${NC} ${F_BLU}[%es]${NC} "
 
-# --- Config build ---
-GEN=""; OPT=""
-LIDAR_LIB="rplidar_sdk/output/Linux/Release/libsl_lidar_sdk.a"
-
-# Helper d'affichage compact
-step() { printf "${1}${BOLD} %-10s ${NC} ${2}%s${NC}\n" "$3" "$4"; }
-
 # --- Fonctions de Build ---
+
+# Helper d'affichage compact [BG_COLOR] [FG_COLOR] [LABEL] [MESSAGE]
+# Format [BADGE = BG_COLOR + LABEL] [MESSAGE = FG_COLOR + TEXT]
+ 
+step() { printf "${1}${BOLD} %-10s ${NC} ${2}%s${NC}\n" "$3" "$4"; }
 
 # Helpers de build
 
@@ -90,7 +92,7 @@ build_arm() {
 }
 
 # Fonction pour setup LSP (compile_commands.json et link)
-setup_ide() {
+setup_lsp() {
     step "$BG_BLU" "$F_BLU" "SETUP" "Génération LSP..."
     cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null
     [ -f "build/compile_commands.json" ] && { ln -sf build/compile_commands.json .; step "$BG_GRN" "$F_GRN" "DONE" "Lien créé."; } \
@@ -179,7 +181,7 @@ case "$1" in
                step "$BG_BLU" "$F_BLU" "LOGS" "En direct du robot (Ctrl+C pour quitter l'affichage)..." 
                ssh -t $PI_USER@$PI_HOST "journalctl -u programCDFR.service -f -n 50"
                ;;
-    setup-ide)    run_timed "Setup IDE" setup_ide ;;
+    setup-lsp)    run_timed "Setup LSP" setup_lsp ;;
     tests)        run_timed "Build local" build_local; \
                    if [ -f "build/robot_tests" ]; then \
                         [ -e "lidar" ] || ln -s "tests/lidar" "lidar"; \

@@ -19,7 +19,7 @@ This program enables the robot to perform various tasks such as navigation, data
 Before running the program, make sure you have installed the following dependencies:
 
 ```bash
-sudo apt-get install make gcc g++ python3-venv
+sudo apt-get install cmake make gcc g++ python3-venv ninja
 ```
 
 For ARM (Raspberry Pi) compilation, install:
@@ -56,12 +56,24 @@ sudo apt install gdbserver
    git pull
    ```
 
+4. (Optional) You may want to setup the LSP Server (clangd) if you are not on VSCode. To do so, run:
+   
+   ```bash
+   bash build.sh setup-lsp
+   ```
+
 ## 💻 Compilation
 
 To compile the program on your machine, simply run:
 
 ```bash
 bash build.sh build
+```
+
+To compile for ARM (Raspbery Pi) :
+
+```bash
+bash build.sh build_arm
 ```
 
 To run tests:
