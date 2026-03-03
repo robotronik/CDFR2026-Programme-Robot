@@ -98,6 +98,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             LOG_INFO("No more stocks to take, exiting GatherStock");
             stock_num = -1;
             gatherStockState = FSM_GATHER_NAV;
+            runState = FSM_ACTION_NAV_HOME; // si plus de stock, on return home
             return FSM_RETURN_DONE;
         }
         //LOG_INFO("Next stock to take: ", stock_num, " offset: ", offset);
@@ -121,9 +122,9 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 }
             }
             else if (nav_ret == NAV_ERROR){
-                gatherStockState = FSM_GATHER_NAV;
                 LOG_WARNING("Navigation error while going to stock ", stock_num);
-                // TODO get another stock
+                stock_num = -1;
+                gatherStockState = FSM_GATHER_NAV;
                 return FSM_RETURN_ERROR;
             }
             }
@@ -171,7 +172,7 @@ ReturnFSM_t ActionFSM::DropStock(){
         case FSM_DROP_NAV:
             {   
             // Navigate to dropzone
-            nav_ret = navigationGoTo(dropzonePos, true);
+            nav_ret = navigationGoTo(dropzonePos, true, true);
             //LOG_INFO("Navigating to stock ", stock_num, " at position (", dropzonePos.x, ",", dropzonePos.y, ") with angle ", dropzonePos.a);
 
             if (nav_ret == NAV_DONE){ // We consider that we are at the dropzone if we are close enough, to avoid navigation errors

@@ -39,7 +39,7 @@ bool lowerClaws(){
     static unsigned long startTime = 0;
     switch (state){
         case 1:
-            arduino.moveMotorDC(80, true);
+            arduino.moveMotorDC(50, true);
             startTime = _millis();
             state++;
             break;
@@ -65,7 +65,7 @@ bool raiseClaws(){
     static unsigned long startTime = 0;
     switch (state){
         case 1:
-            arduino.moveMotorDC(80, false);
+            arduino.moveMotorDC(110, false);
             startTime = _millis();
             state++;
             break;

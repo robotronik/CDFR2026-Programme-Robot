@@ -270,11 +270,7 @@ int StartSequence()
     manual_ctrl = false;
     manual_currentFunc = NULL;
 
-    pathfindInit();
-
-    // TODO REMOVE
-    pathfind_place_obstacle_rect_with_inflation(400, 0, 100, 100, 200);
-
+    pathfind_setup();
 
     drive.reset();
 
@@ -287,13 +283,20 @@ void GetLidar()
     static position_t prev_pos;
     static position_t prev_vel;
     static long prev_time_ms = 0;
+    static long prev_rest_ms = 0;
+
     if (lidar.getData())
     {
+        long now = _millis();
+
         double time_s = double(_millis() - prev_time_ms) / 1000.0; 
         //convertAngularToAxial(lidar.data, lidar.count, position, 200);
         convertAngularToAxialCompensated(lidar.data, lidar.count, prev_pos, prev_vel, time_s, 200);
-
-        pathfind_fill_lidar();
+        
+        if (now - prev_rest_ms > 200) {
+            pathfind_fill_lidar();
+            prev_rest_ms = now;
+        }
         
         if (currentState == RUN || currentState == MANUAL)
             navigationOpponentDetection();
