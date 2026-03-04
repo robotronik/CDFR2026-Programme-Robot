@@ -7,7 +7,6 @@
 #include "vision/ArucoCam.hpp"
 #include "utils/logger.hpp"
 #include "utils/json.hpp" // For handling JSON
-#include "defs/constante.h"
 
 using json = nlohmann::json;
 
@@ -62,7 +61,6 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     success = false;
     if (status == false) {
         LOG_WARNING("ArucoCam ", id, " is not running, will start it now");
-        LOG_WARNING("ArucoCam ", id, " is not running, will start it now");
         start();
         return false;
     }
@@ -72,7 +70,6 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     // Returns true if the call was successful, false otherwise
     if (id < 0) {
         // TODO change this to return a random position
-        return true;
         return true;
     }
     json response;
