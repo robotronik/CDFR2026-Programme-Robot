@@ -147,6 +147,9 @@ bool closeClaws(){
 bool openClaws(){
     return snapClaws(false);
 }
+bool snapClaws(bool closed){
+    return snapClaws(closed, true);
+}
 
 bool snapClaws(bool closed, bool small){
     static bool prevState = !closed;

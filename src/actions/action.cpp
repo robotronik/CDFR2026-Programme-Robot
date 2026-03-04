@@ -121,7 +121,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             nav_ret = navigationGoTo(targetPos, true);
             if (nav_ret == NAV_DONE){
                 //LOG_INFO("Nov Done to stock ", stock_num, "lowering claws");
-                if (lowerClaws() && snapClaws(true, false)){
+                if (lowerClaws() && snapClaws(false, false)){
                     LOG_INFO("Claws lowered for stock ", stock_num);
                     gatherStockState = FSM_GATHER_MOVE;
                     LOG_INFO("Nav done FSM_GATHER_NAV, going to FSM_GATHER_MOVE");

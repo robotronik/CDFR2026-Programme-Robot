@@ -30,7 +30,8 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos);
 // Servo Control
 bool closeClaws();
 bool openClaws();
-bool snapClaws(bool closed, bool small = true);
+bool snapClaws(bool closed);
+bool snapClaws(bool closed, bool small);
 bool resetSpinClaws();
 bool spinAllClaws();
 bool spinClaws(bool spin1, bool spin2, bool spin3, bool spin4);
