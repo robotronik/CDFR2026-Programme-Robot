@@ -49,10 +49,10 @@ class ActionFSM{
         typedef enum
         {
             FSM_GATHER_NAV,
+            FSM_GATHER_CLAWS,
             FSM_GATHER_MOVE,
             FSM_GATHER_COLLECT,
-            FSM_GATHER_COLLECTED,
-            FSM_GATHER_CLAWS
+            FSM_GATHER_COLLECTED
         } StateGatherStock_t;
 
         typedef enum

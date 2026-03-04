@@ -132,11 +132,12 @@ ReturnFSM_t ActionFSM::TakeStock(){
             break;
         case FSM_GATHER_CLAWS:
             //LOG_INFO("Nov Done to stock ", stock_num, "lowering claws");
-            if (lowerClaws()){
+            if (snapClaws(false,false) & lowerClaws()){
                 LOG_INFO("Claws lowered for stock ", stock_num);
                 gatherStockState = FSM_GATHER_MOVE;
                 LOG_INFO("Nav done FSM_GATHER_NAV, going to FSM_GATHER_MOVE");
             }
+            break;
         case FSM_GATHER_MOVE:
             nav_ret = navigationGoTo(position_t {stockPos.x + int(stockOff.x * 0.66), stockPos.y + int(stockOff.y * 0.66), angle}, true);
             //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
