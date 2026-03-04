@@ -155,7 +155,7 @@ bool snapClaws(bool closed, bool small){
     static int prevTarget = -1;
     int target = closed ? 16 : (small ? 40 : 130);
     if (prevTarget != target){
-        arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 100);
+        arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 150);
         prevTarget = target;
     }
     int current = 0;
