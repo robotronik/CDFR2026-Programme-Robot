@@ -27,6 +27,8 @@ public:
     void SetLidarPWM(uint8_t val);
     void moveMotorDC(uint8_t speed, bool forward);
     void stopMotorDC();
+    void keepMotorDCup();
+
 private:
     int i2cFile;
     void setServoPower(bool power);

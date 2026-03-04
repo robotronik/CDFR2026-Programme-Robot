@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
             // switchTeamSide(color);
 
             if (readLimitSwitchTop()){
-                arduino.stopMotorDC();
+                arduino.keepMotorDCup();
             }
 
 
