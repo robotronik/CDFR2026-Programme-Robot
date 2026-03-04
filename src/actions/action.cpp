@@ -120,12 +120,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
             nav_ret = navigationGoTo(targetPos, true);
             if (nav_ret == NAV_DONE){
-                //LOG_INFO("Nov Done to stock ", stock_num, "lowering claws");
-                if (lowerClaws() && snapClaws(false, false)){
-                    LOG_INFO("Claws lowered for stock ", stock_num);
-                    gatherStockState = FSM_GATHER_MOVE;
-                    LOG_INFO("Nav done FSM_GATHER_NAV, going to FSM_GATHER_MOVE");
-                }
+                gatherStockState = FSM_GATHER_CLAWS;
             }
             else if (nav_ret == NAV_ERROR){
                 LOG_WARNING("Navigation error while going to stock ", stock_num);
@@ -135,7 +130,13 @@ ReturnFSM_t ActionFSM::TakeStock(){
             }
             }
             break;
-
+        case FSM_GATHER_CLAWS:
+            //LOG_INFO("Nov Done to stock ", stock_num, "lowering claws");
+            if (lowerClaws()){
+                LOG_INFO("Claws lowered for stock ", stock_num);
+                gatherStockState = FSM_GATHER_MOVE;
+                LOG_INFO("Nav done FSM_GATHER_NAV, going to FSM_GATHER_MOVE");
+            }
         case FSM_GATHER_MOVE:
             nav_ret = navigationGoTo(position_t {stockPos.x + int(stockOff.x * 0.66), stockPos.y + int(stockOff.y * 0.66), angle}, true);
             //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
