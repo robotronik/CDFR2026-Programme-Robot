@@ -91,10 +91,8 @@ bool rotateTwoBlocks(){
 
 bool dropBlock(){
     static int state = 0;
-    static unsigned long startTime = 0;
     switch (state){
         case 0:
-            startTime = _millis();
             state++;
             break;
         case 1:

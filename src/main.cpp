@@ -357,8 +357,7 @@ void tests()
         usleep(500000); 
 
         //position depart et arrivé aléatoire
-        int start_ix = 0, start_iy = 0, goal_ix = 0, goal_iy = 0;
-        position_t target, start, goal;
+        position_t target, start;
         target.x = rand() % (600) - 600 / 2;
         target.y = rand() % (600) - 600 / 2;
 

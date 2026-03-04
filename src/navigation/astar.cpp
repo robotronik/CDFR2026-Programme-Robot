@@ -34,7 +34,7 @@ void escape_from_obstacle(int *x,int *y){
     position_t queue[AS_HEIGHT*AS_WIDTH];
     int qs=0,qe=0;
     
-    queue[qe++]=(position_t){*x,*y};
+    queue[qe++] = (position_t){ static_cast<double>(*x), static_cast<double>(*y) };
     visited[*x][*y]=true;
 
     while(qs<qe){
@@ -53,7 +53,7 @@ void escape_from_obstacle(int *x,int *y){
                 *x=nx; *y=ny;
                 return;
             }
-            queue[qe++]=(position_t){nx,ny};
+            queue[qe++]=(position_t){static_cast<double>(nx),static_cast<double>(ny)};
         }
     }
 }
@@ -78,14 +78,14 @@ int reconstruct_path(int sx,int sy,int gx,int gy,position_t *path){
     int x=gx,y=gy;
 
     while(!(x==sx && y==sy)){
-        path[len++]=(position_t ){x,y};
+        path[len++]=(position_t ){static_cast<double>(x),static_cast<double>(y)};
         int px=nodes[x][y].parent_x;
         int py=nodes[x][y].parent_y;
         x=px; y=py;
         if(len>=500) break;
     }
 
-    path[len++]=(position_t ){sx,sy};
+    path[len++]=(position_t ){static_cast<double>(sx),static_cast<double>(sy)};
 
     for(int i=0;i<len/2;i++){
         position_t tmp=path[i];
@@ -120,7 +120,7 @@ void astar_pathfind(int *sx,int *sy,int *gx,int *gy){
 
     position_int_t open[AS_HEIGHT*AS_WIDTH];
     int open_size=0;
-    open[open_size++] = (position_int_t){ (double)start_x, (double)start_y };
+    open[open_size++] = (position_int_t){ static_cast<int>(start_x), static_cast<int>(start_y) };
     int dirs[4][2]={{1,0},{-1,0},{0,1},{0,-1}};
 
     while(open_size>0){
