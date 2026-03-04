@@ -26,6 +26,8 @@ void setDropzoneState(int dropzoneNum, TableState::dropzone_state_t state);
 void setDropzoneAsError(int dropzoneNum);
 int getBestStockPositionOff(int stockNum, position_t fromPos);
 position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos);
+position_t calculateClosestArucoPosition(position_t currentPos, position_t& outPos);
+
 // Servo Control
 bool closeClaws();
 bool openClaws();

@@ -307,43 +307,6 @@ ReturnFSM_t ActionFSM::Cursor(){
     return FSM_RETURN_WORKING;
 }
 
-position_t calculateClosestArucoPosition(position_t currentPos, position_t& outPos){
-    outPos = currentPos;
-    position_t closestPos = ARUCO_POSITIONS_TABLE[0];
-    double dist20 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[0]);
-    double dist21 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[1]);
-    double dist22 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[2]);
-    double dist23 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[3]);
-    double minDistance = dist20;
-    if (dist21 < minDistance){
-        minDistance = dist21;
-        closestPos = ARUCO_POSITIONS_TABLE[1];
-    }
-    if (dist22 < minDistance){
-        minDistance = dist22;
-        closestPos = ARUCO_POSITIONS_TABLE[2];
-    }
-    if (dist23 < minDistance){
-        minDistance = dist23;
-        closestPos = ARUCO_POSITIONS_TABLE[3];
-    }
-    // Check if we are above the aruco marker
-    const double minimal_distance = 200.0; // 20cm
-    if (minDistance < minimal_distance){
-        LOG_WARNING("Above aruco marker, need to move away first");
-        double displacement = minimal_distance - minDistance + 1; //+margin
-        position_t tmp = position_vector(closestPos, currentPos);
-        position_normalize(tmp);
-        tmp.x *= displacement;
-        tmp.y *= displacement;
-        outPos.x += tmp.x;
-        outPos.y += tmp.y;
-    }
-    outPos.a = RAD_TO_DEG * position_angle(drive.position, closestPos) + OFFSET_CAM_A;
-
-    return closestPos;
-}
-
 void ActionFSM::SetBestAction(position_t position){
     position_t targetPos = {625, 1220, 45};
     if (tableStatus.colorTeam == YELLOW) position_robot_flip(targetPos);
