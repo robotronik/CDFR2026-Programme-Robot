@@ -10,29 +10,6 @@
 //                   BASIC FSM CONTROL
 // ------------------------------------------------------
 
-// Function to deploy the banner (example)
-bool rotateBlocks(){
-    static int state = 1;
-    switch (state){
-        case 1:
-            if (resetSpinClaws() & openClaws())
-                state++;
-            break;
-        case 2:
-            if (closeClaws())
-                state++;
-            break;
-        case 3:
-            if (spinAllClaws()){
-                state = 1;
-                openClaws();
-                return true;
-            }
-            break;
-    }
-    return false;
-}
-
 bool lowerClaws(){
     static int state = 1;
     //LOG_INFO("lowerClaws state = ", state);
@@ -244,20 +221,6 @@ bool moveColumnsElevator(int level){
 
 
 // ------------------------------------------------------
-//                   DC MOTOR CONTROL
-// ------------------------------------------------------
-
-// Moves the tribune elevator to a predefined level
-bool moveTribuneElevator(){
-    arduino.moveMotorDC(80, 30);
-    return true;
-}
-
-void stopTribuneElevator(){
-    arduino.stopMotorDC();
-}
-
-// ------------------------------------------------------
 //                GLOBAL SET/RES CONTROL
 // ------------------------------------------------------
 
@@ -274,7 +237,7 @@ void enableActuators(){
     drive.enable();
 }
 void disableActuators(){
-    stopTribuneElevator();
+    arduino.stopMotorDC();
     for (int i = 0; i < 4; i++){
         arduino.disableStepper(i);
     }
