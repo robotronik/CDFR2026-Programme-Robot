@@ -390,6 +390,7 @@ void opponentInAction(position_t position){
         {
             LOG_INFO("Opponent at dropzone ", i ," at position ", position.x, position.y);
             tableStatus.dropzone_states[i] = (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE;
+            //TODO to remove, search dropzone for steal with other way
             return;
         }
     }

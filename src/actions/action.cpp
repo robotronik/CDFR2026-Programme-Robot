@@ -230,7 +230,7 @@ ReturnFSM_t ActionFSM::Cursor(){
     if (tableStatus.colorTeam == YELLOW) position_robot_flip(navTarget);
 
     position_t moveTarget = navTarget;
-    moveTarget.x -= 330.0;
+    moveTarget.y -= 280.0;
     moveTarget.a = 0.0;
     if (tableStatus.colorTeam == YELLOW) position_robot_flip(moveTarget);
 
@@ -242,7 +242,7 @@ ReturnFSM_t ActionFSM::Cursor(){
 
     switch (CursorState){
         case FSM_CURSOR_NAV:
-            nav_ret = navigationGoTo(navTarget, true);
+            nav_ret = navigationGoTo(navTarget, true, true);
             if (nav_ret == NAV_DONE){
                 if (lowerClaws()){
                     LOG_INFO("Nav done FSM_CURSOR_NAV, going to FSM_CURSOR");
@@ -281,6 +281,7 @@ ReturnFSM_t ActionFSM::Cursor(){
                 LOG_WARNING("Navigation error while moving to final cursor position");
                 return FSM_RETURN_ERROR;
             }
+            break;
 
     }
     return FSM_RETURN_WORKING;
