@@ -125,7 +125,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             else if (nav_ret == NAV_ERROR){
                 LOG_WARNING("Navigation error while going to stock ", stock_num);
                 stock_num = -1;
-                gatherStockState = FSM_GATHER_NAV;
+                gatherStockState = FSM_GATHER_NAV; // TO TEST avec adversaire 
                 return FSM_RETURN_ERROR;
             }
             }
