@@ -106,6 +106,58 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     return true;
 }
 
+// Returns true when done
+bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success) {
+    success = false;
+    if (status == false) {
+        LOG_WARNING("ArucoCam ", id, " is not running, will start it now");
+        start();
+        return false;
+    }
+
+    // LOG_DEBUG("Fetching position from ArucoCam ", id);
+    // Calls /position rest api endpoint of the ArucoCam API
+    // Returns true if the call was successful, false otherwise
+    if (id < 0) {
+        // TODO change this to return a random position
+        return true;
+    }
+    json response;
+    if (restAPI_GET(url, "/objects", response) == false) {
+        LOG_ERROR("ArucoCam::getObjectPos() - Failed to fetch position");
+        return true;
+    }
+    int failedFrames = response.value("failedFrames", -1);
+    int sucessFrames = response.value("sucessFrames", -1);
+    // int totalFrames = response.value("totalFrames", -1);
+    if (failedFrames == -1 || sucessFrames == -1) {
+        LOG_ERROR("ArucoCam::getObjectPos() - Invalid response data, camera might not be running");
+        status = false;
+        return true;
+    }
+    if (failedFrames > SCAN_FAIL_FRAMES_NUM) {
+        LOG_WARNING("Cam has too many failed frames : ", failedFrames);
+        stop();
+        return true;
+    }
+    if (sucessFrames < SCAN_DONE_FRAMES_NUM) {
+        //LOG_WARNING("Cam has not enough good success frames : ", sucessFrames);
+        return false;
+    }
+    // Extract the values from the JSON object
+    // TODO
+    // CALCULATE THE AVERAGE POSITION
+    success = true;
+    json position = response["position"];
+    x = position.value("x", 0);
+    y = position.value("y", 0);
+    a = position.value("a", 0);
+    LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+    // Return true if the values were successfully extracted
+    stop();
+    return true;
+}
+
 void ArucoCam::start() {
     json response;
     if (restAPI_GET(url, "/start", response)){
