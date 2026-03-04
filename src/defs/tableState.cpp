@@ -8,7 +8,7 @@ TableState::TableState(){
     colorTeam = NONE;
     strategy = 1;
     startTime = 0;
-
+    calibrationAge = 0;
     reset();
 }
 

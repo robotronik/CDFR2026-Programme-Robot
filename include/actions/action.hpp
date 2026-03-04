@@ -18,13 +18,16 @@ class ActionFSM{
         void Reset();
         bool RunFSM();
         void SetBestAction(position_t position);
-        inline bool cursorIsDone(){ return cursorStatus; }
-        inline void setCursorIsDone(bool val){ cursorStatus = val; }
+        bool cursorIsDone(){ return cursorStatus; }
+        void setCursorIsDone(bool val){ cursorStatus = val; }
+        
     private:
 
         int stock_num;// Num of stock
         int dropzone_num;// Num of dropzone to drop the stock
         int offset;// Offset  is direction to take the stock from
+        bool cursorStatus = false;
+
         nav_return_t nav_ret;
         position_t dropzonePos;
 
@@ -35,17 +38,19 @@ class ActionFSM{
         ReturnFSM_t GetRobotCenter();
         ReturnFSM_t Calibrate();
 
+        /************  FSM GLOBAL ************/
         typedef enum
         {
             FSM_ACTION_GATHER,
             FSM_ACTION_DROP,
             FSM_ACTION_CURSOR,
             FSM_ACTION_NAV_HOME,
+            FSM_ACTION_CALIBRATION,
             FSM_CENTER_CALIBRATION
         } StateRun_t;
-
         StateRun_t runState = FSM_ACTION_GATHER;
 
+        /************  FSM GATHER ************/
         typedef enum
         {
             FSM_GATHER_NAV,
@@ -54,26 +59,37 @@ class ActionFSM{
             FSM_GATHER_COLLECT,
             FSM_GATHER_COLLECTED
         } StateGatherStock_t;
+        StateGatherStock_t gatherStockState = FSM_GATHER_NAV;
 
+        /************  FSM DROP ************/
         typedef enum
         {
             FSM_DROP_NONE,
             FSM_DROP_NAV,
             FSM_DROP
         } StateDropStock_t;
+        StateDropStock_t dropStockState = FSM_DROP_NONE;
 
+        /************  FSM CURSOR ************/
         typedef enum
         {
             FSM_CURSOR_NAV,
             FSM_CURSOR_MOVE,
             FSM_CURSOR_END
         } StateCursor_t;
-
-        StateGatherStock_t gatherStockState = FSM_GATHER_NAV;
-        StateDropStock_t dropStockState = FSM_DROP_NONE;
         StateCursor_t CursorState = FSM_CURSOR_NAV;
-        bool cursorStatus = false;
 
+        /************  FSM CALIBRATION ************/
+        typedef enum
+        {   
+            FSM_CALCULATION,
+            FSM_CALIBRATION_NAV,
+            FSM_CALIBRATION_CALIBRATE,
+            FSM_CALIBRATION_RAISE
+        } StateCalibration_t;
+        StateCalibration_t calibrationState = FSM_CALCULATION;
+
+        /************  FSM CENTER CALIBRATION ************/
         typedef enum
         {
             FSM_ARUCO_1,
@@ -81,16 +97,7 @@ class ActionFSM{
             FSM_ARUCO_NAV
 
         } StateCalibrationCamera_t;
-
-        typedef enum
-        {
-            FSM_CALIBRATION_NAV,
-            FSM_CALIBRATION_CALIBRATE,
-            FSM_CALCULATION
-        } StateCalibration_t;
-
-        StateCalibration_t calibrationState = FSM_CALCULATION;
-
         StateCalibrationCamera_t calibrationCameraState = FSM_ARUCO_1;
+
 
 };

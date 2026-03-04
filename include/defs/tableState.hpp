@@ -20,6 +20,7 @@ class TableState
 
         colorTeam_t colorTeam;
         int strategy;
+        int calibrationAge;
 
         /* data Winter is comming */
         bool avail_stocks[STOCK_COUNT];     // Is stock available
@@ -32,6 +33,8 @@ class TableState
         } dropzone_state_t;
 
         dropzone_state_t dropzone_states[DROPZONE_COUNT];
+        void resetCalibrationAge(){ calibrationAge = 0;}
+
 };
 
 // Serialize tableState
