@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
             // switchTeamSide(color);
 
             if (readLimitSwitchTop()){
-                arduino.keepMotorDCup();
+                arduino.stopMotorDC();
             }
 
 
@@ -147,6 +147,8 @@ int main(int argc, char *argv[])
                 tableStatus.reset();
                 tableStatus.startTime = _millis();
                 action.Reset();
+                arduino.keepMotorDCup();
+
             }
             bool finished = action.RunFSM();
 
