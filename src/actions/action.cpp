@@ -118,7 +118,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_NAV:
             {
             position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
-            nav_ret = navigationGoTo(targetPos, true);
+            nav_ret = navigationGoTo(targetPos, true, true); // Enabeling A*
             if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_CLAWS;
             }
