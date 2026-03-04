@@ -208,7 +208,7 @@ void Arduino::stopMotorDC(){
 }
 
 void Arduino::keepMotorDCup(){
-    moveMotorDC(40,false);
+    moveMotorDC(30,false);
     LOG_DEBUG("DC Motor keep Position UP");
 
 }
