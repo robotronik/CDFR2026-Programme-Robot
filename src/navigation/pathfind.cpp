@@ -40,7 +40,7 @@ int pathfind(position_t start, position_t goal, position_t path[]) {
 
     int len = reconstruct_path(sx, sy, gx, gy, path);
     print_costmap_with_path(path, len, position_int_t{sx, sy}, position_int_t{gx, gy});
-    if (len == 0) {
+    if (len <= 0) {
         LOG_WARNING("Goal unreachable, printing costmap with path:");
         return 0;
     }
@@ -61,11 +61,11 @@ void pathfind_setup() {
     astar_initialize_costmap();
     int RayonRobot=150;
     // ===== TABLE BORDER ===== 
-    place_obstacle_with_margin(0,-1500,50,2000,RayonRobot);
-    place_obstacle_with_margin(0,1500,50,2000,RayonRobot);
-    place_obstacle_with_margin(-1000,0,3000,50,RayonRobot);
-    place_obstacle_with_margin(1000,0,3000,50,RayonRobot);
-    place_obstacle_with_margin(-775,0,1800,450,RayonRobot);
+    place_obstacle_with_margin(0,-1500,50,2000,RayonRobot,false);
+    place_obstacle_with_margin(0,1500,50,2000,RayonRobot,false);
+    place_obstacle_with_margin(-1000,0,3000,50,RayonRobot,false);
+    place_obstacle_with_margin(1000,0,3000,50,RayonRobot,false);
+    place_obstacle_with_margin(-775,0,1800,450,RayonRobot,false);
 
     // ===== DROP ZONES =====
     place_obstacle_with_margin( 200,  1400, 200, 200, RayonRobot);
@@ -88,6 +88,6 @@ void pathfind_fill_lidar(){
 
     for (int i = 0; i < lidar.count; i++){
         if (!lidar.data[i].onTable) continue;
-        place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y,150, 150,150);
+        place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y,150, 150,150,false);
     }
 }

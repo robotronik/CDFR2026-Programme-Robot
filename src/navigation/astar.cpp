@@ -162,30 +162,41 @@ void astar_pathfind(int *sx,int *sy,int *gx,int *gy){
 }
 
 
-void place_obstacle_with_margin(int x0_mm,int y0_mm,int w_mm,int h_mm,int RayonRobot){
-    int x0=(x0_mm+1000)/SCALE;
-    int y0=(y0_mm+1500)/SCALE;
-    int w=w_mm/SCALE, h=h_mm/SCALE;
-    int margin=RayonRobot/SCALE;
+// x0_mm, y0_mm : position centrale en mm
+// w_mm, h_mm : largeur/hauteur de l'obstacle en mm
+// RayonRobot : marge autour de l'obstacle
+// traversable : true = A* peut traverser si nécessaire (MARGIN_COST)
+//               false = infranchissable (OBSTACLE_COST)
+void place_obstacle_with_margin(int x0_mm, int y0_mm, int w_mm, int h_mm, int RayonRobot, bool traversable) {
+    int x0 = (x0_mm + 1000) / SCALE;
+    int y0 = (y0_mm + 1500) / SCALE;
+    int w = w_mm / SCALE;
+    int h = h_mm / SCALE;
+    int margin = RayonRobot / SCALE;
 
-    int x_start=x0-h/2;
-    int x_end=x_start+h;
-    int y_start=y0-w/2;
-    int y_end=y_start+w;
+    int x_start = x0 - h/2;
+    int x_end   = x_start + h;
+    int y_start = y0 - w/2;
+    int y_end   = y_start + w;
 
-    for(int x=x_start;x<x_end;x++)
-        for(int y=y_start;y<y_end;y++)
-            if(x>=0 && x<AS_HEIGHT && y>=0 && y<AS_WIDTH)
-                costmap[x][y]=OBSTACLE_COST;
+    // Définir l'obstacle principal
+    unsigned char main_cost = traversable ? MARGIN_COST : OBSTACLE_COST;
+    for(int x = x_start; x < x_end; x++)
+        for(int y = y_start; y < y_end; y++)
+            if(x >= 0 && x < AS_HEIGHT && y >= 0 && y < AS_WIDTH)
+                costmap[x][y] = main_cost;
 
-    x_start-=margin; x_end+=margin;
-    y_start-=margin; y_end+=margin;
+    // Définir la marge autour de l'obstacle
+    x_start -= margin; x_end += margin;
+    y_start -= margin; y_end += margin;
 
-    for(int x=x_start;x<x_end;x++)
-        for(int y=y_start;y<y_end;y++)
-            if(x>=0 && x<AS_HEIGHT && y>=0 && y<AS_WIDTH)
-                if(costmap[x][y]!=OBSTACLE_COST)
-                    costmap[x][y]=MARGIN_COST;
+    unsigned char margin_cost = traversable ? MARGIN_COST : OBSTACLE_COST;
+    for(int x = x_start; x < x_end; x++)
+        for(int y = y_start; y < y_end; y++)
+            if(x >= 0 && x < AS_HEIGHT && y >= 0 && y < AS_WIDTH)
+                // ne pas écraser l'obstacle principal
+                if(costmap[x][y] != main_cost)
+                    costmap[x][y] = margin_cost;
 }
 
 int line_max_cost(position_t p1, position_t p2) {

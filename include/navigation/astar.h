@@ -18,7 +18,7 @@ typedef struct {
 extern unsigned char costmap[AS_HEIGHT][AS_WIDTH];
 
 void astar_initialize_costmap();
-void place_obstacle_with_margin(int x0_mm,int y0_mm,int w_mm,int h_mm,int RayonRobot);
+void place_obstacle_with_margin(int x0_mm,int y0_mm,int w_mm,int h_mm,int RayonRobot, bool traversable = true);
 void astar_pathfind(int *sx,int *sy,int *gx,int *gy);
 int reconstruct_path(int sx,int sy,int gx,int gy,position_t *path);
 int smooth_path(position_t *in,int in_len,position_t *out);
