@@ -95,6 +95,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
         return false;
     }
     // Extract the values from the JSON object
+    LOG_DEBUG("getPos got the frame");
     success = true;
     json position = response["position"];
     x = position.value("x", 0);
