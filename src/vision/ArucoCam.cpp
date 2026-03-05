@@ -95,12 +95,20 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
         return false;
     }
     // Extract the values from the JSON object
-    LOG_DEBUG("getPos got the frame");
-    success = true;
+    if(response.is_null()){
+        success = false;
+        return true;
+    }
     json position = response["position"];
-    x = position.value("x", 0);
-    y = position.value("y", 0);
-    a = position.value("a", 0);
+    if(!position["x"].is_null() && !position["y"].is_null() && !position["a"].is_null()){
+        x = position.value("x", 0);
+        y = position.value("y", 0);
+        a = position.value("a", 0);
+    }else{
+        success = false;
+        return true;
+    }
+    success = true;
     LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted
     stop();
@@ -129,49 +137,50 @@ bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success) {
         LOG_ERROR("ArucoCam::getObjectPos() - Failed to fetch position");
         return true;
     }
-    int failedFrames = response.value("failedFrames", -1);
-    int sucessFrames = response.value("sucessFrames", -1);
-    // int totalFrames = response.value("totalFrames", -1);
-    if (failedFrames == -1 || sucessFrames == -1) {
-        LOG_ERROR("ArucoCam::getObjectPos() - Invalid response data, camera might not be running");
-        status = false;
-        return true;
-    }
-    if (failedFrames > SCAN_FAIL_FRAMES_NUM) {
-        LOG_WARNING("Cam has too many failed frames : ", failedFrames);
-        stop();
-        return true;
-    }
-    if (sucessFrames < SCAN_DONE_FRAMES_NUM) {
-        //LOG_WARNING("Cam has not enough good success frames : ", sucessFrames);
-        return false;
-    }
     // Extract the values from the JSON object
     // CALCULATE THE AVERAGE POSITION
-    success = true;
     int count = 0;
+    if(response.is_null()){
+        success = false;
+        return true;
+    }
     auto& objects = response["objects"];
-
+    float m_x = 0, m_y = 0, m_a = 0;
     for (auto& [key, list] : objects.items()) {
         for (auto& obj : list) {
-            x += obj.value("x",0);
-            y += obj.value("y",0);
-            a += obj.value("a",0);
-            count++;
+            if(obj["x"].is_null() || obj["y"].is_null() || obj["a"].is_null()){
+                success = false;
+                return true;
+            }else{
+                m_y -= obj.value("x",0);
+                m_x += obj.value("y",0);
+                m_a += obj.value("a",0);
+                count++;
+            }
         }
     }
-    x /= count;
-    y /= count;
-    a /= count;
+    m_x /= count;
+    m_y /= count;
+    m_a /= count;
+    
+    // Décalage pour le centre du robot
+    m_x -= OFFSET_CAM_X;// axes inversés
+    m_y += OFFSET_CAM_Y;// axes inversés
+    m_a += OFFSET_CAM_A;
 
-    // Convert camera position to robot position
-    x -= OFFSET_CAM_X;
-    y -= OFFSET_CAM_Y;
+    LOG_DEBUG("m_x = ", m_x, " m_y = ",m_y);
+    //projection sur les axes:
+    double a_rad = a * M_PI / 180.0;
+    double cos_a = cos(a_rad);
+    double sin_a = sin(a_rad);
+    x -= m_x * cos_a - m_y * sin_a;
+    y -= m_x * sin_a + m_y * cos_a;
     a += OFFSET_CAM_A;
+
     // Normalize angle to ]-180;180]
     if (a > 180.0) a -= 360.0;
     else if (a <= -180.0) a += 360.0;
-
+    success = true;
     LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted
     stop();

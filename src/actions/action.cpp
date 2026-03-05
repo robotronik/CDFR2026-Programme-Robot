@@ -151,13 +151,15 @@ ReturnFSM_t ActionFSM::TakeStock(){
             }
             break;
         case FSM_GATHER_DETECT:
-            double x,y,a;
+            {
+            double x = drive.position.x, y = drive.position.y , a = drive.position.a;
             bool sucess;
             LOG_DEBUG("Going for getObjectPos");
             if(arucoCam1.getObjectPos(x,y,a,sucess)){
                 if(sucess){
                     LOG_DEBUG("Detection sucess calibration on blocks");
-                    target_ = position_t{drive.position.x + x + int(stockOff.x * 0.66), drive.position.y + y + int(stockOff.y * 0.66), a};
+                    LOG_DEBUG("Théorie: x= ",stockPos.x," y= ",stockPos.y);
+                    target_ = position_t{x + int(stockOff.x * 0.66), y + int(stockOff.y * 0.66), angle};
                 }else{
                     LOG_DEBUG("Detection failed calibration on map");
                     target_ = position_t{stockPos.x + int(stockOff.x * 0.66), stockPos.y + int(stockOff.y * 0.66), angle};
@@ -165,6 +167,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 LOG_DEBUG("Detect average stock position at x=",x," y=",y);
                 LOG_DEBUG("Going to target position { x=",target_.x," y=",target_.y," a=",target_.a,"}");
                 gatherStockState = FSM_GATHER_CLAWS;
+            }
             }
             break;
         case FSM_GATHER_CLAWS:
