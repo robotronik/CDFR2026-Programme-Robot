@@ -246,19 +246,21 @@ ReturnFSM_t ActionFSM::DropStock(){
 }
 
 ReturnFSM_t ActionFSM::Cursor(){
-    position_t navTarget = {625.0, 1220.0,  45.0};
-    if (tableStatus.colorTeam == YELLOW) position_robot_flip(navTarget);
-
+    position_t navTarget = {625.0, 1220.0, 45.0};
     position_t moveTarget = navTarget;
     moveTarget.y -= 280.0;
     moveTarget.a = 0.0;
-    if (tableStatus.colorTeam == YELLOW) position_robot_flip(moveTarget);
 
     position_t endTarget = navTarget;
     endTarget.x -= 200.0;
     endTarget.y -= 280.0;
     endTarget.a = 0.0;
-    if (tableStatus.colorTeam == YELLOW) position_robot_flip(endTarget);
+
+    if (tableStatus.colorTeam == YELLOW){
+        position_robot_flip(navTarget);
+        position_robot_flip(moveTarget);
+        position_robot_flip(endTarget);
+    }
 
     switch (CursorState){
         case FSM_CURSOR_NAV:

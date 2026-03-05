@@ -39,14 +39,14 @@ int pathfind(position_t start, position_t goal, position_t path[]) {
     LOG_INFO("After escape start : ", sx, " / ", sy, " goal : ", gx, " / ", gy);
 
     int len = reconstruct_path(sx, sy, gx, gy, path);
-    print_costmap_with_path(path, len, position_int_t{sx, sy}, position_int_t{gx, gy});
+    //print_costmap_with_path(path, len, position_int_t{sx, sy}, position_int_t{gx, gy});
     if (len <= 0) {
         LOG_WARNING("Goal unreachable, printing costmap with path:");
         return 0;
     }
 
     int smooth_len = smooth_path(path, len, path);
-    print_costmap_with_path(path, smooth_len, position_int_t{sx, sy}, position_int_t{gx, gy});
+    //print_costmap_with_path(path, smooth_len, position_int_t{sx, sy}, position_int_t{gx, gy});
     for(int i = 0; i < smooth_len; i++){
         path[i].x = path[i].x * SCALE - 1000;
         path[i].y = path[i].y * SCALE - 1500;
