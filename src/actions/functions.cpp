@@ -320,7 +320,7 @@ int getBestStockPositionOff(int stockNum, position_t fromPos){
         position_t stockOff = STOCK_OFFSETS[offNum];
         position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, 0};
 
-        double dist2 = position_distance(stockOff,targetPos);
+        double dist2 = position_distance(fromPos,targetPos);
 
         if (dist2 < bestDist2){
             bestDist2 = dist2;

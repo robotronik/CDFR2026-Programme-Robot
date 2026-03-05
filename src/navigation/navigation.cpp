@@ -64,8 +64,6 @@ void fillCurrentPath(position_t path[], int pathLength) {
 }
 
 nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
-    static bool pathActive = false;
-
     if (useAStar){
         currentPathLenght = pathfind(drive.position, pos, currentPath);
 
@@ -75,13 +73,8 @@ nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
         }
 
         //LOG_WARNING("Path computed!");
-        pathActive = true;
 
         nav_return_t ret = navigationPath(currentPath, currentPathLenght, turnEnd);
-
-        if (ret == NAV_DONE || ret == NAV_ERROR){
-            pathActive = false;
-        }
 
         return ret;
     }
