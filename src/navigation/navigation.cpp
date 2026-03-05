@@ -74,7 +74,7 @@ nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
             return NAV_ERROR;
         }
 
-        LOG_WARNING("Path computed!");
+        //LOG_WARNING("Path computed!");
         pathActive = true;
 
         nav_return_t ret = navigationPath(currentPath, currentPathLenght, turnEnd);

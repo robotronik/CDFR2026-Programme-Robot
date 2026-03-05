@@ -14,8 +14,7 @@ int pathfind(position_t start, position_t goal, position_t path[]) {
     // Ajouter les obstacles du lidar
     pathfind_fill_lidar();
 
-    LOG_INFO("Original start : ", start.x, " / ", start.y, 
-             " goal : ", goal.x, " / ", goal.y);
+    //LOG_INFO("Original start : ", start.x, " / ", start.y, " goal : ", goal.x, " / ", goal.y);
 
     int sx = (start.x + 1000) / SCALE;
     int sy = (start.y + 1500) / SCALE;
@@ -32,11 +31,11 @@ int pathfind(position_t start, position_t goal, position_t path[]) {
     if (gy < 0) gy = 0;
     else if (gy >= AS_HEIGHT) gy = AS_HEIGHT - 1;
     
-    LOG_INFO("Converted start : ", sx, " / ", sy, " goal : ", gx, " / ", gy);
+    //LOG_INFO("Converted start : ", sx, " / ", sy, " goal : ", gx, " / ", gy);
 
     astar_pathfind(&sx, &sy, &gx, &gy);
 
-    LOG_INFO("After escape start : ", sx, " / ", sy, " goal : ", gx, " / ", gy);
+    //LOG_INFO("After escape start : ", sx, " / ", sy, " goal : ", gx, " / ", gy);
 
     int len = reconstruct_path(sx, sy, gx, gy, path);
     //print_costmap_with_path(path, len, position_int_t{sx, sy}, position_int_t{gx, gy});
