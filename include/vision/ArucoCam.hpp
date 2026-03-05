@@ -16,7 +16,7 @@ public:
     ~ArucoCam();
     bool getPos(double & x, double & y, double & a, bool& success);
     bool getRobotPos(double & x, double & y, double & a, bool& success);
-    //bool getObjectPos(double & x, double & y, double & a, bool& success);
+    bool getObjectPos(double & x, double & y, double & a, bool& success);
 private:
     std::string url;
     void start();

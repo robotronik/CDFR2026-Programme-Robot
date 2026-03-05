@@ -115,7 +115,6 @@ bool ActionFSM::RunFSM(){
     return false;
 }
 
-
 ReturnFSM_t ActionFSM::TakeStock(){
     //LOG_INFO("TakeStock state: ", gatherStockState, " stock_num: ", stock_num);
     if (stock_num == -1 || gatherStockState == FSM_GATHER_NAV){
@@ -150,6 +149,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             }
             }
             break;
+
         case FSM_GATHER_CLAWS:
             //LOG_INFO("Nov Done to stock ", stock_num, "lowering claws");
             if (snapClaws(false,false) & lowerClaws()){
@@ -159,11 +159,22 @@ ReturnFSM_t ActionFSM::TakeStock(){
             }
             break;
         case FSM_GATHER_MOVE:
-            nav_ret = navigationGoTo(position_t {stockPos.x + int(stockOff.x * 0.66), stockPos.y + int(stockOff.y * 0.66), angle}, true);
+            {
+            double x,y,a;
+            bool sucess;
+            position_t target_;
+            arucoCam1.getObjectPos(x,y,a,sucess);
+            if(sucess){
+                target_ = position_t{drive.position.x + x + int(stockOff.x * 0.66), drive.position.y + y + int(stockOff.y * 0.66), a};
+            }else{
+                target_ = position_t{stockPos.x + int(stockOff.x * 0.66), stockPos.y + int(stockOff.y * 0.66), angle};
+            }
+            nav_ret = navigationGoTo(target_, true);
             //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
             if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_COLLECT;
                 LOG_INFO("Nav done FSM_GATHER_MOVE, going to FSM_GATHER_COLLECT");
+            }
             }
             break;
         case FSM_GATHER_COLLECT:
@@ -350,6 +361,7 @@ ReturnFSM_t ActionFSM::Calibrate(){
     switch (calibrationState){
         case FSM_CALCULATION:
             arucoPos = calculateClosestArucoPosition(drive.position, target_);
+            calibrationState = FSM_CALIBRATION_NAV;
             LOG_DEBUG("Calibrating, closest aruco marker is at (", arucoPos.x, ", ", arucoPos.y, ", ", arucoPos.a, ")");
             break;
         case FSM_CALIBRATION_NAV:

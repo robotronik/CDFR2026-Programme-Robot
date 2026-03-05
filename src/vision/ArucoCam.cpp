@@ -106,6 +106,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     return true;
 }
 
+// Returns the position of the robot center relative to the average position of the aruco tags detected
 // Returns true when done
 bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success) {
     success = false;
@@ -145,14 +146,32 @@ bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success) {
         return false;
     }
     // Extract the values from the JSON object
-    // TODO
     // CALCULATE THE AVERAGE POSITION
     success = true;
-    json position = response["position"];
-    x = position.value("x", 0);
-    y = position.value("y", 0);
-    a = position.value("a", 0);
-    LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+    int count = 0;
+    auto& objects = response["objects"];
+
+    for (auto& [key, list] : objects.items()) {
+        for (auto& obj : list) {
+            x += obj.value("x",0);
+            y += obj.value("y",0);
+            a += obj.value("a",0);
+            count++;
+        }
+    }
+    x /= count;
+    y /= count;
+    a /= count;
+
+    // Convert camera position to robot position
+    x -= OFFSET_CAM_X;
+    y -= OFFSET_CAM_Y;
+    a += OFFSET_CAM_A;
+    // Normalize angle to ]-180;180]
+    if (a > 180.0) a -= 360.0;
+    else if (a <= -180.0) a += 360.0;
+
+    LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted
     stop();
     return true;
