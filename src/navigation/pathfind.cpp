@@ -60,12 +60,6 @@ int pathfind(position_t start, position_t goal, position_t path[]) {
 void pathfind_setup() {
     astar_initialize_costmap();
     int RayonRobot=150;
-    // ===== TABLE BORDER ===== 
-    place_obstacle_with_margin(0,-1500,50,2000,RayonRobot,false);
-    place_obstacle_with_margin(0,1500,50,2000,RayonRobot,false);
-    place_obstacle_with_margin(-1000,0,3000,50,RayonRobot,false);
-    place_obstacle_with_margin(1000,0,3000,50,RayonRobot,false);
-    place_obstacle_with_margin(-775,0,1800,450,RayonRobot,false);
 
     // ===== DROP ZONES =====
     place_obstacle_with_margin( 200,  1400, 200, 200, RayonRobot);
@@ -79,6 +73,13 @@ void pathfind_setup() {
     place_obstacle_with_margin( 200,  -700, 200, 200, RayonRobot);
     place_obstacle_with_margin(-450,  -250, 200, 200, RayonRobot);
     place_obstacle_with_margin( 900,     0, 200, 200, RayonRobot);
+
+    // ===== TABLE BORDER ===== 
+    place_obstacle_with_margin(0,-1500,50,2000,RayonRobot,false);
+    place_obstacle_with_margin(0,1500,50,2000,RayonRobot,false);
+    place_obstacle_with_margin(-1000,0,3000,50,RayonRobot,false);
+    place_obstacle_with_margin(1000,0,3000,50,RayonRobot,false);
+    place_obstacle_with_margin(-775,0,1800,450,RayonRobot,false);
 }
 
 void pathfind_fill_lidar(){

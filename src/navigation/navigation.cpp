@@ -65,25 +65,17 @@ void fillCurrentPath(position_t path[], int pathLength) {
 
 nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
     static bool pathActive = false;
-    static position_t lastTarget;
 
     if (useAStar){
-        // Recalcule uniquement si nouveau target
-        if (!pathActive || 
-            lastTarget.x != pos.x || 
-            lastTarget.y != pos.y)
-        {
-            currentPathLenght = pathfind(drive.position, pos, currentPath);
+        currentPathLenght = pathfind(drive.position, pos, currentPath);
 
-            if (currentPathLenght <= 0){
-                LOG_WARNING("No path found");
-                return NAV_ERROR;
-            }
-
-            LOG_WARNING("Path computed!");
-            pathActive = true;
-            lastTarget = pos;
+        if (currentPathLenght <= 0){
+            LOG_WARNING("No path found");
+            return NAV_ERROR;
         }
+
+        LOG_WARNING("Path computed!");
+        pathActive = true;
 
         nav_return_t ret = navigationPath(currentPath, currentPathLenght, turnEnd);
 
