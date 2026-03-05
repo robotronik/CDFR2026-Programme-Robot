@@ -40,6 +40,7 @@ main_State_t currentState;
 main_State_t nextState;
 bool initState;
 bool manual_ctrl;
+bool motorUpFirst = true;
 bool (*manual_currentFunc)(); //Pointer to a function to execute of type bool func(void)
 
 std::thread api_server_thread;
@@ -127,8 +128,9 @@ int main(int argc, char *argv[])
             // colorTeam_t color = readColorSensorSwitch();
             // switchTeamSide(color);
 
-            if (readLimitSwitchTop()){
+            if (readLimitSwitchTop() and motorUpFirst){
                 arduino.moveMotorDC(20,false);
+                motorUpFirst = false;
             }
 
 
