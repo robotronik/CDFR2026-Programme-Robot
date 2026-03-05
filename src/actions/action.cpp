@@ -353,7 +353,7 @@ void ActionFSM::SetBestAction(position_t position){
         LOG_INFO("Best action for position (", position.x, ", ", position.y, ") is to drop a stock, going to FSM_ACTION_DROP");
         return;
     }
-    if(runState == FSM_ACTION_DROP || runState == FSM_ACTION_CURSOR || runState == FSM_ACTION_NAV_HOME){
+    if(runState == FSM_ACTION_DROP || runState == FSM_ACTION_CURSOR || runState == FSM_ACTION_NAV_HOME || runState == FSM_ACTION_CALIBRATION){
         runState = FSM_ACTION_GATHER;
         LOG_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
         return;
