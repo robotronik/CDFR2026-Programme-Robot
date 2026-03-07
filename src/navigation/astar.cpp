@@ -6,223 +6,200 @@
 #include <limits.h>
 #include "utils/logger.hpp"
 
-#define CLAMP(x, min, max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))
-
-#define MAX_OPEN_SIZE (AS_HEIGHT * AS_WIDTH)
-#define FREE_SPACE 0
-
-unsigned char costmap[AS_HEIGHT][AS_WIDTH];
-
 typedef struct {
-    int x, y;
-    int g;  // Coût depuis le départ
-    int h;  // Heuristique jusqu’à la cible
-    int f;  // f = g + h
-    int parent_x, parent_y;
+    int g,f,parent_x,parent_y;
     bool visited;
 } Node;
 
+unsigned char costmap[AS_HEIGHT][AS_WIDTH];
 Node nodes[AS_HEIGHT][AS_WIDTH];
 
 int heuristic(int x1, int y1, int x2, int y2) {
     return abs(x1 - x2) + abs(y1 - y2);
 }
 
-void astar_print_costmap_around_point(int x, int y) {
-    int half_size = 5; // Rayon du carré (10x10)
-    for (int i = x - half_size; i <= x + half_size; i++) {
-        for (int j = y - half_size; j <= y + half_size; j++) {
-            if (i < 0 || i >= AS_HEIGHT || j < 0 || j >= AS_WIDTH) {
-                printf("  ? "); // Hors limites
-            } else if (costmap[i][j] == OBSTACLE_COST) {
-                printf("  # "); // Obstacle
-            } else if (costmap[i][j] == 0) {
-                printf("  . "); // Espace libre
-            } else {
-                printf("%3d ", costmap[i][j]); // Coût
+void astar_initialize_costmap(){
+    for(int x=0;x<AS_HEIGHT;x++)
+        for(int y=0;y<AS_WIDTH;y++)
+            costmap[x][y]=FREE_SPACE;
+}
+
+void escape_from_obstacle(int *x,int *y){
+
+    if(*x<0||*x>=AS_HEIGHT||*y<0||*y>=AS_WIDTH) return;
+    if(costmap[*x][*y]<MARGIN_COST) return;
+
+    int dirs[4][2]={{1,0},{-1,0},{0,1},{0,-1}};
+    bool visited[AS_HEIGHT][AS_WIDTH]={0};
+    position_t queue[AS_HEIGHT*AS_WIDTH];
+    int qs=0,qe=0;
+    
+    queue[qe++] = (position_t){ static_cast<double>(*x), static_cast<double>(*y) };
+    visited[*x][*y]=true;
+
+    while(qs<qe){
+        position_t cur=queue[qs++];
+
+        for(int d=0;d<4;d++){
+            int nx=cur.x+dirs[d][0];
+            int ny=cur.y+dirs[d][1];
+
+            if(nx<0||ny<0||nx>=AS_HEIGHT||ny>=AS_WIDTH) continue;
+            if(visited[nx][ny]) continue;
+
+            visited[nx][ny]=true;
+
+            if(costmap[nx][ny]<MARGIN_COST){
+                *x=nx; *y=ny;
+                return;
             }
+            queue[qe++]=(position_t){static_cast<double>(nx),static_cast<double>(ny)};
         }
-        printf("\n");
     }
-    printf("\n");
 }
 
 // Récupère le chemin dans points[], retourne la longueur
-int astar_reconstruct_path_points(int start_x, int start_y, int goal_x, int goal_y, astar_pos_t *points, int max_points) {
-    int length = 0;
-    int x = goal_x;
-    int y = goal_y;
+int reconstruct_path(int sx,int sy,int gx,int gy,position_t *path){
 
-    while (!(x == start_x && y == start_y)) {
-        if (x < 0 || x >= AS_HEIGHT || y < 0 || y >= AS_WIDTH) {
-            LOG_ERROR("Position (", x, ", ", y, ") hors limites dans reconstruct_path_points");
-            break;  // évite le segfault
-        }
-        if (length >= max_points) break;
-        points[length++] = (astar_pos_t){x, y};
-        int px = nodes[x][y].parent_x;
-        int py = nodes[x][y].parent_y;
-        x = px;
-        y = py;
+    // Validate start and goal indices to avoid out-of-bounds access on nodes[][]
+    if (sx < 0 || sx >= AS_HEIGHT ||
+        sy < 0 || sy >= AS_WIDTH  ||
+        gx < 0 || gx >= AS_HEIGHT ||
+        gy < 0 || gy >= AS_WIDTH) {
+        printf("reconstruct_path: invalid indices (sx=%d, sy=%d, gx=%d, gy=%d)\n", sx, sy, gx, gy);
+        return 0;
     }
-    if (length < max_points) {
-        points[length++] = (astar_pos_t){start_x, start_y};
+    if(nodes[gx][gy].g==INT_MAX){
+        printf("Goal jamais atteint\n");
+        return 0;
     }
 
-    // Inverse le tableau (car actuellement du but vers départ)
-    for (int i = 0; i < length/2; i++) {
-        astar_pos_t tmp = points[i];
-        points[i] = points[length-1-i];
-        points[length-1-i] = tmp;
+    int len=0;
+    int x=gx,y=gy;
+
+    while(!(x==sx && y==sy)){
+        path[len++]=(position_t ){static_cast<double>(x),static_cast<double>(y)};
+        int px=nodes[x][y].parent_x;
+        int py=nodes[x][y].parent_y;
+        x=px; y=py;
+        if(len>=500) break;
     }
-    return length;
+
+    path[len++]=(position_t ){static_cast<double>(sx),static_cast<double>(sy)};
+
+    for(int i=0;i<len/2;i++){
+        position_t tmp=path[i];
+        path[i]=path[len-1-i];
+        path[len-1-i]=tmp;
+    }
+
+    return len;
 }
 
-void astar_pathfind(int start_x, int start_y, int goal_x, int goal_y) {
-    for (int x = 0; x < AS_HEIGHT; x++)
-        for (int y = 0; y < AS_WIDTH; y++) {
-            nodes[x][y].x = x;
-            nodes[x][y].y = y;
-            nodes[x][y].g = INT_MAX;
-            nodes[x][y].f = INT_MAX;
-            nodes[x][y].visited = false;
+void astar_pathfind(int *sx,int *sy,int *gx,int *gy){
+    escape_from_obstacle(sx,sy);
+    escape_from_obstacle(gx,gy);
+
+    int start_x=*sx, start_y=*sy;
+    int goal_x=*gx, goal_y=*gy;
+
+    for(int x=0;x<AS_HEIGHT;x++)
+        for(int y=0;y<AS_WIDTH;y++){
+            nodes[x][y].g=INT_MAX;
+            nodes[x][y].f=INT_MAX;
+            nodes[x][y].visited=false;
+            nodes[x][y].parent_x=-1;
+            nodes[x][y].parent_y=-1;
         }
 
-    nodes[start_x][start_y].g = 0;
-    nodes[start_x][start_y].h = heuristic(start_x, start_y, goal_x, goal_y);
-    nodes[start_x][start_y].f = nodes[start_x][start_y].h;
+    if(start_x<0||start_x>=AS_HEIGHT||start_y<0||start_y>=AS_WIDTH) return;
+    if(goal_x<0||goal_x>=AS_HEIGHT||goal_y<0||goal_y>=AS_WIDTH) return;
 
-    astar_pos_t open[MAX_OPEN_SIZE];
-    int open_size = 0;
-    open[open_size++] = (astar_pos_t){start_x, start_y};
+    nodes[start_x][start_y].g=0;
+    nodes[start_x][start_y].f=heuristic(start_x,start_y,goal_x,goal_y);
 
-    while (open_size > 0) {
-        // Trouver le noeud avec le plus petit f dans open
-        int best_idx = 0;
-        for (int i = 1; i < open_size; i++) {
-            astar_pos_t p = open[i];
-            if (nodes[p.x][p.y].f < nodes[open[best_idx].x][open[best_idx].y].f)
-                best_idx = i;
-        }
+    position_int_t open[AS_HEIGHT*AS_WIDTH];
+    int open_size=0;
+    open[open_size++] = (position_int_t){ static_cast<int>(start_x), static_cast<int>(start_y) };
+    int dirs[4][2]={{1,0},{-1,0},{0,1},{0,-1}};
 
-        astar_pos_t current = open[best_idx];
+    while(open_size>0){
 
-        // Retirer current de open
-        open[best_idx] = open[--open_size];
-
-        int cx = current.x, cy = current.y;
-        if (cx == goal_x && cy == goal_y) {
-            return;
-        }
-
-        nodes[cx][cy].visited = true;
-
-        // Voisinage en 4 directions (NSEW)
-        int directions[4][2] = {{1,0}, {-1,0}, {0,1}, {0,-1}};
-
-        for (int d = 0; d < 4; d++) {
-            int nx = cx + directions[d][0];
-            int ny = cy + directions[d][1];
-
-            if (nx < 0 || ny < 0 || nx >= AS_HEIGHT || ny >= AS_WIDTH)
-                continue;
-
-            if (costmap[nx][ny] >= OBSTACLE_COST)
-                continue;  // Obstacle impassable
-
-            if (nodes[nx][ny].visited)
-                continue;
-
-            int tentative_g = nodes[cx][cy].g + costmap[nx][ny] + 1;
-
-            if (tentative_g < nodes[nx][ny].g) {
-                nodes[nx][ny].g = tentative_g;
-                nodes[nx][ny].h = heuristic(nx, ny, goal_x, goal_y);
-                nodes[nx][ny].f = nodes[nx][ny].g + nodes[nx][ny].h;
-                nodes[nx][ny].parent_x = cx;
-                nodes[nx][ny].parent_y = cy;
-
-                // Ajouter à open si pas déjà dedans
-                bool in_open = false;
-                for (int i = 0; i < open_size; i++)
-                    if (open[i].x == nx && open[i].y == ny)
-                        in_open = true;
-                if (!in_open && open_size < MAX_OPEN_SIZE)
-                    open[open_size++] = (astar_pos_t){nx, ny};
-            }
-        }
-    }
-
-    LOG_WARNING("Aucun chemin trouvé.");
-}
-
-void astar_initialize_costmap(int border_size) {
-    for (int x = 0; x < AS_HEIGHT; x++) {
-        for (int y = 0; y < AS_WIDTH; y++) {
-            // Vérifie si la cellule est proche d’un bord
-            if (x < border_size || x >= AS_HEIGHT - border_size || y < border_size || y >= AS_WIDTH - border_size)
-                costmap[x][y] = OBSTACLE_COST;  // Bord = obstacle
-            else
-                costmap[x][y] = FREE_SPACE;
-        }
-    }
-}
+        int best=0;
+        for(int i=1;i<open_size;i++)
+            if(nodes[open[i].x][open[i].y].f <
+               nodes[open[best].x][open[best].y].f)
+                best=i;
 
 
-void astar_place_obstacle_rect_with_inflation(int cx, int cy, int height, int width, int inflation_radius) {
-    int half_w_cells = height / 2;
-    int half_h_cells = width / 2;
+        int cx = open[best].x;
+        int cy = open[best].y;
+        open[best]=open[--open_size];
+        if(cx==goal_x && cy==goal_y) return;
 
-    // Skip if the center is already in an obstacle
-    if (cx < 0 || cx >= AS_HEIGHT || cy < 0 || cy >= AS_WIDTH) return;
-    if (costmap[cx][cy] >= OBSTACLE_COST-2) return;
+        nodes[cx][cy].visited=true;
 
-    for (int x = cx - half_w_cells; x <= cx + half_w_cells; x++) {
-        for (int y = cy - half_h_cells; y <= cy + half_h_cells; y++) {
-            if (x < 0 || x >= AS_HEIGHT || y < 0 || y >= AS_WIDTH) continue;
+        for(int d=0;d<4;d++){
+            int nx=cx+dirs[d][0];
+            int ny=cy+dirs[d][1];
 
-            costmap[x][y] = OBSTACLE_COST;
+            if(nx<0||ny<0||nx>=AS_HEIGHT||ny>=AS_WIDTH) continue;
+            if(costmap[nx][ny]==OBSTACLE_COST) continue;
+            if(nodes[nx][ny].visited) continue;
 
-            // Appliquer l'inflation autour
-            for (int dx = -inflation_radius; dx <= inflation_radius; dx++) {
-                for (int dy = -inflation_radius; dy <= inflation_radius; dy++) {
-                    int nx = x + dx;
-                    int ny = y + dy;
+            int extra=(costmap[nx][ny]==MARGIN_COST)?10:1;
+            int new_g=nodes[cx][cy].g+extra;
 
-                    if (nx < 0 || nx >= AS_HEIGHT || ny < 0 || ny >= AS_WIDTH) continue;
-
-                    int distance = abs(dx) + abs(dy);
-                    if (distance == 0 || distance > inflation_radius) continue;
-
-                    int cost = OBSTACLE_COST - (distance * (OBSTACLE_COST / inflation_radius));
-                    if (cost > costmap[nx][ny]) {
-                        costmap[nx][ny] = cost;
-                    }
-                }
+            if(new_g<nodes[nx][ny].g){
+                nodes[nx][ny].g=new_g;
+                nodes[nx][ny].f=new_g+heuristic(nx,ny,goal_x,goal_y);
+                nodes[nx][ny].parent_x=cx;
+                nodes[nx][ny].parent_y=cy;
+                open[open_size++]=(position_int_t){nx,ny};
             }
         }
     }
 }
 
-void astar_print_costmap() {
-    for (int x = 0; x < AS_HEIGHT; x++) {
-        for (int y = 0; y < AS_WIDTH; y++) {
-            if (costmap[x][y] == 254) {
-                printf("  X ");  // Afficher un 'X' pour le chemin
-            } else if (costmap[x][y] == OBSTACLE_COST) {
-                printf("  # ");  // Afficher '#' pour les obstacles
-            } else if (costmap[x][y] == 0) {
-                printf("  . ");  // Afficher '.' pour l'espace libre
-            } else {
-                printf("%3d ", costmap[x][y]);  // Sinon afficher le coût
-            }
-        }
-        printf("\n");
-    }
-    printf("\n");
+
+// x0_mm, y0_mm : position centrale en mm
+// w_mm, h_mm : largeur/hauteur de l'obstacle en mm
+// RayonRobot : marge autour de l'obstacle
+// traversable : true = A* peut traverser si nécessaire (MARGIN_COST)
+//               false = infranchissable (OBSTACLE_COST)
+void place_obstacle_with_margin(int x0_mm, int y0_mm, int w_mm, int h_mm, int RayonRobot, bool traversable) {
+    int x0 = (x0_mm + 1000) / SCALE;
+    int y0 = (y0_mm + 1500) / SCALE;
+    int w = w_mm / SCALE;
+    int h = h_mm / SCALE;
+    int margin = RayonRobot / SCALE;
+
+    int x_start = x0 - h/2;
+    int x_end   = x_start + h;
+    int y_start = y0 - w/2;
+    int y_end   = y_start + w;
+
+    // Définir l'obstacle principal
+    unsigned char main_cost = traversable ? MARGIN_COST : OBSTACLE_COST;
+    for(int x = x_start; x < x_end; x++)
+        for(int y = y_start; y < y_end; y++)
+            if(x >= 0 && x < AS_HEIGHT && y >= 0 && y < AS_WIDTH)
+                costmap[x][y] = main_cost;
+
+    // Définir la marge autour de l'obstacle
+    x_start -= margin; x_end += margin;
+    y_start -= margin; y_end += margin;
+
+    unsigned char margin_cost = traversable ? MARGIN_COST : OBSTACLE_COST;
+    for(int x = x_start; x < x_end; x++)
+        for(int y = y_start; y < y_end; y++)
+            if(x >= 0 && x < AS_HEIGHT && y >= 0 && y < AS_WIDTH)
+                // ne pas écraser l'obstacle principal
+                if(costmap[x][y] != main_cost)
+                    costmap[x][y] = margin_cost;
 }
 
-int line_max_cost(astar_pos_t p1, astar_pos_t p2) {
+int line_max_cost(position_t p1, position_t p2) {
     int x0 = p1.x, y0 = p1.y;
     int x1 = p2.x, y1 = p2.y;
 
@@ -248,94 +225,52 @@ int line_max_cost(astar_pos_t p1, astar_pos_t p2) {
     return max_cost;
 }
 
-int astar_smooth_path(astar_pos_t *in_path, int in_length, astar_pos_t *out_path, int max_points) {
-    int out_len = 0;
-    int i = 0;
-
-    while (i < in_length) {
-        out_path[out_len++] = in_path[i];
-        if (out_len >= max_points) break;
-
-        int best_j = i + 1;
-
-        // Essayer d'aller aussi loin que possible sans dépasser un coût > 1
-        for (int j = in_length - 1; j > i; j--) {
-            if (line_max_cost(in_path[i], in_path[j]) <= 1) {
-                best_j = j;
-                break;
-            }
-        }
-
-        i = best_j;
+bool line_clear(position_t a, position_t b){
+    int x0=a.x, y0=a.y, x1=b.x, y1=b.y;
+    int dx=abs(x1-x0), sx=x0<x1?1:-1;
+    int dy=-abs(y1-y0), sy=y0<y1?1:-1;
+    int err=dx+dy;
+    while(true){
+        if(x0<0 || x0>=AS_HEIGHT || y0<0 || y0>=AS_WIDTH) return false;
+        if(costmap[x0][y0] >= MARGIN_COST) return false;  // <- ici, obstacle ET marge
+        if(x0==x1 && y0==y1) break;
+        int e2=2*err;
+        if(e2>=dy){ err+=dy; x0+=sx; }
+        if(e2<=dx){ err+=dx; y0+=sy; }
     }
+    return true;
+}
 
+int smooth_path(position_t *in,int in_len,position_t *out){
+    int out_len=0,i=0;
+    while(i<in_len){
+        out[out_len++]=in[i];
+        int best=i+1;
+        for(int j=in_len-1;j>i;j--)
+            if(line_clear(in[i],in[j])){ best=j; break; }
+        i=best;
+    }
     return out_len;
 }
 
-// Fonction de lissage par moyenne glissante
-int astar_smooth_path2(astar_pos_t *in_path, int in_length, position_t *out_path, int max_points, int window_size) {
-    if (!in_path || !out_path || in_length <= 0 || max_points <= 0 || window_size <= 0 || window_size > in_length) {
-        for (int i = 0; i < in_length && i < max_points; ++i) {
-            out_path[i].x = in_path[i].x;
-            out_path[i].y = in_path[i].y;
-        }
-        return in_length; // Copie directe du chemin
-        return -1; // Paramètres invalides
-    }
+void print_costmap_with_path(position_t *path, int len, position_int_t start, position_int_t goal) {
+    LOG_INFO("start : ", start.x, " / ", start.y, "goal : ", goal.x, " / " , goal.y);
+    for(int x=0; x<AS_HEIGHT; x++){
+        for(int y=0; y<AS_WIDTH; y++){
+            if(x == start.x && y == start.y) {printf(" S");continue;}
+            if(x == goal.x && y == goal.y) {printf(" G");continue;}
 
-    int half_window = window_size / 2;
-    int out_index = 0;
+            bool on_path = false;
+            for(int i=0; i<len; i++)
+                if(path[i].x == x && path[i].y == y) on_path = true;
 
-    for (int i = 0; i < in_length && out_index < max_points; ++i) {
-        int x_sum = 0, y_sum = 0, cost_sum = 0;
-        int count = 0;
-
-        // Calcul de la moyenne dans la fenêtre centrée sur i
-        for (int j = i - half_window; j <= i + half_window; ++j) {
-            if (j >= 0 && j < in_length) {
-                x_sum += in_path[j].x;
-                y_sum += in_path[j].y;
-                cost_sum += in_path[j].cost;
-                ++count;
-            }
-        }
-
-        // Moyenne entière arrondie
-        out_path[out_index].x = 1.0*x_sum / count;
-        out_path[out_index].y = 1.0*y_sum / count;
-        
-
-        ++out_index;
-    }
-
-    return out_index; // Nombre de points générés
-}
-
-
-void astar_print_costmap_with_path(astar_pos_t *path, int path_len) {
-    for (int x = 0; x < AS_HEIGHT; x++) {
-        for (int y = 0; y < AS_WIDTH; y++) {
-            bool is_path = false;
-            for (int i = 0; i < path_len; i++) {
-                if (path[i].x == x && path[i].y == y) {
-                    is_path = true;
-                    break;
-                }
-            }
-            if (is_path) {
-                printf("  X ");  // Afficher 'X' pour les points du chemin
-            } else if (costmap[x][y] == OBSTACLE_COST) {
-                printf("  # ");  // Afficher '#' pour les obstacles
-            }
-            else if (costmap[x][y] == 0) {
-                printf("  . ");  // Afficher '.' pour rien
-            } else {
-                printf("%3d ", costmap[x][y]);  // Afficher le coût sinon
-            }
+            if(on_path) printf(" X");
+            else if(costmap[x][y] == OBSTACLE_COST) printf(" #");
+            else if(costmap[x][y] == MARGIN_COST) printf(" +");
+            else printf(" .");
         }
         printf("\n");
     }
-    printf("\n");
 }
 
 json astar_get_costmap_json() {

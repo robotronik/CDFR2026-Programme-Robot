@@ -6,22 +6,35 @@ using json = nlohmann::json;
 
 class TableState
 {
-public:
+    public:
 
-    TableState();
-    ~TableState();
+        TableState();
+        ~TableState();
 
-    void reset();
-    int getScore();
-    
-    /* common data */
-    position_t pos_opponent;
-    unsigned long startTime;
+        void reset();
+        int getScore();
+        
+        /* common data */
+        position_t pos_opponent;
+        unsigned long startTime;
 
-    colorTeam_t colorTeam;
-    int strategy;
+        colorTeam_t colorTeam;
+        int strategy;
+        int calibrationAge;
 
-    /* data Winter is comming */
+        /* data Winter is comming */
+        bool avail_stocks[STOCK_COUNT];     // Is stock available
+        typedef enum
+        {
+            DROPZONE_EMPTY,
+            DROPZONE_YELLOW,
+            DROPZONE_BLUE,
+            DROPZONE_ERROR
+        } dropzone_state_t;
+
+        dropzone_state_t dropzone_states[DROPZONE_COUNT];
+        void resetCalibrationAge(){ calibrationAge = 0;}
+
 };
 
 // Serialize tableState

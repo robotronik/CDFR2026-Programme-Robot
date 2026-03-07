@@ -2,6 +2,10 @@
 
 #include <string>
 
+#define OFFSET_CAM_X 129 // Offset of the camera in mm on the x axis
+#define OFFSET_CAM_Y 0 // Offset of the camera in mm on the y axis
+#define OFFSET_CAM_A 0 // Offset angle of the camera in degrees
+
 class ArucoCam {   
 private:
     int pid;
@@ -12,6 +16,7 @@ public:
     ~ArucoCam();
     bool getPos(double & x, double & y, double & a, bool& success);
     bool getRobotPos(double & x, double & y, double & a, bool& success);
+    bool getObjectPos(double & x, double & y, double & a, bool& success);
 private:
     std::string url;
     void start();

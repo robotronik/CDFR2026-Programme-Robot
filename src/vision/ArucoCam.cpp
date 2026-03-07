@@ -14,10 +14,6 @@ using json = nlohmann::json;
 #define SCAN_FAIL_FRAMES_NUM 10
 #define SCAN_DONE_FRAMES_NUM 20
 
-#define OFFSET_CAM_X 129 // Offset of the camera in mm on the x axis
-#define OFFSET_CAM_Y 0 // Offset of the camera in mm on the y axis
-#define OFFSET_CAM_A 0 // Offset angle of the camera in degrees
-
 pid_t startPythonProgram(char** args);
 void stopPythonProgram(pid_t pid);
 bool restAPI_GET(const std::string &url, const std::string &resquest, json &response);
@@ -60,7 +56,6 @@ ArucoCam::~ArucoCam(){
         stopPythonProgram(pid);
 }
 
-
 // Returns true when done
 bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     success = false;
@@ -100,12 +95,96 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
         return false;
     }
     // Extract the values from the JSON object
-    success = true;
+    if(response.is_null()){
+        success = false;
+        return true;
+    }
     json position = response["position"];
-    x = position.value("x", 0);
-    y = position.value("y", 0);
-    a = position.value("a", 0);
+    if(!position["x"].is_null() && !position["y"].is_null() && !position["a"].is_null()){
+        x = position.value("x", 0);
+        y = position.value("y", 0);
+        a = position.value("a", 0);
+    }else{
+        success = false;
+        return true;
+    }
+    success = true;
     LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+    // Return true if the values were successfully extracted
+    stop();
+    return true;
+}
+
+// Returns the position of the robot center relative to the average position of the aruco tags detected
+// Returns true when done
+bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success) {
+    success = false;
+    if (status == false) {
+        LOG_WARNING("ArucoCam ", id, " is not running, will start it now");
+        start();
+        return false;
+    }
+
+    // LOG_DEBUG("Fetching position from ArucoCam ", id);
+    // Calls /position rest api endpoint of the ArucoCam API
+    // Returns true if the call was successful, false otherwise
+    if (id < 0) {
+        // TODO change this to return a random position
+        return true;
+    }
+    json response;
+    if (restAPI_GET(url, "/objects", response) == false) {
+        LOG_ERROR("ArucoCam::getObjectPos() - Failed to fetch position");
+        return true;
+    }
+    // Extract the values from the JSON object
+    // CALCULATE THE AVERAGE POSITION
+    int count = 0;
+    if(response.is_null()){
+        success = false;
+        return true;
+    }
+    auto& objects = response["objects"];
+
+    double m_x = 0, m_y = 0;
+    for (auto& [key, list] : objects.items()) {
+        for (auto& obj : list) {
+            
+            // On convertit vers le repère robot 
+            double a_tag_rad = obj.value("a",0.0) * M_PI / 180.0;
+            double sin_tag = sin(a_tag_rad);
+            double cos_tag = cos(a_tag_rad);
+            double x = obj.value("y", 0.0);
+            double y = obj.value("x", 0.0);
+            LOG_DEBUG("Position is x=",x* cos_tag - y * sin_tag, " y= ",x* sin_tag + y*cos_tag);
+            m_x -= x* cos_tag - y * sin_tag;
+            m_y -= x* sin_tag + y*cos_tag; 
+            count++;
+        }
+    }
+
+    if(!count){
+        success = false;
+        return true;
+    }
+    m_x = m_x / count;
+    m_y = m_y / count;
+    LOG_DEBUG("Before offset m_x = ", m_x, " m_y = ",m_y);
+    
+    // Décalage pour le centre du robot
+    m_x += OFFSET_CAM_X;// axes inversés
+    m_y += OFFSET_CAM_Y;// axes inversés
+
+    LOG_DEBUG("m_x = ", m_x, " m_y = ",m_y);
+
+    //projection dans le repère de la table:
+    double a_rad = a * M_PI / 180.0;
+    double cos_a = cos(a_rad);
+    double sin_a = sin(a_rad);
+    x -= m_x * cos_a - m_y * sin_a;
+    y -= m_x * sin_a + m_y * cos_a;
+    success = true;
+    LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted
     stop();
     return true;

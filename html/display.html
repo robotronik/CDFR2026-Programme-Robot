@@ -279,11 +279,11 @@
         }
 
         function drawCostmap(costmap) {
-            const scale = 15;
+            const scale = 50;
 
             costmap.forEach(cell => {
                 const { x, y, cost } = cell;
-                ctx.fillStyle = `rgba(255, 0, 0, ${cost / 60.0})`;
+                ctx.fillStyle = `rgba(100, 0, 0, ${cost / 300})`;
                 ctx.fillRect(145 + x * scale, 145 + y * scale, scale, scale);
             });
         }

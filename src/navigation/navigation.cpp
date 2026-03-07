@@ -16,6 +16,7 @@ static int pointAlongPathIndex = 0;
 nav_return_t navigationDrive(){
     if (currentPathLenght == 0 || pointAlongPathIndex >= currentPathLenght)
         return NAV_DONE;
+    //LOG_DEBUG("Driving to point ", pointAlongPathIndex, " / ", currentPathLenght, " at position (", currentPath[pointAlongPathIndex].x, ", ", currentPath[pointAlongPathIndex].y, ", " , currentPath[pointAlongPathIndex].a, ")");
     bool done = drive.drive(currentPath + pointAlongPathIndex, currentPathLenght - pointAlongPathIndex);
 
     if (done){
@@ -44,6 +45,7 @@ nav_return_t navigationGo(){
         if (arucoCam1.getRobotPos(robot_pos.x, robot_pos.y, robot_pos.a, cam_success)){
             if (cam_success){
                 drive.setCoordinates(robot_pos);
+                tableStatus.resetCalibrationAge();
                 LOG_GREEN_INFO("Camera calibration successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
             }
             else{
@@ -64,19 +66,21 @@ void fillCurrentPath(position_t path[], int pathLength) {
 nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
     if (useAStar){
         currentPathLenght = pathfind(drive.position, pos, currentPath);
-        if (currentPathLenght == -1){
+
+        if (currentPathLenght <= 0){
             LOG_WARNING("No path found");
-            if (!is_robot_stalled){
-                is_robot_stalled = true;
-                robot_stall_start_time = _millis();
-            }
+            return NAV_ERROR;
         }
-        else
-            LOG_WARNING("Path found!");
-        return (navigationPath(currentPath, currentPathLenght, turnEnd));
+
+        //LOG_WARNING("Path computed!");
+
+        nav_return_t ret = navigationPath(currentPath, currentPathLenght, turnEnd);
+
+        return ret;
     }
-    else 
-        return (navigationPath(&pos, 1, turnEnd));
+    else {
+        return navigationPath(&pos, 1, turnEnd);
+    }
 }
 
 nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd){

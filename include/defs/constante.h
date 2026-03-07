@@ -11,8 +11,6 @@
 
 #define ROBOT_WIDTH 400
 #define OPPONENT_ROBOT_RADIUS 250
-const int STOCK_WIDTH_MM = 100;
-const int STOCK_HEIGHT_MM = 400;
 
 // Define the nums of the arduino for the STEPPERS
 #define STEPPER_NUM_1        1
@@ -38,3 +36,72 @@ const int STOCK_HEIGHT_MM = 400;
 #define SENSOR_NUM_6         6
 #define SENSOR_NUM_7         7
 #define SENSOR_NUM_8         8
+
+#define OFFSET_STOCK 300 // Offset to be in the middle of the stock, could be changed if we want to take the stock from the top or the bottom
+#define STOCK_COUNT  8
+#define DROPZONE_COUNT 10
+#define OFFSET_DROPZONE 300 // Offset to be in the middle of the dropzone, could be tweaked
+#define CALIBRATION_DEPLETION_TIME 2 // Max time between to calibration
+// Define the dimensions of the stocks
+#define STOCKS_WIDTH 200
+#define STOCKS_LENGTH 150
+
+// Define the positions of the stocks 
+const position_t STOCK_POSITIONS_TABLE[] = {
+    position_t{.x = -200, .y = 1325, .a = 90},\
+    position_t{.x = 600, .y = 1325, .a = 90},\
+    position_t{.x = 825, .y = 400, .a = 0}, \
+    position_t{.x = 200, .y = 350, .a = 0}, \
+
+    position_t{.x = -200, .y = -1325, .a = 90}, \
+    position_t{.x = 600, .y = -1325, .a = 90}, \
+    position_t{.x = 825, .y = -400, .a = 0}, \
+    position_t{.x = 200, .y = -350, .a = 0}};
+    
+    
+// The stock table is ordered following symetry of the table, could be ordered by proximity
+
+const position_t STOCK_OFFSETS[] = {
+    { 0, OFFSET_STOCK, -90},  //0 : Offset depuis droite
+    {0, - OFFSET_STOCK, 90},  //1 : Offset depuis gauche
+    { OFFSET_STOCK,0, 180 },  //2 : Offset depuis bas
+    { - OFFSET_STOCK,0, 0},  //3 : Offset depuis haut
+}; 
+
+const int STOCK_OFFSET_MAPPING[STOCK_COUNT][2] = {
+    {1,-1}, // Stock 0 utilise les offsets 1
+    {1,-1}, // Stock 1 utilise les offsets 1
+    {3,-1}, // Stock 2 utilise les offsets 3
+    {2, 3}, // Stock 3 utilise les offsets 2 et 3
+
+    {0,-1}, // Stock 4 utilise les offsets 0
+    {0,-1}, // Stock 5 utilise les offsets 0
+    {3,-1}, // Stock 6 utilise les offsets 3
+    {2,3}, // Stock 7 utilise les offsets 2,3
+};
+
+// Define the dimensions of the Dropzone
+#define DROPZONE_WIDTH 200
+#define DROPZONE_LENGTH 200
+
+//Define the positions of the Dropzone
+const position_t DROPZONE_POSITIONS_TABLE[] = {
+    position_t{.x = 200, .y = 1400}, \
+    position_t{.x = 900, .y = 800}, \
+    position_t{.x = 200, .y = 700}, \
+    position_t{.x = -450, .y = 250}, \
+    position_t{.x = 200, .y = 0}, \
+
+    position_t{.x = 200, .y = -1400}, \
+    position_t{.x = 900, .y = -800}, \
+    position_t{.x = 200, .y = -700}, \
+    position_t{.x = -450, .y = -250}, \
+    position_t{.x = 900, .y = 0}}; \
+    // The dropzone table is ordered following symetry of the table, could be ordered by proximity
+
+
+const position_t ARUCO_POSITIONS_TABLE[] = {
+    position_t{.x = -400, .y = -900, .a = 0}, \
+    position_t{.x = -400, .y = 900, .a = 0}, \
+    position_t{.x = 400, .y = -900, .a = 0}, \
+    position_t{.x = 400, .y = 900, .a = 0}};
