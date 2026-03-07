@@ -145,41 +145,44 @@ bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success) {
         return true;
     }
     auto& objects = response["objects"];
-    float m_x = 0, m_y = 0, m_a = 0;
+
+    double m_x = 0, m_y = 0;
     for (auto& [key, list] : objects.items()) {
         for (auto& obj : list) {
-            if(obj["x"].is_null() || obj["y"].is_null() || obj["a"].is_null()){
-                success = false;
-                return true;
-            }else{
-                m_y -= obj.value("x",0);
-                m_x += obj.value("y",0);
-                m_a += obj.value("a",0);
-                count++;
-            }
+            
+            // On convertit vers le repère robot 
+            double a_tag_rad = obj.value("a",0.0) * M_PI / 180.0;
+            double sin_tag = sin(a_tag_rad);
+            double cos_tag = cos(a_tag_rad);
+            double x = obj.value("y", 0.0);
+            double y = obj.value("x", 0.0);
+            LOG_DEBUG("Position is x=",x* cos_tag - y * sin_tag, " y= ",x* sin_tag + y*cos_tag);
+            m_x -= x* cos_tag - y * sin_tag;
+            m_y -= x* sin_tag + y*cos_tag; 
+            count++;
         }
     }
-    m_x /= count;
-    m_y /= count;
-    m_a /= count;
+
+    if(!count){
+        success = false;
+        return true;
+    }
+    m_x = m_x / count;
+    m_y = m_y / count;
+    LOG_DEBUG("Before offset m_x = ", m_x, " m_y = ",m_y);
     
     // Décalage pour le centre du robot
-    m_x -= OFFSET_CAM_X;// axes inversés
+    m_x += OFFSET_CAM_X;// axes inversés
     m_y += OFFSET_CAM_Y;// axes inversés
-    m_a += OFFSET_CAM_A;
 
     LOG_DEBUG("m_x = ", m_x, " m_y = ",m_y);
-    //projection sur les axes:
+
+    //projection dans le repère de la table:
     double a_rad = a * M_PI / 180.0;
     double cos_a = cos(a_rad);
     double sin_a = sin(a_rad);
     x -= m_x * cos_a - m_y * sin_a;
     y -= m_x * sin_a + m_y * cos_a;
-    a += OFFSET_CAM_A;
-
-    // Normalize angle to ]-180;180]
-    if (a > 180.0) a -= 360.0;
-    else if (a <= -180.0) a += 360.0;
     success = true;
     LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted
