@@ -18,6 +18,7 @@ bool lowerClaws();
 bool raiseClaws();
 bool rotateTwoBlocks();
 bool dropBlock();
+bool flipOneBlock();
 
 // Related to stock management
 int GetBestDropZone(position_t fromPos);
@@ -36,6 +37,8 @@ bool snapClaws(bool closed, bool small);
 bool resetSpinClaws();
 bool spinAllClaws();
 bool spinClaws(bool spin1, bool spin2, bool spin3, bool spin4);
+bool moveServoAndWait(int servo, int target, int speed);
+
 
 // Stepper Control
 bool moveColumnsElevator(int level); // Example

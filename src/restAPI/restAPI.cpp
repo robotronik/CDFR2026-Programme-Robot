@@ -570,6 +570,7 @@ void StartAPIServer(){
         else if (req_value == "lowerClaws")       manual_currentFunc = lowerClaws;
         else if (req_value == "raiseClaws")       manual_currentFunc = raiseClaws;
         else if (req_value == "rotateTwoBlocks")  manual_currentFunc = rotateTwoBlocks;
+        else if (req_value == "flipOneBlock")  manual_currentFunc = flipOneBlock;
         else {
             json response;
             response["message"] = "Invalid action requested";
