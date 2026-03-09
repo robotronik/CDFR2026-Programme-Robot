@@ -17,8 +17,7 @@ ActionFSM::~ActionFSM(){}
 
 
 void ActionFSM::Reset(){
-    runState = FSM_ACTION_NAV_HOME;
-    SetBestAction(drive.position);
+    runState = FSM_ACTION_CALIBRATION;
 
     /****** RESET OF FSM STATES *******/
     gatherStockState = FSM_GATHER_NAV;
@@ -166,7 +165,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             if(arucoCam1.getObjectInfoColors(stockOrder,x,y,a,sucess)){
                 if(sucess){
                     LOG_DEBUG("Detection sucess calibration on blocks");
-                    targetStockPos = position_t{x + int(stockOff.x * 0.66) + 15, y + int(stockOff.y * 0.66), angle};
+                    targetStockPos = position_t{x + int(stockOff.x * 0.66), y + int(stockOff.y * 0.66), angle};
                 }else{
                     //TODO handle error
                     LOG_DEBUG("Detection failed calibration on map");
@@ -347,7 +346,7 @@ void ActionFSM::SetBestAction(position_t position){
     }else if(tableStatus.calibrationAge >= CALIBRATION_DEPLETION_TIME){
         runState = FSM_ACTION_CALIBRATION;
         LOG_INFO("Calibration aged is greater than 2 going for forced calibration");
-        return; // TODO Etienne - Test si le bloquage du robot lors de la calibration forcée était lié à l'absence de return
+        return;
     }
     if((!cursorIsDone()) && (position_distance(position, CursorPos) < 300 || stock_num == 1)){ // If we are close to the cursor position or if we are at stock 
         LOG_INFO("In cursor area");
@@ -362,7 +361,7 @@ void ActionFSM::SetBestAction(position_t position){
         LOG_INFO("Best action for position (", position.x, ", ", position.y, ") is to drop a stock, going to FSM_ACTION_DROP");
         return;
     }
-    if(runState == FSM_ACTION_DROP || runState == FSM_ACTION_CURSOR || runState == FSM_ACTION_NAV_HOME || runState == FSM_ACTION_CALIBRATION){
+    if(runState == FSM_ACTION_DROP || runState == FSM_ACTION_CURSOR || runState == FSM_ACTION_CALIBRATION){
         runState = FSM_ACTION_GATHER;
         LOG_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
         return;
@@ -376,20 +375,20 @@ ReturnFSM_t ActionFSM::Calibrate(){
     
     nav_return_t nav_ret;
     static unsigned long start_time;
-    static position_t target_;
+    static position_t Calibrationtarget_;
     static position_t arucoPos;
 
     switch (calibrationState){
         case FSM_CALCULATION:
-            arucoPos = calculateClosestArucoPosition(drive.position, target_);
+            arucoPos = calculateClosestArucoPosition(drive.position, Calibrationtarget_);
             calibrationState = FSM_CALIBRATION_NAV;
             LOG_DEBUG("Calibrating, closest aruco marker is at (", arucoPos.x, ", ", arucoPos.y, ", ", arucoPos.a, ")");
-            LOG_DEBUG("Calibrating, going to (", target_.x, ", ", target_.y, ", ", target_.a, ")");
+            LOG_DEBUG("Calibrating, going to (", Calibrationtarget_.x, ", ", Calibrationtarget_.y, ", ", Calibrationtarget_.a, ")");
             break;
         case FSM_CALIBRATION_NAV:
             {
             // Look towards the closest aruco marker by only spinning in place
-            nav_ret = navigationGoTo(target_, true);
+            nav_ret = navigationGoTo(Calibrationtarget_, true);
             if (nav_ret == NAV_DONE){
                 calibrationState = FSM_CALIBRATION_RAISE;
                 LOG_INFO("Nav done for FSM_CALIBRATION_NAV, going to FSM_CALIBRATION_RAISE");
@@ -421,6 +420,7 @@ ReturnFSM_t ActionFSM::Calibrate(){
                     LOG_INFO("Calibrating for FSM_CALIBRATION_CALIBRATE");
                 }
                 else{
+                    calibrationState = FSM_CALCULATION;
                     LOG_WARNING("Camera did not have a good position estimate, skipping calibration");
                 }
                 return FSM_RETURN_DONE;

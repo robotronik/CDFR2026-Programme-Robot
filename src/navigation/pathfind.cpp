@@ -58,7 +58,7 @@ int pathfind(position_t start, position_t goal, position_t path[]) {
 
 void pathfind_setup() {
     astar_initialize_costmap();
-    int RayonRobot=150;
+    int RayonRobot=200;
 
     // ===== DROP ZONES =====
     place_obstacle_with_margin( 200,  1400, 200, 200, RayonRobot);
