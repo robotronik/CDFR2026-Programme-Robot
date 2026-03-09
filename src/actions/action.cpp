@@ -165,7 +165,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
                     LOG_DEBUG("Théorie: x= ",stockPos.x," y= ",stockPos.y);
                     LOG_DEBUG("Detect average stock position at x=",x," y=",y);
 
-                    target_ = position_t{x , y , angle}; //TODO douteux
+                    target_ = position_t{x + int(stockOff.x * 0.66) + 15, y + int(stockOff.y * 0.66), angle}; //TODO Etienne - douteux ne devrait pas aller sur le stock
                 }else{
                     LOG_DEBUG("Detection failed calibration on map");
                     target_ = position_t{stockPos.x + int(stockOff.x * 0.66), stockPos.y + int(stockOff.y * 0.66), angle};
@@ -338,8 +338,9 @@ ReturnFSM_t ActionFSM::Cursor(){
 }
 
 void ActionFSM::SetBestAction(position_t position){
-    position_t targetPos = {625, 1220, 45};
-    if (tableStatus.colorTeam == YELLOW) position_robot_flip(targetPos);
+    // TODO Etienne - refacto de cette fonction en switch case pour lisibilité
+    position_t CursorPos = {625, 1220, 45};
+    if (tableStatus.colorTeam == YELLOW) position_robot_flip(CursorPos);
 
     if(_millis() > tableStatus.startTime + 95000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
         LOG_INFO("95 seconds passed, switching to NAV_HOME");
@@ -348,8 +349,9 @@ void ActionFSM::SetBestAction(position_t position){
     }else if(tableStatus.calibrationAge >= CALIBRATION_DEPLETION_TIME){
         runState = FSM_ACTION_CALIBRATION;
         LOG_INFO("Calibration aged is greater than 2 going for forced calibration");
+        return; // TODO Etienne - Test si le bloquage du robot lors de la calibration forcée était lié à l'absence de return
     }
-    if((!cursorIsDone()) && (position_distance(position, targetPos) < 300 || stock_num == 1)){ // If we are close to the cursor position or if we are at stock 
+    if((!cursorIsDone()) && (position_distance(position, CursorPos) < 300 || stock_num == 1)){ // If we are close to the cursor position or if we are at stock 
         LOG_INFO("In cursor area");
         setCursorIsDone(true);
         runState = FSM_ACTION_CURSOR;
@@ -370,6 +372,10 @@ void ActionFSM::SetBestAction(position_t position){
 }
    
 ReturnFSM_t ActionFSM::Calibrate(){
+    //TODO Etienne - Le robot se déplace sur le tag aruco au lieu de s'en éloigner lorsqu'il est trop proche du tag
+    // maybe bug dans calculateClosestArucoPosition sens du vecteur
+    // ajout de log à tester
+    
     nav_return_t nav_ret;
     static unsigned long start_time;
     static position_t target_;
@@ -380,14 +386,15 @@ ReturnFSM_t ActionFSM::Calibrate(){
             arucoPos = calculateClosestArucoPosition(drive.position, target_);
             calibrationState = FSM_CALIBRATION_NAV;
             LOG_DEBUG("Calibrating, closest aruco marker is at (", arucoPos.x, ", ", arucoPos.y, ", ", arucoPos.a, ")");
+            LOG_DEBUG("Calibrating, going to (", target_.x, ", ", target_.y, ", ", target_.a, ")");
             break;
         case FSM_CALIBRATION_NAV:
             {
             // Look towards the closest aruco marker by only spinning in place
             nav_ret = navigationGoTo(target_, true);
             if (nav_ret == NAV_DONE){
-                calibrationState = FSM_CALIBRATION_CALIBRATE;
-                LOG_INFO("Nav done for FSM_CALIBRATION_NAV, going to FSM_CALIBRATION_CALIBRATE");
+                calibrationState = FSM_CALIBRATION_RAISE;
+                LOG_INFO("Nav done for FSM_CALIBRATION_NAV, going to FSM_CALIBRATION_RAISE");
                 start_time = _millis();
             }
             else if (nav_ret == NAV_ERROR){

@@ -6,9 +6,6 @@
 #include "utils/httplib.h"
 #include "vision/ArucoCam.hpp"
 #include "utils/logger.hpp"
-#include "utils/json.hpp" // For handling JSON
-
-using json = nlohmann::json;
 
 #define PORT_OFFSET 5000
 #define SCAN_FAIL_FRAMES_NUM 10
@@ -115,10 +112,8 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     return true;
 }
 
-// Returns the position of the robot center relative to the average position of the aruco tags detected
-// Returns true when done
-bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success) {
-    success = false;
+bool ArucoCam::getObjectData(json& objects, bool& sucess){
+    sucess = false;
     if (status == false) {
         LOG_WARNING("ArucoCam ", id, " is not running, will start it now");
         start();
@@ -138,27 +133,51 @@ bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success) {
         return true;
     }
     // Extract the values from the JSON object
-    // CALCULATE THE AVERAGE POSITION
-    int count = 0;
     if(response.is_null()){
-        success = false;
         return true;
     }
-    auto& objects = response["objects"];
+    sucess = true;
+    objects = response;
+    return true;
+}
 
-    double m_x = 0, m_y = 0;
+//return the order of the color in the stock in binary form
+// 0110 meaning Yellow Blue Blue Yellow
+bool ArucoCam::getObjectColor(uint8_t& order, bool& success){
+    json data;
+    bool data_success;
+    success = false;
+    if(getObjectData(data, data_success)){
+        if(!data_success){
+            success = false;
+            return true;
+        }
+    }else{
+        return false;
+    }
+    return ToObjectColor(data, order, success);
+
+}
+
+bool ArucoCam::ToObjectColor(json& data, uint8_t& order, bool& success){
+    int count = 0;
+    auto& objects = data["objects"];
+
     for (auto& [key, list] : objects.items()) {
         for (auto& obj : list) {
+            double r_x = 0, r_y = 0;
             
             // On convertit vers le repère robot 
             double a_tag_rad = obj.value("a",0.0) * M_PI / 180.0;
             double sin_tag = sin(a_tag_rad);
             double cos_tag = cos(a_tag_rad);
-            double x = obj.value("y", 0.0);
+            double x = obj.value("y", 0.0); // TODO Etienne - Tester si l'inversion des axes est bien la solution 
             double y = obj.value("x", 0.0);
-            LOG_DEBUG("Position is x=",x* cos_tag - y * sin_tag, " y= ",x* sin_tag + y*cos_tag);
-            m_x -= x* cos_tag - y * sin_tag;
-            m_y -= x* sin_tag + y*cos_tag; 
+            LOG_DEBUG("Position is x=",x* cos_tag - y * sin_tag, " y= ",x* sin_tag + y*cos_tag, " Color is ", obj.value("label",""));
+            r_x = x* cos_tag - y * sin_tag;
+            r_y = x* sin_tag + y*cos_tag; 
+            //TODO Etienne - Trier l'odre des blocks
+            // puis faire la fonction qui fait couleur et position en même temps
             count++;
         }
     }
@@ -167,20 +186,52 @@ bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success) {
         success = false;
         return true;
     }
+}
+
+// Returns the position of the average position of the aruco tags detected on the table
+// Returns true when done
+bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool& success) {
+    
+    int count = 0;
+    auto& objects = data["objects"];
+    double m_x = 0, m_y = 0;
+
+    for (auto& [key, list] : objects.items()) {
+        for (auto& obj : list) {
+            
+            // On convertit vers le repère robot 
+            double a_tag_rad = obj.value("a",0.0) * M_PI / 180.0;
+            double sin_tag = sin(a_tag_rad);
+            double cos_tag = cos(a_tag_rad);
+            double x = obj.value("x", 0.0);
+            double y = obj.value("y", 0.0);
+            LOG_DEBUG("Position is x=",x* cos_tag - y * sin_tag, " y= ",x* sin_tag + y*cos_tag);
+            m_x += x* cos_tag - y * sin_tag;
+            m_y += x* sin_tag + y*cos_tag; 
+            count++;
+        }
+    }
+
+    if(!count){
+        success = false;
+        return true;
+    }
+
     m_x = m_x / count;
     m_y = m_y / count;
     LOG_DEBUG("Before offset m_x = ", m_x, " m_y = ",m_y);
     
     // Décalage pour le centre du robot
-    m_x += OFFSET_CAM_X;// axes inversés
-    m_y += OFFSET_CAM_Y;// axes inversés
+    m_x += OFFSET_CAM_X;
+    m_y += OFFSET_CAM_Y;
 
-    LOG_DEBUG("m_x = ", m_x, " m_y = ",m_y);
+    LOG_DEBUG("After offset m_x = ", m_x, " m_y = ",m_y);
 
     //projection dans le repère de la table:
-    double a_rad = a * M_PI / 180.0;
+    double a_rad = (-1*a) * M_PI / 180.0;
     double cos_a = cos(a_rad);
     double sin_a = sin(a_rad);
+    LOG_DEBUG("Décalage en x = ", m_x * cos_a - m_y * sin_a, " décalage en y ", m_x * sin_a + m_y * cos_a);
     x -= m_x * cos_a - m_y * sin_a;
     y -= m_x * sin_a + m_y * cos_a;
     success = true;
@@ -188,6 +239,22 @@ bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success) {
     // Return true if the values were successfully extracted
     stop();
     return true;
+}
+
+bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success){
+    json data;
+    bool data_success;
+    success = false;
+    if(getObjectData(data, data_success)){
+        if(!data_success){
+            success = false;
+            return true;
+        }
+    }else{
+        return false;
+    }
+
+    return ToObjectPos(data, x, y, a, success);
 }
 
 void ArucoCam::start() {

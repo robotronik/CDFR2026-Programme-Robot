@@ -84,9 +84,9 @@ class ActionFSM{
         typedef enum
         {   
             FSM_CALCULATION,
+            FSM_CALIBRATION_RAISE,
             FSM_CALIBRATION_NAV,
-            FSM_CALIBRATION_CALIBRATE,
-            FSM_CALIBRATION_RAISE
+            FSM_CALIBRATION_CALIBRATE
         } StateCalibration_t;
         StateCalibration_t calibrationState = FSM_CALCULATION;
 
