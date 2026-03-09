@@ -374,7 +374,6 @@ ReturnFSM_t ActionFSM::Calibrate(){
     // ajout de log à tester
     
     nav_return_t nav_ret;
-    static unsigned long start_time;
     static position_t Calibrationtarget_;
     static position_t arucoPos;
 
@@ -392,7 +391,6 @@ ReturnFSM_t ActionFSM::Calibrate(){
             if (nav_ret == NAV_DONE){
                 calibrationState = FSM_CALCULATION;
                 LOG_INFO("Nav done for FSM_CALIBRATION_NAV, going to FSM_CALIBRATION_RAISE");
-                start_time = _millis();
                 return FSM_RETURN_DONE;
             }
             else if (nav_ret == NAV_ERROR){
