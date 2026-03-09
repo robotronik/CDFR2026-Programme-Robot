@@ -31,6 +31,9 @@ void ActionFSM::Reset(){
     dropzone_num = 0;
     stock_num = -1;
     offset = 0;
+    targetStockPos = position_t{0,0,0};
+    dropzonePos = position_t{0,0,0};
+    stockOrder[0] = false; stockOrder[1]=false; stockOrder[2]=false; stockOrder[3]=false;
     setCursorIsDone(false);
     
     // TODO reset other states (num,offset, etc.)
@@ -131,7 +134,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
 
     position_t stockPos = STOCK_POSITIONS_TABLE[stock_num];
     position_t stockOff = STOCK_OFFSETS[offset];
-    static position_t target_;
+
     double angle = RAD_TO_DEG*  position_angle(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a} , stockPos);
 
     switch (gatherStockState){
@@ -156,27 +159,21 @@ ReturnFSM_t ActionFSM::TakeStock(){
             double y = drive.position.y;
             double a = drive.position.a;
             bool sucess = false;
-            LOG_DEBUG("Going for getObjectPos");
-            LOG_DEBUG("Pos robot: x= ",x," y= ",y);
 
-            if(arucoCam1.getObjectPos(x,y,a,sucess)){
+            if(arucoCam1.getObjectInfoColors(stockOrder,x,y,a,sucess)){
                 if(sucess){
                     LOG_DEBUG("Detection sucess calibration on blocks");
-                    LOG_DEBUG("Théorie: x= ",stockPos.x," y= ",stockPos.y);
-                    LOG_DEBUG("Detect average stock position at x=",x," y=",y);
-
-                    target_ = position_t{x + int(stockOff.x * 0.66) + 15, y + int(stockOff.y * 0.66), angle}; //TODO Etienne - douteux ne devrait pas aller sur le stock
+                    targetStockPos = position_t{x + int(stockOff.x * 0.66) + 15, y + int(stockOff.y * 0.66), angle};
                 }else{
+                    //TODO handle error
                     LOG_DEBUG("Detection failed calibration on map");
-                    target_ = position_t{stockPos.x + int(stockOff.x * 0.66), stockPos.y + int(stockOff.y * 0.66), angle};
+                    targetStockPos = position_t{stockPos.x + int(stockOff.x * 0.66), stockPos.y + int(stockOff.y * 0.66), angle};
                 }
-                LOG_DEBUG("Going to target position { x=",target_.x," y=",target_.y," a=",target_.a,"}");
                 gatherStockState = FSM_GATHER_CLAWS;
             }
             }
             break;
         case FSM_GATHER_CLAWS:
-            //LOG_INFO("Nov Done to stock ", stock_num, "lowering claws");
             if (snapClaws(false,false) & lowerClaws()){
                 LOG_INFO("Claws lowered for stock ", stock_num);
                 gatherStockState = FSM_GATHER_MOVE;
@@ -186,7 +183,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_MOVE:
             {
             
-            nav_ret = navigationGoTo(target_, true);
+            nav_ret = navigationGoTo(targetStockPos, true);
             //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
             if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_COLLECT;
@@ -196,7 +193,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             break;
         case FSM_GATHER_COLLECT:
             // Collect the stock
-            if (rotateTwoBlocks()){ // TODO fermer claw puis partir sans attendre fin rotateTwoBlocks (timer)
+            if (rotateTwoBlocks(stockOrder)){ // TODO fermer claw puis partir sans attendre fin rotateTwoBlocks (timer)
                 LOG_INFO("Stock", stock_num, " collected");
                 setStockAsRemoved(stock_num);
                 gatherStockState = FSM_GATHER_COLLECTED;

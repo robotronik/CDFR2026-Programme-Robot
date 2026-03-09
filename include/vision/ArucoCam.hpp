@@ -1,6 +1,7 @@
 #pragma once
 #include "utils/json.hpp" // For handling JSON
 #include <string>
+
 using json = nlohmann::json;
 
 #define OFFSET_CAM_X 129 // Offset of the camera in mm on the x axis
@@ -20,10 +21,11 @@ public:
     bool getObjectData(json& objects, bool& sucess);
 
     bool ToObjectPos(json& data, double & x, double & y, double & a, bool& success);
-    bool ToObjectColor(json& data, uint8_t& order, bool& success);
+    bool ToObjectColor(json& data, bool* order, bool& success);
 
-    bool getObjectColor(uint8_t& order, bool& success);
+    bool getObjectColor(bool* order, bool& success);
     bool getObjectPos(double & x, double & y, double & a, bool& success);
+    bool getObjectInfoColors(bool* order, double & x, double & y, double & a, bool& success);
 private:
     std::string url;
     void start();

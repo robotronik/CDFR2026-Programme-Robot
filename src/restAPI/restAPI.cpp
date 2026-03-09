@@ -569,7 +569,7 @@ void StartAPIServer(){
         else if (req_value == "dropBlock")     manual_currentFunc = dropBlock;
         else if (req_value == "lowerClaws")       manual_currentFunc = lowerClaws;
         else if (req_value == "raiseClaws")       manual_currentFunc = raiseClaws;
-        else if (req_value == "rotateTwoBlocks")  manual_currentFunc = rotateTwoBlocks;
+        else if (req_value == "rotateTwoBlocks")  manual_currentFunc = rotateTwoBlocksDefault;
         else {
             json response;
             response["message"] = "Invalid action requested";

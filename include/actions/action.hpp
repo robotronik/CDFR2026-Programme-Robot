@@ -30,6 +30,8 @@ class ActionFSM{
 
         nav_return_t nav_ret;
         position_t dropzonePos;
+        position_t targetStockPos;
+        bool stockOrder[4];
 
         ReturnFSM_t TakeStock();
         ReturnFSM_t DropStock();

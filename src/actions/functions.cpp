@@ -57,14 +57,16 @@ bool raiseClaws(){
     return false;
 }
 
+bool rotateTwoBlocksDefault(){
+    bool order[4]{false,true,true,false};
+    return rotateTwoBlocks(order);
+}
 
-bool rotateTwoBlocks(){
+bool rotateTwoBlocks(bool *order){
     static int state = 1;
-    static int choice;
     switch (state){
         case 1 :
             if (closeClaws()){
-                choice = rand() % 6;
                 state++;
             }
             break;
@@ -73,13 +75,26 @@ bool rotateTwoBlocks(){
                 state++;
             break;
         case 3:
-            switch(choice){
-                case 0: if (spinClaws(true,  true,  false, false)) state++; break;
-                case 1: if (spinClaws(true,  false, true,  false)) state++; break;
-                case 2: if (spinClaws(true,  false, false, true )) state++; break;
-                case 3: if (spinClaws(false, true,  true,  false)) state++; break;
-                case 4: if (spinClaws(false, true,  false, true )) state++; break;
-                case 5: if (spinClaws(false, false, true,  true )) state++; break;
+            if(tableStatus.colorTeam == colorTeam_t::BLUE){
+                if(order[0] || order[1] || order[2] || order[3]){
+                    spinClaws(order[0],  order[1],  order[2], order[3]);
+                    state ++;
+                    break;
+                }else{
+                    spinClaws(false, false, false, false);
+                    state ++;
+                    break;
+                }
+            }else{
+                if(order[0] || order[1] || order[2] || order[3]){
+                    spinClaws(!order[0],  !order[1],  !order[2], !order[3]);
+                    state ++;
+                    break;
+                }else{
+                    spinClaws(false, false, false, false);
+                    state ++;
+                    break;
+                }
             }
             break;
         case 4:

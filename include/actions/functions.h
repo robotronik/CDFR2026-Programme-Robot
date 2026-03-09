@@ -16,7 +16,8 @@ void switchStrategy(int strategy);
 // Basic functions (FSM)
 bool lowerClaws();
 bool raiseClaws();
-bool rotateTwoBlocks();
+bool rotateTwoBlocks(bool *order);
+bool rotateTwoBlocksDefault();
 bool dropBlock();
 
 // Related to stock management
