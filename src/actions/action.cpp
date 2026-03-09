@@ -33,6 +33,9 @@ void ActionFSM::Reset(){
     offset = 0;
     targetStockPos = position_t{0,0,0};
     dropzonePos = position_t{0,0,0};
+    CursorPos = {625, 1220, 45};
+    if (tableStatus.colorTeam == YELLOW) position_robot_flip(CursorPos);
+
     stockOrder[0] = false; stockOrder[1]=false; stockOrder[2]=false; stockOrder[3]=false;
     setCursorIsDone(false);
     
@@ -336,8 +339,6 @@ ReturnFSM_t ActionFSM::Cursor(){
 
 void ActionFSM::SetBestAction(position_t position){
     // TODO Etienne - refacto de cette fonction en switch case pour lisibilité
-    position_t CursorPos = {625, 1220, 45};
-    if (tableStatus.colorTeam == YELLOW) position_robot_flip(CursorPos);
 
     if(_millis() > tableStatus.startTime + 95000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
         LOG_INFO("95 seconds passed, switching to NAV_HOME");
