@@ -77,7 +77,7 @@ bool rotateTwoBlocks(bool *order){
         case 3:
             if(tableStatus.colorTeam == colorTeam_t::BLUE){
                 if(order[0] || order[1] || order[2] || order[3]){
-                    spinClaws(!order[0],  !order[1],  !order[2], !order[3]);
+                    spinClaws(!order[3],  !order[2],  !order[1], !order[0]);
                     state ++;
                     break;
                 }else{
@@ -87,7 +87,7 @@ bool rotateTwoBlocks(bool *order){
                 }
             }else{
                 if(order[0] || order[1] || order[2] || order[3]){
-                    spinClaws(order[0],  order[1],  order[2], order[3]);
+                    spinClaws(order[3],  order[2],  order[1], order[0]);
                     state ++;
                     break;
                 }else{
