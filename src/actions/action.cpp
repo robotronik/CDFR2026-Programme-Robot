@@ -381,7 +381,7 @@ ReturnFSM_t ActionFSM::Calibrate(){
     switch (calibrationState){
         case FSM_CALCULATION:
             arucoPos = calculateClosestArucoPosition(drive.position, Calibrationtarget_);
-            calibrationState = FSM_CALIBRATION_NAV;
+            calibrationState = FSM_CALIBRATION_RAISE;
             LOG_DEBUG("Calibrating, closest aruco marker is at (", arucoPos.x, ", ", arucoPos.y, ", ", arucoPos.a, ")");
             LOG_DEBUG("Calibrating, going to (", Calibrationtarget_.x, ", ", Calibrationtarget_.y, ", ", Calibrationtarget_.a, ")");
             break;
@@ -390,9 +390,10 @@ ReturnFSM_t ActionFSM::Calibrate(){
             // Look towards the closest aruco marker by only spinning in place
             nav_ret = navigationGoTo(Calibrationtarget_, true);
             if (nav_ret == NAV_DONE){
-                calibrationState = FSM_CALIBRATION_RAISE;
+                calibrationState = FSM_CALCULATION;
                 LOG_INFO("Nav done for FSM_CALIBRATION_NAV, going to FSM_CALIBRATION_RAISE");
                 start_time = _millis();
+                return FSM_RETURN_DONE;
             }
             else if (nav_ret == NAV_ERROR){
                 return FSM_RETURN_ERROR;
@@ -402,28 +403,7 @@ ReturnFSM_t ActionFSM::Calibrate(){
         case FSM_CALIBRATION_RAISE:
             if(raiseClaws()){
                 LOG_DEBUG("Raised claws for vision");
-                calibrationState = FSM_CALIBRATION_CALIBRATE;
-            }
-            break;
-        case FSM_CALIBRATION_CALIBRATE:
-            // Calibrate
-            if (_millis() > start_time + 1000){ // Timeout after 1s
-                LOG_ERROR("Calibration timeout");
-                return FSM_RETURN_ERROR;
-            }
-            position_t pos_;
-            bool cam_success;
-            if (arucoCam1.getRobotPos(pos_.x, pos_.y, pos_.a, cam_success)){
-                if (cam_success){
-                    drive.setCoordinates(pos_);
-                    calibrationState = FSM_CALCULATION;
-                    LOG_INFO("Calibrating for FSM_CALIBRATION_CALIBRATE");
-                }
-                else{
-                    calibrationState = FSM_CALCULATION;
-                    LOG_WARNING("Camera did not have a good position estimate, skipping calibration");
-                }
-                return FSM_RETURN_DONE;
+                calibrationState = FSM_CALIBRATION_NAV;
             }
             break;
     }
