@@ -175,6 +175,8 @@ logger* log_asserv();
 #define LOG_INFO(message, ...)           SimpleLogger::log((logger*)log_main(),true,false,true,{}                      , LogLevel::INFO, "INFO"   , __FILE__, __LINE__, message, ##__VA_ARGS__)
 #define LOG_WARNING(message, ...)        SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::YELLOW), LogLevel::WARNING, "WARNING", __FILE__, __LINE__, message, ##__VA_ARGS__)
 #define LOG_ERROR(message, ...)          SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::RED)   , LogLevel::ERROR, "ERROR"  , __FILE__, __LINE__, message, ##__VA_ARGS__)
+#define LOG_GREEN_INFO(message, ...)     SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::GREEN)  , LogLevel::INFO, "INFO"   , __FILE__, __LINE__, message, ##__VA_ARGS__)
+
 
 #define LOG_ASSERV_SET_INFO(message, ...) SimpleLogger::log((logger*)log_asserv(),true,true,false,AnsiStyle(Color::GREEN), LogLevel::I2C, "I2C", __FILE__, __LINE__, message, ##__VA_ARGS__)
 #define LOG_ASSERV_GET_INFO(message, ...) SimpleLogger::log((logger*)log_asserv(),true,false,false,AnsiStyle(Color::GREEN), LogLevel::I2C, "I2C", __FILE__, __LINE__, message, ##__VA_ARGS__)
