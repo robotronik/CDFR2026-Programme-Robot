@@ -85,7 +85,7 @@ struct AnsiStyle {
 class logger
 {
 private:
-    LogLevel currentLevel = LogLevel::DEBUG;
+    LogLevel currentLevel = LogLevel::DEBUG; // Change HERE for different level of log
     bool stdOutInitValid;
     static int globalLogNum;
     bool logEnable = true;
