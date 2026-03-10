@@ -145,9 +145,11 @@ ReturnFSM_t ActionFSM::TakeStock(){
             {
             position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
             nav_ret = navigationGoTo(targetPos, true); // Enabeling A*
-            if (snapClaws(false,false) & (nav_ret == NAV_DONE)){
+            if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to stock now searching for blocks");
                 gatherStockState = FSM_GATHER_DETECT;
+            }else if(nav_ret == NAV_IN_PROCESS){
+                snapClaws(false,false);
             }
             else if (nav_ret == NAV_ERROR){
                 LOG_WARNING("FSM_GATHER_NAV: Navigation error while going to stock ", stock_num);
