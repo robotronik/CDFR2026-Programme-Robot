@@ -35,7 +35,7 @@ nav_return_t navigationGo(){
     if (driving){
         nav_return_t result = navigationDrive();
         if (result == NAV_DONE){
-            LOG_INFO("Navigation drive completed");
+            LOG_EXTENDED_DEBUG("Navigation drive completed");
             driving = false;
         }
     } else {
@@ -46,10 +46,10 @@ nav_return_t navigationGo(){
             if (cam_success){
                 drive.setCoordinates(robot_pos);
                 tableStatus.resetCalibrationAge();
-                LOG_GREEN_INFO("Camera calibration successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
+                LOG_GREEN_INFO("Camera calibration during move successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
             }
             else{
-                LOG_WARNING("Camera did not have a good position estimate, skipping calibration");
+                LOG_EXTENDED_DEBUG("Camera did not have a good position estimate, skipping calibration");
             }
             driving = true;
             return NAV_DONE;
@@ -125,9 +125,9 @@ void navigationOpponentDetection(){
         // Check if the opponent is in the way
         isEndangered = opponent_collide_lidar(lidar.data, lidar.count, 300, brakingDistance, OPPONENT_ROBOT_RADIUS);
         if (isEndangered)
-            LOG_INFO("Opponent is in the way");
+            LOG_WARNING("Opponent is in the way");
         else
-            LOG_DEBUG("No opponent in the way");
+            LOG_EXTENDED_DEBUG("No opponent in the way");
     }
     // stop the robot if it is endangered
     if (isEndangered && !is_robot_stalled){

@@ -348,12 +348,12 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos){
 
 void setStockAsRemoved(int num){
     tableStatus.avail_stocks[num] = false;
-    LOG_INFO("Removed stock ", num);
+    LOG_EXTENDED_DEBUG("Removed stock ", num);
 }
 
 void setDropzoneState(int dropzoneNum, TableState::dropzone_state_t state){
     tableStatus.dropzone_states[dropzoneNum] = state;
-    LOG_INFO("Set dropzone ", dropzoneNum, " state to ", state);
+    LOG_EXTENDED_DEBUG("Set dropzone ", dropzoneNum, " state to ", state);
 }
 
 void setDropzoneAsError(int dropzoneNum){

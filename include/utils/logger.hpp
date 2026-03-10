@@ -155,6 +155,7 @@ logger* log_asserv();
 
 // Convenience macros that automatically pass the calling function's name.
 #define LOG_DEBUG(message, ...)      SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::GRAY)  ,"DEBUG"  , __FILE__, __LINE__, message, ##__VA_ARGS__)
+#define LOG_EXTENDED_DEBUG(message, ...)      SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::GRAY)  ,"EXTENDED_DEBUG"  , __FILE__, __LINE__, message, ##__VA_ARGS__)
 #define LOG_INFO(message, ...)       SimpleLogger::log((logger*)log_main(),true,false,true,{}                      ,"INFO"   , __FILE__, __LINE__, message, ##__VA_ARGS__)
 #define LOG_WARNING(message, ...)    SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::YELLOW),"WARNING", __FILE__, __LINE__, message, ##__VA_ARGS__)
 #define LOG_ERROR(message, ...)      SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::RED)   ,"ERROR"  , __FILE__, __LINE__, message, ##__VA_ARGS__)

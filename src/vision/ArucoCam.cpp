@@ -58,7 +58,7 @@ ArucoCam::~ArucoCam(){
 bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     success = false;
     if (status == false) {
-        LOG_WARNING("ArucoCam ", id, " is not running, will start it now");
+        LOG_EXTENDED_DEBUG("ArucoCam ", id, " is not running, will start it now");
         start();
         return false;
     }
@@ -84,12 +84,12 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
         return true;
     }
     if (failedFrames > SCAN_FAIL_FRAMES_NUM) {
-        LOG_WARNING("Cam has too many failed frames : ", failedFrames);
+        LOG_EXTENDED_DEBUG("Cam has too many failed frames : ", failedFrames);
         stop();
         return true;
     }
     if (sucessFrames < SCAN_DONE_FRAMES_NUM) {
-        //LOG_WARNING("Cam has not enough good success frames : ", sucessFrames);
+        LOG_EXTENDED_DEBUG("Cam has not enough good success frames : ", sucessFrames);
         return false;
     }
     // Extract the values from the JSON object
@@ -107,7 +107,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
         return true;
     }
     success = true;
-    LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+    //LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted
     stop();
     return true;
@@ -116,7 +116,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
 bool ArucoCam::getObjectData(json& objects, bool& sucess){
     sucess = false;
     if (status == false) {
-        LOG_WARNING("ArucoCam ", id, " is not running, will start it now");
+        LOG_EXTENDED_DEBUG("ArucoCam ", id, " is not running, will start it now");
         start();
         return false;
     }
@@ -222,8 +222,8 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
             double cos_tag = cos(a_tag_rad);
             double x_tmp = obj.value("x", 0.0);
             double y_tmp = obj.value("y", 0.0);
-            m_x += x_tmp* cos_tag - y_tmp * sin_tag;
-            m_y += x_tmp* sin_tag + y_tmp*cos_tag; 
+            m_x -= x_tmp* cos_tag - y_tmp * sin_tag;
+            m_y -= x_tmp* sin_tag + y_tmp*cos_tag; 
             count++;
         }
     }
@@ -242,11 +242,11 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
 
 
     //projection dans le repère de la table:
-    double a_rad = (-1*a) * M_PI / 180.0;
+    double a_rad = (a) * M_PI / 180.0;
     double cos_a = cos(a_rad);
     double sin_a = sin(a_rad);
-    x -= m_x * cos_a - m_y * sin_a;
-    y -= m_x * sin_a + m_y * cos_a;
+    x += m_x * cos_a - m_y * sin_a;
+    y += m_x * sin_a + m_y * cos_a;
     success = true;
     LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted
@@ -297,7 +297,7 @@ void ArucoCam::start() {
     json response;
     if (restAPI_GET(url, "/start", response)){
         status = true;
-        LOG_GREEN_INFO("ArucoCam ", id, " started");
+        LOG_EXTENDED_DEBUG("ArucoCam ", id, " started");
     }
 }
 
@@ -305,7 +305,7 @@ void ArucoCam::stop() {
     json response;
     if (restAPI_GET(url, "/stop", response)){
         status = false;
-        LOG_GREEN_INFO("ArucoCam ", id, " stopped");
+        LOG_EXTENDED_DEBUG("ArucoCam ", id, " stopped");
     }
 }
 
