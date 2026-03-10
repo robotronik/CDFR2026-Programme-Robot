@@ -13,7 +13,7 @@ static position_t currentPath[1024];
 static int currentPathLenght = 0;
 static int pointAlongPathIndex = 0;
 
-nav_return_t navigationGo(){
+nav_return_t navigationDrive(){
     if (currentPathLenght == 0 || pointAlongPathIndex >= currentPathLenght)
         return NAV_DONE;
     bool done = drive.drive(currentPath + pointAlongPathIndex, currentPathLenght - pointAlongPathIndex);
@@ -22,6 +22,34 @@ nav_return_t navigationGo(){
         pointAlongPathIndex += 1;
         if (pointAlongPathIndex >= currentPathLenght){
             // Done with navigation
+            return NAV_DONE;
+        }
+    }
+    return NAV_IN_PROCESS;
+}
+
+nav_return_t navigationGo(){
+    // FSM which does drive and calibration
+    static bool driving = true;
+    if (driving){
+        nav_return_t result = navigationDrive();
+        if (result == NAV_DONE){
+            LOG_INFO("Navigation drive completed");
+            driving = false;
+        }
+    } else {
+        // Calibrate using camera
+        bool cam_success;
+        position_t robot_pos;
+        if (arucoCam1.getRobotPos(robot_pos.x, robot_pos.y, robot_pos.a, cam_success)){
+            if (cam_success){
+                drive.setCoordinates(robot_pos);
+                LOG_GREEN_INFO("Camera calibration successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
+            }
+            else{
+                LOG_WARNING("Camera did not have a good position estimate, skipping calibration");
+            }
+            driving = true;
             return NAV_DONE;
         }
     }

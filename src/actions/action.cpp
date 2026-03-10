@@ -143,10 +143,16 @@ ReturnFSM_t ActionFSM::Calibrate(){
             return FSM_RETURN_ERROR;
         }
         position_t pos_;
-        if (arucoCam1.getPos(pos_.x, pos_.y, pos_.a)){
-            drive.setCoordinates(pos_);
-            calibrationState = FSM_CALIBRATION_NAV;
-            LOG_INFO("Calibrating for FSM_CALIBRATION_CALIBRATE");
+        bool cam_success;
+        if (arucoCam1.getRobotPos(pos_.x, pos_.y, pos_.a, cam_success)){
+            if (cam_success){
+                drive.setCoordinates(pos_);
+                calibrationState = FSM_CALIBRATION_NAV;
+                LOG_INFO("Calibrating for FSM_CALIBRATION_CALIBRATE");
+            }
+            else{
+                LOG_WARNING("Camera did not have a good position estimate, skipping calibration");
+            }
             return FSM_RETURN_DONE;
         }
     break;
