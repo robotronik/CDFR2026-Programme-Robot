@@ -17,18 +17,12 @@ bool lowerClaws(){
     switch (state){
         case 1: // descente rapide
             LOG_INFO("Lower Claws");
-            arduino.moveMotorDC(100, true);
+            arduino.moveMotorDC(30, true);
             startTime = _millis();
             state = 2;
             break;
-        case 2: // ralentir avant la fin
-            if (_millis() - startTime >= 300){
-                arduino.moveMotorDC(20, true);
-                state = 3;
-            }
-            break;
-        case 3: // approche lente jusqu'au switch
-            if (readLimitSwitchBottom() || (_millis() - startTime >= 1000)){
+        case 2: // approche lente jusqu'au switch
+            if (readLimitSwitchBottom() || (_millis() - startTime >= 1500)){
                 arduino.stopMotorDC();
                 state = 1;
                 return true;
@@ -44,21 +38,13 @@ bool raiseClaws(){
 
     switch(state){
         case 1: // montée rapide
-            LOG_INFO("Raise Claws FAST");
-            arduino.moveMotorDC(150, false);
+            LOG_INFO("Raise Claws");
+            arduino.moveMotorDC(90, false);
             startTime = _millis();
             state = 2;
             break;
-
-        case 2: // ralentir avant la fin
-            if (_millis() - startTime >= 300){   // durée rapide
-                arduino.moveMotorDC(60, false);  // vitesse lente
-                state = 3;
-            }
-            break;
-
-        case 3: // approche lente jusqu'au switch
-            if (readLimitSwitchTop() || (_millis() - startTime >= 1500)){ // timeout de sécurité
+        case 2: // approche lente jusqu'au switch
+            if (readLimitSwitchTop() || (_millis() - startTime >= 2000)){ // timeout de sécurité
                 arduino.keepMotorDCup();        // maintenir la pince levée
                 state = 1;
                 return true;
@@ -77,20 +63,22 @@ bool rotateTwoBlocksDefault(){
 bool rotateTwoBlocks(bool *order){  
     static int state = 1;
     static unsigned long startTime = 0;
-    static bool spinDone = false;
 
     switch (state){
         case 1:
             if (closeClaws()){
                 startTime = _millis();
-                spinDone = false;
                 state = 2;
             }
             break;
 
         case 2:
-            bool raiseDone = raiseClaws();
-            if (!spinDone && _millis() - startTime >= 400){
+            if (raiseClaws()){
+                state = 3;
+            }
+            break;
+        case 3:
+            if (_millis() - startTime >= 400){
 
                 bool any = order[0] || order[1] || order[2] || order[3];
                 bool a=false,b=true,c=true,d=false;
@@ -103,10 +91,6 @@ bool rotateTwoBlocks(bool *order){
                     }
                 }
                 spinClaws(a,b,c,d);
-                spinDone = true;
-            }
-
-            if (raiseDone){
                 state = 1;
                 return true;
             }

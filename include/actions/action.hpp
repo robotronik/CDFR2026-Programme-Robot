@@ -27,6 +27,7 @@ class ActionFSM{
         int dropzone_num;// Num of dropzone to drop the stock
         int offset;// Offset  is direction to take the stock from
         bool cursorStatus = false;
+        bool rotate_done = false;
 
         position_t CursorPos = {625, 1220, 45};
         nav_return_t nav_ret;
@@ -77,6 +78,7 @@ class ActionFSM{
         /************  FSM CURSOR ************/
         typedef enum
         {
+            CURSOR_RAISE_CLAW,
             FSM_CURSOR_NAV,
             FSM_CURSOR_LOW_CLAW,
             FSM_CURSOR_MOVE,

@@ -22,7 +22,7 @@ void ActionFSM::Reset(){
     /****** RESET OF FSM STATES *******/
     gatherStockState = FSM_GATHER_NAV;
     dropStockState = FSM_DROP_NONE;
-    CursorState = FSM_CURSOR_NAV;
+    CursorState = CURSOR_RAISE_CLAW;
     calibrationCameraState = FSM_ARUCO_1;
     calibrationState = FSM_CALCULATION;
 
@@ -215,7 +215,6 @@ ReturnFSM_t ActionFSM::TakeStock(){
 }
 
 ReturnFSM_t ActionFSM::DropStock(){
-    bool rotate_done = false;
     switch (dropStockState){
         case FSM_DROP_NONE:
             dropzone_num = GetBestDropZone(drive.position);
@@ -240,7 +239,6 @@ ReturnFSM_t ActionFSM::DropStock(){
                 tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE);
                 dropStockState = FSM_DROP;
                 LOG_EXTENDED_DEBUG("FSM_DROP_NAV: Finished Drop Nav and rotate 2 blocks");
-                rotate_done = false;
             }
             else if (nav_ret == NAV_ERROR){
 
@@ -272,6 +270,7 @@ ReturnFSM_t ActionFSM::DropStock(){
                 dropStockState = FSM_DROP_NONE;
                 stock_num = -1;
                 offset = 0;  
+                rotate_done = false;
                 return FSM_RETURN_DONE; 
             }
             break;
@@ -297,10 +296,16 @@ ReturnFSM_t ActionFSM::Cursor(){
     }
 
     switch (CursorState){
+        case CURSOR_RAISE_CLAW:
+            if (raiseClaws()){
+                LOG_EXTENDED_DEBUG("CURSOR_RAISE_CLAW: going to FSM_CURSOR_NAV");
+                CursorState = FSM_CURSOR_NAV;
+            }
+            break;
         case FSM_CURSOR_NAV:
             nav_ret = navigationGoTo(navTarget, true);
-            if (raiseClaws() & (nav_ret == NAV_DONE)){ 
-                LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Nav done and Claws lowered, going to FSM_CURSOR");
+            if ((nav_ret == NAV_DONE)){ 
+                LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Nav done, going to FSM_CURSOR");
                 CursorState = FSM_CURSOR_LOW_CLAW;
             }
             else if (nav_ret == NAV_ERROR){
@@ -334,7 +339,7 @@ ReturnFSM_t ActionFSM::Cursor(){
             nav_ret = navigationGoTo(endTarget);
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_END: Nav done, cursor action complete");
-                CursorState = FSM_CURSOR_NAV;
+                CursorState = CURSOR_RAISE_CLAW;
                 return FSM_RETURN_DONE;
             }
             else if (nav_ret == NAV_ERROR){
