@@ -82,8 +82,6 @@ void pathfind_setup() {
 }
 
 void pathfind_fill_lidar(){
-    // Reset the costmap, pourquoi ?
-    astar_initialize_costmap();
     pathfind_setup();
 
     for (int i = 0; i < lidar.count; i++){
