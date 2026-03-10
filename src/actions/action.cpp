@@ -145,7 +145,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             {
             position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
             nav_ret = navigationGoTo(targetPos, true, true); // Enabeling A*
-            if (nav_ret == NAV_DONE){
+            if (snapClaws(false,false) & nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to stock now searching for blocks");
                 gatherStockState = FSM_GATHER_DETECT;
             }
@@ -178,7 +178,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             }
             break;
         case FSM_GATHER_CLAWS:
-            if (snapClaws(false,false) && lowerClaws()){
+            if (lowerClaws()){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for stock ", stock_num);
                 gatherStockState = FSM_GATHER_MOVE;
             }
