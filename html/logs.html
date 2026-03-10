@@ -47,78 +47,37 @@
         // Start the continuous fetching loop
         startContinuousRobotFetch();
 
-        const ANSI_CODES = {
-            styles: {
-                0: 'reset',
-                1: 'font-weight: bold',
-                2: 'opacity: 0.6',
-                3: 'font-style: italic',
-                4: 'text-decoration: underline',
-                7: 'reverse',
-            },
-            colors: {
-                30: 'color: black',
-                31: 'color: red',
-                32: 'color: green',
-                33: 'color: yellow',
-                34: 'color: blue',
-                35: 'color: magenta',
-                36: 'color: cyan',
-                37: 'color: white',
-                90: 'color: gray',
-            },
-            backgrounds: {
-                40: 'background-color: black',
-                41: 'background-color: red',
-                42: 'background-color: green',
-                43: 'background-color: yellow',
-                44: 'background-color: blue',
-                45: 'background-color: magenta',
-                46: 'background-color: cyan',
-                47: 'background-color: white',
-            }
+        const ANSI_COLORS = {
+            30: 'black',
+            31: 'red',
+            32: 'green',
+            33: 'yellow',
+            34: 'blue',
+            35: 'magenta',
+            36: 'cyan',
+            37: 'white',
+            90: 'gray',
         };
 
         function parseANSI(input) {
-            const stack = [];
             return input.replace(/\x1b\[([0-9;]*)m/g, (_, seq) => {
-                const codes = seq.split(';').map(Number);
-                if (codes.includes(0)) {
-                    stack.length = 0;
+                const codes = seq.split(';').map(Number).filter(code => !Number.isNaN(code));
+                if (codes.includes(0) || codes.includes(39)) {
                     return '</span>';
                 }
 
-                const styleParts = [];
-                let textColor = '';
-                let bgColor = '';
-                let reverse = false;
-
+                let color = null;
                 codes.forEach(code => {
-                    const style = ANSI_CODES.styles[code];
-                    if (style === 'reverse') {
-                        reverse = true;
-                    } else if (style) {
-                        styleParts.push(style);
-                    } else if (ANSI_CODES.colors[code]) {
-                        textColor = ANSI_CODES.colors[code];
-                    } else if (ANSI_CODES.backgrounds[code]) {
-                        bgColor = ANSI_CODES.backgrounds[code];
+                    if (ANSI_COLORS[code]) {
+                        color = ANSI_COLORS[code];
                     }
                 });
 
-                if (reverse) {
-                    // Switch text and background
-                    const temp = textColor;
-                    textColor = bgColor.replace('background-', '') || 'color: black';
-                    bgColor = temp.replace('color', 'background-color') || 'background-color: white';
+                if (!color) {
+                    return '';
                 }
 
-                if (textColor) styleParts.push(textColor);
-                if (bgColor) styleParts.push(bgColor);
-
-                const styleString = styleParts.join('; ');
-                stack.push(styleString);
-                return `<span style="${styleString}">`;
+                return `<span style="color: ${color}">`;
             });
         }
 
