@@ -368,7 +368,7 @@ void tests()
         start.a = rand() % 360;
         drive.setCoordinates(start);
         
-        navigationGoTo(target, true, true);
+        navigationGoTo(target, true);
     }
     StopAPIServer();
     api_server_thread.join();

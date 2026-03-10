@@ -144,7 +144,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_NAV:
             {
             position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
-            nav_ret = navigationGoTo(targetPos, true, true); // Enabeling A*
+            nav_ret = navigationGoTo(targetPos, true); // Enabeling A*
             if (snapClaws(false,false) & (nav_ret == NAV_DONE)){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to stock now searching for blocks");
                 gatherStockState = FSM_GATHER_DETECT;
@@ -187,7 +187,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_MOVE:
             {
             
-            nav_ret = navigationGoTo(targetStockPos, true);
+            nav_ret = navigationGoTo(targetStockPos);
             //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
             if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_COLLECT;
@@ -230,7 +230,7 @@ ReturnFSM_t ActionFSM::DropStock(){
         case FSM_DROP_NAV:
             {   
             // Navigate to dropzone
-            nav_ret = navigationGoTo(dropzonePos, true, true);
+            nav_ret = navigationGoTo(dropzonePos, true);
             //LOG_INFO("Navigating to stock ", stock_num, " at position (", dropzonePos.x, ",", dropzonePos.y, ") with angle ", dropzonePos.a);
 
             if ((nav_ret == NAV_DONE) & rotateTwoBlocks(stockOrder)){ // We consider that we are at the dropzone if we are close enough, to avoid navigation errors
@@ -294,7 +294,7 @@ ReturnFSM_t ActionFSM::Cursor(){
 
     switch (CursorState){
         case FSM_CURSOR_NAV:
-            nav_ret = navigationGoTo(navTarget, true, true);
+            nav_ret = navigationGoTo(navTarget, true);
             if (raiseClaws() & (nav_ret == NAV_DONE)){ 
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Nav done and Claws lowered, going to FSM_CURSOR");
                 CursorState = FSM_CURSOR_LOW_CLAW;
@@ -312,7 +312,7 @@ ReturnFSM_t ActionFSM::Cursor(){
             break;
 
         case FSM_CURSOR_MOVE:
-            nav_ret = navigationGoTo(moveTarget, true);
+            nav_ret = navigationGoTo(moveTarget);
             //LOG_INFO("Claws lowered at cursor position");
             if (nav_ret == NAV_DONE){
                 if (raiseClaws()){
@@ -327,7 +327,7 @@ ReturnFSM_t ActionFSM::Cursor(){
             break;
 
         case FSM_CURSOR_END:
-            nav_ret = navigationGoTo(endTarget, true);
+            nav_ret = navigationGoTo(endTarget);
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_END: Nav done, cursor action complete");
                 CursorState = FSM_CURSOR_NAV;
@@ -393,7 +393,7 @@ ReturnFSM_t ActionFSM::Calibrate(){
         case FSM_CALIBRATION_NAV:
             {
             // Look towards the closest aruco marker by only spinning in place
-            nav_ret = navigationGoTo(Calibrationtarget_, true);
+            nav_ret = navigationGoTo(Calibrationtarget_);
             if (nav_ret == NAV_DONE){
                 calibrationState = FSM_CALCULATION;
                 LOG_EXTENDED_DEBUG("FSM_CALIBRATION_NAV: Nav done, going to FSM_CALIBRATION_RAISE");
@@ -447,7 +447,7 @@ ReturnFSM_t ActionFSM::GetRobotCenter(){
             break;
         case FSM_ARUCO_NAV:
             {
-            nav_ret = navigationGoTo(target_, true);
+            nav_ret = navigationGoTo(target_);
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_ARUCO_NAV: Nav done for FSM_ARUCO_NAV, going to FSM_ARUCO_2");
                 calibrationCameraState = FSM_ARUCO_2;

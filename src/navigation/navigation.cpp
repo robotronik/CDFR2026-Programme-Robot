@@ -63,7 +63,7 @@ void fillCurrentPath(position_t path[], int pathLength) {
     currentPathLenght = pathLength;
 }
 
-nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
+nav_return_t navigationGoTo(position_t pos, bool useAStar){
     if (useAStar){
         currentPathLenght = pathfind(drive.position, pos, currentPath);
 
@@ -74,16 +74,16 @@ nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
 
         //LOG_WARNING("Path computed!");
 
-        nav_return_t ret = navigationPath(currentPath, currentPathLenght, turnEnd);
+        nav_return_t ret = navigationPath(currentPath, currentPathLenght);
 
         return ret;
     }
     else {
-        return navigationPath(&pos, 1, turnEnd);
+        return navigationPath(&pos, 1);
     }
 }
 
-nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd){
+nav_return_t navigationPath(position_t path[], int pathLenght){
     bool is_same_path = memcmp(currentPath, path, sizeof(position_t) * pathLenght) == 0;
     if (is_same_path && is_robot_stalled){
         // Drive Break

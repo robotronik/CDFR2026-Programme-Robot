@@ -366,7 +366,7 @@ void StartAPIServer(){
         //Apply the values
         position_t pos = {req_x_value, req_y_value, req_a_value};
         drive.setCoordinates(pos);
-        navigationGoTo(pos, false, false);
+        navigationGoTo(pos, false);
 
         json response;
         response["message"] = "Successfull";
@@ -398,12 +398,12 @@ void StartAPIServer(){
             double req_a_value = req_data["a"];
             LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", req_x_value, " y=", req_y_value, " a=", req_a_value);
             position_t pos = {req_x_value, req_y_value, req_a_value};
-            navigationGoTo(pos, true, false);
+            navigationGoTo(pos, false);
         }
         else{
             LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", req_x_value, " y=", req_y_value);
             position_t pos = {req_x_value, req_y_value, req_a_value};
-            navigationGoTo(pos, false, false);
+            navigationGoTo(pos, false);
         }
 
         json response;
@@ -435,13 +435,13 @@ void StartAPIServer(){
         if (req_data.contains("a")){
             LOG_INFO("Manual ctrl : Requested set_target_coordinates_Astart, x=", req_x_value, " y=", req_y_value, " a=", req_a_value);
             position_t pos = {req_x_value, req_y_value, req_a_value};
-            navigationGoTo(pos, true, true);
+            navigationGoTo(pos, true);
         }
         else{
             LOG_INFO("Manual ctrl : Requested set_target_coordinates_Astart, x=", req_x_value, " y=", req_y_value);
             position_t pos = {req_x_value, req_y_value, req_a_value};
 
-            navigationGoTo(pos, true, true);
+            navigationGoTo(pos, true);
         }
 
         json response;
@@ -468,7 +468,7 @@ void StartAPIServer(){
 
         // Apply the value
         position_t pos = {newXvalue, newYvalue, drive.position.a};
-        navigationGoTo(pos, false);
+        navigationGoTo(pos);
 
         json response;
         response["message"] = "Successfull";
@@ -490,7 +490,7 @@ void StartAPIServer(){
         // Apply the value
         // TODO
         position_t pos = {drive.position.x, drive.position.y, drive.position.a + req_value};
-        navigationGoTo(pos, true);
+        navigationGoTo(pos);
 
         LOG_INFO("Manual ctrl : Requested set_rotate, value=", req_value);
 

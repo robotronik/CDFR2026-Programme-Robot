@@ -13,8 +13,8 @@ typedef enum {
 } nav_return_t;
 
 // Navigation functions
-nav_return_t navigationGoTo(position_t pos, bool turnEnd = false, bool useAStar = false);
-nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd = false);
+nav_return_t navigationGoTo(position_t pos, bool useAStar = false);
+nav_return_t navigationPath(position_t path[], int pathLenght);
 void navigation_path_json(json& j);
 void navigationOpponentDetection();
 
