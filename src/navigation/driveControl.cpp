@@ -25,7 +25,6 @@ void DriveControl::reset() {
     acceleration = {0.0, 0.0, 0.0};
     is_enabled = false;
     is_slow_mode = true;
-    is_very_slow_mode = false;
     drive_interface::disable();
     drive_interface::set_target(convertPositionToPacked(target));
     drive_interface::set_coordinates(convertPositionToPacked(position));
@@ -62,9 +61,9 @@ bool DriveControl::drive(position_t pos[], int n) {
 
     // Calculate position_speed with acceleration, top speed, and deceleration
     // Angular motion
-    double angle_acceleration = is_very_slow_mode ? 5.0 : (is_slow_mode ? 15.0 : 150.0); // deg/s
-    double angle_top_speed   = is_very_slow_mode ? 50.0 : (is_slow_mode ? 100.0 : 800.0); // deg/s
-    double angle_deceleration= is_very_slow_mode ? 50.0 : (is_slow_mode ? 150.0 : 600.0); // deg/s²
+    double angle_acceleration = (is_slow_mode ? 15.0 : 150.0); // deg/s
+    double angle_top_speed   = (is_slow_mode ? 100.0 : 800.0); // deg/s
+    double angle_deceleration= (is_slow_mode ? 150.0 : 600.0); // deg/s²
 
     double current_angular_velocity = fabs(velocity.a); // deg/s
     double angle_speed;
@@ -93,9 +92,9 @@ bool DriveControl::drive(position_t pos[], int n) {
     pos_target.a = position.a + MIN(MAX(error_heading, -angle_speed/kP_ang), angle_speed/kP_ang);
 
     // Linear motion
-    double position_acceleration = is_very_slow_mode ? 20.0 : (is_slow_mode ? 50.0 : 100.0); // mm/s²
-    double position_top_speed    = is_very_slow_mode ? 100.0 : (is_slow_mode ? 500.0 : 2000.0); // mm/s
-    double position_deceleration = is_very_slow_mode ? 200.0 : (is_slow_mode ? 600.0 : 1200.0); // mm/s²
+    double position_acceleration = (is_slow_mode ? 50.0 : 100.0); // mm/s²
+    double position_top_speed    =  (is_slow_mode ? 300.0 : 2000.0); // mm/s
+    double position_deceleration =  (is_slow_mode ? 600.0 : 1200.0); // mm/s²
     double current_linear_velocity = position_length(velocity); // mm/s
     double position_speed; // mm/s
     

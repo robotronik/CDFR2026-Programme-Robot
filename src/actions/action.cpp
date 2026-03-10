@@ -181,7 +181,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             if (lowerClaws()){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for stock ", stock_num);
                 gatherStockState = FSM_GATHER_MOVE;
-                drive.is_very_slow_mode = true;
+                drive.is_slow_mode = true;
             }
             break;
         case FSM_GATHER_MOVE:
@@ -198,7 +198,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_COLLECT:
             // Collect the stock
             if (closeClaws()){
-                drive.is_very_slow_mode = false;
+                drive.is_slow_mode = false;
                 LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: Stock", stock_num, " collected");
                 tableStatus.setStockAsRemoved(stock_num);
                 gatherStockState = FSM_GATHER_COLLECTED;
