@@ -225,12 +225,11 @@ ReturnFSM_t ActionFSM::DropStock(){
             }
             dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
             LOG_EXTENDED_DEBUG("FSM_DROP_NONE: Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ", ", dropzonePos.y, ", ", dropzonePos.a , ")");
+            LOG_EXTENDED_DEBUG("FSM_DROP_NONE -> FSM_DROP_NAV");
             dropStockState = FSM_DROP_NAV;
             break;
         case FSM_DROP_NAV:
-        {   
-            LOG_EXTENDED_DEBUG("FSM_DROP_NONE -> FSM_DROP_NAV");
-            
+        {               
             nav_ret = navigationGoTo(dropzonePos, true);
     
             if (!rotate_done) rotate_done = rotateTwoBlocks(stockOrder);
