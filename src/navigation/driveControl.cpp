@@ -44,7 +44,7 @@ bool DriveControl::drive(position_t pos[], int n) {
     }
 
     // Calculate the target point along the path
-    double looking_distance = is_slow_mode ? 40.0 : 80.0; // Radius (mm)
+    double looking_distance = 80.0; // Radius (mm)
     
     position_t pos_target;
     double total_distance = position_distance(position, pos[0]);
