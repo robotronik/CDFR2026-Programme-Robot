@@ -22,12 +22,6 @@ bool lowerClaws(){
             break;
         case 2:
             if (readLimitSwitchBottom() || (_millis() >= startTime + 1000)){ // Si pinces bloquées ou après 1s
-                startTime = _millis();
-                state++;
-            }
-            break;
-        case 3:
-            if (_millis() >= startTime + 500){
                 arduino.stopMotorDC();
                 state = 1;
                 return true;
@@ -62,7 +56,7 @@ bool rotateTwoBlocksDefault(){
     return rotateTwoBlocks(order);
 }
 
-bool rotateTwoBlocks(bool *order){
+bool rotateTwoBlocks(bool *order){  
     static int state = 1;
     static unsigned long startTime = 0;
     static bool spinDone = false;
@@ -81,7 +75,7 @@ bool rotateTwoBlocks(bool *order){
             if (!spinDone && _millis() - startTime >= 400){
 
                 bool any = order[0] || order[1] || order[2] || order[3];
-                bool a=false,b=false,c=false,d=false;
+                bool a=false,b=true,c=true,d=false;
 
                 if (any){
                     if (tableStatus.colorTeam == colorTeam_t::BLUE){

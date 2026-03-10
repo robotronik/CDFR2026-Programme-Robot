@@ -176,7 +176,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             }
             break;
         case FSM_GATHER_CLAWS:
-            if (snapClaws(false,false) & lowerClaws()){
+            if (snapClaws(false,false) && lowerClaws()){
                 LOG_INFO("Claws lowered for stock ", stock_num);
                 gatherStockState = FSM_GATHER_MOVE;
                 LOG_INFO("Nav done FSM_GATHER_NAV, going to FSM_GATHER_MOVE");
@@ -294,17 +294,22 @@ ReturnFSM_t ActionFSM::Cursor(){
     switch (CursorState){
         case FSM_CURSOR_NAV:
             nav_ret = navigationGoTo(navTarget, true, true);
-            if (nav_ret == NAV_DONE){
-                if (lowerClaws()){
-                    LOG_INFO("Nav done FSM_CURSOR_NAV, going to FSM_CURSOR");
-                    CursorState = FSM_CURSOR_MOVE;
-                }
+            if (raiseClaws() & nav_ret == NAV_DONE){ 
+                LOG_INFO("Nav done FSM_CURSOR_NAV, going to FSM_CURSOR_LOW_CLAW");
+                CursorState = FSM_CURSOR_LOW_CLAW;
             }
             else if (nav_ret == NAV_ERROR){
                 LOG_WARNING("Navigation error while going to cursor position");
                 return FSM_RETURN_ERROR;
             }
             break;
+        case FSM_CURSOR_LOW_CLAW:
+            if (lowerClaws()){
+                LOG_INFO("Nav done FSM_CURSOR_LOW_CLAW, going to FSM_CURSOR_MOVE");
+                CursorState = FSM_CURSOR_MOVE;
+            }
+            break;
+
         case FSM_CURSOR_MOVE:
             nav_ret = navigationGoTo(moveTarget, true);
             //LOG_INFO("Claws lowered at cursor position");
