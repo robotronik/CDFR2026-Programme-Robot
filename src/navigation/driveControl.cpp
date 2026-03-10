@@ -146,14 +146,9 @@ bool DriveControl::drive(position_t pos[], int n) {
     bool is_done_ang = fabs(error_heading) < 1.0 && fabs(velocity.a) < 5.0;
     //LOG_DEBUG("Position error: ", position_distance(position, pos[n - 1]), "mm, Velocity: ", position_length(velocity), "mm/s, Angle error: ", error_heading, "deg, Angular velocity: ", fabs(velocity.a), "deg/s");
 
-    if (is_done_pos && is_done_ang && n == 1){
+    if (is_done_pos && is_done_ang){
         return true;
-    }
-
-    bool has_passed_sub_target = position_distance(position, pos[0]) < looking_distance;
-    if (has_passed_sub_target && n > 1)
-        return true;
-    
+    }    
     return false; // Not done
 }
 
