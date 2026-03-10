@@ -215,6 +215,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
 }
 
 ReturnFSM_t ActionFSM::DropStock(){
+    bool rotate_done = false;
     switch (dropStockState){
         case FSM_DROP_NONE:
             dropzone_num = GetBestDropZone(drive.position);
@@ -228,15 +229,18 @@ ReturnFSM_t ActionFSM::DropStock(){
             dropStockState = FSM_DROP_NAV;
             break;
         case FSM_DROP_NAV:
-            {   
-            // Navigate to dropzone
+        {   
+            LOG_EXTENDED_DEBUG("FSM_DROP_NONE -> FSM_DROP_NAV");
+            
             nav_ret = navigationGoTo(dropzonePos, true);
-            //LOG_INFO("Navigating to stock ", stock_num, " at position (", dropzonePos.x, ",", dropzonePos.y, ") with angle ", dropzonePos.a);
-
-            if ((nav_ret == NAV_DONE) & rotateTwoBlocks(stockOrder)){ // We consider that we are at the dropzone if we are close enough, to avoid navigation errors
-                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE); // Mark dropzone as occupied
+    
+            if (!rotate_done) rotate_done = rotateTwoBlocks(stockOrder);
+        
+            if (rotate_done && (nav_ret == NAV_DONE)) {
+                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE);
                 dropStockState = FSM_DROP;
                 LOG_EXTENDED_DEBUG("FSM_DROP_NAV: Finished Drop Nav and rotate 2 blocks");
+                rotate_done = false;
             }
             else if (nav_ret == NAV_ERROR){
 
@@ -257,7 +261,7 @@ ReturnFSM_t ActionFSM::DropStock(){
                 dropStockState = FSM_DROP_NAV;
                 return FSM_RETURN_WORKING;
             }
-            }
+        }
             break;
 
         case FSM_DROP:
@@ -387,7 +391,7 @@ ReturnFSM_t ActionFSM::Calibrate(){
     switch (calibrationState){
         case FSM_CALCULATION:
             arucoPos = calculateClosestArucoPosition(drive.position, Calibrationtarget_);
-            calibrationState = FSM_CALIBRATION_RAISE;
+            calibrationState = FSM_CALIBRATION_NAV;
             LOG_DEBUG("FSM_CALCULATION: closest aruco marker is at (", arucoPos.x, ", ", arucoPos.y, ", ", arucoPos.a, ")");
             break;
         case FSM_CALIBRATION_NAV:
@@ -396,18 +400,12 @@ ReturnFSM_t ActionFSM::Calibrate(){
             nav_ret = navigationGoTo(Calibrationtarget_);
             if (nav_ret == NAV_DONE){
                 calibrationState = FSM_CALCULATION;
-                LOG_EXTENDED_DEBUG("FSM_CALIBRATION_NAV: Nav done, going to FSM_CALIBRATION_RAISE");
+                LOG_EXTENDED_DEBUG("FSM_CALIBRATION_NAV: Nav done, going to FSM_CALCULATION");
                 return FSM_RETURN_DONE;
             }
             else if (nav_ret == NAV_ERROR){
                 return FSM_RETURN_ERROR;
             }
-            }
-            break;
-        case FSM_CALIBRATION_RAISE:
-            if(raiseClaws()){
-                LOG_EXTENDED_DEBUG("FSM_CALIBRATION_RAISE: Raised claws for vision");
-                calibrationState = FSM_CALIBRATION_NAV;
             }
             break;
     }

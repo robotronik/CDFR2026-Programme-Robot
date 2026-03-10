@@ -17,13 +17,13 @@ bool lowerClaws(){
     switch (state){
         case 1: // descente rapide
             LOG_INFO("Lower Claws");
-            arduino.moveMotorDC(60, true);
+            arduino.moveMotorDC(100, true);
             startTime = _millis();
             state = 2;
             break;
         case 2: // ralentir avant la fin
-            if (_millis() - startTime >= 200){
-                arduino.moveMotorDC(25, true);
+            if (_millis() - startTime >= 300){
+                arduino.moveMotorDC(20, true);
                 state = 3;
             }
             break;
@@ -52,7 +52,7 @@ bool raiseClaws(){
 
         case 2: // ralentir avant la fin
             if (_millis() - startTime >= 300){   // durée rapide
-                arduino.moveMotorDC(80, false);  // vitesse lente
+                arduino.moveMotorDC(60, false);  // vitesse lente
                 state = 3;
             }
             break;

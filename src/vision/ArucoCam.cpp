@@ -245,8 +245,8 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
     double a_rad = (a) * M_PI / 180.0;
     double cos_a = cos(a_rad);
     double sin_a = sin(a_rad);
-    x += m_x * cos_a - m_y * sin_a;
-    y += m_x * sin_a + m_y * cos_a;
+    x -= m_x * cos_a - m_y * sin_a;
+    y -= m_x * sin_a + m_y * cos_a;
     success = true;
     LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted

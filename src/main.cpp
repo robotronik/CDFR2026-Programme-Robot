@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
                 arduino.setStepper(0, 4);
                 homeActuators();
                 lidar.startSpin();
-                arduino.moveMotorDC(130, false);
+                arduino.moveMotorDC(80, false);
 
                 if (tableStatus.colorTeam == NONE)
                     arduino.RGB_Blinking(255, 0, 0); // Red Blinking
