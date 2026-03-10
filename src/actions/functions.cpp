@@ -86,13 +86,17 @@ bool rotateTwoBlocks(bool *order){
                 if (any){
                     if (tableStatus.colorTeam == colorTeam_t::BLUE){
                         a = !order[3]; b = !order[2]; c = !order[1]; d = !order[0];
-                }else{
+                    }else{
                         a = order[3]; b = order[2]; c = order[1]; d = order[0];
                     }
                 }
                 spinClaws(a,b,c,d);
                 spinDone = true;
-                }
+            }
+
+            if (raiseDone){
+                state = 1;
+                return true;
             }
             break;
     }
