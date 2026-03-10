@@ -59,6 +59,15 @@ enum class Style {
     REVERSE = 7
 };
 
+enum class LogLevel {
+    EXTENDED_DEBUG = 0,
+    DEBUG,
+    INFO,
+    WARNING,
+    ERROR,
+    I2C,
+    NONE // Pour tout masquer
+};
 
 struct AnsiStyle {
     std::optional<Color> color = std::nullopt;
@@ -76,6 +85,7 @@ struct AnsiStyle {
 class logger
 {
 private:
+    LogLevel currentLevel = LogLevel::DEBUG;
     bool stdOutInitValid;
     static int globalLogNum;
     bool logEnable = true;
@@ -104,6 +114,8 @@ private:
     void logToFile(const std::string& message, bool forceSync);
     void logToOutput(const std::string& message);
 public:
+    void setLogLevel(LogLevel level) { currentLevel = level; }
+    LogLevel getLogLevel() { return currentLevel; }
     logger(const std::string name, bool defaultlogStatus = true);
     ~logger();
 
@@ -133,7 +145,11 @@ inline void appendMessage(std::ostringstream& oss, const T& value, const Args&..
 }
 
 template<typename... Args>
-inline void log(logger* loggerType, bool logFile, bool forceSync, bool logOut, const AnsiStyle& style,const std::string& typeLevel, const std::string& file, const int line, const std::string& message, const Args&... args) {
+inline void log(logger* loggerType, bool logFile, bool forceSync, bool logOut, const AnsiStyle& style, LogLevel msgLevel, const std::string& typeLevel, const std::string& file, const int line, const std::string& message, const Args&... args) {
+
+    if (msgLevel < loggerType->getLogLevel()) {
+        return; 
+    }
 
     std::ostringstream oss;
     appendMessage(oss, message, args...);
@@ -154,12 +170,11 @@ logger* log_main();
 logger* log_asserv();
 
 // Convenience macros that automatically pass the calling function's name.
-#define LOG_DEBUG(message, ...)      SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::GRAY)  ,"DEBUG"  , __FILE__, __LINE__, message, ##__VA_ARGS__)
-#define LOG_EXTENDED_DEBUG(message, ...)      SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::GRAY)  ,"EXTENDED_DEBUG"  , __FILE__, __LINE__, message, ##__VA_ARGS__)
-#define LOG_INFO(message, ...)       SimpleLogger::log((logger*)log_main(),true,false,true,{}                      ,"INFO"   , __FILE__, __LINE__, message, ##__VA_ARGS__)
-#define LOG_WARNING(message, ...)    SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::YELLOW),"WARNING", __FILE__, __LINE__, message, ##__VA_ARGS__)
-#define LOG_ERROR(message, ...)      SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::RED)   ,"ERROR"  , __FILE__, __LINE__, message, ##__VA_ARGS__)
-#define LOG_GREEN_INFO(message, ...) SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::GREEN) ,"GREEN"  , __FILE__, __LINE__, message, ##__VA_ARGS__)
+#define LOG_EXTENDED_DEBUG(message, ...) SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::GRAY)  , LogLevel::EXTENDED_DEBUG, "EXTENDED_DEBUG", __FILE__, __LINE__, message, ##__VA_ARGS__)
+#define LOG_DEBUG(message, ...)          SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::GRAY)  , LogLevel::DEBUG, "DEBUG"  , __FILE__, __LINE__, message, ##__VA_ARGS__)
+#define LOG_INFO(message, ...)           SimpleLogger::log((logger*)log_main(),true,false,true,{}                      , LogLevel::INFO, "INFO"   , __FILE__, __LINE__, message, ##__VA_ARGS__)
+#define LOG_WARNING(message, ...)        SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::YELLOW), LogLevel::WARNING, "WARNING", __FILE__, __LINE__, message, ##__VA_ARGS__)
+#define LOG_ERROR(message, ...)          SimpleLogger::log((logger*)log_main(),true,false,true,AnsiStyle(Color::RED)   , LogLevel::ERROR, "ERROR"  , __FILE__, __LINE__, message, ##__VA_ARGS__)
 
-#define LOG_ASSERV_SET_INFO(message, ...) SimpleLogger::log((logger*)log_asserv(),true,true,false,AnsiStyle(Color::GREEN),"I2C", __FILE__, __LINE__, message, ##__VA_ARGS__)
-#define LOG_ASSERV_GET_INFO(message, ...) SimpleLogger::log((logger*)log_asserv(),true,false,false,AnsiStyle(Color::GREEN),"I2C", __FILE__, __LINE__, message, ##__VA_ARGS__)
+#define LOG_ASSERV_SET_INFO(message, ...) SimpleLogger::log((logger*)log_asserv(),true,true,false,AnsiStyle(Color::GREEN), LogLevel::I2C, "I2C", __FILE__, __LINE__, message, ##__VA_ARGS__)
+#define LOG_ASSERV_GET_INFO(message, ...) SimpleLogger::log((logger*)log_asserv(),true,false,false,AnsiStyle(Color::GREEN), LogLevel::I2C, "I2C", __FILE__, __LINE__, message, ##__VA_ARGS__)
