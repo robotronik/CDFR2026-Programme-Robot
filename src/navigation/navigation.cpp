@@ -83,20 +83,31 @@ nav_return_t navigationGoTo(position_t pos, bool useAStar){
     }
 }
 
-nav_return_t navigationPath(position_t path[], int pathLenght){
-    bool is_same_path = memcmp(currentPath, path, sizeof(position_t) * pathLenght) == 0;
-    if (is_same_path && is_robot_stalled){
-        // Drive Break
-        return NAV_PAUSED;
-    }
+nav_return_t navigationPath(position_t path[], int pathLenght) {
+    // Vérifie d'abord si les longueurs correspondent
+    bool is_same_path = (currentPathLenght == pathLenght);
 
-    if (!is_same_path){
-        for (int i = 0; i < pathLenght; i++){
+    // Si les longueurs correspondent, compare tous les éléments du path
+    if (is_same_path) is_same_path = memcmp(currentPath, path, sizeof(position_t) * pathLenght) == 0;
+
+    // Si c'est le même chemin et que le robot est bloqué, on met en pause
+    if (is_same_path && is_robot_stalled) return NAV_PAUSED;
+
+    // Si ce n'est pas le même chemin, on met à jour complètement
+    if (!is_same_path) {
+        for (int i = 0; i < pathLenght; i++) {
             currentPath[i] = path[i];
         }
         currentPathLenght = pathLenght;
+        pointAlongPathIndex = 0;  // Reset de l'index pour repartir du début
+    }
+
+    // Sécurité supplémentaire : si l'index dépasse la longueur du path, on le recale
+    if (pointAlongPathIndex >= currentPathLenght) {
+        LOG_WARNING("PointAlongPathIndex dépasse la longueur du path, reset à 0");
         pointAlongPathIndex = 0;
     }
+
     return navigationGo();
 }
 
