@@ -12,16 +12,23 @@
 
 bool lowerClaws(){
     static int state = 1;
-    //LOG_INFO("lowerClaws state = ", state);
     static unsigned long startTime = 0;
+
     switch (state){
-        case 1:
-            arduino.moveMotorDC(30, true);
+        case 1: // descente rapide
+            LOG_INFO("Lower Claws");
+            arduino.moveMotorDC(60, true);
             startTime = _millis();
-            state++;
+            state = 2;
             break;
-        case 2:
-            if (readLimitSwitchBottom() || (_millis() >= startTime + 1000)){ // Si pinces bloquées ou après 1s
+        case 2: // ralentir avant la fin
+            if (_millis() - startTime >= 200){
+                arduino.moveMotorDC(25, true);
+                state = 3;
+            }
+            break;
+        case 3: // approche lente jusqu'au switch
+            if (readLimitSwitchBottom() || (_millis() - startTime >= 1000)){
                 arduino.stopMotorDC();
                 state = 1;
                 return true;
@@ -34,20 +41,31 @@ bool lowerClaws(){
 bool raiseClaws(){
     static int state = 1;
     static unsigned long startTime = 0;
-    switch (state){
-        case 1:
-            arduino.moveMotorDC(110, false);
+
+    switch(state){
+        case 1: // montée rapide
+            LOG_INFO("Raise Claws FAST");
+            arduino.moveMotorDC(150, false);
             startTime = _millis();
-            state++;
+            state = 2;
             break;
-        case 2:
-            if (readLimitSwitchTop() || (_millis() >= startTime + 1500)){ // Si pinces bloquées ou après 1.5s
-                arduino.keepMotorDCup();
+
+        case 2: // ralentir avant la fin
+            if (_millis() - startTime >= 300){   // durée rapide
+                arduino.moveMotorDC(80, false);  // vitesse lente
+                state = 3;
+            }
+            break;
+
+        case 3: // approche lente jusqu'au switch
+            if (readLimitSwitchTop() || (_millis() - startTime >= 1500)){ // timeout de sécurité
+                arduino.keepMotorDCup();        // maintenir la pince levée
                 state = 1;
                 return true;
             }
             break;
     }
+
     return false;
 }
 
