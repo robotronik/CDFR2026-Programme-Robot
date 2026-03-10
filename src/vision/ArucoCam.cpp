@@ -89,7 +89,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
         return true;
     }
     if (sucessFrames < SCAN_DONE_FRAMES_NUM) {
-        LOG_EXTENDED_DEBUG("Cam has not enough good success frames : ", sucessFrames);
+        //LOG_EXTENDED_DEBUG("Cam has not enough good success frames : ", sucessFrames);
         return false;
     }
     // Extract the values from the JSON object
