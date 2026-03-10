@@ -38,7 +38,6 @@ class ActionFSM{
         ReturnFSM_t TakeStock();
         ReturnFSM_t DropStock();
         ReturnFSM_t Cursor();
-        ReturnFSM_t GatherStock();
         ReturnFSM_t GetRobotCenter();
         ReturnFSM_t Calibrate();
 
@@ -84,7 +83,7 @@ class ActionFSM{
             FSM_CURSOR_MOVE,
             FSM_CURSOR_END
         } StateCursor_t;
-        StateCursor_t CursorState = FSM_CURSOR_NAV;
+        StateCursor_t CursorState = CURSOR_RAISE_CLAW;
 
         /************  FSM CALIBRATION ************/
         typedef enum

@@ -143,6 +143,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
     switch (gatherStockState){
         case FSM_GATHER_NAV:
             {
+            //LOG_DEBUG("entering FSM_GATHER_NAV");
             position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
             nav_ret = navigationGoTo(targetPos, true); // Enabeling A*
             if (nav_ret == NAV_DONE){
@@ -219,6 +220,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
 ReturnFSM_t ActionFSM::DropStock(){
     switch (dropStockState){
         case FSM_DROP_NONE:
+            rotate_done = false;
             dropzone_num = GetBestDropZone(drive.position);
             LOG_DEBUG("FSM_DROP_NONE: Best drop zone for stock ", stock_num, " is ", dropzone_num);
             if (dropzone_num == -1) {

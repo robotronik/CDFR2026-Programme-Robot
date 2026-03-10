@@ -16,7 +16,7 @@ bool lowerClaws(){
 
     switch (state){
         case 1: // descente rapide
-            LOG_INFO("Lower Claws");
+            LOG_DEBUG("Lower Claws");
             arduino.moveMotorDC(30, true);
             startTime = _millis();
             state = 2;
@@ -38,7 +38,7 @@ bool raiseClaws(){
 
     switch(state){
         case 1: // montée rapide
-            LOG_INFO("Raise Claws");
+            LOG_DEBUG("Raise Claws");
             arduino.moveMotorDC(90, false);
             startTime = _millis();
             state = 2;
@@ -103,6 +103,7 @@ bool dropBlock(){
     static int state = 0;
     switch (state){
         case 0:
+            LOG_DEBUG("Drop Block");
             state++;
             break;
         case 1:
