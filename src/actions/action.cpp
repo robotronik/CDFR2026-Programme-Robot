@@ -145,7 +145,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             {
             position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
             nav_ret = navigationGoTo(targetPos, true, true); // Enabeling A*
-            if (snapClaws(false,false) & nav_ret == NAV_DONE){
+            if (snapClaws(false,false) & (nav_ret == NAV_DONE)){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to stock now searching for blocks");
                 gatherStockState = FSM_GATHER_DETECT;
             }
@@ -181,6 +181,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             if (lowerClaws()){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for stock ", stock_num);
                 gatherStockState = FSM_GATHER_MOVE;
+                drive.is_very_slow_mode = true;
             }
             break;
         case FSM_GATHER_MOVE:
@@ -197,6 +198,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_COLLECT:
             // Collect the stock
             if (closeClaws()){
+                drive.is_very_slow_mode = false;
                 LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: Stock", stock_num, " collected");
                 setStockAsRemoved(stock_num);
                 gatherStockState = FSM_GATHER_COLLECTED;
@@ -293,7 +295,7 @@ ReturnFSM_t ActionFSM::Cursor(){
     switch (CursorState){
         case FSM_CURSOR_NAV:
             nav_ret = navigationGoTo(navTarget, true, true);
-            if (raiseClaws() & nav_ret == NAV_DONE){ 
+            if (raiseClaws() & (nav_ret == NAV_DONE)){ 
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Nav done and Claws lowered, going to FSM_CURSOR");
                 CursorState = FSM_CURSOR_LOW_CLAW;
             }
