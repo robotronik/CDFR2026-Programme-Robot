@@ -189,13 +189,14 @@ ReturnFSM_t ActionFSM::TakeStock(){
             //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
             if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_COLLECT;
+                LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
                 LOG_INFO("Nav done FSM_GATHER_MOVE, going to FSM_GATHER_COLLECT");
             }
             }
             break;
         case FSM_GATHER_COLLECT:
             // Collect the stock
-            if (rotateTwoBlocks(stockOrder)){ // TODO fermer claw puis partir sans attendre fin rotateTwoBlocks (timer)
+            if (closeClaws()){
                 LOG_INFO("Stock", stock_num, " collected");
                 setStockAsRemoved(stock_num);
                 gatherStockState = FSM_GATHER_COLLECTED;
@@ -230,7 +231,8 @@ ReturnFSM_t ActionFSM::DropStock(){
             nav_ret = navigationGoTo(dropzonePos, true, true);
             //LOG_INFO("Navigating to stock ", stock_num, " at position (", dropzonePos.x, ",", dropzonePos.y, ") with angle ", dropzonePos.a);
 
-            if (nav_ret == NAV_DONE){ // We consider that we are at the dropzone if we are close enough, to avoid navigation errors
+            if ((nav_ret == NAV_DONE) & rotateTwoBlocks(stockOrder)){ // We consider that we are at the dropzone if we are close enough, to avoid navigation errors
+                LOG_INFO("Navigating to drop ", stock_num, " at position (", dropzonePos.x, ",", dropzonePos.y, ") with angle ", dropzonePos.a);
                 LOG_INFO("Nav done FSM_DROP_NAV, going to FSM_DROP");
                 setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE); // Mark dropzone as occupied
                 dropStockState = FSM_DROP;

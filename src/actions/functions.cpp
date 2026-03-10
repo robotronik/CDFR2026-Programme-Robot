@@ -64,42 +64,36 @@ bool rotateTwoBlocksDefault(){
 
 bool rotateTwoBlocks(bool *order){
     static int state = 1;
+    static unsigned long startTime = 0;
+    static bool spinDone = false;
+
     switch (state){
-        case 1 :
+        case 1:
             if (closeClaws()){
-                state++;
+                startTime = _millis();
+                spinDone = false;
+                state = 2;
             }
             break;
+
         case 2:
-            if (raiseClaws())
-                state++;
-            break;
-        case 3:
-            if(tableStatus.colorTeam == colorTeam_t::BLUE){
-                if(order[0] || order[1] || order[2] || order[3]){
-                    spinClaws(!order[3],  !order[2],  !order[1], !order[0]);
-                    state ++;
-                    break;
+            bool raiseDone = raiseClaws();
+            if (!spinDone && _millis() - startTime >= 400){
+
+                bool any = order[0] || order[1] || order[2] || order[3];
+                bool a=false,b=false,c=false,d=false;
+
+                if (any){
+                    if (tableStatus.colorTeam == colorTeam_t::BLUE){
+                        a = !order[3]; b = !order[2]; c = !order[1]; d = !order[0];
                 }else{
-                    spinClaws(false, false, false, false);
-                    state ++;
-                    break;
+                        a = order[3]; b = order[2]; c = order[1]; d = order[0];
+                    }
                 }
-            }else{
-                if(order[0] || order[1] || order[2] || order[3]){
-                    spinClaws(order[3],  order[2],  order[1], order[0]);
-                    state ++;
-                    break;
-                }else{
-                    spinClaws(false, false, false, false);
-                    state ++;
-                    break;
+                spinClaws(a,b,c,d);
+                spinDone = true;
                 }
             }
-            break;
-        case 4:
-            state = 1;
-            return true;
             break;
     }
     return false;
