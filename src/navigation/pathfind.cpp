@@ -5,12 +5,6 @@
 #include "main.hpp"
 
 int pathfind(position_t start, position_t goal, position_t path[]) {
-
-
-    // Toujours réinitialiser la costmap
-    astar_initialize_costmap();
-    pathfind_setup();
-
     // Ajouter les obstacles du lidar
     pathfind_fill_lidar();
 
@@ -74,11 +68,11 @@ void pathfind_setup() {
     place_obstacle_with_margin( 900,     0, 200, 200, RayonRobot);
 
     // ===== TABLE BORDER ===== 
-    place_obstacle_with_margin(0,-1500,50,2000,RayonRobot,false);
-    place_obstacle_with_margin(0,1500,50,2000,RayonRobot,false);
-    place_obstacle_with_margin(-1000,0,3000,50,RayonRobot,false);
-    place_obstacle_with_margin(1000,0,3000,50,RayonRobot,false);
-    place_obstacle_with_margin(-775,0,1800,450,RayonRobot,false);
+    place_obstacle_with_margin(    0,-1500,   50, 2000, RayonRobot, false);
+    place_obstacle_with_margin(    0, 1500,   50, 2000, RayonRobot, false);
+    place_obstacle_with_margin(-1000,    0, 3000,   50, RayonRobot, false);
+    place_obstacle_with_margin( 1000,    0, 3000,   50, RayonRobot, false);
+    place_obstacle_with_margin( -775,    0, 1800,  450, RayonRobot, false);
 }
 
 void pathfind_fill_lidar(){
@@ -86,6 +80,7 @@ void pathfind_fill_lidar(){
 
     for (int i = 0; i < lidar.count; i++){
         if (!lidar.data[i].onTable) continue;
+        // TODO Dont add all of the lidar points to improve performance
         place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y,150, 150,150,false);
     }
 }

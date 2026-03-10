@@ -28,7 +28,7 @@ nav_return_t navigationDrive(){
             return NAV_IN_PROCESS;
         }
         else {
-            LOG_GREEN_INFO("Path found!");
+            // LOG_GREEN_INFO("Path found!");
         }
     }
     else{
@@ -72,7 +72,7 @@ nav_return_t navigationGo(){
 nav_return_t navigationGoTo(position_t pos, bool useAStar){
     if (current_pos_target.x != pos.x || 
         current_pos_target.y != pos.y || 
-        (current_pos_target.a != pos.a) || 
+        current_pos_target.a != pos.a || 
         current_use_astar != useAStar){
         LOG_INFO("New navigation target: { x = ", pos.x, " y = ", pos.y, " a = ", pos.a, " }, useAStar = ", useAStar);
         current_pos_target = pos;

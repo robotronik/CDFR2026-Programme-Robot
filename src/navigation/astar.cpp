@@ -181,22 +181,34 @@ void place_obstacle_with_margin(int x0_mm, int y0_mm, int w_mm, int h_mm, int Ra
 
     // Définir l'obstacle principal
     unsigned char main_cost = traversable ? MARGIN_COST : OBSTACLE_COST;
-    for(int x = x_start; x < x_end; x++)
-        for(int y = y_start; y < y_end; y++)
-            if(x >= 0 && x < AS_HEIGHT && y >= 0 && y < AS_WIDTH)
-                costmap[x][y] = main_cost;
+    
+    // Clamp bounds to valid range before loop
+    int xs_main = (x_start < 0) ? 0 : x_start;
+    int xe_main = (x_end > AS_HEIGHT) ? AS_HEIGHT : x_end;
+    int ys_main = (y_start < 0) ? 0 : y_start;
+    int ye_main = (y_end > AS_WIDTH) ? AS_WIDTH : y_end;
+    
+    for(int x = xs_main; x < xe_main; x++)
+        for(int y = ys_main; y < ye_main; y++)
+            costmap[x][y] = main_cost;
 
     // Définir la marge autour de l'obstacle
     x_start -= margin; x_end += margin;
     y_start -= margin; y_end += margin;
 
     unsigned char margin_cost = traversable ? MARGIN_COST : OBSTACLE_COST;
-    for(int x = x_start; x < x_end; x++)
-        for(int y = y_start; y < y_end; y++)
-            if(x >= 0 && x < AS_HEIGHT && y >= 0 && y < AS_WIDTH)
-                // ne pas écraser l'obstacle principal
-                if(costmap[x][y] != main_cost)
-                    costmap[x][y] = margin_cost;
+    
+    // Clamp bounds to valid range before loop
+    int xs_margin = (x_start < 0) ? 0 : x_start;
+    int xe_margin = (x_end > AS_HEIGHT) ? AS_HEIGHT : x_end;
+    int ys_margin = (y_start < 0) ? 0 : y_start;
+    int ye_margin = (y_end > AS_WIDTH) ? AS_WIDTH : y_end;
+    
+    for(int x = xs_margin; x < xe_margin; x++)
+        for(int y = ys_margin; y < ye_margin; y++)
+            // ne pas écraser l'obstacle principal
+            if (costmap[x][y] < margin_cost)
+                costmap[x][y] = margin_cost;
 }
 
 int line_max_cost(position_t p1, position_t p2) {
