@@ -200,7 +200,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             if (closeClaws()){
                 drive.is_very_slow_mode = false;
                 LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: Stock", stock_num, " collected");
-                setStockAsRemoved(stock_num);
+                tableStatus.setStockAsRemoved(stock_num);
                 gatherStockState = FSM_GATHER_COLLECTED;
                 return FSM_RETURN_DONE;
             }
@@ -234,21 +234,21 @@ ReturnFSM_t ActionFSM::DropStock(){
             //LOG_INFO("Navigating to stock ", stock_num, " at position (", dropzonePos.x, ",", dropzonePos.y, ") with angle ", dropzonePos.a);
 
             if ((nav_ret == NAV_DONE) & rotateTwoBlocks(stockOrder)){ // We consider that we are at the dropzone if we are close enough, to avoid navigation errors
-                setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE); // Mark dropzone as occupied
+                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE); // Mark dropzone as occupied
                 dropStockState = FSM_DROP;
                 LOG_EXTENDED_DEBUG("FSM_DROP_NAV: Finished Drop Nav and rotate 2 blocks");
             }
             else if (nav_ret == NAV_ERROR){
 
                 LOG_WARNING("FSM_DROP_NAV(NAV_ERROR): Navigation error while going to dropzone for stock ", stock_num);
-                setDropzoneAsError(dropzone_num);
+                tableStatus.setDropzoneAsError(dropzone_num);
                 
                 int dropzone_temp = GetBestDropZone(drive.position);
                 if(dropzone_temp == -1){
                     LOG_ERROR("FSM_DROP_NAV(NAV_ERROR): No more dropzone available, cannot drop stock ", stock_num);
                     return FSM_RETURN_ERROR;
                 }else{
-                    setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
+                    tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
                     dropzone_num = dropzone_temp;
                     dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
                     LOG_EXTENDED_DEBUG("FSM_DROP_NAV(NAV_ERROR): New dropzone position for stock ", stock_num, " is (", dropzonePos.x, ",", dropzonePos.y, ")");

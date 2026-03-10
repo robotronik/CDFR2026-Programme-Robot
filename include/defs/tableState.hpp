@@ -34,6 +34,9 @@ class TableState
 
         dropzone_state_t dropzone_states[DROPZONE_COUNT];
         void resetCalibrationAge(){ calibrationAge = 0;}
+        void setStockAsRemoved(int num);
+        void setDropzoneState(int dropzoneNum, TableState::dropzone_state_t state);
+        void setDropzoneAsError(int dropzoneNum);
 
 };
 

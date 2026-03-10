@@ -45,3 +45,17 @@ void to_json(json& j, const TableState& ts) {
         {"strategy", ts.strategy}
     };
 }
+
+void TableState::setStockAsRemoved(int num){
+    tableStatus.avail_stocks[num] = false;
+    LOG_EXTENDED_DEBUG("Removed stock ", num);
+}
+
+void TableState::setDropzoneState(int dropzoneNum, TableState::dropzone_state_t state){
+    tableStatus.dropzone_states[dropzoneNum] = state;
+    LOG_EXTENDED_DEBUG("Set dropzone ", dropzoneNum, " state to ", state);
+}
+
+void TableState::setDropzoneAsError(int dropzoneNum){
+    setDropzoneState(dropzoneNum, TableState::DROPZONE_ERROR);
+}
