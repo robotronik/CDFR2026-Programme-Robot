@@ -50,8 +50,8 @@ bool ActionFSM::RunFSM(){
     case FSM_ACTION_GATHER:
         ret = TakeStock();
         if (ret == FSM_RETURN_DONE){
-            SetBestAction(drive.position);
             LOG_INFO("ACTION_GATHER: Finished gathering stock ", stock_num);
+            SetBestAction(drive.position);
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("ACTION_GATHER: Couldn't gather");
@@ -76,8 +76,8 @@ bool ActionFSM::RunFSM(){
         ret = Cursor();
         if (ret == FSM_RETURN_DONE){
             setCursorIsDone(true);
-            SetBestAction(drive.position);
             LOG_INFO("ACTION_CURSOR: Finished cursor action");
+            SetBestAction(drive.position);
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("ACTION_CURSOR: Couldn't do cursor action");
@@ -97,8 +97,8 @@ bool ActionFSM::RunFSM(){
         ret = Calibrate();
         if (ret == FSM_RETURN_DONE){
             tableStatus.resetCalibrationAge();
-            SetBestAction(drive.position);
             LOG_INFO("ACTION_CALIBRATION: Finished calibration action");
+            SetBestAction(drive.position);
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("ACTION_CALIBRATION: Couldn't do calibration action");
@@ -123,7 +123,7 @@ bool ActionFSM::RunFSM(){
 
 ReturnFSM_t ActionFSM::TakeStock(){
     //LOG_INFO("TakeStock state: ", gatherStockState, " stock_num: ", stock_num);
-    if (stock_num == -1 || gatherStockState == FSM_GATHER_NAV){
+    if (stock_num == -1 && gatherStockState == FSM_GATHER_NAV){
         //LOG_DEBUG("Getting next stock to take");
         if (!chooseStockStrategy(stock_num, offset)){
             LOG_WARNING("ACTION_GATHER: No more stocks to take, exiting GatherStock");

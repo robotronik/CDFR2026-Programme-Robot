@@ -101,7 +101,7 @@ bool chooseStockStrategy(int& stockNum, int& stockOffset){
         stockOffset = getBestStockPositionOff(stockNum, drive.position);
         return true;
     }
-    LOG_GREEN_INFO("No stock available");
+    //LOG_WARNING("No stock available");
     return false;
 }
 
