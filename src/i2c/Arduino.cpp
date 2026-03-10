@@ -196,7 +196,7 @@ void Arduino::moveMotorDC(uint8_t speed, bool forward){
     WriteUInt8(&ptr, speed);
     WriteUInt8(&ptr, forward);
     I2cSendData(i2cFile, CMD_MOVE_DC_MOTOR, message, 3);
-    LOG_DEBUG("DC Motor moved");
+    //LOG_DEBUG("DC Motor moved");
 }
 void Arduino::stopMotorDC(){
     //LOG_DEBUG("Stopping DC Motor ");
