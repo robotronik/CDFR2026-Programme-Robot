@@ -279,7 +279,7 @@ ReturnFSM_t ActionFSM::Cursor(){
     moveTarget.a = 0.0;
 
     position_t endTarget = navTarget;
-    endTarget.x -= 200.0;
+    endTarget.x -= 50.0;
     endTarget.y -= 280.0;
     endTarget.a = 0.0;
 
@@ -348,7 +348,7 @@ void ActionFSM::SetBestAction(position_t position){
         LOG_INFO("Calibration aged is greater than 2 going for forced calibration");
         return;
     }
-    if((!cursorIsDone()) && (position_distance(position, CursorPos) < 300 || stock_num == 1)){ // If we are close to the cursor position or if we are at stock 
+    if((!cursorIsDone()) && (position_distance(position, CursorPos) < 300 || stock_num == (tableStatus.colorTeam == YELLOW ? 5 : 1))){ // If we are close to the cursor position or if we are at stock 
         LOG_INFO("In cursor area");
         setCursorIsDone(true);
         runState = FSM_ACTION_CURSOR;
