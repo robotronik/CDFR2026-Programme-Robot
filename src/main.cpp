@@ -136,7 +136,6 @@ int main(int argc, char *argv[])
         case RUN:
         {
             if (initState){
-                log_main_set_status(true);
                 LOG_GREEN_INFO("RUN");
                 tableStatus.reset();
                 tableStatus.startTime = _millis();
@@ -183,7 +182,6 @@ int main(int argc, char *argv[])
         {
             if (initState){
                 LOG_GREEN_INFO("FIN");
-                log_main_set_status(false);
                 arduino.RGB_Solid(0, 255, 0);
                 disableActuators();
                 // Clear command buffer

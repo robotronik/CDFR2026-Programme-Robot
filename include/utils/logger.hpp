@@ -40,7 +40,6 @@ void log_main(std::optional<Color> color, const std::string& message);
 
 // Logger state helpers for API/UI usage.
 int log_main_get_id();
-void log_main_set_status(bool enabled);
 std::string log_main_get_screen();
 
 // Base case for message appending: when there are no more arguments.

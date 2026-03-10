@@ -12,7 +12,6 @@ namespace {
 
 struct LoggerState {
     bool stdOutInitValid = false;
-    bool logEnable = true;
     std::string baseName = "mainLog";
     int fileDescriptor = -1;
     std::string timeString = currentTimeFormatted();
@@ -182,12 +181,6 @@ void logToOutput(const std::string& message) {
 } // namespace
 
 void log_main(std::optional<Color> color, const std::string& message) {
-    auto& s = state();
-
-    if (!s.logEnable) {
-        return;
-    }
-
     std::ostringstream formatted;
     if (color.has_value()) {
         formatted << makeAnsiCode(color) << message << "\033[0m" << std::endl;
@@ -200,10 +193,6 @@ void log_main(std::optional<Color> color, const std::string& message) {
 
 int log_main_get_id() {
     return getLogNumber();
-}
-
-void log_main_set_status(bool enabled) {
-    state().logEnable = enabled;
 }
 
 std::string log_main_get_screen() {
