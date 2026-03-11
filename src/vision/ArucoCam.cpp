@@ -130,7 +130,7 @@ bool ArucoCam::getObjectData(json& objects, bool& sucess){
     }
     json response;
     if (restAPI_GET(url, "/objects", response) == false) {
-        LOG_ERROR("ArucoCam::getObjectPos() - Failed to fetch position");
+        LOG_ERROR("ArucoCam::getObjectData() - Failed to fetch objects");
         return true;
     }
     // Extract the values from the JSON object
