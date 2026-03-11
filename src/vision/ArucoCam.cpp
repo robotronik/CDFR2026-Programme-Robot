@@ -196,7 +196,7 @@ bool ArucoCam::ToObjectColor(json& data, bool* order, bool& success){
     }
 
     std::sort(possible.begin(), possible.end(), sortBlockT);
-    for(size_t i = 0 ; i< (size_t)count; i++){  
+    for(size_t i = 0 ; i< (size_t)4; i++){  
         order[i] = possible[i].color;
         if(possible[i].color){
             LOG_DEBUG("Blue");

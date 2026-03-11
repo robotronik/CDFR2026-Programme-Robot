@@ -15,8 +15,8 @@ TableState::TableState(){
 TableState::~TableState(){}
 
 void TableState::reset(){
-    
-    /* data Winter is comming */
+    resetCalibrationAge();
+/* data Winter is comming */
     for (int i = 0; i < STOCK_COUNT; i++)
         avail_stocks[i] = true;
 
@@ -52,7 +52,11 @@ void TableState::setStockAsRemoved(int num){
 }
 
 void TableState::setDropzoneState(int dropzoneNum, TableState::dropzone_state_t state){
-    tableStatus.dropzone_states[dropzoneNum] = state;
+    if (dropzoneNum < 0 || dropzoneNum >= DROPZONE_COUNT) {
+        LOG_EXTENDED_DEBUG("Attempted to set dropzone state with invalid index ", dropzoneNum);
+        return;
+    }
+    dropzone_states[dropzoneNum] = state;
     LOG_EXTENDED_DEBUG("Set dropzone ", dropzoneNum, " state to ", state);
 }
 
