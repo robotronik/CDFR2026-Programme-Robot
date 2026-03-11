@@ -124,7 +124,7 @@ bool DriveControl::drive(position_t pos[], int n) {
     const double kP_lin = 6.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
     vec.x *= position_speed / kP_lin;
     vec.y *= position_speed / kP_lin;
-    if (err_len < position_length(vec) && err_len > 30.0) {
+    if (err_len > position_length(vec) && err_len > 30.0) {
         pos_target.x = position.x + vec.x;
         pos_target.y = position.y + vec.y;
     }
