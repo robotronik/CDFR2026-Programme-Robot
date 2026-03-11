@@ -288,8 +288,8 @@ ReturnFSM_t ActionFSM::DropStock(){
                 LOG_EXTENDED_DEBUG("FSM_DROP: Stock ", stock_num, " dropped");
                 dropStockState = FSM_DROP_NAV_BACK;
                 backPos = drive.position;
-                backPos.x += 100 * cos(drive.position.a);
-                backPos.y += 100 * sin(drive.position.a);
+                backPos.x -= 50 * cos(drive.position.a);
+                backPos.y -= 50 * sin(drive.position.a);
 
                 //No more stock in hand
                 stock_num = -1;
@@ -341,7 +341,7 @@ ReturnFSM_t ActionFSM::Cursor(){
             }
             break;
         case FSM_CURSOR_NAV:
-            nav_ret = navigationGoTo(navTarget, true);
+            nav_ret = navigationGoTo(navTarget, false); //false sinon il va pas vouloir y aller car trop proche du mur
             if ((nav_ret == NAV_DONE)){ 
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Nav done, going to FSM_CURSOR");
                 CursorState = FSM_CURSOR_LOW_CLAW;
@@ -418,7 +418,6 @@ void ActionFSM::SetBestAction(position_t position){
     /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
     if((!tableStatus.cursorIsDone()) && (position_distance(position, tableStatus.CursorPos) < 300 || stock_num == (tableStatus.colorTeam == YELLOW ? 5 : 1))){ // If we are close to the cursor position or if we are at stock 
         LOG_GREEN_INFO("Going for cursor action");
-        tableStatus.calibrationAge += 1;
         runState = FSM_ACTION_CURSOR;
         return;
     }

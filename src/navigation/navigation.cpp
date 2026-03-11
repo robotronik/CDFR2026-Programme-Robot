@@ -25,7 +25,7 @@ nav_return_t navigationDrive(){
                 is_robot_stalled = true;
                 robot_stall_start_time = _millis();
             }
-            return NAV_IN_PROCESS;
+            return NAV_ERROR;
         }
         else {
             // LOG_GREEN_INFO("Path found!");
