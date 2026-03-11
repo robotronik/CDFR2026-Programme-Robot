@@ -234,7 +234,6 @@ ReturnFSM_t ActionFSM::DropStock(){
             if (!rotate_done) rotate_done = rotateTwoBlocks(stockOrder);
         
             if (rotate_done && (nav_ret == NAV_DONE)) {
-                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE);
                 dropStockState = FSM_DROP;
                 LOG_EXTENDED_DEBUG("FSM_DROP_NAV: Finished Drop Nav and rotate 2 blocks");
             }
@@ -264,6 +263,7 @@ ReturnFSM_t ActionFSM::DropStock(){
             // Drop the stock
             if (dropBlock()){
                 LOG_EXTENDED_DEBUG("FSM_DROP: Stock ", stock_num, " dropped");
+                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE);
                 dropStockState = FSM_DROP_NAV_BACK;
                 backPos = drive.position;
                 backPos.x += 100 * cos(drive.position.a);
