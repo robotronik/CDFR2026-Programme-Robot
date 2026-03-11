@@ -15,7 +15,6 @@ ActionFSM::ActionFSM(){
 
 ActionFSM::~ActionFSM(){}
 
-
 void ActionFSM::Reset(){
     runState = FSM_ACTION_CALIBRATION;
 
@@ -377,7 +376,7 @@ void ActionFSM::SetBestAction(position_t position){
         LOG_GREEN_INFO("Calibration aged is greater than 2 going for forced calibration");
         return;
     }
-    if((!tableStatus.cursorIsDone()) && (position_distance(position, CursorPos) < 300 || stock_num == (tableStatus.colorTeam == YELLOW ? 5 : 1))){ // If we are close to the cursor position or if we are at stock 
+    if((!tableStatus.cursorIsDone()) && (position_distance(position, tableStatus.CursorPos) < 300 || stock_num == (tableStatus.colorTeam == YELLOW ? 5 : 1))){ // If we are close to the cursor position or if we are at stock 
         LOG_GREEN_INFO("Going for cursor action");
         runState = FSM_ACTION_CURSOR;
         return;
@@ -397,10 +396,6 @@ void ActionFSM::SetBestAction(position_t position){
 }
    
 ReturnFSM_t ActionFSM::Calibrate(){
-    //TODO Etienne - Le robot se déplace sur le tag aruco au lieu de s'en éloigner lorsqu'il est trop proche du tag
-    // maybe bug dans calculateClosestArucoPosition sens du vecteur
-    // ajout de log à tester
-    
     nav_return_t nav_ret;
     static position_t Calibrationtarget_;
     static position_t arucoPos;

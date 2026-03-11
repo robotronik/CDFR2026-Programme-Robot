@@ -25,9 +25,11 @@ class TableState
         bool cursorIsDone(){ return cursorStatus; }
         void setCursorIsDone(bool val){ cursorStatus = val; }
         position_t CursorPos = {625, 1220, 45};
-        
+
         /* data Winter is comming */
         bool avail_stocks[STOCK_COUNT];     // Is stock available
+        inline bool remainingStocksExist(){for(size_t _ = 0; _ < STOCK_COUNT; _++ ){if(avail_stocks[_]) return true;}; return false;}
+        
         typedef enum
         {
             DROPZONE_EMPTY,

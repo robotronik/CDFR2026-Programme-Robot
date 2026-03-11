@@ -27,7 +27,6 @@ class ActionFSM{
         bool rotate_done = false;
         position_t backPos;
 
-        position_t CursorPos = {625, 1220, 45};
         nav_return_t nav_ret;
         position_t dropzonePos;
         position_t targetStockPos;
