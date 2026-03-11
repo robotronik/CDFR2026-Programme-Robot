@@ -91,16 +91,22 @@ bool ActionFSM::RunFSM(){
     case FSM_ACTION_CALIBRATION:
         ret = Calibrate();
         if (ret == FSM_RETURN_DONE){
-            tableStatus.resetCalibrationAge();
+            // Si calibrationAge != 0 la calibration a échoué
+            // et on se donne une action supplémentaire avant de retenter
+            if(tableStatus.calibrationAge) tableStatus.calibrationAge -=1; 
             LOG_INFO("ACTION_CALIBRATION: Finished calibration action");
             SetBestAction(drive.position);
         }
         else if (ret == FSM_RETURN_ERROR){
-            LOG_ERROR("ACTION_CALIBRATION: Couldn't do calibration action");
-            // TODO Handle error
+            LOG_ERROR("ACTION_CALIBRATION: Couldn't do calibration action, going for next action");
+            tableStatus.calibrationAge -=1; // On se donne une action supplémentaire avant de retenter la calibration
+            SetBestAction(drive.position);
         }
         break;
-
+    /*
+        Action de calibration ne sera pas éxecutée en match
+        En cas d'erreur return true pour mettre fin au match
+    */
     case FSM_CENTER_CALIBRATION:
         ret = GetRobotCenter();
         if(ret == FSM_RETURN_DONE){
@@ -109,7 +115,7 @@ bool ActionFSM::RunFSM(){
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("CENTER_CALIBRATION: Error during center calibration step ", calibrationCameraState);
-            // TODO Handle error
+            return true; // Robot is done
         }
         break;
     }
@@ -414,7 +420,11 @@ void ActionFSM::SetBestAction(position_t position){
     }
 
 }
-   
+
+/*
+    Force la calibration en se tournant vers un tag ou s'éloignant d'un tag aruco
+    Si la navigation échoue la calibration est considérée échouée et sera retentée une action plus tard
+*/
 ReturnFSM_t ActionFSM::Calibrate(){
     nav_return_t nav_ret;
     static position_t Calibrationtarget_;
