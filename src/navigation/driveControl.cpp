@@ -24,7 +24,7 @@ void DriveControl::reset() {
     velocity = {0.0, 0.0, 0.0};
     acceleration = {0.0, 0.0, 0.0};
     is_enabled = false;
-    is_slow_mode = true;
+    is_slow_mode = false;
     drive_interface::disable();
     drive_interface::set_target(convertPositionToPacked(target));
     drive_interface::set_coordinates(convertPositionToPacked(position));
@@ -132,9 +132,9 @@ bool DriveControl::drive(position_t pos[], int n) {
         drive_interface::set_target(convertPositionToPacked(pos_target));
     }
 
-    bool is_done_pos = position_distance(position, pos[n - 1]) < 5.0 && fabs(velocity.x) < 30.0 && fabs(velocity.y) < 30.0;
-    bool is_done_ang = fabs(error_heading) < 1.0 && fabs(velocity.a) < 5.0;
-    //LOG_DEBUG("Position error: ", position_distance(position, pos[n - 1]), "mm, Velocity: ", position_length(velocity), "mm/s, Angle error: ", error_heading, "deg, Angular velocity: ", fabs(velocity.a), "deg/s");
+    bool is_done_pos = position_distance(position, pos[n - 1]) < 7.0 && fabs(velocity.x) < 15.0 && fabs(velocity.y) < 15.0;
+    bool is_done_ang = fabs(error_heading) < 1.0 && fabs(velocity.a) < 4.0;
+    // LOG_DEBUG("Position error: ", position_distance(position, pos[n - 1]), "mm, Velocity x: ", velocity.x, "mm/s, Velocity y: ", velocity.y, "mm/s, Angle error: ", error_heading, "deg, Angular velocity: ", fabs(velocity.a), "deg/s");
 
     if (is_done_pos && is_done_ang){
         return true;
