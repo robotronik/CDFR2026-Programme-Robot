@@ -65,9 +65,11 @@ bool ActionFSM::RunFSM(){
             SetBestAction(drive.position);
         }
         break;
-    //****************************************************************
-    //****************************************************************
-
+    
+    /*
+        Action Curseur
+        En cas d'erreur on lance une nouvelle action et retentera plus tard
+    */
     case FSM_ACTION_CURSOR:
         ret = Cursor();
         if (ret == FSM_RETURN_DONE){
@@ -76,10 +78,16 @@ bool ActionFSM::RunFSM(){
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("ACTION_CURSOR: Couldn't do cursor action");
-            // TODO Handle error
+            tableStatus.setCursorIsDone(true); // Place le curseur comme virtuellement fait
+            SetBestAction(drive.position); // Choisit une nouvelle action, le curseur étant indisponible
+            tableStatus.setCursorIsDone(false); // Rend le curseur de nouveau disponible
         }
         break;
 
+    /*
+        Action retour sur zone de départ
+        n'est run que si plus rien n'est possible sur la table ou si le temps est écoulé
+    */
     case FSM_ACTION_NAV_HOME:
         if (returnToHome()){
             LOG_INFO("ACTION_NAV_HOME: Finished going home");
@@ -87,7 +95,9 @@ bool ActionFSM::RunFSM(){
             return true; // Robot is done
         }
         break;
-    //*******************************************************************
+    /*
+        Action forçant la calibration 
+    */
     case FSM_ACTION_CALIBRATION:
         ret = Calibrate();
         if (ret == FSM_RETURN_DONE){
