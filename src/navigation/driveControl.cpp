@@ -44,16 +44,14 @@ bool DriveControl::drive(position_t pos[], int n) {
     }
 
     // Calculate the target point along the path
-    double looking_distance = 80.0; // Radius (mm)
+    double looking_distance = 120.0; // Radius (mm)
     
     position_t pos_target;
     double total_distance = position_distance(position, pos[0]);
-    position_t from = position;
     int i = 0;
     while (total_distance < looking_distance && i < n - 1) {
         // Calculate the distance to the next position
         total_distance += position_distance(pos[i], pos[i + 1]);
-        from = pos[i];
         i++;
     }
     // Use the position at the looking distance
@@ -68,7 +66,7 @@ bool DriveControl::drive(position_t pos[], int n) {
     double current_angular_velocity = fabs(velocity.a); // deg/s
     double angle_speed;
     
-    double error_heading = pos_target.a - position.a;
+    double error_heading = pos[n-1].a - position.a;
     while (error_heading > 180.0) error_heading -= 360.0;
     while (error_heading < -180.0) error_heading += 360.0;
     
@@ -118,18 +116,10 @@ bool DriveControl::drive(position_t pos[], int n) {
         position_speed = position_top_speed;
     }
 
-    if (total_distance > looking_distance){
-        double resulting_displ = looking_distance - total_distance + position_distance(from, pos_target);
-        position_t displacement = position_vector(from, pos_target);
-        position_normalize(displacement);
-        displacement.x *= resulting_displ;
-        displacement.y *= resulting_displ;
-
-        from.x += displacement.x;
-        from.y += displacement.y;
+    if (total_distance > 20.0){
         position_t vec;
-        vec.x = from.x - position.x;
-        vec.y = from.y - position.y;
+        vec.x = pos_target.x - position.x;
+        vec.y = pos_target.y - position.y;
         position_normalize(vec);
         const double kP_lin = 6.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
         vec.x *= position_speed / kP_lin;

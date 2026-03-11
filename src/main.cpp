@@ -285,7 +285,6 @@ void GetLidar()
     static position_t prev_pos;
     static position_t prev_vel;
     static long prev_time_ms = 0;
-    static long prev_rest_ms = 0;
 
     if (lidar.getData())
     {
@@ -294,11 +293,7 @@ void GetLidar()
         double time_s = double(_millis() - prev_time_ms) / 1000.0; 
         //convertAngularToAxial(lidar.data, lidar.count, position, 200);
         convertAngularToAxialCompensated(lidar.data, lidar.count, prev_pos, prev_vel, time_s, 200);
-        
-        if (now - prev_rest_ms > 200) {
-            pathfind_fill_lidar();
-            prev_rest_ms = now;
-        }
+        pathfind_fill_lidar();
         
         if (currentState == RUN || currentState == MANUAL)
             navigationOpponentDetection();

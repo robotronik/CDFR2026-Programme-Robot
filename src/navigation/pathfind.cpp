@@ -6,7 +6,7 @@
 
 int pathfind(position_t start, position_t goal, position_t path[]) {
     // Ajouter les obstacles du lidar
-    pathfind_fill_lidar();
+    // pathfind_fill_lidar();
 
     //LOG_INFO("Original start : ", start.x, " / ", start.y, " goal : ", goal.x, " / ", goal.y);
 
