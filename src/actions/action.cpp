@@ -32,11 +32,8 @@ void ActionFSM::Reset(){
     offset = 0;
     targetStockPos = position_t{0,0,0};
     dropzonePos = position_t{0,0,0};
-    CursorPos = {625, 1220, 45};
-    if (tableStatus.colorTeam == YELLOW) position_robot_flip(CursorPos);
 
     stockOrder[0] = false; stockOrder[1]=false; stockOrder[2]=false; stockOrder[3]=false;
-    setCursorIsDone(false);
     
     // TODO reset other states (num,offset, etc.)
 }
@@ -75,7 +72,6 @@ bool ActionFSM::RunFSM(){
     case FSM_ACTION_CURSOR:
         ret = Cursor();
         if (ret == FSM_RETURN_DONE){
-            setCursorIsDone(true);
             LOG_INFO("ACTION_CURSOR: Finished cursor action");
             SetBestAction(drive.position);
         }
@@ -355,6 +351,7 @@ ReturnFSM_t ActionFSM::Cursor(){
             nav_ret = navigationGoTo(endTarget);
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_END: Nav done, cursor action complete");
+                tableStatus.setCursorIsDone(true);
                 CursorState = CURSOR_RAISE_CLAW;
                 return FSM_RETURN_DONE;
             }
@@ -380,9 +377,8 @@ void ActionFSM::SetBestAction(position_t position){
         LOG_GREEN_INFO("Calibration aged is greater than 2 going for forced calibration");
         return;
     }
-    if((!cursorIsDone()) && (position_distance(position, CursorPos) < 300 || stock_num == (tableStatus.colorTeam == YELLOW ? 5 : 1))){ // If we are close to the cursor position or if we are at stock 
+    if((!tableStatus.cursorIsDone()) && (position_distance(position, CursorPos) < 300 || stock_num == (tableStatus.colorTeam == YELLOW ? 5 : 1))){ // If we are close to the cursor position or if we are at stock 
         LOG_GREEN_INFO("Going for cursor action");
-        setCursorIsDone(true);
         runState = FSM_ACTION_CURSOR;
         return;
     }

@@ -9,14 +9,23 @@ TableState::TableState(){
     strategy = 1;
     startTime = 0;
     calibrationAge = 0;
+    setCursorIsDone(false);
+    CursorPos = {625, 1220, 45};
+    if (tableStatus.colorTeam == YELLOW) position_robot_flip(CursorPos);
     reset();
 }
 
 TableState::~TableState(){}
 
 void TableState::reset(){
+    /* data Winter is comming */
+
+    setCursorIsDone(false);
+    CursorPos = {625, 1220, 45};
+    if (tableStatus.colorTeam == YELLOW) position_robot_flip(CursorPos);
+
     resetCalibrationAge();
-/* data Winter is comming */
+    
     for (int i = 0; i < STOCK_COUNT; i++)
         avail_stocks[i] = true;
 

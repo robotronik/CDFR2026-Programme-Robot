@@ -21,7 +21,11 @@ class TableState
         colorTeam_t colorTeam;
         int strategy;
         int calibrationAge;
-
+        bool cursorStatus = false;
+        bool cursorIsDone(){ return cursorStatus; }
+        void setCursorIsDone(bool val){ cursorStatus = val; }
+        position_t CursorPos = {625, 1220, 45};
+        
         /* data Winter is comming */
         bool avail_stocks[STOCK_COUNT];     // Is stock available
         typedef enum

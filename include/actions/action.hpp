@@ -18,15 +18,12 @@ class ActionFSM{
         void Reset();
         bool RunFSM();
         void SetBestAction(position_t position);
-        bool cursorIsDone(){ return cursorStatus; }
-        void setCursorIsDone(bool val){ cursorStatus = val; }
         
     private:
 
         int stock_num;// Num of stock
         int dropzone_num;// Num of dropzone to drop the stock
         int offset;// Offset  is direction to take the stock from
-        bool cursorStatus = false;
         bool rotate_done = false;
         position_t backPos;
 
