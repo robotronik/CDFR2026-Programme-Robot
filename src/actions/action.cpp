@@ -41,8 +41,10 @@ bool ActionFSM::RunFSM(){
     ReturnFSM_t ret;
     switch (runState)
     {
-    //****************************************************************
-    // ACTION PRINCIPALE *************************************************
+    /*
+        Action Gather:
+
+    */
     case FSM_ACTION_GATHER:
         ret = TakeStock();
         if (ret == FSM_RETURN_DONE){
@@ -54,7 +56,11 @@ bool ActionFSM::RunFSM(){
             // TODO Handle error
         }
         break;
-    //****************************************************************
+
+    /*
+        Action drop block in zone
+        Error make the action be postponned
+    */
     case FSM_ACTION_DROP:
         ret = DropStock();
         if (ret == FSM_RETURN_ERROR){
@@ -143,10 +149,9 @@ ReturnFSM_t ActionFSM::TakeStock(){
     if (stock_num == -1 && gatherStockState == FSM_GATHER_NAV){
         //LOG_DEBUG("Getting next stock to take");
         if (!chooseStockStrategy(stock_num, offset)){
-            LOG_WARNING("ACTION_GATHER: No more stocks to take, exiting GatherStock");
+            LOG_ERROR("ACTION_GATHER: No more stocks to take, exiting GatherStock");//Should never be catch
             stock_num = -1;
             gatherStockState = FSM_GATHER_NAV;
-            runState = FSM_ACTION_NAV_HOME; // si plus de stock, on return home
             return FSM_RETURN_DONE;
         }
         LOG_EXTENDED_DEBUG("ACTION_GATHER: Next stock to take: ", stock_num, " offset: ", offset);
@@ -170,10 +175,10 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 snapClaws(false,false);
             }
             else if (nav_ret == NAV_ERROR){
-                LOG_WARNING("FSM_GATHER_NAV: Navigation error while going to stock ", stock_num);
+                LOG_ERROR("FSM_GATHER_NAV: Navigation error while going to stock ", stock_num);
                 stock_num = -1;
-                gatherStockState = FSM_GATHER_NAV; // TO TEST avec adversaire 
-                return FSM_RETURN_ERROR;
+                gatherStockState = FSM_GATHER_NAV;
+                return FSM_RETURN_DONE;
             }
             }
             break;
