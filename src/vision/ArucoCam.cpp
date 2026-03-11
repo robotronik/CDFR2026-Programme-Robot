@@ -182,7 +182,10 @@ bool ArucoCam::ToObjectColor(json& data, bool* order, bool& success){
             double x_tmp = obj.value("x", 0.0);
             double y_tmp = obj.value("y", 0.0);
             //m_x += x_tmp* cos_tag - y_tmp * sin_tag;
-            possible.push_back(block_t{.axe= x_tmp* sin_tag + y_tmp*cos_tag, .color = (obj.value("label", "") == "Blue")? true : false}); 
+            possible.push_back(block_t{
+                .axe= x_tmp* sin_tag + y_tmp*cos_tag, 
+                .color = (obj.value("label", "") == "Blue")? true : false
+            }); 
             count++;
         }
     }
