@@ -39,6 +39,8 @@ class TableState
         } dropzone_state_t;
 
         dropzone_state_t dropzone_states[DROPZONE_COUNT];
+        inline bool remainingDropExist(){for(size_t _ = 0; _ < DROPZONE_COUNT; _++ ){if(dropzone_states[_] == DROPZONE_EMPTY) return true;}; return false;}
+        
         void resetCalibrationAge(){ calibrationAge = 0;}
         void setStockAsRemoved(int num);
         void setDropzoneState(int dropzoneNum, TableState::dropzone_state_t state);

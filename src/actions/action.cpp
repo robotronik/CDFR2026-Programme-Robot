@@ -59,7 +59,13 @@ bool ActionFSM::RunFSM(){
         ret = DropStock();
         if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("ACTION_DROP: Couldn't drop");
-            // TODO Handle error
+            if(dropzone_num == -1){
+                LOG_ERROR("ACTION_DROP: dropzone_num == -1, Should not be the case");
+            }else{
+                LOG_ERROR("ACTION_DROP: last dropzone was not available");
+                SetBestAction(drive.position); // Going for next action, try again later
+            }
+
         }else if (ret == FSM_RETURN_DONE){
             LOG_INFO("ACTION_DROP: Finished dropping stock ", stock_num);
             SetBestAction(drive.position);
@@ -261,6 +267,7 @@ ReturnFSM_t ActionFSM::DropStock(){
                 int dropzone_temp = GetBestDropZone(drive.position);
                 if(dropzone_temp == -1){
                     LOG_ERROR("FSM_DROP_NAV(NAV_ERROR): No more dropzone available, cannot drop stock ", stock_num);
+                    tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
                     return FSM_RETURN_ERROR;
                 }else{
                     tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
@@ -279,12 +286,16 @@ ReturnFSM_t ActionFSM::DropStock(){
             // Drop the stock
             if (dropBlock()){
                 LOG_EXTENDED_DEBUG("FSM_DROP: Stock ", stock_num, " dropped");
-                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE);  
                 dropStockState = FSM_DROP_NAV_BACK;
                 backPos = drive.position;
                 backPos.x += 100 * cos(drive.position.a);
                 backPos.y += 100 * sin(drive.position.a);
-                
+
+                //No more stock in hand
+                stock_num = -1;
+                gatherStockState = FSM_GATHER_NAV;
+                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE);  
+
             }
             break;
         case FSM_DROP_NAV_BACK:
@@ -292,9 +303,7 @@ ReturnFSM_t ActionFSM::DropStock(){
             nav_ret = navigationGoTo(backPos, false);
         
             if (nav_ret == NAV_DONE) {
-                gatherStockState = FSM_GATHER_NAV;
                 dropStockState = FSM_DROP_NONE;
-                stock_num = -1;
                 offset = 0;  
                 rotate_done = false;
                 LOG_EXTENDED_DEBUG("FSM_DROP_NAV_BACK: Finished Drop Nav Back");
@@ -415,7 +424,7 @@ void ActionFSM::SetBestAction(position_t position){
     }
 
     /**************************** CONDITIONS POUR DROP UN STOCK ***************************************/
-    if(stock_num != -1){ // On peut DROP à partir du moment où on a un stock
+    if(tableStatus.remainingDropExist() && stock_num != -1){ // On peut DROP à partir du moment où on a un stock et qu'il reste des drop zones
         runState = FSM_ACTION_DROP;
         tableStatus.calibrationAge += 1;
         LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to drop a stock, going to FSM_ACTION_DROP");
