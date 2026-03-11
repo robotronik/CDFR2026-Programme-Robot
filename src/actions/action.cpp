@@ -263,7 +263,7 @@ ReturnFSM_t ActionFSM::DropStock(){
             // Drop the stock
             if (dropBlock()){
                 LOG_EXTENDED_DEBUG("FSM_DROP: Stock ", stock_num, " dropped");
-                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE);
+                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE);  
                 dropStockState = FSM_DROP_NAV_BACK;
                 backPos = drive.position;
                 backPos.x += 100 * cos(drive.position.a);
