@@ -364,35 +364,55 @@ ReturnFSM_t ActionFSM::Cursor(){
     return FSM_RETURN_WORKING;
 }
 
+/*
+    Plus l'action est prioritaire plus elle apparaît tôt dans le code.
+        Ex: le retour êtant prioritaire sur toutes les autres actions on fera toujours le retour si les conditions sont remplies
+    Priorités actuelles:
+        - Retour
+        - Calibration
+        - Curseur
+        - Drop
+        - Take
+*/
 void ActionFSM::SetBestAction(position_t position){
-    // TODO Etienne - refacto de cette fonction en switch case pour lisibilité
 
+    /********************* CONDITIONS POUR LE RETURN HOME ***********************/
     if(_millis() > tableStatus.startTime + 95000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
         LOG_GREEN_INFO("95 seconds passed, switching to NAV_HOME");
         runState = FSM_ACTION_NAV_HOME;
         return;
-    }else if(tableStatus.calibrationAge >= CALIBRATION_DEPLETION_TIME){
+    }
+
+    /************************** CONDITIONS SUR LA CALIBRATION *************************/
+    if(tableStatus.calibrationAge >= CALIBRATION_DEPLETION_TIME){
         runState = FSM_ACTION_CALIBRATION;
         LOG_GREEN_INFO("Calibration aged is greater than 2 going for forced calibration");
         return;
     }
+
+    /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
     if((!tableStatus.cursorIsDone()) && (position_distance(position, tableStatus.CursorPos) < 300 || stock_num == (tableStatus.colorTeam == YELLOW ? 5 : 1))){ // If we are close to the cursor position or if we are at stock 
         LOG_GREEN_INFO("Going for cursor action");
+        tableStatus.calibrationAge += 1;
         runState = FSM_ACTION_CURSOR;
         return;
     }
 
-    if(runState == FSM_ACTION_GATHER || stock_num != -1){
+    /**************************** CONDITIONS POUR DROP UN STOCK ***************************************/
+    if(stock_num != -1){ // On peut DROP à partir du moment où on a un stock
         runState = FSM_ACTION_DROP;
         tableStatus.calibrationAge += 1;
         LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to drop a stock, going to FSM_ACTION_DROP");
         return;
     }
-    if(runState == FSM_ACTION_DROP || runState == FSM_ACTION_CURSOR || runState == FSM_ACTION_CALIBRATION){
+
+    /*****************CONDITIONS POUR RECUPERER UN STOCK **********************************/
+    if(tableStatus.remainingStocksExist() && stock_num == -1){// On ne se base plus sur l'état précédent mais sur la possibilité de réaliser l'action
         runState = FSM_ACTION_GATHER;
         LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
         return;
     }
+
 }
    
 ReturnFSM_t ActionFSM::Calibrate(){
