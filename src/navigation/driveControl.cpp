@@ -116,25 +116,23 @@ bool DriveControl::drive(position_t pos[], int n) {
         position_speed = position_top_speed;
     }
 
+    double err_len = position_distance(position, pos[n - 1]);
     position_t vec;
     vec.x = pos_target.x - position.x;
     vec.y = pos_target.y - position.y;
-    if (position_length(vec) > 50.0){
-        position_normalize(vec);
-        const double kP_lin = 6.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
-        vec.x *= position_speed / kP_lin;
-        vec.y *= position_speed / kP_lin;
+    position_normalize(vec);
+    const double kP_lin = 6.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
+    vec.x *= position_speed / kP_lin;
+    vec.y *= position_speed / kP_lin;
+    if (err_len < position_length(vec) && err_len > 5.0) {
         pos_target.x = position.x + vec.x;
         pos_target.y = position.y + vec.y;
-        drive_interface::set_target(convertPositionToPacked(pos_target));
     }
-    else{
-        drive_interface::set_target(convertPositionToPacked(pos_target));
-    }
+    drive_interface::set_target(convertPositionToPacked(pos_target));
 
-    bool is_done_pos = position_distance(position, pos[n - 1]) < 7.0 && fabs(velocity.x) < 15.0 && fabs(velocity.y) < 15.0;
+    bool is_done_pos = err_len < 7.0 && fabs(velocity.x) < 15.0 && fabs(velocity.y) < 15.0;
     bool is_done_ang = fabs(error_heading) < 1.0 && fabs(velocity.a) < 4.0;
-    // LOG_DEBUG("Position error: ", position_distance(position, pos[n - 1]), "mm, Velocity x: ", velocity.x, "mm/s, Velocity y: ", velocity.y, "mm/s, Angle error: ", error_heading, "deg, Angular velocity: ", fabs(velocity.a), "deg/s");
+    // LOG_DEBUG("Position error: ", err_len, "mm, Velocity x: ", velocity.x, "mm/s, Velocity y: ", velocity.y, "mm/s, Angle error: ", error_heading, "deg, Angular velocity: ", fabs(velocity.a), "deg/s");
 
     if (is_done_pos && is_done_ang){
         return true;
