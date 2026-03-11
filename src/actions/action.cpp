@@ -210,7 +210,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             break;
         case FSM_GATHER_COLLECTED:
             // Wait for the stock to be collected before doing anything else (like navigating to dropzone), to avoid dropping the stock on the way
-            LOG_WARNING("GATHER_COLLEDTED: trying to run take stock but stock already in claws");
+            LOG_WARNING("GATHER_COLLECTED: trying to run take stock but stock already in claws");
             return FSM_RETURN_DONE;
             break;
     }
