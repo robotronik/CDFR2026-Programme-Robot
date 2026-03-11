@@ -170,11 +170,11 @@ ReturnFSM_t ActionFSM::TakeStock(){
             if(arucoCam1.getObjectInfoColors(stockOrder,x,y,a,sucess)){
                 if(sucess){
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Detection sucess calibration on blocks");
-                    targetStockPos = position_t{x + int(stockOff.x * 0.66), y + int(stockOff.y * 0.66), angle};
+                    targetStockPos = position_t{x + int(stockOff.x * 0.68), y + int(stockOff.y * 0.68), angle};
                 }else{
                     //TODO handle error
                     LOG_WARNING("FSM_GATHER_DETECT: Detection failed calibration on map");
-                    targetStockPos = position_t{stockPos.x + int(stockOff.x * 0.66), stockPos.y + int(stockOff.y * 0.66), angle};
+                    targetStockPos = position_t{stockPos.x + int(stockOff.x * 0.68), stockPos.y + int(stockOff.y * 0.68), angle};
                 }
                 gatherStockState = FSM_GATHER_CLAWS;
             }
@@ -268,27 +268,42 @@ ReturnFSM_t ActionFSM::DropStock(){
         case FSM_DROP:
             // Drop the stock
             if (dropBlock()){
-                LOG_EXTENDED_DEBUG("FSM_DROP: Stock ", stock_num, "dropped");
+                LOG_EXTENDED_DEBUG("FSM_DROP: Stock ", stock_num, " dropped");
+                dropStockState = FSM_DROP_NAV_BACK;
+                backPos = drive.position;
+                backPos.x += 100 * cos(drive.position.a);
+                backPos.y += 100 * sin(drive.position.a);
+                
+            }
+            break;
+        case FSM_DROP_NAV_BACK:
+        { 
+            nav_ret = navigationGoTo(backPos, false);
+        
+            if (nav_ret == NAV_DONE) {
                 gatherStockState = FSM_GATHER_NAV;
                 dropStockState = FSM_DROP_NONE;
                 stock_num = -1;
                 offset = 0;  
                 rotate_done = false;
+                LOG_EXTENDED_DEBUG("FSM_DROP_NAV_BACK: Finished Drop Nav Back");
                 return FSM_RETURN_DONE; 
             }
+        }
             break;
+            
     }
     return FSM_RETURN_WORKING;
 }
 
 ReturnFSM_t ActionFSM::Cursor(){
-    position_t navTarget = {625.0, 1220.0, 45.0};
+    position_t navTarget = {760.0, 1260.0, 45.0};
     position_t moveTarget = navTarget;
     moveTarget.y -= 280.0;
     moveTarget.a = 0.0;
 
     position_t endTarget = navTarget;
-    endTarget.x -= 50.0;
+    endTarget.x -= 100.0;
     endTarget.y -= 280.0;
     endTarget.a = 0.0;
 
@@ -300,7 +315,7 @@ ReturnFSM_t ActionFSM::Cursor(){
 
     switch (CursorState){
         case CURSOR_RAISE_CLAW:
-            if (raiseClaws()){
+            if (rotateTwoBlocks(stockOrder)){
                 LOG_EXTENDED_DEBUG("CURSOR_RAISE_CLAW: going to FSM_CURSOR_NAV");
                 CursorState = FSM_CURSOR_NAV;
             }
@@ -327,10 +342,8 @@ ReturnFSM_t ActionFSM::Cursor(){
             nav_ret = navigationGoTo(moveTarget);
             //LOG_INFO("Claws lowered at cursor position");
             if (nav_ret == NAV_DONE){
-                if (raiseClaws()){
-                    LOG_EXTENDED_DEBUG("FSM_CURSOR_MOVE: Nav done and raised claws, going to FSM_CURSOR");
-                    CursorState = FSM_CURSOR_END;
-                }
+                LOG_EXTENDED_DEBUG("FSM_CURSOR_MOVE: Nav done and raised claws, going to FSM_CURSOR");
+                CursorState = FSM_CURSOR_END;
             }
             else if (nav_ret == NAV_ERROR){
                 LOG_WARNING("FSM_CURSOR_MOVE: Navigation error while moving to cursor position for raiseClaws");

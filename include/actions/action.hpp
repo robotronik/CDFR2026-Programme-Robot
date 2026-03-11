@@ -28,6 +28,7 @@ class ActionFSM{
         int offset;// Offset  is direction to take the stock from
         bool cursorStatus = false;
         bool rotate_done = false;
+        position_t backPos;
 
         position_t CursorPos = {625, 1220, 45};
         nav_return_t nav_ret;
@@ -70,7 +71,8 @@ class ActionFSM{
         {
             FSM_DROP_NONE,
             FSM_DROP_NAV,
-            FSM_DROP
+            FSM_DROP,
+            FSM_DROP_NAV_BACK
         } StateDropStock_t;
         StateDropStock_t dropStockState = FSM_DROP_NONE;
 

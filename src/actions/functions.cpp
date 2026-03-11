@@ -62,14 +62,10 @@ bool rotateTwoBlocksDefault(){
 
 bool rotateTwoBlocks(bool *order){  
     static int state = 1;
-    static unsigned long startTime = 0;
-
     switch (state){
         case 1:
-            if (closeClaws()){
-                startTime = _millis();
+            if (closeClaws())
                 state = 2;
-            }
             break;
 
         case 2:
@@ -78,22 +74,21 @@ bool rotateTwoBlocks(bool *order){
             }
             break;
         case 3:
-            if (_millis() - startTime >= 400){
 
-                bool any = order[0] || order[1] || order[2] || order[3];
-                bool a=false,b=true,c=true,d=false;
+            bool any = order[0] || order[1] || order[2] || order[3];
+            bool a=false,b=true,c=true,d=false;
 
-                if (any){
-                    if (tableStatus.colorTeam == colorTeam_t::BLUE){
-                        a = !order[3]; b = !order[2]; c = !order[1]; d = !order[0];
-                    }else{
-                        a = order[3]; b = order[2]; c = order[1]; d = order[0];
-                    }
+            if (any){
+                if (tableStatus.colorTeam == colorTeam_t::BLUE){
+                    a = !order[3]; b = !order[2]; c = !order[1]; d = !order[0];
+                }else{
+                    a = order[3]; b = order[2]; c = order[1]; d = order[0];
                 }
-                spinClaws(a,b,c,d);
-                state = 1;
-                return true;
             }
+            spinClaws(a,b,c,d);
+            state = 1;
+            return true;
+            
             break;
     }
     return false;
