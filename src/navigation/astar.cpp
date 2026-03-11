@@ -96,10 +96,7 @@ int reconstruct_path(int sx,int sy,int gx,int gy,position_t *path){
     return len;
 }
 
-void astar_pathfind(int *sx,int *sy,int *gx,int *gy){
-    escape_from_obstacle(sx,sy);
-    escape_from_obstacle(gx,gy);
-
+void astar_pathfind(int *sx,int *sy,int *gx,int *gy){    
     int start_x=*sx, start_y=*sy;
     int goal_x=*gx, goal_y=*gy;
 
@@ -110,7 +107,7 @@ void astar_pathfind(int *sx,int *sy,int *gx,int *gy){
             nodes[x][y].visited=false;
             nodes[x][y].parent_x=-1;
             nodes[x][y].parent_y=-1;
-        }
+    }
 
     if(start_x<0||start_x>=AS_HEIGHT||start_y<0||start_y>=AS_WIDTH) return;
     if(goal_x<0||goal_x>=AS_HEIGHT||goal_y<0||goal_y>=AS_WIDTH) return;
@@ -120,7 +117,7 @@ void astar_pathfind(int *sx,int *sy,int *gx,int *gy){
 
     position_int_t open[AS_HEIGHT*AS_WIDTH];
     int open_size=0;
-    open[open_size++] = (position_int_t){ static_cast<int>(start_x), static_cast<int>(start_y) };
+    open[open_size++] = (position_int_t){ start_x, start_y };
     int dirs[4][2]={{1,0},{-1,0},{0,1},{0,-1}};
 
     while(open_size>0){
@@ -147,7 +144,14 @@ void astar_pathfind(int *sx,int *sy,int *gx,int *gy){
             if(costmap[nx][ny]==OBSTACLE_COST) continue;
             if(nodes[nx][ny].visited) continue;
 
-            int extra=(costmap[nx][ny]==MARGIN_COST)?10:1;
+            // --- NOUVELLE LOGIQUE DE COÛT ---
+            int extra = 1; 
+            if (costmap[nx][ny] == OBSTACLE_COST) {
+                extra = 100; // Très coûteux, mais pas bloquant
+            } else if (costmap[nx][ny] == MARGIN_COST) {
+                extra = 10;  // Coût intermédiaire
+            }
+            
             int new_g=nodes[cx][cy].g+extra;
 
             if(new_g<nodes[nx][ny].g){
