@@ -142,9 +142,13 @@ position_t calculateClosestArucoPosition(position_t currentPos, position_t& outP
     return closestPos;
 }
 
+/*
+    Return best drop zone id
+    -1 if no drop zone available
+*/
 int GetBestDropZone(position_t fromPos){
     int bestDropZone = -1;
-    double bestDist2 = 1000000;
+    double bestDist2 = INFINITY;
 
     for (int i = 0; i < DROPZONE_COUNT; i++){
         if (tableStatus.dropzone_states[i] != TableState::DROPZONE_EMPTY)
