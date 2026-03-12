@@ -192,11 +192,21 @@ int getBestStockPositionOff(int stockNum, position_t fromPos){
 }
 
 position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos){
-    if (dropzoneNum == 7 || dropzoneNum == 4 || dropzoneNum == 2 ){
-        position_t dropzonePos = DROPZONE_POSITIONS_TABLE[dropzoneNum];
+    if (dropzoneNum == 7 || dropzoneNum == 4 || dropzoneNum == 2 ){// deactivated for now
+        position_t bestPoss = DROPZONE_POSITIONS_TABLE[dropzoneNum];
+        /*
         position_t vect = position_vector(dropzonePos, fromPos);
         position_normalize(vect);
         position_t bestPoss = position_t{dropzonePos.x + int(vect.x * OFFSET_DROPZONE), dropzonePos.y + int(vect.y * OFFSET_DROPZONE), RAD_TO_DEG * position_angle(fromPos, dropzonePos)};
+        */
+        if(position_distance(fromPos, position_sum(bestPoss, position_t{.x = OFFSET_DROPZONE, .y=0}))
+            < position_distance(fromPos, position_sum(bestPoss, position_t{.x = - OFFSET_DROPZONE, .y=0}))){
+                bestPoss = position_sum(bestPoss, position_t{.x = OFFSET_DROPZONE, .y=0});
+                bestPoss.a = 180;
+        }else{
+            bestPoss = position_sum(bestPoss, position_t{.x = -OFFSET_DROPZONE, .y=0});
+            bestPoss.a = 0;
+        }
         return bestPoss;
     }else{
         position_t bestPoss = DROPZONE_POSITIONS_TABLE[dropzoneNum];
