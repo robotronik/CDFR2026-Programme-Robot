@@ -73,7 +73,7 @@ bool ActionFSM::RunFSM(){
             }
 
         }else if (ret == FSM_RETURN_DONE){
-            LOG_INFO("ACTION_DROP: Finished dropping stock ", stock_num);
+            LOG_INFO("ACTION_DROP: Finished dropping stock: stock_num is now: ", stock_num);
             SetBestAction(drive.position);
         }
         break;
@@ -154,7 +154,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             gatherStockState = FSM_GATHER_NAV;
             return FSM_RETURN_DONE;
         }
-        LOG_EXTENDED_DEBUG("ACTION_GATHER: Next stock to take: ", stock_num, " offset: ", offset);
+        LOG_GREEN_INFO("ACTION_GATHER: Next stock to take: ", stock_num, " offset: ", offset);
     }
 
     position_t stockPos = STOCK_POSITIONS_TABLE[stock_num];
@@ -244,7 +244,7 @@ ReturnFSM_t ActionFSM::DropStock(){
         case FSM_DROP_NONE:
             rotate_done = false;
             dropzone_num = GetBestDropZone(drive.position);
-            LOG_DEBUG("FSM_DROP_NONE: Best drop zone for stock ", stock_num, " is ", dropzone_num);
+            LOG_GREEN_INFO("FSM_DROP_NONE: Best drop zone for stock ", stock_num, " is ", dropzone_num);
             if (dropzone_num == -1) {
                 LOG_ERROR("FSM_DROP_NONE: No more dropzone available, cannot drop stock ", stock_num);
                 return FSM_RETURN_ERROR;
