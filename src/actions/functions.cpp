@@ -117,14 +117,14 @@ bool flipOneBlock(){
     //servo 8 : 170 = ventouse bas,  0 = ventouse haut 
     switch(state){
         case 0: //take block
-            if (moveServoAndWait(SERVO_NUM_7,180,200) && moveServoAndWait(SERVO_NUM_6,175,200)){
+            if ( arduino.writeSensor(1, true) && moveServoAndWait(SERVO_NUM_7,180,200) && moveServoAndWait(SERVO_NUM_6,175,200)){
                 startTime = _millis();
                 state = 1;
             }
             break;
 
         case 1: //monte bras
-            if (_millis() > startTime + 1000){
+            if (_millis() > startTime + 500){
                 if (moveServoAndWait(SERVO_NUM_6,150,200))
                     state = 2;
             }
@@ -142,7 +142,7 @@ bool flipOneBlock(){
             }
             break;
         case 4: //lacher ventouse
-            if (_millis() > startTime + 4000){
+            if (arduino.writeSensor(1, false) &&  _millis() > startTime + 1000){
                 if (moveServoAndWait(SERVO_NUM_6,80,200) & moveServoAndWait(SERVO_NUM_7,180,200)){
                     state = 0; 
                     return true;
