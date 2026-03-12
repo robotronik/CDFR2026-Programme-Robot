@@ -38,6 +38,9 @@
             <div class="col">
                 <button type="button" class="btn btn-success w-100" onclick="fetchPreview()">Fetch Preview</button>
             </div>
+            <div class="col">
+                <button type="button" class="btn btn-success w-100" onclick="fetchIsolated()">Fetch Isolated</button>
+            </div>
         </div>
 
         <div class="label-section">Position response</div>
@@ -58,6 +61,7 @@
 
     <script>
         const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000`;
+        const API_BASE_ROBOT = `${window.location.protocol}//${window.location.hostname}`;
         document.getElementById("apiBaseLabel").textContent = API_BASE;
 
         const statusLabel = document.getElementById("status-label");
@@ -78,6 +82,17 @@
 
         async function getJson(path) {
             const response = await fetch(`${API_BASE}${path}`, { method: "GET" });
+            const contentType = response.headers.get("content-type") || "";
+            const payload = contentType.includes("application/json") ? await response.json() : { message: await response.text() };
+
+            if (!response.ok) {
+                throw new Error(payload.message || `HTTP ${response.status}`);
+            }
+            return payload;
+        }
+
+        async function getJson_robot(path) {
+            const response = await fetch(`${API_BASE_ROBOT}${path}`, { method: "GET" });
             const contentType = response.headers.get("content-type") || "";
             const payload = contentType.includes("application/json") ? await response.json() : { message: await response.text() };
 
@@ -123,6 +138,17 @@
                 const data = await getJson("/objects");
                 objectsOutput.textContent = jsonPretty(data);
                 setStatus("Objects fetched", "success");
+            } catch (error) {
+                appendAlert(error.message, "danger");
+                setStatus(error.message, "danger");
+            }
+        }
+
+        async function fetchIsolated() {
+            try {
+                const data = await getJson_robot("/get_isolated");
+                objectsOutput.textContent = jsonPretty(data);
+                setStatus("Isolated objects fetched", "success");
             } catch (error) {
                 appendAlert(error.message, "danger");
                 setStatus(error.message, "danger");

@@ -27,6 +27,9 @@ public:
     bool getObjectColor(bool* order, bool& success);
     bool getObjectPos(double & x, double & y, double & a, bool& success);
     bool getObjectInfoColors(bool* order, double & x, double & y, double & a, bool& success);
+    bool getBestIsolatedObject(double & x, double & y, double & a, bool& success);
+    json getBestIsolatedObject_json();
+
 private:
     std::string url;
     void start();

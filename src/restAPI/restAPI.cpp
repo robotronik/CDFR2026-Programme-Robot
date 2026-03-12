@@ -14,6 +14,7 @@
 #include "navigation/navigation.h"
 #include "navigation/astar.h" //for static variable
 #include "actions/functions.h" //for state machine functions
+#include "vision/ArucoCam.hpp" //for vision fuction
 
 #include "restAPI/crow.hpp"
 #include "utils/json.hpp" // For handling JSON
@@ -238,6 +239,13 @@ void StartAPIServer(){
     ([](){
         json response;
         response["costmap"] = astar_get_costmap_json();
+        return crow::response(response.dump());
+    });
+
+    CROW_ROUTE(app, "/get_isolated")
+    ([](){
+        json response;
+        response["object"] = arucoCam1.getBestIsolatedObject_json();
         return crow::response(response.dump());
     });
 

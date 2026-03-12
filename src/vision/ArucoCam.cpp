@@ -146,6 +146,7 @@ bool ArucoCam::getObjectData(json& objects, bool& sucess){
 typedef struct {
     double x;
     double y;
+    double a;
     bool color; //true for Blue false for Yellow
 }block_t;
 
@@ -261,7 +262,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
 /*
     Get the most isolated object to take
 */
-bool ToIsolatedObject(json& data, double & x, double & y, double & a, bool& success){
+bool ArucoCam::ToIsolatedObject(json& data, double & x, double & y, double & a, bool& success){
     int count = 0;
     auto& objects = data["objects"];
     std::vector<block_t> possible;
@@ -276,7 +277,8 @@ bool ToIsolatedObject(json& data, double & x, double & y, double & a, bool& succ
             double y_tmp = obj.value("y", 0.0);
             possible.push_back(block_t{
                 .x = x_tmp* cos_tag - y_tmp * sin_tag,
-                .y= x_tmp* sin_tag + y_tmp*cos_tag, 
+                .y= x_tmp* sin_tag + y_tmp*cos_tag,
+                .a = obj.value("a",0.0),
                 .color = (obj.value("label", "") == "Blue")? true : false
             }); 
             count++;
@@ -289,15 +291,44 @@ bool ToIsolatedObject(json& data, double & x, double & y, double & a, bool& succ
     }
 
     std::sort(possible.begin(), possible.end(), sortBlockT);
-    for(size_t i = 0 ; i< (size_t)4; i++){  
-        if(possible[i].color){
-            LOG_DEBUG("Blue");
-        }else{
-            LOG_DEBUG("Yellow");
-        }
-    }
+    LOG_GREEN_INFO("Isolated on one side is ", possible[0].color, " at ( ",possible[0].x,", ",possible[0].y,")");
+    LOG_GREEN_INFO("Isolated on the other side is ", possible[3].color, " at ( ",possible[3].x,", ",possible[3].y,")");
+    x = possible[0].x;
+    y = possible[0].y;
+    a = possible[0].a;
+
     success = true;
     return true;
+}
+
+bool ArucoCam::getBestIsolatedObject(double & x, double & y, double & a, bool& success){
+    json data;
+    bool data_success;
+    success = false;
+    if(getObjectData(data, data_success)){
+        if(!data_success){
+            success = false;
+            return true;
+        }
+    }else{
+        return false;
+    }
+
+    return ToIsolatedObject(data, x, y, a, success);
+}
+
+json ArucoCam::getBestIsolatedObject_json(){
+    double x = 0;
+    double y = 0;
+    double a = 0;
+    bool sucess = false;
+    while(!getBestIsolatedObject(x,y,a,sucess)){
+        continue;
+    }
+    return json{
+        {"x", x},
+        {"y", y},
+        {"a", a}};
 }
 
 bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success){
