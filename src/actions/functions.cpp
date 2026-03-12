@@ -117,7 +117,7 @@ bool flipOneBlock(){
     //servo 8 : 170 = ventouse bas,  0 = ventouse haut 
     switch(state){
         case 0: //take block
-            if (moveServoAndWait(SERVO_NUM_7,170,200) && moveServoAndWait(SERVO_NUM_6,180,200)){
+            if (moveServoAndWait(SERVO_NUM_7,180,200) && moveServoAndWait(SERVO_NUM_6,175,200)){
                 startTime = _millis();
                 state = 1;
             }
@@ -143,7 +143,7 @@ bool flipOneBlock(){
             break;
         case 4: //lacher ventouse
             if (_millis() > startTime + 4000){
-                if (moveServoAndWait(SERVO_NUM_7,170,200) & moveServoAndWait(SERVO_NUM_6,90,200)){
+                if (moveServoAndWait(SERVO_NUM_6,80,200) & moveServoAndWait(SERVO_NUM_7,180,200)){
                     state = 0; 
                     return true;
                 }

@@ -15,6 +15,8 @@ public:
     void moveServoSpeed(int ServoID, int position, int speed);
     bool getServo(int ServoID, int& position);
     bool readSensor(int SensorID, bool& value);
+    void writeSensor(int SensorID, bool state);
+
     void moveStepper(int32_t absPosition, int StepperID);
     void setStepperSpeed(int StepperID, int speed);
     void setStepper(int32_t absPosition, int StepperID);
