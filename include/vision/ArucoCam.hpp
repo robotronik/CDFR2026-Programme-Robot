@@ -22,6 +22,7 @@ public:
 
     bool ToObjectPos(json& data, double & x, double & y, double & a, bool& success);
     bool ToObjectColor(json& data, bool* order, bool& success);
+    bool ToIsolatedObject(json& data, double & x, double & y, double & a, bool& success);
 
     bool getObjectColor(bool* order, bool& success);
     bool getObjectPos(double & x, double & y, double & a, bool& success);

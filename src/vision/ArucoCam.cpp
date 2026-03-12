@@ -144,11 +144,12 @@ bool ArucoCam::getObjectData(json& objects, bool& sucess){
 
 
 typedef struct {
-    double axe;
+    double x;
+    double y;
     bool color; //true for Blue false for Yellow
 }block_t;
 
-bool sortBlockT(const block_t& a, const block_t& b){ return a.axe < b.axe;}
+bool sortBlockT(const block_t& a, const block_t& b){ return a.y < b.y;}
 
 //return the order of the color in the stock in binary form
 // 0110 meaning Yellow Blue Blue Yellow
@@ -183,7 +184,7 @@ bool ArucoCam::ToObjectColor(json& data, bool* order, bool& success){
             double y_tmp = obj.value("y", 0.0);
             //m_x += x_tmp* cos_tag - y_tmp * sin_tag;
             possible.push_back(block_t{
-                .axe= x_tmp* sin_tag + y_tmp*cos_tag, 
+                .y= x_tmp* sin_tag + y_tmp*cos_tag, 
                 .color = (obj.value("label", "") == "Blue")? true : false
             }); 
             count++;
@@ -254,6 +255,48 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
     LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted
     stop();
+    return true;
+}
+
+/*
+    Get the most isolated object to take
+*/
+bool ToIsolatedObject(json& data, double & x, double & y, double & a, bool& success){
+    int count = 0;
+    auto& objects = data["objects"];
+    std::vector<block_t> possible;
+    for (auto& [key, list] : objects.items()) {
+        for (auto& obj : list) {
+            
+            // On convertit vers le repère robot 
+            double a_tag_rad = obj.value("a",0.0) * M_PI / 180.0;
+            double sin_tag = sin(a_tag_rad);
+            double cos_tag = cos(a_tag_rad);
+            double x_tmp = obj.value("x", 0.0);
+            double y_tmp = obj.value("y", 0.0);
+            possible.push_back(block_t{
+                .x = x_tmp* cos_tag - y_tmp * sin_tag,
+                .y= x_tmp* sin_tag + y_tmp*cos_tag, 
+                .color = (obj.value("label", "") == "Blue")? true : false
+            }); 
+            count++;
+        }
+    }
+
+    if(possible.empty()){
+        success = false;
+        return true;
+    }
+
+    std::sort(possible.begin(), possible.end(), sortBlockT);
+    for(size_t i = 0 ; i< (size_t)4; i++){  
+        if(possible[i].color){
+            LOG_DEBUG("Blue");
+        }else{
+            LOG_DEBUG("Yellow");
+        }
+    }
+    success = true;
     return true;
 }
 
