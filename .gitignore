@@ -6,6 +6,7 @@
 
 
 /build/
+/build_arm/
 /bin/
 /obj/
 /arm_bin/
@@ -25,3 +26,6 @@ Thumbs.db
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/c_cpp_properties.json
+
+/compile_commands.json
+.cache/*
