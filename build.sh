@@ -31,11 +31,11 @@ step() { printf "${1}${BOLD} %-10s ${NC} ${2}%s${NC}\n" "$3" "$4"; }
 setup_generator() {
     if command -v ninja >/dev/null 2>&1; then
         step "$BG_BLU" "$F_BLU" "CONFIG" "Ninja détecté."
-        GEN="-G Ninja"
+        GEN="-GNinja"
         OPT=""
     else
         step "$BG_ORG" "$F_ORG" "WARN" "Make utilisé (Ninja absent)."
-        GEN="-G Unix\ Makefiles"
+        GEN="-GUnix Makefiles"
         OPT="-- -j$(nproc)"
     fi
 }

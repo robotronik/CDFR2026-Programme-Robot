@@ -40,13 +40,15 @@ if(CCACHE_PROGRAM)
 endif()
 
 # Opti 2: Linker rapide
-find_program(MOLD_PATH NAMES mold)
-find_program(LLD_PATH NAMES ld.lld)
+if(NOT CMAKE_CROSSCOMPILING)
+    find_program(MOLD_PATH NAMES mold)
+    find_program(LLD_PATH NAMES ld.lld)
 
-if(MOLD_PATH)
-    add_link_options("-fuse-ld=mold")
-elseif(LLD_PATH)
-    add_link_options("-fuse-ld=lld")
+    if(MOLD_PATH)
+        add_link_options("-fuse-ld=mold")
+    elseif(LLD_PATH)
+        add_link_options("-fuse-ld=lld")
+    endif()
 endif()
 
 # Options de compilation de base
