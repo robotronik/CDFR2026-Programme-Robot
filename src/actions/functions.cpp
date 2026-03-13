@@ -133,7 +133,7 @@ bool snapClaws(bool closed){
 
 bool snapClaws(bool closed, bool small){
     static int prevTarget = -1;
-    int target = closed ? 16 : (small ? 40 : 130);
+    int target = closed ? 15 : (small ? 45 : 130);
     if (prevTarget != target){
         arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 150);
         prevTarget = target;
@@ -258,7 +258,7 @@ bool returnToHome(){
     unsigned long time = _millis() - tableStatus.startTime;
     position_t homePos;
     homePos.x = (time < 98000) ? -200 : -600;
-    homePos.y = (tableStatus.colorTeam == BLUE) ? 1100 : -1100;
+    homePos.y = (tableStatus.colorTeam == BLUE) ? 1200 : -1200;
     homePos.a = 180;
     nav_return_t res = navigationGoTo(homePos, true);
     return res == NAV_DONE && isRobotInArrivalZone(drive.position);

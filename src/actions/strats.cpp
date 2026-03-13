@@ -210,7 +210,7 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos){
         return bestPoss;
     }else{
         position_t bestPoss = DROPZONE_POSITIONS_TABLE[dropzoneNum];
-        if(MAX_WIDTH_TABLE + (bestPoss.x < 0 ? bestPoss.x : -1 * bestPoss.x) < MAX_LENGTH_TABLE + (bestPoss.y < 0 ? bestPoss.y : -1* bestPoss.y)){
+        if(MAX_WIDTH_TABLE - abs(bestPoss.x) < MAX_LENGTH_TABLE - abs(bestPoss.y)){
             bestPoss.x += (bestPoss.x > 0? -1 : 1 ) * OFFSET_DROPZONE;
             bestPoss.a = (bestPoss.x > 0? 0 : 180);
         }else{

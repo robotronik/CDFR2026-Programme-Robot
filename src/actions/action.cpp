@@ -161,6 +161,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
     position_t stockOff = STOCK_OFFSETS[offset];
 
     double angle = RAD_TO_DEG*  position_angle(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a} , stockPos);
+    double mult_off = 0.68;
 
     switch (gatherStockState){
         case FSM_GATHER_NAV:
@@ -293,8 +294,8 @@ ReturnFSM_t ActionFSM::DropStock(){
                 LOG_EXTENDED_DEBUG("FSM_DROP: Stock ", stock_num, " dropped");
                 dropStockState = FSM_DROP_NAV_BACK;
                 backPos = drive.position;
-                backPos.x -= 50 * cos(drive.position.a);
-                backPos.y -= 50 * sin(drive.position.a);
+                backPos.x -= 50 * cos(DEG_TO_RAD * drive.position.a);
+                backPos.y -= 50 * sin(DEG_TO_RAD * drive.position.a);
 
                 //No more stock in hand
                 stock_num = -1;
