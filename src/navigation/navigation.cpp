@@ -9,23 +9,34 @@
 static bool is_robot_stalled = false;
 static unsigned long robot_stall_start_time;
 
+static position_t current_pos_target;
+static bool current_use_astar;
+
 static position_t currentPath[1024];
-static int currentPathLenght = 0;
-static int pointAlongPathIndex = 0;
+static int currentPathLength = 0;
 
 nav_return_t navigationDrive(){
-    if (currentPathLenght == 0 || pointAlongPathIndex >= currentPathLenght)
-        return NAV_DONE;
-    //LOG_DEBUG("Driving to point ", pointAlongPathIndex, " / ", currentPathLenght, " at position (", currentPath[pointAlongPathIndex].x, ", ", currentPath[pointAlongPathIndex].y, ", " , currentPath[pointAlongPathIndex].a, ")");
-    bool done = drive.drive(currentPath + pointAlongPathIndex, currentPathLenght - pointAlongPathIndex);
-
-    if (done){
-        pointAlongPathIndex += 1;
-        if (pointAlongPathIndex >= currentPathLenght){
-            // Done with navigation
-            return NAV_DONE;
+    // Calculate the path
+    if (current_use_astar){
+        currentPathLength = pathfind(drive.position, current_pos_target, currentPath);
+        if (currentPathLength == -1){
+            LOG_ERROR("No path found");
+            if (!is_robot_stalled){
+                is_robot_stalled = true;
+                robot_stall_start_time = _millis();
+            }
+            return NAV_IN_PROCESS;
+        }
+        else {
+            LOG_GREEN_INFO("Path found!");
         }
     }
+    else{
+        currentPathLength = 1;
+        currentPath[0] = current_pos_target;
+    }
+    bool done = drive.drive(currentPath, currentPathLength);
+    if (done) return NAV_DONE;
     return NAV_IN_PROCESS;
 }
 
@@ -58,44 +69,14 @@ nav_return_t navigationGo(){
     return NAV_IN_PROCESS;
 }
 
-void fillCurrentPath(position_t path[], int pathLength) {
-    memcpy(currentPath, path, sizeof(position_t) * pathLength);
-    currentPathLenght = pathLength;
-}
-
 nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
-    if (useAStar){
-        currentPathLenght = pathfind(drive.position, pos, currentPath);
-
-        if (currentPathLenght <= 0){
-            LOG_WARNING("No path found");
-            return NAV_ERROR;
-        }
-
-        //LOG_WARNING("Path computed!");
-
-        nav_return_t ret = navigationPath(currentPath, currentPathLenght, turnEnd);
-
-        return ret;
-    }
-    else {
-        return navigationPath(&pos, 1, turnEnd);
-    }
-}
-
-nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd){
-    bool is_same_path = memcmp(currentPath, path, sizeof(position_t) * pathLenght) == 0;
-    if (is_same_path && is_robot_stalled){
-        // Drive Break
-        return NAV_PAUSED;
-    }
-
-    if (!is_same_path){
-        for (int i = 0; i < pathLenght; i++){
-            currentPath[i] = path[i];
-        }
-        currentPathLenght = pathLenght;
-        pointAlongPathIndex = 0;
+    if (current_pos_target.x != pos.x || 
+        current_pos_target.y != pos.y || 
+        (current_pos_target.a != pos.a && turnEnd) || 
+        current_use_astar != useAStar){
+        LOG_INFO("New navigation target: { x = ", pos.x, " y = ", pos.y, " a = ", pos.a, " }, useAStar = ", useAStar);
+        current_pos_target = pos;
+        current_use_astar = useAStar;
     }
     return navigationGo();
 }
@@ -103,7 +84,7 @@ nav_return_t navigationPath(position_t path[], int pathLenght, bool turnEnd){
 void navigation_path_json(json& j){
     j = json::array();
     j.push_back({{"x", drive.position.x}, {"y", drive.position.y}});
-    for (int i = 0; i < currentPathLenght; i++){
+    for (int i = 0; i < currentPathLength; i++){
         j.push_back({{"x", currentPath[i].x}, {"y", currentPath[i].y}});
     }
 }

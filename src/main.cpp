@@ -66,7 +66,7 @@ void ctrlz(int signal)
 
 int main(int argc, char *argv[])
 {
-    LOG_DEBUG("LOG ID : ",log_asserv()->getLogID());
+    LOG_DEBUG("LOG ID : ", log_main_get_id());
     if (StartSequence() != 0)
         return -1;
 
@@ -144,7 +144,6 @@ int main(int argc, char *argv[])
         case RUN:
         {
             if (initState){
-                log_asserv()->setLogStatus(true);
                 LOG_GREEN_INFO("RUN");
                 tableStatus.reset();
                 tableStatus.startTime = _millis();
@@ -193,7 +192,6 @@ int main(int argc, char *argv[])
         {
             if (initState){
                 LOG_GREEN_INFO("FIN");
-                log_asserv()->setLogStatus(false);
                 arduino.RGB_Solid(0, 255, 0);
                 disableActuators();
                 // Clear command buffer
