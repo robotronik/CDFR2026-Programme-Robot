@@ -1,6 +1,15 @@
 #include "defs/structs.hpp"
 #include <math.h>
 
+// Return leftOp+RightOp as position_t
+// NB: The angle is concerned
+position_t position_sum(position_t leftOp, position_t rightOp){
+    return position_t{
+        .x = leftOp.x + rightOp.x,
+        .y = leftOp.y + rightOp.y,
+        .a = leftOp.a + rightOp.a
+    };
+}
 
 // Define a function to calculate the angle in rads from and to a position_t
 double position_angle(position_t from, position_t to){
@@ -48,10 +57,7 @@ double normalize_angle(double angle) {
 
 void position_robot_flip(position_t& pos){
     pos.y = -pos.y;
-    if (pos.a >= 0)
-        pos.a = 180 - pos.a;
-    else
-        pos.a = -180 - pos.a;
+    pos.a = -pos.a;
 }
 
 

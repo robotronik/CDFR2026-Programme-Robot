@@ -6,17 +6,11 @@
 #include "utils/httplib.h"
 #include "vision/ArucoCam.hpp"
 #include "utils/logger.hpp"
-#include "utils/json.hpp" // For handling JSON
-
-using json = nlohmann::json;
+#include <algorithm>
 
 #define PORT_OFFSET 5000
 #define SCAN_FAIL_FRAMES_NUM 10
 #define SCAN_DONE_FRAMES_NUM 20
-
-#define OFFSET_CAM_X 129 // Offset of the camera in mm on the x axis
-#define OFFSET_CAM_Y 0 // Offset of the camera in mm on the y axis
-#define OFFSET_CAM_A 0 // Offset angle of the camera in degrees
 
 pid_t startPythonProgram(char** args);
 void stopPythonProgram(pid_t pid);
@@ -60,12 +54,11 @@ ArucoCam::~ArucoCam(){
         stopPythonProgram(pid);
 }
 
-
 // Returns true when done
 bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     success = false;
     if (status == false) {
-        LOG_WARNING("ArucoCam ", id, " is not running, will start it now");
+        LOG_EXTENDED_DEBUG("ArucoCam ", id, " is not running, will start it now");
         start();
         return false;
     }
@@ -91,31 +84,297 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
         return true;
     }
     if (failedFrames > SCAN_FAIL_FRAMES_NUM) {
-        LOG_WARNING("Cam has too many failed frames : ", failedFrames);
+        LOG_EXTENDED_DEBUG("Cam has too many failed frames : ", failedFrames);
         stop();
         return true;
     }
     if (sucessFrames < SCAN_DONE_FRAMES_NUM) {
-        //LOG_WARNING("Cam has not enough good success frames : ", sucessFrames);
+        //LOG_EXTENDED_DEBUG("Cam has not enough good success frames : ", sucessFrames);
         return false;
     }
     // Extract the values from the JSON object
-    success = true;
+    if(response.is_null()){
+        success = false;
+        return true;
+    }
     json position = response["position"];
-    x = position.value("x", 0);
-    y = position.value("y", 0);
-    a = position.value("a", 0);
-    LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+    if(!position["x"].is_null() && !position["y"].is_null() && !position["a"].is_null()){
+        x = position.value("x", 0);
+        y = position.value("y", 0);
+        a = position.value("a", 0);
+    }else{
+        success = false;
+        return true;
+    }
+    success = true;
+    //LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted
     stop();
     return true;
+}
+
+bool ArucoCam::getObjectData(json& objects, bool& sucess){
+    sucess = false;
+    if (status == false) {
+        LOG_EXTENDED_DEBUG("ArucoCam ", id, " is not running, will start it now");
+        start();
+        return false;
+    }
+
+    // LOG_DEBUG("Fetching position from ArucoCam ", id);
+    // Calls /position rest api endpoint of the ArucoCam API
+    // Returns true if the call was successful, false otherwise
+    if (id < 0) {
+        // TODO change this to return a random position
+        return true;
+    }
+    json response;
+    if (restAPI_GET(url, "/objects", response) == false) {
+        LOG_ERROR("ArucoCam::getObjectData() - Failed to fetch objects");
+        return true;
+    }
+    // Extract the values from the JSON object
+    if(response.is_null()){
+        return true;
+    }
+    sucess = true;
+    objects = response;
+    return true;
+}
+
+
+typedef struct {
+    double x;
+    double y;
+    double a;
+    bool color; //true for Blue false for Yellow
+}block_t;
+
+bool sortBlockT(const block_t& a, const block_t& b){ return a.y < b.y;}
+
+//return the order of the color in the stock in binary form
+// 0110 meaning Yellow Blue Blue Yellow
+bool ArucoCam::getObjectColor(bool* order, bool& success){
+    json data;
+    bool data_success;
+    success = false;
+    if(getObjectData(data, data_success)){
+        if(!data_success){
+            success = false;
+            return true;
+        }
+    }else{
+        return false;
+    }
+    return ToObjectColor(data, order, success);
+
+}
+
+bool ArucoCam::ToObjectColor(json& data, bool* order, bool& success){
+    int count = 0;
+    auto& objects = data["objects"];
+    std::vector<block_t> possible;
+    for (auto& [key, list] : objects.items()) {
+        for (auto& obj : list) {
+            
+            // On convertit vers le repère robot 
+            double a_tag_rad = obj.value("a",0.0) * M_PI / 180.0;
+            double sin_tag = sin(a_tag_rad);
+            double cos_tag = cos(a_tag_rad);
+            double x_tmp = obj.value("x", 0.0);
+            double y_tmp = obj.value("y", 0.0);
+            //m_x += x_tmp* cos_tag - y_tmp * sin_tag;
+            possible.push_back(block_t{
+                .y= x_tmp* sin_tag + y_tmp*cos_tag, 
+                .color = (obj.value("label", "") == "Blue")? true : false
+            }); 
+            count++;
+        }
+    }
+
+    if(possible.empty()){
+        success = false;
+        return true;
+    }
+
+    std::sort(possible.begin(), possible.end(), sortBlockT);
+    for(size_t i = 0 ; i< (size_t)4; i++){  
+        order[i] = possible[i].color;
+        if(possible[i].color){
+            LOG_DEBUG("Blue");
+        }else{
+            LOG_DEBUG("Yellow");
+        }
+    }
+    success = true;
+    return true;
+}
+
+// Returns the position of the average position of the aruco tags detected on the table
+// Returns true when done
+bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool& success) {
+    
+    int count = 0;
+    auto& objects = data["objects"];
+    double m_x = 0, m_y = 0;
+
+    for (auto& [key, list] : objects.items()) {
+        for (auto& obj : list) {
+            
+            // On convertit vers le repère robot 
+            double a_tag_rad = -1 * obj.value("a",0.0) * M_PI / 180.0;
+            double sin_tag = sin(a_tag_rad);
+            double cos_tag = cos(a_tag_rad);
+            double x_tmp = obj.value("x", 0.0);
+            double y_tmp = obj.value("y", 0.0);
+            m_x -= x_tmp* cos_tag - y_tmp * sin_tag;
+            m_y -= x_tmp* sin_tag + y_tmp*cos_tag; 
+            count++;
+        }
+    }
+
+    if(!count){
+        success = false;
+        return true;
+    }
+
+    m_x = m_x / count;
+    m_y = m_y / count;
+    
+    // Décalage pour le centre du robot
+    m_x += OFFSET_CAM_X;
+    m_y += OFFSET_CAM_Y;
+
+
+    //projection dans le repère de la table:
+    double a_rad = (a) * M_PI / 180.0;
+    double cos_a = cos(a_rad);
+    double sin_a = sin(a_rad);
+    x += m_x * cos_a - m_y * sin_a;
+    y += m_x * sin_a + m_y * cos_a;
+    success = true;
+    LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+    // Return true if the values were successfully extracted
+    stop();
+    return true;
+}
+
+/*
+    Get the most isolated object to take
+*/
+bool ArucoCam::ToIsolatedObject(json& data, double & x, double & y, double & a, bool& success){
+    int count = 0;
+    auto& objects = data["objects"];
+    std::vector<block_t> possible;
+    for (auto& [key, list] : objects.items()) {
+        for (auto& obj : list) {
+            
+            // On convertit vers le repère robot 
+            double a_tag_rad = obj.value("a",0.0) * M_PI / 180.0;
+            double sin_tag = sin(a_tag_rad);
+            double cos_tag = cos(a_tag_rad);
+            double x_tmp = obj.value("x", 0.0);
+            double y_tmp = obj.value("y", 0.0);
+            possible.push_back(block_t{
+                .x = x_tmp* cos_tag - y_tmp * sin_tag,
+                .y= x_tmp* sin_tag + y_tmp*cos_tag,
+                .a = obj.value("a",0.0),
+                .color = (obj.value("label", "") == "Blue")? true : false
+            }); 
+            count++;
+        }
+    }
+
+    if(possible.empty()){
+        success = false;
+        return true;
+    }
+
+    std::sort(possible.begin(), possible.end(), sortBlockT);
+    LOG_GREEN_INFO("Isolated on one side is ", possible[0].color, " at ( ",possible[0].x,", ",possible[0].y,")");
+    LOG_GREEN_INFO("Isolated on the other side is ", possible[3].color, " at ( ",possible[3].x,", ",possible[3].y,")");
+    x = possible[0].x;
+    y = possible[0].y;
+    a = possible[0].a;
+
+    success = true;
+    return true;
+}
+
+bool ArucoCam::getBestIsolatedObject(double & x, double & y, double & a, bool& success){
+    json data;
+    bool data_success;
+    success = false;
+    if(getObjectData(data, data_success)){
+        if(!data_success){
+            success = false;
+            return true;
+        }
+    }else{
+        return false;
+    }
+
+    return ToIsolatedObject(data, x, y, a, success);
+}
+
+json ArucoCam::getBestIsolatedObject_json(){
+    double x = 0;
+    double y = 0;
+    double a = 0;
+    bool sucess = false;
+    while(!getBestIsolatedObject(x,y,a,sucess)){
+        continue;
+    }
+    return json{
+        {"x", x},
+        {"y", y},
+        {"a", a}};
+}
+
+bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success){
+    json data;
+    bool data_success;
+    success = false;
+    if(getObjectData(data, data_success)){
+        if(!data_success){
+            success = false;
+            return true;
+        }
+    }else{
+        return false;
+    }
+
+    return ToObjectPos(data, x, y, a, success);
+}
+
+bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double & a, bool& success){
+    json data;
+    bool data_success;
+    success = false;
+    if(getObjectData(data, data_success)){
+        if(!data_success){
+            success = false;
+            return true;
+        }
+    }else{
+        return false;
+    }
+
+    if(ToObjectPos(data, x, y, a, success)){// Can not return False so first If is useless
+        if(success){
+            if(ToObjectColor(data,order, success)){ // Can not return false either
+                return true; // exec finished 
+            }else return false; // exec unfinished
+        }else return true; // exec finished on fail
+    }else return false; // exec unfinished
+
 }
 
 void ArucoCam::start() {
     json response;
     if (restAPI_GET(url, "/start", response)){
         status = true;
-        LOG_GREEN_INFO("ArucoCam ", id, " started");
+        LOG_EXTENDED_DEBUG("ArucoCam ", id, " started");
     }
 }
 
@@ -123,7 +382,7 @@ void ArucoCam::stop() {
     json response;
     if (restAPI_GET(url, "/stop", response)){
         status = false;
-        LOG_GREEN_INFO("ArucoCam ", id, " stopped");
+        LOG_EXTENDED_DEBUG("ArucoCam ", id, " stopped");
     }
 }
 

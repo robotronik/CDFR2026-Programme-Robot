@@ -25,6 +25,7 @@ enum class Color {
 };
 
 enum class LogLevel {
+    EXTENDED_DEBUG = 0,
     DEBUG,
     INFO,
     WARNING,
@@ -33,7 +34,7 @@ enum class LogLevel {
 };
 
 // Only messages with a level equal to or above CURRENT_LOG_LEVEL will be printed.
-constexpr LogLevel CURRENT_LOG_LEVEL = LogLevel::DEBUG;
+constexpr LogLevel CURRENT_LOG_LEVEL = LogLevel::EXTENDED_DEBUG;
 
 // Base logger write function (already formatted message).
 void log_main(std::optional<Color> color, const std::string& message);
@@ -54,6 +55,7 @@ inline void appendMessage(std::ostringstream& oss, const T& value, const Args&..
 
 inline std::string getLevelString(LogLevel level) {
     switch (level) {
+        case LogLevel::EXTENDED_DEBUG: return "EXT_DEBUG";
         case LogLevel::DEBUG:     return "DEBUG";
         case LogLevel::INFO:      return "INFO";
         case LogLevel::WARNING:   return "WARNING";
@@ -87,6 +89,7 @@ inline void log_main(std::optional<Color> color,
 }
 
 // Convenience macros that automatically pass file and line.
+#define LOG_EXTENDED_DEBUG(message, ...)   log_main(Color::GRAY   , LogLevel::EXTENDED_DEBUG    , __FILE__, __LINE__, message, ##__VA_ARGS__)
 #define LOG_DEBUG(message, ...)      log_main(Color::GRAY   , LogLevel::DEBUG    , __FILE__, __LINE__, message, ##__VA_ARGS__)
 #define LOG_INFO(message, ...)       log_main(std::nullopt  , LogLevel::INFO     , __FILE__, __LINE__, message, ##__VA_ARGS__)
 #define LOG_WARNING(message, ...)    log_main(Color::YELLOW , LogLevel::WARNING  , __FILE__, __LINE__, message, ##__VA_ARGS__)

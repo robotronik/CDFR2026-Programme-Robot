@@ -19,16 +19,16 @@ nav_return_t navigationDrive(){
     // Calculate the path
     if (current_use_astar){
         currentPathLength = pathfind(drive.position, current_pos_target, currentPath);
-        if (currentPathLength == -1){
+        if (currentPathLength <= 0){
             LOG_ERROR("No path found");
             if (!is_robot_stalled){
                 is_robot_stalled = true;
                 robot_stall_start_time = _millis();
             }
-            return NAV_IN_PROCESS;
+            return NAV_ERROR;
         }
         else {
-            LOG_GREEN_INFO("Path found!");
+            // LOG_GREEN_INFO("Path found!");
         }
     }
     else{
@@ -46,7 +46,7 @@ nav_return_t navigationGo(){
     if (driving){
         nav_return_t result = navigationDrive();
         if (result == NAV_DONE){
-            LOG_INFO("Navigation drive completed");
+            LOG_EXTENDED_DEBUG("Navigation drive completed");
             driving = false;
         }
     } else {
@@ -56,10 +56,11 @@ nav_return_t navigationGo(){
         if (arucoCam1.getRobotPos(robot_pos.x, robot_pos.y, robot_pos.a, cam_success)){
             if (cam_success){
                 drive.setCoordinates(robot_pos);
-                LOG_GREEN_INFO("Camera calibration successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
+                tableStatus.resetCalibrationAge();
+                LOG_GREEN_INFO("Camera calibration during move successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
             }
             else{
-                LOG_WARNING("Camera did not have a good position estimate, skipping calibration");
+                LOG_EXTENDED_DEBUG("Camera did not have a good position estimate, skipping calibration");
             }
             driving = true;
             return NAV_DONE;
@@ -68,15 +69,16 @@ nav_return_t navigationGo(){
     return NAV_IN_PROCESS;
 }
 
-nav_return_t navigationGoTo(position_t pos, bool turnEnd, bool useAStar){
+nav_return_t navigationGoTo(position_t pos, bool useAStar){
     if (current_pos_target.x != pos.x || 
         current_pos_target.y != pos.y || 
-        (current_pos_target.a != pos.a && turnEnd) || 
+        current_pos_target.a != pos.a || 
         current_use_astar != useAStar){
         LOG_INFO("New navigation target: { x = ", pos.x, " y = ", pos.y, " a = ", pos.a, " }, useAStar = ", useAStar);
         current_pos_target = pos;
         current_use_astar = useAStar;
     }
+
     return navigationGo();
 }
 
@@ -105,9 +107,9 @@ void navigationOpponentDetection(){
         // Check if the opponent is in the way
         isEndangered = opponent_collide_lidar(lidar.data, lidar.count, 300, brakingDistance, OPPONENT_ROBOT_RADIUS);
         if (isEndangered)
-            LOG_INFO("Opponent is in the way");
+            LOG_WARNING("Opponent is in the way");
         else
-            LOG_DEBUG("No opponent in the way");
+            LOG_EXTENDED_DEBUG("No opponent in the way");
     }
     // stop the robot if it is endangered
     if (isEndangered && !is_robot_stalled){

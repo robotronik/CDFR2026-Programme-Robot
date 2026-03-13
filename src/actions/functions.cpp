@@ -1,49 +1,30 @@
 #include "actions/functions.h"
-#include "main.hpp"
 #include "navigation/navigation.h"
 #include "lidar/lidarAnalize.h"
 #include "lidar/Lidar.hpp"
 #include "defs/constante.h"
 #include "i2c/Arduino.hpp"
 #include "actions/strats.hpp"
+#include "main.hpp"
+#include "utils/logger.hpp"
 #include <math.h>
-
 // ------------------------------------------------------
 //                   BASIC FSM CONTROL
 // ------------------------------------------------------
 
-// Function to deploy the banner (example)
-bool rotateBlocks(){
-    static int state = 1;
-    switch (state){
-        case 1:
-            if (resetSpinClaws() & openClaws())
-                state++;
-            break;
-        case 2:
-            if (closeClaws())
-                state++;
-            break;
-        case 3:
-            if (spinAllClaws()){
-                state = 1;
-                openClaws();
-                return true;
-            }
-            break;
-    }
-    return false;
-}
-
 bool lowerClaws(){
     static int state = 1;
+    static unsigned long startTime = 0;
+
     switch (state){
-        case 1:
-            arduino.moveMotorDC(50, true);
-            state++;
+        case 1: // descente rapide
+            LOG_DEBUG("Lower Claws");
+            arduino.moveMotorDC(30, true);
+            startTime = _millis();
+            state = 2;
             break;
-        case 2:
-            if (readLimitSwitchBottom()){
+        case 2: // approche lente jusqu'au switch
+            if (readLimitSwitchBottom() || (_millis() - startTime >= 1500)){
                 arduino.stopMotorDC();
                 state = 1;
                 return true;
@@ -55,15 +36,80 @@ bool lowerClaws(){
 
 bool raiseClaws(){
     static int state = 1;
+    static unsigned long startTime = 0;
+
+    switch(state){
+        case 1: // montée rapide
+            LOG_DEBUG("Raise Claws");
+            arduino.moveMotorDC(90, false);
+            startTime = _millis();
+            state = 2;
+            break;
+        case 2: // approche lente jusqu'au switch
+            if (readLimitSwitchTop() || (_millis() - startTime >= 2000)){ // timeout de sécurité
+                arduino.keepMotorDCup();        // maintenir la pince levée
+                state = 1;
+                return true;
+            }
+            break;
+    }
+
+    return false;
+}
+
+bool rotateTwoBlocksDefault(){
+    bool order[4]{false,true,true,false};
+    return rotateTwoBlocks(order);
+}
+
+bool rotateTwoBlocks(bool *order){  
+    static int state = 1;
     switch (state){
         case 1:
-            arduino.moveMotorDC(50, false);
+            if (closeClaws())
+                state = 2;
+            break;
+
+        case 2:
+            if (raiseClaws()){
+                state = 3;
+            }
+            break;
+        case 3:
+
+            bool any = order[0] || order[1] || order[2] || order[3];
+            bool a=false,b=true,c=true,d=false;
+
+            if (any){
+                if (tableStatus.colorTeam == colorTeam_t::BLUE){
+                    a = !order[3]; b = !order[2]; c = !order[1]; d = !order[0];
+                }else{
+                    a = order[3]; b = order[2]; c = order[1]; d = order[0];
+                }
+            }
+            spinClaws(a,b,c,d);
+            state = 1;
+            return true;
+            
+            break;
+    }
+    return false;
+}
+
+bool dropBlock(){
+    static int state = 0;
+    switch (state){
+        case 0:
+            LOG_DEBUG("Drop Block");
             state++;
             break;
+        case 1:
+            if (lowerClaws()) // Si pinces bloquées
+                state++;
+            break;
         case 2:
-            if (readLimitSwitchTop()){
-                arduino.stopMotorDC();
-                state = 1;
+            if (openClaws() & resetSpinClaws() & raiseClaws()){
+                state = 0;
                 return true;
             }
             break;
@@ -71,23 +117,6 @@ bool raiseClaws(){
     return false;
 }
 
-bool raiseLittleClaws(){
-    static int state = 1;
-    switch (state){
-        case 1:
-            arduino.moveMotorDC(50, false);
-            state++;
-            break;
-        case 2:
-            if (!readLimitSwitchBottom()){
-                arduino.stopMotorDC();
-                state = 1;
-                return true;
-            }
-            break;
-    }
-    return false;
-}
 
 // ------------------------------------------------------
 //                   SERVO CONTROL
@@ -100,13 +129,16 @@ bool closeClaws(){
 bool openClaws(){
     return snapClaws(false);
 }
-
 bool snapClaws(bool closed){
-    static bool prevState = !closed;
-    int target = closed ? 16 : 90;
-    if (prevState != closed){
-        arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 100);
-        prevState = closed;
+    return snapClaws(closed, true);
+}
+
+bool snapClaws(bool closed, bool small){
+    static int prevTarget = -1;
+    int target = closed ? 15 : (small ? 45 : 130);
+    if (prevTarget != target){
+        arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 150);
+        prevTarget = target;
     }
     int current = 0;
     if (!arduino.getServo(SERVO_CLAW_CLOSE_1, current)) return false;
@@ -195,20 +227,6 @@ bool moveColumnsElevator(int level){
 
 
 // ------------------------------------------------------
-//                   DC MOTOR CONTROL
-// ------------------------------------------------------
-
-// Moves the tribune elevator to a predefined level
-bool moveTribuneElevator(){
-    arduino.moveMotorDC(80, 30);
-    return true;
-}
-
-void stopTribuneElevator(){
-    arduino.stopMotorDC();
-}
-
-// ------------------------------------------------------
 //                GLOBAL SET/RES CONTROL
 // ------------------------------------------------------
 
@@ -225,7 +243,7 @@ void enableActuators(){
     drive.enable();
 }
 void disableActuators(){
-    stopTribuneElevator();
+    arduino.stopMotorDC();
     for (int i = 0; i < 4; i++){
         arduino.disableStepper(i);
     }
@@ -238,36 +256,11 @@ void disableActuators(){
 //                        OTHER
 // ------------------------------------------------------
 
-bool rotateTwoBlocks(){
-    static int state = 1;
-    switch (state){
-        case 1:
-            if (lowerClaws() & closeClaws())
-                state++;
-            break;
-        case 2:
-            if (raiseLittleClaws() & spinClaws(true, false, true, false))
-                state++;
-            break;
-        case 3:
-            if (lowerClaws())
-                state++;
-            break;
-        case 4:
-            if (raiseLittleClaws() & openClaws()){
-                state = 1;
-                return true;
-            }
-            break;
-    }
-    return false;
-}
-
 bool returnToHome(){
     unsigned long time = _millis() - tableStatus.startTime;
     position_t homePos;
     homePos.x = (time < 98000) ? -200 : -600;
-    homePos.y = (tableStatus.colorTeam == BLUE) ? 1100 : -1100;
+    homePos.y = (tableStatus.colorTeam == BLUE) ? 1200 : -1200;
     homePos.a = 180;
     nav_return_t res = navigationGoTo(homePos, true);
     return res == NAV_DONE && isRobotInArrivalZone(drive.position);
@@ -281,9 +274,29 @@ bool m_isPointInsideRectangle(float px, float py, float cx, float cy, float w, f
 }
 
 void opponentInAction(position_t position){
-    // TODO
-    // m_isPointInsideRectangle(position.x, position.y, stock_pos.x, stock_pos.y, OPPONENT_ROBOT_RADIUS * 2 + w, OPPONENT_ROBOT_RADIUS * 2 + h)
+    for(int i = 0; i < STOCK_COUNT; i++){
+        position_t stock_pos = STOCK_POSITIONS_TABLE[i];
+        if (tableStatus.avail_stocks[i] && m_isPointInsideRectangle(position.x, position.y, stock_pos.x, stock_pos.y, 
+            OPPONENT_ROBOT_RADIUS * 2 + (stock_pos.a == 90 ? STOCKS_LENGTH : STOCKS_WIDTH), 
+            OPPONENT_ROBOT_RADIUS * 2 + (stock_pos.a == 90 ? STOCKS_WIDTH : STOCKS_LENGTH)) )// we  consider stock orientation
+        {
+            LOG_INFO("Opponent in action at stock ", i, " at position ", position.x, " / ", position.y);
+            tableStatus.avail_stocks[i] = false;
+            return;
+        }
+    }
+    for(int i = 0; i < DROPZONE_COUNT; i++){
+        position_t dropzone_pos = DROPZONE_POSITIONS_TABLE[i];
+        if (tableStatus.dropzone_states[i] == TableState::DROPZONE_EMPTY && m_isPointInsideRectangle(position.x, position.y, dropzone_pos.x, dropzone_pos.y, OPPONENT_ROBOT_RADIUS * 2 + DROPZONE_WIDTH, OPPONENT_ROBOT_RADIUS * 2 + DROPZONE_LENGTH))
+        {
+            LOG_INFO("Opponent at dropzone ", i ," at position ", position.x, position.y);
+            tableStatus.dropzone_states[i] = (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE;
+            //TODO to remove, search dropzone for steal with other way
+            return;
+        }
+    }
 }
+
 void switchTeamSide(colorTeam_t color){
     if (color == NONE) return;
     if (currentState == RUN) return;

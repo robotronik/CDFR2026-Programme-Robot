@@ -18,7 +18,6 @@
 #ifndef __CROSS_COMPILE_ARM__
     #define DISABLE_LIDAR
     #define TEST_API_ONLY
-    #define EMULATE_CAM
     #define EMULATE_I2C
 #endif
 
@@ -32,7 +31,7 @@ Arduino arduino;
 Lidar lidar;
 
 #ifndef EMULATE_CAM
-ArucoCam arucoCam1(0, "data/OV9281_1280_800.yaml");
+ArucoCam arucoCam1 = ArucoCam(0, "data/OV9281_1280_800.yaml");
 #else
 ArucoCam arucoCam1(-1, "");
 #endif
@@ -41,6 +40,7 @@ main_State_t currentState;
 main_State_t nextState;
 bool initState;
 bool manual_ctrl;
+bool motorUpFirst = true;
 bool (*manual_currentFunc)(); //Pointer to a function to execute of type bool func(void)
 
 std::thread api_server_thread;
@@ -58,7 +58,7 @@ void ctrlc(int)
     LOG_INFO("Stop Signal Recieved");
     exit_requested = true;
 }
-void ctrlz(int signal)
+void ctrlz(int)
 {
     LOG_INFO("Termination Signal Recieved");
     exit(0);
@@ -119,12 +119,20 @@ int main(int argc, char *argv[])
                 arduino.setStepper(0, 4);
                 homeActuators();
                 lidar.startSpin();
+                arduino.moveMotorDC(80, false);
+
                 if (tableStatus.colorTeam == NONE)
                     arduino.RGB_Blinking(255, 0, 0); // Red Blinking
             }
 
             // colorTeam_t color = readColorSensorSwitch();
             // switchTeamSide(color);
+
+            if (readLimitSwitchTop() and motorUpFirst){
+                arduino.moveMotorDC(20,false);
+                motorUpFirst = false;
+            }
+
 
             if (readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = RUN;
@@ -140,6 +148,8 @@ int main(int argc, char *argv[])
                 tableStatus.reset();
                 tableStatus.startTime = _millis();
                 action.Reset();
+                arduino.keepMotorDCup();
+
             }
             bool finished = action.RunFSM();
 
@@ -189,6 +199,7 @@ int main(int argc, char *argv[])
                 // Clear manual_func
                 manual_currentFunc = NULL;
                 lidar.stopSpin();
+                arduino.stopMotorDC();
             }
 
             if (!readLatchSensor()){
@@ -261,11 +272,7 @@ int StartSequence()
     manual_ctrl = false;
     manual_currentFunc = NULL;
 
-    pathfindInit();
-
-    // TODO REMOVE
-    pathfind_place_obstacle_rect_with_inflation(400, 0, 100, 100, 200);
-
+    pathfind_setup();
 
     drive.reset();
 
@@ -278,12 +285,12 @@ void GetLidar()
     static position_t prev_pos;
     static position_t prev_vel;
     static long prev_time_ms = 0;
+
     if (lidar.getData())
     {
         double time_s = double(_millis() - prev_time_ms) / 1000.0; 
         //convertAngularToAxial(lidar.data, lidar.count, position, 200);
         convertAngularToAxialCompensated(lidar.data, lidar.count, prev_pos, prev_vel, time_s, 200);
-
         pathfind_fill_lidar();
         
         if (currentState == RUN || currentState == MANUAL)
@@ -343,8 +350,7 @@ void tests()
         usleep(500000); 
 
         //position depart et arrivé aléatoire
-        int start_ix = 0, start_iy = 0, goal_ix = 0, goal_iy = 0;
-        position_t target, start, goal;
+        position_t target, start;
         target.x = rand() % (600) - 600 / 2;
         target.y = rand() % (600) - 600 / 2;
 
@@ -353,7 +359,7 @@ void tests()
         start.a = rand() % 360;
         drive.setCoordinates(start);
         
-        navigationGoTo(target, true, true);
+        navigationGoTo(target, true);
     }
     StopAPIServer();
     api_server_thread.join();

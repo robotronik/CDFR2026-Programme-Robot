@@ -1,7 +1,7 @@
 #include "lidar/lidarAnalize.h"
 #include "defs/constante.h" // DEG_TO_RAD
+#include "utils/logger.hpp"
 #include <math.h>
-
 
 void convertAngularToAxial(lidarAnalize_t* data, int count, position_t position, int narrow){
     for(int i = 0; i< count; i++){

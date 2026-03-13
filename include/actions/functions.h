@@ -13,25 +13,23 @@ void switchTeamSide(colorTeam_t color);
 void switchStrategy(int strategy);
 
 // Basic functions (FSM)
-bool rotateBlocks();
 bool lowerClaws();
 bool raiseClaws();
-bool raiseLittleClaws();
+bool rotateTwoBlocks(bool *order);
+bool rotateTwoBlocksDefault();
+bool dropBlock();
 
 // Servo Control
 bool closeClaws();
 bool openClaws();
 bool snapClaws(bool closed);
+bool snapClaws(bool closed, bool small);
 bool resetSpinClaws();
 bool spinAllClaws();
 bool spinClaws(bool spin1, bool spin2, bool spin3, bool spin4);
 
 // Stepper Control
 bool moveColumnsElevator(int level); // Example
-
-// DC Motor Control
-bool moveTribuneElevator();
-void stopTribuneElevator();
 
 // Input sensors
 bool readButtonSensor();

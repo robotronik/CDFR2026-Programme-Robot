@@ -5,6 +5,7 @@
 //#include "lidar/Lidar.hpp"
 #include "defs/structs.hpp"
 #include "defs/constante.h"
+#include "utils/logger.hpp"
 
 #define LIDAR_UNIT_TEST(x) numTests++; if(!(x)) {LOG_WARNING("Test failed on line ", __LINE__ );} else {numPassed++;}
 

@@ -82,8 +82,7 @@
                     throw new Error('Network response was not ok ' + response.statusText);
                 }
                 let data = await response.json();
-                draw(data); // Pass the fetched data   
-                drawCostmap(data["costmap"]);
+                draw(data); // Pass the fetched data
                 let robotStatus = data["status"];
                 if (robotStatus == 0)
                     stateLabel.innerHTML = "Robot State : Init";
@@ -122,9 +121,6 @@
         }
 
         function draw(data) {
-            if (data.costmap && Array.isArray(data.costmap)) {
-                drawCostmap(data.costmap);
-            }
             ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
 
             ctx.fillStyle = 'silver';
@@ -132,6 +128,10 @@
             ctx.drawImage(svgBackground, topLeftX, topLeftY, 3000, 2000);
             // Dont draw the grid
             //ctx.drawImage(svgGrid, topLeftX, topLeftY, 3000, 2000);
+
+            if (data["costmap"]) {
+                drawCostmap(data["costmap"]);
+            }
 
             // Draw robot
             ctx.lineWidth = 4;
@@ -279,11 +279,11 @@
         }
 
         function drawCostmap(costmap) {
-            const scale = 15;
+            const scale = 50;
 
             costmap.forEach(cell => {
                 const { x, y, cost } = cell;
-                ctx.fillStyle = `rgba(255, 0, 0, ${cost / 60.0})`;
+                ctx.fillStyle = `rgba(100, 0, 0, ${cost / 300})`;
                 ctx.fillRect(145 + x * scale, 145 + y * scale, scale, scale);
             });
         }
