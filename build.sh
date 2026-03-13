@@ -179,7 +179,7 @@ case "$1" in
                run_timed "Déploiement Complet" deploy_pi 
                echo -e "${WHT}--------------------------------------------------------${NC}"
                step "$BG_BLU" "$F_BLU" "LOGS" "En direct du robot (Ctrl+C pour quitter l'affichage)..." 
-               ssh -t $PI_USER@$PI_HOST "journalctl -u programCDFR.service -f -n 50"
+               ssh -t $PI_USER@$PI_HOST "journalctl -u programCDFR -f --output=cat"
                ;;
     setup-lsp)    run_timed "Setup LSP" setup_lsp ;;
     tests)        run_timed "Build local" build_local; \
