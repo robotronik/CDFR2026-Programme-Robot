@@ -5,6 +5,8 @@
 #include "defs/constante.h"
 #include "i2c/Arduino.hpp"
 #include "actions/strats.hpp"
+#include "main.hpp"
+#include "utils/logger.hpp"
 #include <math.h>
 // ------------------------------------------------------
 //                   BASIC FSM CONTROL

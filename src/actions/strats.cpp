@@ -1,5 +1,10 @@
 #include "actions/strats.hpp"
 #include "actions/functions.h"
+#include "utils/logger.hpp"
+#include "defs/structs.hpp"
+#include "navigation/driveControl.h"
+#include <math.h>
+#include "main.hpp" // for tableStatus
 
 void check(colorTeam_t color, int strategy){
     // Check if the color and strategy are valid

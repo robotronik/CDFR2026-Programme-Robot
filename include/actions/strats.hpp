@@ -1,6 +1,6 @@
 #pragma once
-#include "main.hpp"
-#include "utils/logger.hpp"
+#include "drive_interface.h" // For position_t
+#include "utils/utils.h" // For colorTeam_t
 
 void check(colorTeam_t color, int strategy);
 

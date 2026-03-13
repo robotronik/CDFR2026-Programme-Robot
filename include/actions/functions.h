@@ -2,7 +2,6 @@
 #define MYFUNCTION_H
 
 #include "defs/structs.hpp"
-#include "main.hpp"
 
 bool returnToHome();
 bool homeActuators();

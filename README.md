@@ -19,7 +19,7 @@ This program enables the robot to perform various tasks such as navigation, data
 Before running the program, make sure you have installed the following dependencies:
 
 ```bash
-sudo apt-get install cmake make gcc g++ python3-venv ninja
+sudo apt-get install cmake make gcc g++ python3-venv ninja-build
 ```
 
 To speed up compilation times massively, you can install CCache and MOLD:

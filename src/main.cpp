@@ -58,7 +58,7 @@ void ctrlc(int)
     LOG_INFO("Stop Signal Recieved");
     exit_requested = true;
 }
-void ctrlz(int signal)
+void ctrlz(int)
 {
     LOG_INFO("Termination Signal Recieved");
     exit(0);
@@ -288,8 +288,6 @@ void GetLidar()
 
     if (lidar.getData())
     {
-        long now = _millis();
-
         double time_s = double(_millis() - prev_time_ms) / 1000.0; 
         //convertAngularToAxial(lidar.data, lidar.count, position, 200);
         convertAngularToAxialCompensated(lidar.data, lidar.count, prev_pos, prev_vel, time_s, 200);
