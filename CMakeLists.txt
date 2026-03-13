@@ -53,6 +53,7 @@ endif()
 
 # Options de compilation de base
 add_compile_options(-Wall -Wextra -g -O0)
+add_compile_options("-fmacro-prefix-map=${CMAKE_SOURCE_DIR}/=")
 
 # ------------------------------------------------------------------------------
 # 2. Gestion du code source
