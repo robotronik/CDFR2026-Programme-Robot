@@ -73,6 +73,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     json response;
     if (restAPI_GET(url, "/position", response) == false) {
         LOG_ERROR("ArucoCam::getPos() - Failed to fetch position");
+        stop();
         return true;
     }
     int failedFrames = response.value("failedFrames", -1);
@@ -81,6 +82,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     if (failedFrames == -1 || sucessFrames == -1) {
         LOG_ERROR("ArucoCam::getPos() - Invalid response data, camera might not be running");
         status = false;
+        stop();
         return true;
     }
     if (failedFrames > SCAN_FAIL_FRAMES_NUM) {
@@ -95,6 +97,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     // Extract the values from the JSON object
     if(response.is_null()){
         success = false;
+        stop();
         return true;
     }
     json position = response["position"];
@@ -104,6 +107,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
         a = position.value("a", 0);
     }else{
         success = false;
+        stop();
         return true;
     }
     success = true;
