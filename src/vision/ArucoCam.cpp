@@ -273,7 +273,28 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
     }else{
         LOG_ERROR("Situation with more or less than 4 blocks not yet implemented");
         //TODO
-        success = false;
+        double m_x = 0, m_y = 0;
+
+        for(size_t i = 0 ; i< (size_t)count; i++){  
+            m_x += visibleBlocks[i].x;
+            m_y += visibleBlocks[i].y;
+        }   
+        m_x = m_x / count;
+        m_y = m_y / count;
+        
+        // Décalage pour le centre du robot
+        m_x += OFFSET_CAM_X;
+        m_y += OFFSET_CAM_Y;
+
+        //projection dans le repère de la table:
+        double a_rad = (a) * M_PI / 180.0;
+        double cos_a = cos(a_rad);
+        double sin_a = sin(a_rad);
+        x += m_x * cos_a - m_y * sin_a;
+        y += m_x * sin_a + m_y * cos_a;
+        success = true;
+        LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+        // Return true if the values were successfully extracted
         stop();
         return true;
     }
