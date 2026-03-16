@@ -311,15 +311,15 @@ bool ArucoCam::ToIsolatedObject(json& data, double & x, double & y, double & a, 
         for (auto& obj : list) {
             
             // On convertit vers le repère robot 
-            double a_tag_rad = obj.value("a",0.0) * M_PI / 180.0;
+            double a_tag_rad = -1 * obj.value("a",0.0) * M_PI / 180.0;
             double sin_tag = sin(a_tag_rad);
             double cos_tag = cos(a_tag_rad);
             double x_tmp = obj.value("x", 0.0);
             double y_tmp = obj.value("y", 0.0);
             possible.push_back(block_t{
-                .x = x_tmp* cos_tag - y_tmp * sin_tag,
-                .y= x_tmp* sin_tag + y_tmp*cos_tag,
-                .a = obj.value("a",0.0),
+                .x = -1 * (x_tmp* cos_tag - y_tmp * sin_tag),
+                .y= -1 * (x_tmp* sin_tag + y_tmp * cos_tag),
+                .a = -1 * obj.value("a",0.0),
                 .color = (obj.value("label", "") == "Blue")? true : false
             }); 
             count++;
@@ -333,10 +333,10 @@ bool ArucoCam::ToIsolatedObject(json& data, double & x, double & y, double & a, 
 
     std::sort(possible.begin(), possible.end(), sortBlockT);
     LOG_GREEN_INFO("Isolated on one side is ", possible[0].color, " at ( ",possible[0].x,", ",possible[0].y,")");
-    LOG_GREEN_INFO("Isolated on the other side is ", possible[3].color, " at ( ",possible[3].x,", ",possible[3].y,")");
-    x = possible[0].x;
-    y = possible[0].y;
-    a = possible[0].a;
+    LOG_GREEN_INFO("Isolated on the other side is ", possible[count-1].color, " at ( ",possible[count-1].x,", ",possible[3].y,")");
+    x += possible[0].x;
+    y += possible[0].y;
+    a += possible[0].a;
 
     success = true;
     return true;
