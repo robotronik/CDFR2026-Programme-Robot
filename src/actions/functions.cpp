@@ -66,16 +66,10 @@ bool rotateTwoBlocks(bool *order){
     static int state = 1;
     switch (state){
         case 1:
-            if (closeClaws())
+            if (closeClaws() && raiseClaws())
                 state = 2;
             break;
-
         case 2:
-            if (raiseClaws()){
-                state = 3;
-            }
-            break;
-        case 3:
 
             bool any = order[0] || order[1] || order[2] || order[3];
             bool a=false,b=true,c=true,d=false;
@@ -117,6 +111,18 @@ bool dropBlock(){
     return false;
 }
 
+bool enableCursor(bool enable){
+    int target = enable ? 150 : 90;
+
+    arduino.moveServo(SERVO_NUM_7, 180);
+    arduino.moveServo(SERVO_NUM_6, target);
+
+    int current = 0;
+    if (!arduino.getServo(SERVO_NUM_6, current)) 
+        return false;
+
+    return current == target;
+}
 
 // ------------------------------------------------------
 //                   SERVO CONTROL

@@ -18,6 +18,8 @@ bool raiseClaws();
 bool rotateTwoBlocks(bool *order);
 bool rotateTwoBlocksDefault();
 bool dropBlock();
+bool enableCursor(bool enable);
+
 
 // Servo Control
 bool closeClaws();
