@@ -161,6 +161,7 @@ bool ArucoCam::getObjectColor(bool* order, bool& success){
     if(getObjectData(data, data_success)){
         if(!data_success){
             success = false;
+            stop();
             return true;
         }
     }else{
@@ -194,6 +195,7 @@ bool ArucoCam::ToObjectColor(json& data, bool* order, bool& success){
 
     if(possible.empty()){
         success = false;
+        stop();
         return true;
     }
 
@@ -207,6 +209,7 @@ bool ArucoCam::ToObjectColor(json& data, bool* order, bool& success){
         }
     }
     success = true;
+    stop();
     return true;
 }
 
@@ -216,7 +219,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
     
     int count = 0;
     auto& objects = data["objects"];
-    double m_x = 0, m_y = 0;
+    std::vector<block_t> visibleBlocks;
 
     for (auto& [key, list] : objects.items()) {
         for (auto& obj : list) {
@@ -228,36 +231,52 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
             double x_tmp = obj.value("x", 0.0);
             double y_tmp = obj.value("y", 0.0);
             LOG_EXTENDED_DEBUG("Coord du tag dans le repère du robot ( ", -1*(x_tmp* cos_tag - y_tmp * sin_tag),", ",-1*(x_tmp* sin_tag + y_tmp*cos_tag), ")");
-            m_x -= x_tmp* cos_tag - y_tmp * sin_tag;
-            m_y -= x_tmp* sin_tag + y_tmp*cos_tag; 
+            visibleBlocks.push_back(block_t{
+                .x = -1*(x_tmp* cos_tag - y_tmp * sin_tag),
+                .y = -1*(x_tmp* sin_tag + y_tmp*cos_tag),
+                .a = -1 * obj.value("a",0.0),
+                .color = (obj.value("label", "") == "Blue")? true : false
+            });
             count++;
         }
     }
 
     if(!count){
         success = false;
+        stop();
+        return true;
+    }else if (count == 4){
+        double m_x = 0, m_y = 0;
+
+        for(size_t i = 0 ; i< (size_t)4; i++){  
+            m_x += visibleBlocks[i].x;
+            m_y += visibleBlocks[i].y;
+        }   
+        m_x = m_x / count;
+        m_y = m_y / count;
+        
+        // Décalage pour le centre du robot
+        m_x += OFFSET_CAM_X;
+        m_y += OFFSET_CAM_Y;
+
+        //projection dans le repère de la table:
+        double a_rad = (a) * M_PI / 180.0;
+        double cos_a = cos(a_rad);
+        double sin_a = sin(a_rad);
+        x += m_x * cos_a - m_y * sin_a;
+        y += m_x * sin_a + m_y * cos_a;
+        success = true;
+        LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+        // Return true if the values were successfully extracted
+        stop();
+        return true;
+    }else{
+        LOG_ERROR("Situation with more or less than 4 blocks not yet implemented");
+        //TODO
+        success = false;
+        stop();
         return true;
     }
-
-    m_x = m_x / count;
-    m_y = m_y / count;
-    
-    // Décalage pour le centre du robot
-    m_x += OFFSET_CAM_X;
-    m_y += OFFSET_CAM_Y;
-
-
-    //projection dans le repère de la table:
-    double a_rad = (a) * M_PI / 180.0;
-    double cos_a = cos(a_rad);
-    double sin_a = sin(a_rad);
-    x += m_x * cos_a - m_y * sin_a;
-    y += m_x * sin_a + m_y * cos_a;
-    success = true;
-    LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
-    // Return true if the values were successfully extracted
-    stop();
-    return true;
 }
 
 /*
@@ -309,6 +328,7 @@ bool ArucoCam::getBestIsolatedObject(double & x, double & y, double & a, bool& s
     if(getObjectData(data, data_success)){
         if(!data_success){
             success = false;
+            stop();
             return true;
         }
     }else{
