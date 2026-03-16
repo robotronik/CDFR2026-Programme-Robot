@@ -117,6 +117,18 @@ bool dropBlock(){
     return false;
 }
 
+bool enableCursor(bool enable){
+    int target = enable ? 150 : 90;
+
+    arduino.moveServo(SERVO_NUM_7, 180);
+    arduino.moveServo(SERVO_NUM_6, target);
+
+    int current = 0;
+    if (!arduino.getServo(SERVO_NUM_6, current)) 
+        return false;
+
+    return current == target;
+}
 
 // ------------------------------------------------------
 //                   SERVO CONTROL

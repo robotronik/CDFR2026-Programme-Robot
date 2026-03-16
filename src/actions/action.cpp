@@ -323,20 +323,15 @@ ReturnFSM_t ActionFSM::DropStock(){
 }
 
 ReturnFSM_t ActionFSM::Cursor(){
-    position_t navTarget = {760.0, 1260.0, 45.0};
+    position_t navTarget = {760.0, 1260.0, -90.0};
     position_t moveTarget = navTarget;
     moveTarget.y -= 280.0;
-    moveTarget.a = 0.0;
-
-    position_t endTarget = navTarget;
-    endTarget.x -= 100.0;
-    endTarget.y -= 280.0;
-    endTarget.a = 0.0;
 
     if (tableStatus.colorTeam == YELLOW){
         position_robot_flip(navTarget);
+        navTarget.a = -90;
         position_robot_flip(moveTarget);
-        position_robot_flip(endTarget);
+        moveTarget.a = -90;
     }
 
     switch (CursorState){
@@ -358,17 +353,16 @@ ReturnFSM_t ActionFSM::Cursor(){
             }
             break;
         case FSM_CURSOR_LOW_CLAW:
-            if (lowerClaws()){
-                LOG_INFO("Nav done FSM_CURSOR_LOW_CLAW, going to FSM_CURSOR_MOVE");
+            if (enableCursor(true)){
+                LOG_EXTENDED_DEBUG("FSM_CURSOR_LOW_CLAW: Ventouse lowered at cursor position");
                 CursorState = FSM_CURSOR_MOVE;
             }
             break;
 
         case FSM_CURSOR_MOVE:
             nav_ret = navigationGoTo(moveTarget);
-            //LOG_INFO("Claws lowered at cursor position");
             if (nav_ret == NAV_DONE){
-                LOG_EXTENDED_DEBUG("FSM_CURSOR_MOVE: Nav done and raised claws, going to FSM_CURSOR");
+                LOG_EXTENDED_DEBUG("FSM_CURSOR_MOVE: Nav done , going to FSM_CURSOR");
                 CursorState = FSM_CURSOR_END;
             }
             else if (nav_ret == NAV_ERROR){
@@ -378,16 +372,10 @@ ReturnFSM_t ActionFSM::Cursor(){
             break;
 
         case FSM_CURSOR_END:
-            nav_ret = navigationGoTo(endTarget);
-            if (nav_ret == NAV_DONE){
-                LOG_EXTENDED_DEBUG("FSM_CURSOR_END: Nav done, cursor action complete");
-                tableStatus.setCursorIsDone(true);
+            if (enableCursor(false)){
+                LOG_EXTENDED_DEBUG("FSM_CURSOR_END: Cursor action done");
                 CursorState = CURSOR_RAISE_CLAW;
                 return FSM_RETURN_DONE;
-            }
-            else if (nav_ret == NAV_ERROR){
-                LOG_WARNING("FSM_CURSOR_END: Navigation error while moving to final cursor position");
-                return FSM_RETURN_ERROR;
             }
             break;
 
@@ -422,7 +410,7 @@ void ActionFSM::SetBestAction(position_t position){
     }
 
     /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
-    if((false && !tableStatus.cursorIsDone()) && (position_distance(position, tableStatus.CursorPos) < 300 || stock_num == (tableStatus.colorTeam == YELLOW ? 5 : 1))){ // If we are close to the cursor position or if we are at stock 
+    if((!tableStatus.cursorIsDone()) && (position_distance(position, tableStatus.CursorPos) < 300 || stock_num == (tableStatus.colorTeam == YELLOW ? 5 : 1))){ // If we are close to the cursor position or if we are at stock 
         LOG_GREEN_INFO("Going for cursor action");
         runState = FSM_ACTION_CURSOR;
         return;
