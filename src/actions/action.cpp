@@ -324,15 +324,15 @@ ReturnFSM_t ActionFSM::DropStock(){
 }
 
 ReturnFSM_t ActionFSM::Cursor(){
-    position_t navTarget = {760.0, 1260.0, -90.0};
+    position_t navTarget = {780.0, 1330.0, -120.0};
     position_t moveTarget = navTarget;
-    moveTarget.y -= 280.0;
+    moveTarget.y -= 520.0;
 
     if (tableStatus.colorTeam == YELLOW){
         position_robot_flip(navTarget);
-        navTarget.a = -90;
+        navTarget.a = -120;
         position_robot_flip(moveTarget);
-        moveTarget.a = -90;
+        moveTarget.a = -120;
     }
 
     switch (CursorState){

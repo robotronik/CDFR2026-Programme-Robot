@@ -112,9 +112,9 @@ bool dropBlock(){
 }
 
 bool enableCursor(bool enable){
-    int target = enable ? 150 : 90;
+    int target = enable ? 160 : 90;
 
-    arduino.moveServo(SERVO_NUM_7, 180);
+    arduino.moveServo(SERVO_NUM_7, 90);
     arduino.moveServo(SERVO_NUM_6, target);
 
     int current = 0;
@@ -239,6 +239,7 @@ bool moveColumnsElevator(int level){
 
 // Returns true if actuators are home
 bool homeActuators(){
+    arduino.moveServo(SERVO_NUM_6, 90);
     return ( resetSpinClaws() & openClaws());
 }
 void enableActuators(){
