@@ -252,7 +252,7 @@ void StartAPIServer(){
     CROW_ROUTE(app, "/get_blockPosition")
     ([](){
         json response;
-        response["object"] = arucoCam1.getBestIsolatedObject_json();
+        response["object"] = arucoCam1.getObjectPosition_json();
         return crow::response(response.dump());
     });
 
