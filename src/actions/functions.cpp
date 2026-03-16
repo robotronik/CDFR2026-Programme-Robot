@@ -124,6 +124,50 @@ bool enableCursor(bool enable){
     return current == target;
 }
 
+bool flipOneBlock(){
+    static int state = 0;
+    static unsigned long startTime = 0;
+    //servo 7 : 90 = bras haut / 150 = intermédiaire / 180 = bras bas
+    //servo 8 : 170 = ventouse bas,  0 = ventouse haut 
+    switch(state){
+        case 0: //take block
+            if ( arduino.writeSensor(1, true) && moveServoAndWait(SERVO_NUM_7,180,200) && moveServoAndWait(SERVO_NUM_6,175,200)){
+                startTime = _millis();
+                state = 1;
+            }
+            break;
+
+        case 1: //monte bras
+            if (_millis() > startTime + 500){
+                if (moveServoAndWait(SERVO_NUM_6,150,200))
+                    state = 2;
+            }
+            break;
+
+        case 2: // tourne ventouse
+            if (moveServoAndWait(SERVO_NUM_7,0,200))
+                state = 3;
+            break;
+
+        case 3: //baisse bras
+            if (moveServoAndWait(SERVO_NUM_6,180,200)){
+                startTime = _millis();
+                state = 4;
+            }
+            break;
+        case 4: //lacher ventouse
+            if (arduino.writeSensor(1, false) &&  _millis() > startTime + 1000){
+                if (moveServoAndWait(SERVO_NUM_6,80,200) & moveServoAndWait(SERVO_NUM_7,180,200)){
+                    state = 0; 
+                    return true;
+                }
+            }
+            break;
+    }
+
+    return false;
+}
+
 // ------------------------------------------------------
 //                   SERVO CONTROL
 // ------------------------------------------------------
@@ -199,6 +243,22 @@ bool spinClaws(bool spin1, bool spin2, bool spin3, bool spin4){
         return false; 
     done4 = (current == target4);
     return (done1 && done2 && done3 && done4);
+}
+
+bool moveServoAndWait(int servo, int target, int speed){
+    static int prevServo = -1;
+    static int prevTarget = -1;
+
+    if (servo != prevServo || target != prevTarget){
+        arduino.moveServoSpeed(servo, target, speed);
+        prevServo = servo;
+        prevTarget = target;
+    }
+
+    int s;
+    if (!arduino.getServo(servo, s)) return false;
+
+    return s == target;
 }
 
 // ------------------------------------------------------
