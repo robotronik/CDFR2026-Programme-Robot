@@ -66,16 +66,10 @@ bool rotateTwoBlocks(bool *order){
     static int state = 1;
     switch (state){
         case 1:
-            if (closeClaws())
+            if (closeClaws() && raiseClaws())
                 state = 2;
             break;
-
         case 2:
-            if (raiseClaws()){
-                state = 3;
-            }
-            break;
-        case 3:
 
             bool any = order[0] || order[1] || order[2] || order[3];
             bool a=false,b=true,c=true,d=false;

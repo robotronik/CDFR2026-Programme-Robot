@@ -192,12 +192,13 @@ ReturnFSM_t ActionFSM::TakeStock(){
 
             if(arucoCam1.getObjectInfoColors(stockOrder,x,y,a,sucess)){
                 if(sucess){
+                    //LOG_GREEN_INFO("pos aruco = ", x ," / ", y," / ",  a);
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Detection sucess calibration on blocks");
-                    targetStockPos = position_t{x + int(stockOff.x * 0.68), y + int(stockOff.y * 0.68), angle};
+                    targetStockPos = position_t{x + int(stockOff.x * mult_off), y + int(stockOff.y * mult_off), angle};
                 }else{
                     //TODO handle error
                     LOG_WARNING("FSM_GATHER_DETECT: Detection failed calibration on map");
-                    targetStockPos = position_t{stockPos.x + int(stockOff.x * 0.68), stockPos.y + int(stockOff.y * 0.68), angle};
+                    targetStockPos = position_t{stockPos.x + int(stockOff.x * mult_off), stockPos.y + int(stockOff.y * mult_off), angle};
                 }
                 gatherStockState = FSM_GATHER_CLAWS;
             }
