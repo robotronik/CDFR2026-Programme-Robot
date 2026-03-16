@@ -124,7 +124,7 @@
 
         async function fetchPosition() {
             try {
-                const data = await getJson("/position");
+                const data = await getJson_robot("/position");
                 positionOutput.textContent = jsonPretty(data);
                 setStatus("Position fetched", "success");
             } catch (error) {

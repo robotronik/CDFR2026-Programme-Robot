@@ -16,7 +16,7 @@ ActionFSM::ActionFSM(){
 ActionFSM::~ActionFSM(){}
 
 void ActionFSM::Reset(){
-    runState = FSM_ACTION_CALIBRATION;
+    runState = FSM_ACTION_GATHER_ISOLATED;
 
     /****** RESET OF FSM STATES *******/
     gatherStockState = FSM_GATHER_NAV;
@@ -245,32 +245,42 @@ ReturnFSM_t ActionFSM::TakeStock(){
 ReturnFSM_t ActionFSM::TakeIsolatedStock(){
     static position_t targetPos_; 
     switch (gatherIsolatedStockState)
-    {
-    case FSM_GATHER_DETECT:
-        double x = drive.position.x;
-        double y = drive.position.y;
-        double a = drive.position.a;
-        bool sucess = false;
-        if(arucoCam1.getBestIsolatedObject(x,y,a,sucess)){
-            if(sucess){
-                targetPos_ = position_t{x,y,a};
-                gatherIsolatedStockState = FSM_GATHER_NAV;
-                LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found an isolated object");
-            }else{
-                LOG_ERROR("FSM_GATHER_DETECT: Failed to find an isolated object");
-                return FSM_RETURN_ERROR;
+    {   
+        case FSM_GATHER_CLAWS:
+            return FSM_RETURN_ERROR;
+        case FSM_GATHER_MOVE:
+            return FSM_RETURN_ERROR;
+        case FSM_GATHER_COLLECT:
+            return FSM_RETURN_ERROR;
+        case FSM_GATHER_COLLECTED:
+            return FSM_RETURN_ERROR;
+
+        case FSM_GATHER_DETECT:
+        {
+            double x = drive.position.x;
+            double y = drive.position.y;
+            double a = drive.position.a;
+            bool sucess = false;
+            if(arucoCam1.getBestIsolatedObject(x,y,a,sucess)){
+                if(sucess){
+                    targetPos_ = position_t{x,y,a};
+                    gatherIsolatedStockState = FSM_GATHER_NAV;
+                    LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found an isolated object");
+                }else{
+                    LOG_ERROR("FSM_GATHER_DETECT: Failed to find an isolated object");
+                    return FSM_RETURN_ERROR;
+                }
             }
+            break;
         }
-        break;
-    
-    case FSM_GATHER_NAV:
-        nav_ret = navigationGoTo(targetPos_, true); // Enabeling A*
-        if (nav_ret == NAV_DONE){
-            LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to stock at postition (",targetPos_.x,", ",targetPos_.y, ")");
-            gatherIsolatedStockState = FSM_GATHER_DETECT;
-            return FSM_RETURN_DONE;
-        }
-        break;
+        case FSM_GATHER_NAV:
+            nav_ret = navigationGoTo(targetPos_, true); // Enabeling A*
+            if (nav_ret == NAV_DONE){
+                LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to stock at postition (",targetPos_.x,", ",targetPos_.y, ")");
+                gatherIsolatedStockState = FSM_GATHER_DETECT;
+                return FSM_RETURN_DONE;
+            }
+            break;
     }
     return FSM_RETURN_WORKING;
 }

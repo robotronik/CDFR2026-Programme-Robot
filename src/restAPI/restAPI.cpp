@@ -256,6 +256,13 @@ void StartAPIServer(){
         return crow::response(response.dump());
     });
 
+    CROW_ROUTE(app, "/position")
+    ([](){
+        json response;
+        response["object"] = arucoCam1.getObjectPosition_json();//Replace by jsom
+        return crow::response(response.dump());
+    });
+
     // ------------------------------- POST Routes -------------------------------
 
     // Define a route for a POST request that accepts JSON data and responds with a message

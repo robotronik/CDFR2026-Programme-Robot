@@ -17,9 +17,17 @@ class ActionFSM{
         ~ActionFSM();
         void Reset();
         bool RunFSM();
-        void SetBestAction(position_t position);
         
     private:
+        /***** FUNCTIONS  *******/
+        void SetBestAction(position_t position);
+
+        ReturnFSM_t TakeStock();
+        ReturnFSM_t TakeIsolatedStock();
+        ReturnFSM_t DropStock();
+        ReturnFSM_t Cursor();
+        ReturnFSM_t Calibrate();
+        ReturnFSM_t GetRobotCenter();
 
         int stock_num;// Num of stock
         int dropzone_num;// Num of dropzone to drop the stock
@@ -32,17 +40,11 @@ class ActionFSM{
         position_t targetStockPos;
         bool stockOrder[4];
 
-        ReturnFSM_t TakeStock();
-        ReturnFSM_t TakeIsolatedStock();
-        ReturnFSM_t DropStock();
-        ReturnFSM_t Cursor();
-        ReturnFSM_t GetRobotCenter();
-        ReturnFSM_t Calibrate();
-
         /************  FSM GLOBAL ************/
         typedef enum
         {
             FSM_ACTION_GATHER,
+            FSM_ACTION_GATHER_ISOLATED,
             FSM_ACTION_DROP,
             FSM_ACTION_CURSOR,
             FSM_ACTION_NAV_HOME,
