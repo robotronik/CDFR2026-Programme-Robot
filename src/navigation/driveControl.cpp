@@ -44,7 +44,7 @@ bool DriveControl::drive(position_t pos[], int n) {
     }
 
     // Calculate the target point along the path
-    double looking_distance = 120.0; // Radius (mm)
+    double looking_distance = 180.0; // Radius (mm)
     
     position_t pos_target;
     double total_distance = position_distance(position, pos[0]);
@@ -59,9 +59,9 @@ bool DriveControl::drive(position_t pos[], int n) {
 
     // Calculate position_speed with acceleration, top speed, and deceleration
     // Angular motion
-    double angle_acceleration = (is_slow_mode ? 15.0 : 150.0); // deg/s
-    double angle_top_speed   = (is_slow_mode ? 100.0 : 800.0); // deg/s
-    double angle_deceleration= (is_slow_mode ? 150.0 : 600.0); // deg/s²
+    double angle_acceleration = (is_slow_mode ? 40.0 : 150.0); // deg/s
+    double angle_top_speed   = (is_slow_mode ? 350.0 : 600.0); // deg/s
+    double angle_deceleration= (is_slow_mode ? 1000.0 : 2000.0); // deg/s²
 
     double current_angular_velocity = fabs(velocity.a); // deg/s
     double angle_speed;
@@ -86,13 +86,13 @@ bool DriveControl::drive(position_t pos[], int n) {
         angle_speed = angle_top_speed;
     }
 
-    const double kP_ang = 8.0;  // Gain for angular speed (deg/s per deg error) (Defined in drive)
+    const double kP_ang = 4.0;  // Gain for angular speed (deg/s per deg error) (Defined in drive)
     pos_target.a = position.a + MIN(MAX(error_heading, -angle_speed/kP_ang), angle_speed/kP_ang);
 
     // Linear motion
-    double position_acceleration = (is_slow_mode ? 50.0 : 100.0); // mm/s²
-    double position_top_speed    =  (is_slow_mode ? 300.0 : 2000.0); // mm/s
-    double position_deceleration =  (is_slow_mode ? 600.0 : 1200.0); // mm/s²
+    double position_acceleration = (is_slow_mode ? 80.0 : 250.0); // mm/s²
+    double position_top_speed    =  (is_slow_mode ? 400.0 : 2000.0); // mm/s
+    double position_deceleration =  (is_slow_mode ? 800.0 : 2000.0); // mm/s²
     double current_linear_velocity = position_length(velocity); // mm/s
     double position_speed; // mm/s
     
@@ -121,7 +121,7 @@ bool DriveControl::drive(position_t pos[], int n) {
     vec.x = pos_target.x - position.x;
     vec.y = pos_target.y - position.y;
     position_normalize(vec);
-    const double kP_lin = 6.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
+    const double kP_lin = 4.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
     vec.x *= position_speed / kP_lin;
     vec.y *= position_speed / kP_lin;
     if (err_len > position_length(vec) && err_len > 30.0) {
@@ -130,10 +130,10 @@ bool DriveControl::drive(position_t pos[], int n) {
     }
     drive_interface::set_target(convertPositionToPacked(pos_target));
 
-    bool is_done_pos = err_len < 7.0 && fabs(velocity.x) < 15.0 && fabs(velocity.y) < 15.0;
+    bool is_done_pos = err_len < 2.0 && fabs(velocity.x) < 15.0 && fabs(velocity.y) < 15.0;
     bool is_done_ang = fabs(error_heading) < 1.0 && fabs(velocity.a) < 4.0;
-    // LOG_DEBUG("Position error: ", err_len, "mm, Velocity x: ", velocity.x, "mm/s, Velocity y: ", velocity.y, "mm/s, Angle error: ", error_heading, "deg, Angular velocity: ", fabs(velocity.a), "deg/s");
-
+    //LOG_DEBUG("Position error: ", err_len, "mm, Velocity x: ", velocity.x, "mm/s, Velocity y: ", velocity.y, "mm/s, Angle error: ", error_heading, "deg, Angular velocity: ", fabs(velocity.a), "deg/s");
+    LOG_DEBUG("Current speed : ", position_length(velocity), "mm/s, Target speed: ", position_speed, "mm/s");
     if (is_done_pos && is_done_ang){
         return true;
     }    
