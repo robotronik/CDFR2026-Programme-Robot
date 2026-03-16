@@ -227,6 +227,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
             double cos_tag = cos(a_tag_rad);
             double x_tmp = obj.value("x", 0.0);
             double y_tmp = obj.value("y", 0.0);
+            LOG_EXTENDED_DEBUG("Coord du tag dans le repère du robot ( ", -1*(x_tmp* cos_tag - y_tmp * sin_tag),", ",-1*(x_tmp* sin_tag + y_tmp*cos_tag), ")");
             m_x -= x_tmp* cos_tag - y_tmp * sin_tag;
             m_y -= x_tmp* sin_tag + y_tmp*cos_tag; 
             count++;
