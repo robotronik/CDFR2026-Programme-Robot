@@ -57,7 +57,18 @@ bool ActionFSM::RunFSM(){
             // TODO Handle error
         }
         break;
-
+    case FSM_ACTION_GATHER_ISOLATED:
+        ret = TakeIsolatedStock();
+        if (ret == FSM_RETURN_DONE){
+            LOG_INFO("FSM_ACTION_GATHER_ISOLATED: Finished gathering");
+            return true;
+            //SetBestAction(drive.position);
+        }
+        else if (ret == FSM_RETURN_ERROR){
+            LOG_ERROR("FSM_ACTION_GATHER_ISOLATED: Couldn't gather");
+            // TODO Handle error
+        }
+        break;
     /*
         Action drop block in zone
         Error make the action be postponned
