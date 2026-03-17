@@ -4,7 +4,9 @@
 #include "utils/logger.hpp"
 #include "main.hpp"
 
-int pathfind(position_t start, position_t goal, position_t path[]) {
+//pathfind(start, goal, path, &len); // avec longueur chemin en mm
+//pathfind(start, goal, path);       // sans longueur chemin en mm
+int pathfind(position_t start, position_t goal, position_t path[], int* path_lenght_mm = nullptr){
     // Ajouter les obstacles du lidar
     // pathfind_fill_lidar();
 
@@ -47,6 +49,15 @@ int pathfind(position_t start, position_t goal, position_t path[]) {
     }
     path[smooth_len] = (position_t){goal.x, goal.y, goal.a};
     smooth_len++;
+
+    int computed_length = 0;
+    position_t prev = start;
+    for (int i = 0; i < smooth_len; i++) {
+        computed_length += position_distance(prev, path[i]);
+        prev = path[i];
+    }
+    if (path_lenght_mm != nullptr) *path_lenght_mm = computed_length;
+
     return smooth_len;
 }
 
