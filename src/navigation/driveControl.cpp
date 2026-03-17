@@ -61,7 +61,6 @@ bool DriveControl::drive(position_t pos[], int n) {
     // Angular motion
     double angle_acceleration = (is_slow_mode ? 40.0 : 150.0); // deg/s
     double angle_top_speed   = (is_slow_mode ? 350.0 : 600.0); // deg/s
-    double angle_deceleration= (is_slow_mode ? 1000.0 : 2000.0); // deg/s²
 
     double current_angular_velocity = fabs(velocity.a); // deg/s
     double angle_speed;
@@ -70,21 +69,7 @@ bool DriveControl::drive(position_t pos[], int n) {
     while (error_heading > 180.0) error_heading -= 360.0;
     while (error_heading < -180.0) error_heading += 360.0;
     
-    // Calculate stopping distance: distance = v² / (2 * a)
-    double angular_stopping_distance = (current_angular_velocity * current_angular_velocity) / (2.0 * angle_deceleration);
-    
-    // Accelerate if below top speed, decelerate if close to target
-    if (fabs(error_heading) <= angular_stopping_distance) {
-        // Deceleration phase - calculate target speed based on remaining distance
-        double target_speed = sqrt(2.0 * angle_deceleration * fabs(error_heading));
-        angle_speed = MAX(MIN(target_speed, current_angular_velocity), 5.0);
-    } else if (current_angular_velocity < angle_top_speed) {
-        // Acceleration phase
-        angle_speed = MIN(current_angular_velocity + angle_acceleration, angle_top_speed);
-    } else {
-        // Maintain top speed
-        angle_speed = angle_top_speed;
-    }
+    angle_speed = MIN(current_angular_velocity + angle_acceleration, angle_top_speed);
 
     const double kP_ang = 4.0;  // Gain for angular speed (deg/s per deg error) (Defined in drive)
     pos_target.a = position.a + MIN(MAX(error_heading, -angle_speed/kP_ang), angle_speed/kP_ang);
@@ -92,31 +77,14 @@ bool DriveControl::drive(position_t pos[], int n) {
     // Linear motion
     double position_acceleration = (is_slow_mode ? 80.0 : 250.0); // mm/s²
     double position_top_speed    =  (is_slow_mode ? 400.0 : 2000.0); // mm/s
-    double position_deceleration =  (is_slow_mode ? 800.0 : 2000.0); // mm/s²
     double current_linear_velocity = position_length(velocity); // mm/s
     double position_speed; // mm/s
+
+    position_speed = MIN(current_linear_velocity + position_acceleration, position_top_speed);
     
     // Distance to final target
     double distance_to_target = position_distance(position, pos[n - 1]);
-    
-    // Calculate stopping distance: distance = v² / (2 * a)
-    double linear_stopping_distance = (current_linear_velocity * current_linear_velocity) / (2.0 * position_deceleration);
-    
-    // Accelerate if below top speed, decelerate if close to target
-    if (distance_to_target <= linear_stopping_distance) {
-        // Deceleration phase - calculate target speed based on remaining distance
-        double target_speed = sqrt(2.0 * position_deceleration * distance_to_target);
-        position_speed = MAX(MIN(target_speed, current_linear_velocity), 10.0);
-        position_speed = MIN(position_speed, current_linear_velocity);
-    } else if (current_linear_velocity < position_top_speed) {
-        // Acceleration phase
-        position_speed = MIN(current_linear_velocity + position_acceleration, position_top_speed);
-    } else {
-        // Maintain top speed
-        position_speed = position_top_speed;
-    }
 
-    double err_len = position_distance(position, pos[n - 1]);
     position_t vec;
     vec.x = pos_target.x - position.x;
     vec.y = pos_target.y - position.y;
@@ -124,16 +92,17 @@ bool DriveControl::drive(position_t pos[], int n) {
     const double kP_lin = 4.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
     vec.x *= position_speed / kP_lin;
     vec.y *= position_speed / kP_lin;
-    if (err_len > position_length(vec) && err_len > 30.0) {
+    if (distance_to_target > position_length(vec) && distance_to_target > 30.0) {
         pos_target.x = position.x + vec.x;
         pos_target.y = position.y + vec.y;
     }
     drive_interface::set_target(convertPositionToPacked(pos_target));
 
-    bool is_done_pos = err_len < 4.0 && fabs(velocity.x) < 15.0 && fabs(velocity.y) < 15.0;
+    bool is_done_pos = distance_to_target < 4.0 && fabs(velocity.x) < 15.0 && fabs(velocity.y) < 15.0;
     bool is_done_ang = fabs(error_heading) < 1.0 && fabs(velocity.a) < 4.0;
-    //LOG_DEBUG("Position error: ", err_len, "mm, Velocity x: ", velocity.x, "mm/s, Velocity y: ", velocity.y, "mm/s, Angle error: ", error_heading, "deg, Angular velocity: ", fabs(velocity.a), "deg/s");
-    // LOG_DEBUG("Current speed : ", position_length(velocity), "mm/s, Target speed: ", position_speed, "mm/s");
+    //LOG_DEBUG("Position error: ", distance_to_target, "mm, Velocity x: ", velocity.x, "mm/s, Velocity y: ", velocity.y, "mm/s, Angle error: ", error_heading, "deg, Angular velocity: ", fabs(velocity.a), "deg/s");
+    //LOG_DEBUG("Current speed : ", position_length(velocity), "mm/s, Target speed: ", position_speed, "mm/s");
+    //LOG_DEBUG("Current speed : ", fabs(velocity.a), "deg/s, Target speed: ", angle_speed, "deg/s");
     if (is_done_pos && is_done_ang){
         return true;
     }    
