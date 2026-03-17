@@ -407,6 +407,20 @@ json ArucoCam::getObjectPosition_json(){
         {"a", a}};
 }
 
+json ArucoCam::getRobotPosition_json(){
+    double x = 0;
+    double y = 0;
+    double a = 0;
+    bool sucess = false;
+    while(!getRobotPos(x,y,a,sucess)){
+        continue;
+    }
+    return json{
+        {"x", x},
+        {"y", y},
+        {"a", a}};
+}
+
 bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double & a, bool& success){
     json data;
     bool data_success;

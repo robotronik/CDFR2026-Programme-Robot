@@ -31,6 +31,8 @@ public:
 
     json getBestIsolatedObject_json();
     json getObjectPosition_json();
+    json getRobotPosition_json();
+
 
 private:
     std::string url;
