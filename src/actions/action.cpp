@@ -16,7 +16,7 @@ ActionFSM::ActionFSM(){
 ActionFSM::~ActionFSM(){}
 
 void ActionFSM::Reset(){
-    runState = FSM_ACTION_GATHER_ISOLATED;
+    runState = FSM_ACTION_CALIBRATION;
 
     /****** RESET OF FSM STATES *******/
     gatherStockState = FSM_GATHER_NAV;
@@ -98,6 +98,7 @@ bool ActionFSM::RunFSM(){
         ret = Cursor();
         if (ret == FSM_RETURN_DONE){
             LOG_INFO("ACTION_CURSOR: Finished cursor action");
+            tableStatus.setCursorIsDone(true); // Place le curseur comme virtuellement fait
             SetBestAction(drive.position);
         }
         else if (ret == FSM_RETURN_ERROR){
@@ -317,7 +318,7 @@ ReturnFSM_t ActionFSM::DropStock(){
     
             if (!rotate_done) rotate_done = rotateTwoBlocks(stockOrder);
         
-            if (rotate_done && (nav_ret == NAV_DONE)) {
+            if ((nav_ret == NAV_DONE) && rotate_done ) {
                 dropStockState = FSM_DROP;
                 LOG_EXTENDED_DEBUG("FSM_DROP_NAV: Finished Drop Nav and rotate 2 blocks");
             }

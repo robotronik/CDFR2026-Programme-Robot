@@ -228,5 +228,5 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos){
 }
 
 position_t getBestIsolatedPosition(position_t centerPos, position_t fromPos){
-    position_t poss1 = position_sum();
+    //position_t poss1 = position_sum();
 }

@@ -6,7 +6,7 @@
 
 //pathfind(start, goal, path, &len); // avec longueur chemin en mm
 //pathfind(start, goal, path);       // sans longueur chemin en mm
-int pathfind(position_t start, position_t goal, position_t path[], int* path_lenght_mm = nullptr){
+int pathfind(position_t start, position_t goal, position_t path[], int* path_lenght_mm){
     // Ajouter les obstacles du lidar
     // pathfind_fill_lidar();
 

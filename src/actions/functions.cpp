@@ -58,7 +58,7 @@ bool raiseClaws(){
 }
 
 bool rotateTwoBlocksDefault(){
-    bool order[4]{false,true,true,false};
+    bool order[4]{false,false,false,false};
     return rotateTwoBlocks(order);
 }
 

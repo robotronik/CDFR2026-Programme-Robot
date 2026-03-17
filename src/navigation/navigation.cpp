@@ -18,7 +18,9 @@ static int currentPathLength = 0;
 nav_return_t navigationDrive(){
     // Calculate the path
     if (current_use_astar){
-        currentPathLength = pathfind(drive.position, current_pos_target, currentPath);
+        int len;
+        currentPathLength = pathfind(drive.position, current_pos_target, currentPath, &len);
+        //LOG_GREEN_INFO("Path length: ", len);
         if (currentPathLength <= 0){
             LOG_ERROR("No path found");
             if (!is_robot_stalled){
