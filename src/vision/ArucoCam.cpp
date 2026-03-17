@@ -135,10 +135,12 @@ bool ArucoCam::getObjectData(json& objects, bool& sucess){
     json response;
     if (restAPI_GET(url, "/objects", response) == false) {
         LOG_ERROR("ArucoCam::getObjectData() - Failed to fetch objects");
+        stop();
         return true;
     }
     // Extract the values from the JSON object
     if(response.is_null()){
+        stop();
         return true;
     }
     sucess = true;
@@ -246,6 +248,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
     }
 
     if(!count){
+        LOG_ERROR("No object found Error stopping cam");
         success = false;
         stop();
         return true;
