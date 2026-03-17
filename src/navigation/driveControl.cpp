@@ -33,7 +33,7 @@ void DriveControl::reset() {
 }
 
 // Returns true if done or point reached
-bool DriveControl::drive(position_t pos[], int n) {
+bool DriveControl::drive(position_t pos[], int n, bool slow_mode) {
     if (!is_enabled){
         LOG_WARNING("Not enabled");
         return false;
@@ -42,6 +42,7 @@ bool DriveControl::drive(position_t pos[], int n) {
         LOG_WARNING("No position given");
         return false;
     }
+    is_slow_mode = slow_mode;
 
     // Calculate the target point along the path
     double looking_distance = 180.0; // Radius (mm)
