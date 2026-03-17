@@ -228,5 +228,11 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos){
 }
 
 position_t getBestIsolatedPosition(position_t centerPos, position_t fromPos){
-    //position_t poss1 = position_sum();
+    const float recul = STOCKS_LENGTH / 2 + ROBOT_WIDTH / 2;
+    position_t vect = position_t{ .x  = sin(DEG_TO_RAD * (centerPos.a + 90)) * recul, .y = cos(DEG_TO_RAD * (centerPos.a + 90)) * recul, .a = 0};
+    position_t possTarget1 = position_sum(centerPos, vect);
+
+    vect = position_t{ .x  = sin(DEG_TO_RAD * (centerPos.a - 90)) * recul, .y = cos(DEG_TO_RAD * (centerPos.a - 90)) * recul, .a = 0};
+    position_t possTarget2 = position_sum(centerPos, vect);
+    return possTarget1;
 }
