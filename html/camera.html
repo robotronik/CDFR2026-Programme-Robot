@@ -30,6 +30,9 @@
                 <button type="button" class="btn btn-danger w-100" onclick="apiStop()">Stop</button>
             </div>
             <div class="col">
+                <button type="button" class="btn btn-success w-100" onclick="apiResetTracking()">Reset Tracking</button>
+            </div>
+            <div class="col">
                 <button type="button" class="btn btn-success w-100" onclick="fetchPosition()">Fetch Position</button>
             </div>
             <div class="col">
@@ -116,6 +119,16 @@
             try {
                 const data = await getJson("/stop");
                 setStatus(data.message || "Camera stopped", "warning");
+            } catch (error) {
+                appendAlert(error.message, "danger");
+                setStatus(error.message, "danger");
+            }
+        }
+
+        async function apiResetTracking() {
+            try {
+                const data = await getJson("/reset_tracking");
+                setStatus(data.message || "Camera Reset Tracking", "warning");
             } catch (error) {
                 appendAlert(error.message, "danger");
                 setStatus(error.message, "danger");
