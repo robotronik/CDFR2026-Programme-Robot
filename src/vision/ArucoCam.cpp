@@ -10,7 +10,7 @@
 
 #define PORT_OFFSET 5000
 #define SCAN_FAIL_FRAMES_NUM 10
-#define SCAN_DONE_FRAMES_NUM 20
+#define SCAN_DONE_FRAMES_NUM 25
 
 pid_t startPythonProgram(char** args);
 void stopPythonProgram(pid_t pid);
@@ -56,65 +56,76 @@ ArucoCam::~ArucoCam(){
 
 // Returns true when done
 bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
+    static bool waiting_for_pos = false; // Wether reset tracking or not
     success = false;
-    if (status == false) {
+    if (id < 0) {
+        // TODO change this to return a random position
+        return true;
+    }
+    if (status == false) { // Camera is not running
         LOG_EXTENDED_DEBUG("ArucoCam ", id, " is not running, will start it now");
         start();
+        waiting_for_pos = true;
+        return false;
+    }
+    if (!waiting_for_pos){ // Reset tracking
+        LOG_EXTENDED_DEBUG("ArucoCam ", id, " starting tracking");
+        reset_tracking();
+        waiting_for_pos = true;
         return false;
     }
 
     // LOG_DEBUG("Fetching position from ArucoCam ", id);
     // Calls /position rest api endpoint of the ArucoCam API
     // Returns true if the call was successful, false otherwise
-    if (id < 0) {
-        // TODO change this to return a random position
-        return true;
-    }
     json response;
     if (restAPI_GET(url, "/position", response) == false) {
         LOG_ERROR("ArucoCam::getPos() - Failed to fetch position");
+        waiting_for_pos = false;
         return true;
     }
+
+    if (!response.contains("position") || response["position"].is_null() || !response["position"].is_object()) {
+        LOG_ERROR("ArucoCam::getPos() - response missing or invalid 'position'");
+        waiting_for_pos = false;
+        return true;
+    }
+
     int failedFrames = response.value("failedFrames", -1);
     int sucessFrames = response.value("sucessFrames", -1);
     // int totalFrames = response.value("totalFrames", -1);
     if (failedFrames == -1 || sucessFrames == -1) {
         LOG_ERROR("ArucoCam::getPos() - Invalid response data, camera might not be running");
-        status = false;
+        waiting_for_pos = false;
         return true;
     }
     if (failedFrames > SCAN_FAIL_FRAMES_NUM) {
         LOG_EXTENDED_DEBUG("Cam has too many failed frames : ", failedFrames);
-        stop();
+        waiting_for_pos = false;
         return true;
     }
     if (sucessFrames < SCAN_DONE_FRAMES_NUM) {
         //LOG_EXTENDED_DEBUG("Cam has not enough good success frames : ", sucessFrames);
-        return false;
+        return false; 
     }
-    // Extract the values from the JSON object
-    if(response.is_null()){
-        success = false;
-        return true;
-    }
+
     json position = response["position"];
-    if(!position["x"].is_null() && !position["y"].is_null() && !position["a"].is_null()){
-        x = position.value("x", 0);
-        y = position.value("y", 0);
-        a = position.value("a", 0);
-    }else{
-        success = false;
-        return true;
-    }
+    x = position.value("x", -1.0);
+    y = position.value("y", -1.0);
+    a = position.value("a", -1.0);
     success = true;
-    //LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+    LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " } with sucess frames : ", sucessFrames, " and failed frames : ", failedFrames);
     // Return true if the values were successfully extracted
-    stop();
+    waiting_for_pos = false;
     return true;
 }
 
 bool ArucoCam::getObjectData(json& objects, bool& sucess){
     sucess = false;
+    if (id < 0) {
+        // TODO change this to return a random position
+        return true;
+    }
     if (status == false) {
         LOG_EXTENDED_DEBUG("ArucoCam ", id, " is not running, will start it now");
         start();
@@ -124,10 +135,6 @@ bool ArucoCam::getObjectData(json& objects, bool& sucess){
     // LOG_DEBUG("Fetching position from ArucoCam ", id);
     // Calls /position rest api endpoint of the ArucoCam API
     // Returns true if the call was successful, false otherwise
-    if (id < 0) {
-        // TODO change this to return a random position
-        return true;
-    }
     json response;
     if (restAPI_GET(url, "/objects", response) == false) {
         LOG_ERROR("ArucoCam::getObjectData() - Failed to fetch objects");
@@ -172,6 +179,11 @@ bool ArucoCam::getObjectColor(bool* order, bool& success){
 
 bool ArucoCam::ToObjectColor(json& data, bool* order, bool& success){
     int count = 0;
+    if (!data.contains("objects") || data["objects"].is_null() || !data["objects"].is_object()) {
+        LOG_ERROR("ArucoCam::ToObjectColor() - invalid or missing 'objects'");
+        success = false;
+        return true;
+    }
     auto& objects = data["objects"];
     std::vector<block_t> possible;
     for (auto& [key, list] : objects.items()) {
@@ -214,6 +226,12 @@ bool ArucoCam::ToObjectColor(json& data, bool* order, bool& success){
 // Returns true when done
 bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool& success) {
     
+    if (!data.contains("objects") || data["objects"].is_null() || !data["objects"].is_object()) {
+        LOG_ERROR("ArucoCam::ToObjectPos() - invalid or missing 'objects'");
+        success = false;
+        return true;
+    }
+
     int count = 0;
     auto& objects = data["objects"];
     double m_x = 0, m_y = 0;
@@ -255,7 +273,6 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
     success = true;
     LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     // Return true if the values were successfully extracted
-    stop();
     return true;
 }
 
@@ -264,6 +281,11 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
 */
 bool ArucoCam::ToIsolatedObject(json& data, double & x, double & y, double & a, bool& success){
     int count = 0;
+    if (!data.contains("objects") || data["objects"].is_null() || !data["objects"].is_object()) {
+        LOG_ERROR("ArucoCam::ToIsolatedObject() - invalid or missing 'objects'");
+        success = false;
+        return true;
+    }
     auto& objects = data["objects"];
     std::vector<block_t> possible;
     for (auto& [key, list] : objects.items()) {
@@ -383,6 +405,14 @@ void ArucoCam::stop() {
     if (restAPI_GET(url, "/stop", response)){
         status = false;
         LOG_EXTENDED_DEBUG("ArucoCam ", id, " stopped");
+    }
+}
+
+void ArucoCam::reset_tracking() {
+    json response;
+    if (restAPI_GET(url, "/reset_tracking", response)){
+        status = true;
+        LOG_EXTENDED_DEBUG("ArucoCam ", id, " reset tracking");
     }
 }
 

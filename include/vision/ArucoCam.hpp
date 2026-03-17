@@ -34,4 +34,5 @@ private:
     std::string url;
     void start();
     void stop();
+    void reset_tracking();
 };
