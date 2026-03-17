@@ -11,6 +11,7 @@ static unsigned long robot_stall_start_time;
 
 static position_t current_pos_target;
 static bool current_use_astar;
+static bool current_slow_mode;
 
 static position_t currentPath[1024];
 static int currentPathLength = 0;
@@ -37,7 +38,7 @@ nav_return_t navigationDrive(){
         currentPathLength = 1;
         currentPath[0] = current_pos_target;
     }
-    bool done = drive.drive(currentPath, currentPathLength);
+    bool done = drive.drive(currentPath, currentPathLength, current_slow_mode);
     if (done) return NAV_DONE;
     return NAV_IN_PROCESS;
 }
@@ -71,7 +72,7 @@ nav_return_t navigationGo(){
     return NAV_IN_PROCESS;
 }
 
-nav_return_t navigationGoTo(position_t pos, bool useAStar){
+nav_return_t navigationGoTo(position_t pos, bool useAStar, bool slow_mode){
     if (current_pos_target.x != pos.x || 
         current_pos_target.y != pos.y || 
         current_pos_target.a != pos.a || 
@@ -80,6 +81,7 @@ nav_return_t navigationGoTo(position_t pos, bool useAStar){
         current_pos_target = pos;
         current_use_astar = useAStar;
     }
+    current_slow_mode = slow_mode;
 
     return navigationGo();
 }
