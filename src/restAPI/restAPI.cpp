@@ -259,7 +259,7 @@ void StartAPIServer(){
     CROW_ROUTE(app, "/position")
     ([](){
         json response;
-        response["object"] = arucoCam1.getObjectPosition_json();//Replace by jsom
+        response["object"] = arucoCam1.getRobotPosition_json();
         return crow::response(response.dump());
     });
 
