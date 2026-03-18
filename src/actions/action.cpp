@@ -221,7 +221,6 @@ ReturnFSM_t ActionFSM::TakeStock(){
             if (lowerClaws()){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for stock ", stock_num);
                 gatherStockState = FSM_GATHER_MOVE;
-                //drive.is_slow_mode = true;
             }
             break;
         case FSM_GATHER_MOVE:
@@ -238,7 +237,6 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_COLLECT:
             // Collect the stock
             if (closeClaws()){
-                //drive.is_slow_mode = false;
                 LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: Stock", stock_num, " collected");
                 tableStatus.setStockAsRemoved(stock_num);
                 gatherStockState = FSM_GATHER_COLLECTED;
@@ -381,12 +379,17 @@ ReturnFSM_t ActionFSM::DropStock(){
 
 ReturnFSM_t ActionFSM::Cursor(){
     position_t navTarget = {800.0, 1300.0, -180.0};
-    position_t moveTarget = navTarget;
-    moveTarget.y -= 300.0;
-    moveTarget.a = -120.0;
+    position_t navTargetRot = navTarget;
+    navTargetRot.a = -120.0;
+
+    position_t moveTarget = navTargetRot;
+    moveTarget.y -= 500.0;
+    moveTarget.x += 20.0;
     
     if (tableStatus.colorTeam == YELLOW){
         position_robot_flip(navTarget);
+        position_robot_flip(navTargetRot);
+        navTargetRot.a = -120.0;
         position_robot_flip(moveTarget);
         moveTarget.a = -120.0;
     }
@@ -402,8 +405,10 @@ ReturnFSM_t ActionFSM::Cursor(){
             nav_ret = navigationGoTo(navTarget, false); //false sinon il va pas vouloir y aller car trop proche du mur
             if ((nav_ret == NAV_DONE)){ 
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Nav done, going to FSM_CURSOR");
-                navTarget.a = 0.0;
-                CursorState = FSM_CURSOR_LOW_CLAW;
+                if (enableCursor(true)){
+                    LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Ventouse lowered at cursor position, going to FSM_CURSOR_LOW_CLAW");
+                    CursorState = FSM_CURSOR_LOW_CLAW;
+                }
             }
             else if (nav_ret == NAV_ERROR){
                 LOG_WARNING("FSM_CURSOR_NAV: Navigation error while going to cursor position for lowerClaws");
@@ -411,22 +416,19 @@ ReturnFSM_t ActionFSM::Cursor(){
             }
             break;
         case FSM_CURSOR_LOW_CLAW:
-            nav_ret = navigationGoTo(navTarget, false); //false sinon il va pas vouloir y aller car trop proche du mur
-            if (enableCursor(true)){
-                if (nav_ret == NAV_DONE){
-                    LOG_EXTENDED_DEBUG("FSM_CURSOR_LOW_CLAW: Nav done for lowerClaws, going to FSM_CURSOR_MOVE");
-                    CursorState = FSM_CURSOR_MOVE;
-                }
-                else if (nav_ret == NAV_ERROR){
-                    LOG_WARNING("FSM_CURSOR_LOW_CLAW: Navigation error while going to cursor position for lowerClaws");
-                    return FSM_RETURN_ERROR;
-                }
-                LOG_EXTENDED_DEBUG("FSM_CURSOR_LOW_CLAW: Ventouse lowered at cursor position");
+            nav_ret = navigationGoTo(navTargetRot, false, true); //false sinon il va pas vouloir y aller car trop proche du mur
+            if (nav_ret == NAV_DONE){
+                LOG_EXTENDED_DEBUG("FSM_CURSOR_LOW_CLAW: Nav done for lowerClaws, going to FSM_CURSOR_MOVE");
+                CursorState = FSM_CURSOR_MOVE;
             }
+            else if (nav_ret == NAV_ERROR){
+                LOG_WARNING("FSM_CURSOR_LOW_CLAW: Navigation error while going to cursor position for lowerClaws");
+                return FSM_RETURN_ERROR;
+            }       
             break;
 
         case FSM_CURSOR_MOVE:
-            nav_ret = navigationGoTo(moveTarget);
+            nav_ret = navigationGoTo(moveTarget, false, true);
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_MOVE: Nav done , going to FSM_CURSOR");
                 CursorState = FSM_CURSOR_END;
