@@ -140,34 +140,23 @@ deploy_pi() {
 # --- Wrapper de Temps & Analyseur ---
 
 run_timed() {
-    local task="$1"; shift; local t0=$(date +%s.%N); local log="/tmp/cdfr_build.log"
-    
+    local task="$1"; shift
+    local t0=$(date +%s.%N)
+
     step "$BG_BLU" "$F_BLU" "EXEC" "${BOLD}$task"
-    echo -e "${WHT}--------------------------------------------------------${NC}"
-    
-    # Exécution avec redirection propre
-    "$@" 2>&1 | tee "$log"
-    local st=${PIPESTATUS[0]}
-    
+    echo "--------------------------------------------------------"
+
+    # Execute the command and capture its exit status
+    "$@" 2>&1
+    local st=$?
+
     local dur=$(LC_NUMERIC=C printf "%.2f" $(echo "$(date +%s.%N) - $t0" | bc))
-    echo -e "${WHT}--------------------------------------------------------${NC}"
-    
-    # Comptage des erreurs et warnings
-    local clean=$(sed -E 's/\x1B\[[0-9;]*[mK]//g' "$log")
-    local w_cnt=$(echo "$clean" | grep -icE "warning:|\[WARNING\]")
-    local e_cnt=$(echo "$clean" | grep -icE "error:|\[ERROR\]")
-    
-    # Formatage dynamique des couleurs pour les stats
-    local w_col="$F_GRN"; [ "$w_cnt" -gt 0 ] && w_col="$F_ORG"
-    local e_col="$F_GRN"; [ "$e_cnt" -gt 0 ] && e_col="$F_RED"
-    local c_base="$F_GRN"; [ $st -ne 0 ] && c_base="$F_RED"
-    
-    local stats=" | ${w_col}${w_cnt} Warn(s)${c_base} | ${e_col}${e_cnt} Err(s)${c_base}"
-    
-    if [ $st -eq 0 ] && [ $e_cnt -eq 0 ]; then
-        step "$BG_GRN" "$F_GRN" "SUCCESS" "$task terminé en ${dur}s${stats}"
+    echo "--------------------------------------------------------"
+
+    if [ $st -eq 0 ]; then
+        step "$BG_GRN" "$F_GRN" "SUCCESS" "$task completed in ${dur}s"
     else
-        step "$BG_RED" "$F_RED" "FAIL" "$task échoué en ${dur}s${stats}"
+        step "$BG_RED" "$F_RED" "FAIL" "$task failed in ${dur}s"
         exit 1  # Exit with a non-zero status to propagate the failure
     fi
 }
