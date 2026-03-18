@@ -78,7 +78,15 @@ build_local() {
     build_lidar
     step "$BG_BLU" "$F_BLU" "BUILD" "Compilation locale (x86_64)..."
     cmake $GEN -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-fdiagnostics-color=always" >/dev/null
+    if [ $? -ne 0 ]; then
+        echo "Error: cmake configuration failed for local build."
+        exit 1
+    fi
     cmake --build build $OPT
+    if [ $? -ne 0 ]; then
+        echo "Error: cmake build failed for local build."
+        exit 1
+    fi
     step "$BG_GRN" "$F_GRN" "DONE" "Binaire compilé."
 }
 
@@ -87,7 +95,15 @@ build_arm() {
     build_lidar_arm 
     step "$BG_BLU" "$F_BLU" "BUILD" "Cross-compilation ARM64..."
     cmake $GEN -B build_arm -DCMAKE_TOOLCHAIN_FILE=pi_toolchain.cmake >/dev/null
+    if [ $? -ne 0 ]; then
+        echo "Error: cmake configuration failed for ARM build."
+        exit 1
+    fi
     cmake --build build_arm $OPT
+    if [ $? -ne 0 ]; then
+        echo "Error: cmake build failed for ARM build."
+        exit 1
+    fi
     step "$BG_GRN" "$F_GRN" "DONE" "Binaire ARM compilé."
 }
 
