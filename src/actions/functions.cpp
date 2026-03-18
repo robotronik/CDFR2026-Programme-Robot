@@ -19,7 +19,7 @@ bool lowerClaws(){
     switch (state){
         case 1: // descente rapide
             LOG_DEBUG("Lower Claws");
-            arduino.moveMotorDC(30, true);
+            arduino.moveMotorDC(70, true);
             startTime = _millis();
             state = 2;
             break;
@@ -112,7 +112,7 @@ bool dropBlock(){
 }
 
 bool enableCursor(bool enable){
-    int target = enable ? 160 : 90;
+    int target = enable ? 140 : 90;
 
     arduino.moveServo(SERVO_NUM_7, 90);
     arduino.moveServo(SERVO_NUM_6, target);
