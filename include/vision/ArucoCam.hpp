@@ -16,6 +16,10 @@ private:
 public:
     ArucoCam(int cam_number, const char* calibration_file_path);
     ~ArucoCam();
+
+    void start();
+    void stop();
+
     bool getPos(double & x, double & y, double & a, bool& success);
     bool getRobotPos(double & x, double & y, double & a, bool& success);
     bool getObjectData(json& objects, bool& sucess);
@@ -33,10 +37,7 @@ public:
     json getObjectPosition_json();
     json getRobotPosition_json();
 
-
 private:
     std::string url;
-    void start();
-    void stop();
     void reset_tracking();
 };
