@@ -231,7 +231,6 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
     std::vector<block_t> visibleBlocks;
     std::vector<block_t> alignBlocks;
 
-
     for (auto& [key, list] : objects.items()) {
         for (auto& obj : list) {
             
@@ -256,48 +255,37 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
         LOG_ERROR("No object found Error stopping cam");
         success = false;
         return true;
-    }
-    /*
-    else if (count == 4){
-        double m_x = 0, m_y = 0;
-
-        for(size_t i = 0 ; i< (size_t)4; i++){  
-            m_x += visibleBlocks[i].x;
-            m_y += visibleBlocks[i].y;
-        }   
-        m_x = m_x / count;
-        m_y = m_y / count;
-        
-        // Décalage pour le centre du robot
-        m_x += OFFSET_CAM_X;
-        m_y += OFFSET_CAM_Y;
-
+    }else if (count == 1){
         //projection dans le repère de la table:
         double a_rad = (a) * M_PI / 180.0;
         double cos_a = cos(a_rad);
         double sin_a = sin(a_rad);
-        x += m_x * cos_a - m_y * sin_a;
-        y += m_x * sin_a + m_y * cos_a;
+        x += visibleBlocks[0].x * cos_a - visibleBlocks[0].y * sin_a;
+        y += visibleBlocks[0].x * sin_a + visibleBlocks[0].y * cos_a;
+        a += visibleBlocks[0].a; 
         success = true;
-        LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+        LOG_GREEN_INFO("Single Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
         // Return true if the values were successfully extracted
         return true;
     }
-    */
     else{
         for(size_t max_block = MIN(4,count); max_block > 1; max_block -- ){
             if(findGroupRANSAC2D(visibleBlocks,alignBlocks, max_block)){
-                double m_x = 0, m_y = 0;
-                for(size_t i = 0 ; i< (size_t)count; i++){  
-                    m_x += visibleBlocks[i].x;
-                    m_y += visibleBlocks[i].y;
-                }   
-                m_x = m_x / count;
-                m_y = m_y / count;
+                //TODO properly align claws with blocks not with averge position
+                //TODO align robot taking angle into acount
+                double m_x,m_y;
+                if(max_block !=2){
+                    m_x = alignBlocks[1].x;
+                    m_y = alignBlocks[1].y;
+                }else{
+                    m_x = alignBlocks[0].x;
+                    m_y = alignBlocks[0].y;
+                }
+
                 
                 // Décalage pour le centre du robot
                 m_x += OFFSET_CAM_X;
-                m_y += OFFSET_CAM_Y;
+                m_y += OFFSET_CAM_Y + OFFSET_CLAW_Y;
 
 
                 //projection dans le repère de la table:

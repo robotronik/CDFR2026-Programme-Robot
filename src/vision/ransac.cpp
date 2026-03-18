@@ -65,7 +65,11 @@ bool findGroupRANSAC2D(
         for (const auto& p : points) {
 
             // filtre orientation
-            if (angleDiff(p.a + 90, lineAngle) > angleTol) // à tester angle tag pas dans l'axe de l'objet
+            float diff = angleDiff(p.a + 90, lineAngle);// à tester angle tag pas dans l'axe de l'objet
+
+            // make it invariant to 180° flip
+            diff = std::min(diff, 180.0f - diff);
+            if (diff > angleTol) 
                 continue;
 
             float d = pointLineDistance(p, line);
