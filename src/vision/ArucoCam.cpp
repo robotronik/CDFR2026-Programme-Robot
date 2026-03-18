@@ -229,6 +229,8 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
     int count = 0;
     auto& objects = data["objects"];
     std::vector<block_t> visibleBlocks;
+    std::vector<block_t> alignBlocks;
+
 
     for (auto& [key, list] : objects.items()) {
         for (auto& obj : list) {
@@ -254,7 +256,9 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
         LOG_ERROR("No object found Error stopping cam");
         success = false;
         return true;
-    }else if (count == 4){
+    }
+    /*
+    else if (count == 4){
         double m_x = 0, m_y = 0;
 
         for(size_t i = 0 ; i< (size_t)4; i++){  
@@ -278,33 +282,42 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
         LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
         // Return true if the values were successfully extracted
         return true;
-    }else{
-        LOG_ERROR("Situation with more or less than 4 blocks not yet implemented");
-        //TODO
-        double m_x = 0, m_y = 0;
+    }
+    */
+    else{
+        for(size_t max_block = MIN(4,count); max_block > 1; max_block -- ){
+            if(findGroupRANSAC2D(visibleBlocks,alignBlocks, max_block)){
+                double m_x = 0, m_y = 0;
+                for(size_t i = 0 ; i< (size_t)count; i++){  
+                    m_x += visibleBlocks[i].x;
+                    m_y += visibleBlocks[i].y;
+                }   
+                m_x = m_x / count;
+                m_y = m_y / count;
+                
+                // Décalage pour le centre du robot
+                m_x += OFFSET_CAM_X;
+                m_y += OFFSET_CAM_Y;
 
-        for(size_t i = 0 ; i< (size_t)count; i++){  
-            m_x += visibleBlocks[i].x;
-            m_y += visibleBlocks[i].y;
-        }   
-        m_x = m_x / count;
-        m_y = m_y / count;
-        
-        // Décalage pour le centre du robot
-        m_x += OFFSET_CAM_X;
-        m_y += OFFSET_CAM_Y;
 
-
-        //projection dans le repère de la table:
-        double a_rad = (a) * M_PI / 180.0;
-        double cos_a = cos(a_rad);
-        double sin_a = sin(a_rad);
-        x += m_x * cos_a - m_y * sin_a;
-        y += m_x * sin_a + m_y * cos_a;
-        success = true;
-        LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
-        // Return true if the values were successfully extracted
+                //projection dans le repère de la table:
+                double a_rad = (a) * M_PI / 180.0;
+                double cos_a = cos(a_rad);
+                double sin_a = sin(a_rad);
+                x += m_x * cos_a - m_y * sin_a;
+                y += m_x * sin_a + m_y * cos_a;
+                success = true;
+                LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+                // Return true if the values were successfully extracted
+                return true;
+            }else{
+                LOG_WARNING("Ransac: Pas de solution à ", max_block);
+            }
+        }
+        LOG_ERROR("Pas de solutions trouvées");
+        success = false;
         return true;
+        
     }
 }
 

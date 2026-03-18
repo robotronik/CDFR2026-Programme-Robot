@@ -24,11 +24,12 @@ inline float project(const block_t& p, const Line& l) {
 bool findGroupRANSAC2D(
     const std::vector<block_t>& points,
     std::vector<block_t>& bestGroup,
-    int maxIterations = 80,
-    float lineTol = 0.02f,
-    float spacing = 0.05f,
-    float spacingTol = 0.015f,
-    float angleTol = 15.0f // tolérance orientation
+    size_t max_blocks,
+    int maxIterations,
+    float lineTol,
+    float spacing,
+    float spacingTol,
+    float angleTol // tolérance orientation
 ) {
     if (points.size() < 4) return false;
 
@@ -74,7 +75,7 @@ bool findGroupRANSAC2D(
             }
         }
 
-        if (inliers.size() < 4) continue;
+        if (inliers.size() < max_blocks) continue;
 
         std::sort(inliers.begin(), inliers.end(),
                   [](const auto& a, const auto& b) {
@@ -82,23 +83,23 @@ bool findGroupRANSAC2D(
                   });
 
         // vérification de l'espacement
-        for (size_t k = 0; k + 3 < inliers.size(); ++k) {
+        for (size_t k = 0; k + max_blocks - 1 < inliers.size(); ++k) {
+            bool status = true;
 
-            float d1 = inliers[k+1].first - inliers[k].first;
-            float d2 = inliers[k+2].first - inliers[k+1].first;
-            float d3 = inliers[k+3].first - inliers[k+2].first;
+            for(int spaces = 1; spaces < max_blocks; spaces ++ ){
+                float d1 = inliers[k + spaces + 1].first - inliers[k + spaces].first;
+                if(std::abs(d1 - spacing) < spacingTol){
+                    continue;
+                }else{
+                    status = false;
+                    break;
+                }
+            }
 
-            if (std::abs(d1 - spacing) < spacingTol &&
-                std::abs(d2 - spacing) < spacingTol &&
-                std::abs(d3 - spacing) < spacingTol) {
-
-                bestGroup = {
-                    *inliers[k].second,
-                    *inliers[k+1].second,
-                    *inliers[k+2].second,
-                    *inliers[k+3].second
-                };
-
+            if (status) {
+                for(size_t _ = 0 ; _ < max_blocks; _++){
+                    bestGroup.push_back(*inliers[k + max_blocks].second);
+                }
                 return true; // early exit if solution found
             }
         }

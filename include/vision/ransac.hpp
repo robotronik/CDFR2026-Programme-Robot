@@ -28,9 +28,10 @@ inline float project(const block_t& p, const Line& l);
 bool findGroupRANSAC2D(
     const std::vector<block_t>& points,
     std::vector<block_t>& bestGroup,
-    int maxIterations,
-    float lineTol,
-    float spacing,
-    float spacingTol,
-    float angleTol // tolérance orientation
+    size_t max_blocks = 4,
+    int maxIterations = 80,
+    float lineTol = 5.0f,
+    float spacing = 50.0f,
+    float spacingTol = 5.0f,
+    float angleTol = 5.0f  // tolérance orientation
 );
