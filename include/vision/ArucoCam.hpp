@@ -1,6 +1,7 @@
 #pragma once
 #include "utils/json.hpp" // For handling JSON
 #include <string>
+#include "vision/ransac.hpp"
 
 using json = nlohmann::json;
 
