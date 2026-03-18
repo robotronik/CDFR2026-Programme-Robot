@@ -384,7 +384,6 @@ ReturnFSM_t ActionFSM::Cursor(){
 
     position_t moveTarget = navTargetRot;
     moveTarget.y -= 500.0;
-    moveTarget.x += 20.0;
     
     if (tableStatus.colorTeam == YELLOW){
         position_robot_flip(navTarget);
@@ -478,7 +477,7 @@ void ActionFSM::SetBestAction(position_t position){
     }
 
     /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
-    if((!tableStatus.cursorIsDone()) && (position_distance(position, tableStatus.CursorPos) < 300 || stock_num == (tableStatus.colorTeam == YELLOW ? 5 : 1))){ // If we are close to the cursor position or if we are at stock 
+    if((false && !tableStatus.cursorIsDone()) && (position_distance(position, tableStatus.CursorPos) < 300 || stock_num == (tableStatus.colorTeam == YELLOW ? 5 : 1))){ // If we are close to the cursor position or if we are at stock 
         LOG_GREEN_INFO("Going for cursor action");
         runState = FSM_ACTION_CURSOR;
         return;
