@@ -262,7 +262,6 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
         double sin_a = sin(a_rad);
         x += visibleBlocks[0].x * cos_a - visibleBlocks[0].y * sin_a;
         y += visibleBlocks[0].x * sin_a + visibleBlocks[0].y * cos_a;
-        a += visibleBlocks[0].a; 
         success = true;
         LOG_GREEN_INFO("Single Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
         // Return true if the values were successfully extracted
@@ -277,9 +276,11 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
                 if(max_block !=2){
                     m_x = alignBlocks[1].x;
                     m_y = alignBlocks[1].y;
+                    a+= alignBlocks[1].a;
                 }else{
                     m_x = alignBlocks[0].x;
                     m_y = alignBlocks[0].y;
+                    a+= alignBlocks[0].a;
                 }
 
                 
