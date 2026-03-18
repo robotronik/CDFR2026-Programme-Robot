@@ -164,8 +164,12 @@ run_timed() {
     
     local stats=" | ${w_col}${w_cnt} Warn(s)${c_base} | ${e_col}${e_cnt} Err(s)${c_base}"
     
-    [ $st -eq 0 ] && [ $e_cnt -eq 0 ] && step "$BG_GRN" "$F_GRN" "SUCCESS" "$task terminé en ${dur}s${stats}" \
-                  || { step "$BG_RED" "$F_RED" "FAIL" "$task échoué en ${dur}s${stats}"; }
+    if [ $st -eq 0 ] && [ $e_cnt -eq 0 ]; then
+        step "$BG_GRN" "$F_GRN" "SUCCESS" "$task terminé en ${dur}s${stats}"
+    else
+        step "$BG_RED" "$F_RED" "FAIL" "$task échoué en ${dur}s${stats}"
+        exit 1  # Exit with a non-zero status to propagate the failure
+    fi
 }
 
 clean() {

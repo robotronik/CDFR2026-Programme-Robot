@@ -26,11 +26,5 @@ jobs:
       run: git clone https://github.com/robotronik/cdfr2024-programme-Actionneur ../cdfr2024-programme-Actionneur
 
     - name: Build and run tests
-      run: |         
-        set -e  # Ensure the script exits on any error
+      run: |
         bash build.sh tests
-        if [ $? -ne 0 ]; then
-          echo "Build failed!"
-          exit 1
-        fi
-      shell: bash
