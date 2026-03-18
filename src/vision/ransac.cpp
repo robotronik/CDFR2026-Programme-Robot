@@ -86,7 +86,7 @@ bool findGroupRANSAC2D(
         for (size_t k = 0; k + max_blocks - 1 < inliers.size(); ++k) {
             bool status = true;
 
-            for(size_t spaces = 1; spaces < max_blocks; spaces ++ ){
+            for(size_t spaces = 0; spaces < max_blocks-1; spaces ++ ){
                 float d1 = inliers[k + spaces + 1].first - inliers[k + spaces].first;
                 if(std::abs(d1 - spacing) < spacingTol){
                     continue;
