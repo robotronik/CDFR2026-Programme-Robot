@@ -41,7 +41,11 @@ bool raiseClaws(){
     switch(state){
         case 1: // montée rapide
             LOG_DEBUG("Raise Claws");
-            arduino.moveMotorDC(90, false);
+            if (readLimitSwitchTop()){
+                state = 1;
+                return true;
+            }
+            arduino.moveMotorDC(150, false);
             startTime = _millis();
             state = 2;
             break;
@@ -329,6 +333,7 @@ bool returnToHome(){
     homePos.x = (time < 98000) ? -200 : -600;
     homePos.y = (tableStatus.colorTeam == BLUE) ? 1200 : -1200;
     homePos.a = 180;
+    raiseClaws();
     nav_return_t res = navigationGoTo(homePos, true);
     return res == NAV_DONE && isRobotInArrivalZone(drive.position);
 }

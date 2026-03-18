@@ -99,7 +99,7 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode) {
     }
     drive_interface::set_target(convertPositionToPacked(pos_target));
 
-    bool is_done_pos = distance_to_target < 4.0 && fabs(velocity.x) < 30.0 && fabs(velocity.y) < 30.0;
+    bool is_done_pos = distance_to_target < 6.0 && fabs(velocity.x) < 30.0 && fabs(velocity.y) < 30.0;
     bool is_done_ang = fabs(error_heading) < 1.0 && fabs(velocity.a) < 4.0;
     //LOG_DEBUG("Position error: ", distance_to_target, "mm, Velocity x: ", velocity.x, "mm/s, Velocity y: ", velocity.y, "mm/s, Angle error: ", error_heading, "deg, Angular velocity: ", fabs(velocity.a), "deg/s");
     //LOG_DEBUG("Current speed : ", position_length(velocity), "mm/s, Target speed: ", position_speed, "mm/s");
