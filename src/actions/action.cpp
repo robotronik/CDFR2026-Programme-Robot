@@ -258,12 +258,6 @@ ReturnFSM_t ActionFSM::TakeIsolatedStock(){
     static position_t targetPos_; 
     switch (gatherIsolatedStockState)
     {   
-        case FSM_GATHER_CLAWS:
-            return FSM_RETURN_ERROR;
-        case FSM_GATHER_MOVE:
-            return FSM_RETURN_ERROR;
-        case FSM_GATHER_COLLECT:
-            return FSM_RETURN_ERROR;
         case FSM_GATHER_COLLECTED:
             return FSM_RETURN_ERROR;
 
@@ -275,7 +269,7 @@ ReturnFSM_t ActionFSM::TakeIsolatedStock(){
             bool sucess = false;
             if(arucoCam1.getBestIsolatedObject(x,y,a,sucess)){
                 if(sucess){
-                    targetPos_ = position_t{x,y,a};
+                    targetPos_ = getBestIsolatedPosition(position_t{x,y,a}, drive.position);
                     gatherIsolatedStockState = FSM_GATHER_NAV;
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found an isolated object");
                 }else{
@@ -286,13 +280,25 @@ ReturnFSM_t ActionFSM::TakeIsolatedStock(){
             break;
         }
         case FSM_GATHER_NAV:
-            nav_ret = navigationGoTo(targetPos_, true); // Enabeling A*
+            nav_ret = navigationGoTo(targetPos_, true);
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to stock at postition (",targetPos_.x,", ",targetPos_.y, ")");
-                gatherIsolatedStockState = FSM_GATHER_DETECT;
-                return FSM_RETURN_DONE;
+                gatherIsolatedStockState = FSM_GATHER_COLLECT;
+                break;
             }
             break;
+        case FSM_GATHER_COLLECT:
+            //TODO add utilisation de la ventouse
+            gatherIsolatedStockState = FSM_GATHER_MOVE;
+            break;
+        case FSM_GATHER_MOVE:
+            //TODO add virer les blocks restant dans la zone
+            gatherIsolatedStockState = FSM_GATHER_CLAWS;
+            break;
+        case FSM_GATHER_CLAWS:
+            //TODO add drop du bon block
+            gatherIsolatedStockState = FSM_GATHER_DETECT;
+            return FSM_RETURN_DONE;
     }
     return FSM_RETURN_WORKING;
 }
