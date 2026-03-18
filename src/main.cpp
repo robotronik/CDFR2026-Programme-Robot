@@ -119,6 +119,7 @@ int main(int argc, char *argv[])
                 arduino.setStepper(0, 4);
                 homeActuators();
                 lidar.startSpin();
+                arucoCam1.start();
                 arduino.moveMotorDC(80, false);
 
                 if (tableStatus.colorTeam == NONE)
@@ -319,6 +320,7 @@ void EndSequence()
     
     // Stop the lidar
     lidar.Stop();
+    arucoCam1.stop();
 
 #ifndef EMULATE_I2C
     drive.disable();
