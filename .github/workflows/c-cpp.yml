@@ -29,5 +29,8 @@ jobs:
       run: |         
         set -e  # Ensure the script exits on any error
         bash build.sh tests
+        if [ $? -ne 0 ]; then
+          echo "Build failed!"
+          exit 1
+        fi
       shell: bash
-      continue-on-error: false  # Ensure the pipeline fails on any error
