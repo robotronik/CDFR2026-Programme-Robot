@@ -44,9 +44,9 @@ ArucoCam::ArucoCam(int cam_number, const char* calibration_file_path) {
     }
     else
     {
-        LOG_GREEN_INFO("ArucoCam ", id, " started with PID ", pid);
         url = "http://localhost:" + std::to_string(PORT_OFFSET + id);
         status = false;
+        LOG_GREEN_INFO("ArucoCam ", id, " started with PID ", pid, " at URL ", url);
     }
 }
 ArucoCam::~ArucoCam(){
@@ -461,6 +461,7 @@ bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double &
 }
 
 void ArucoCam::start() {
+    if (id < 0) return;
     json response;
     if (restAPI_GET(url, "/start", response)){
         status = true;
@@ -469,6 +470,7 @@ void ArucoCam::start() {
 }
 
 void ArucoCam::stop() {
+    if (id < 0) return;
     json response;
     if (restAPI_GET(url, "/stop", response)){
         status = false;
@@ -477,6 +479,7 @@ void ArucoCam::stop() {
 }
 
 void ArucoCam::reset_tracking() {
+    if (id < 0) return;
     json response;
     if (restAPI_GET(url, "/reset_tracking", response)){
         status = true;
