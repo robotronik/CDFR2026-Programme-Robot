@@ -30,8 +30,8 @@ bool findGroupRANSAC2D(
     std::vector<block_t>& bestGroup,
     size_t max_blocks = 4,
     int maxIterations = 80,
-    float lineTol = 5.0f,
+    float lineTol = 10.0f,
     float spacing = 50.0f,
-    float spacingTol = 5.0f,
-    float angleTol = 5.0f  // tolérance orientation
+    float spacingTol = 10.0f,
+    float angleTol = 15.0f  // tolérance orientation
 );
