@@ -103,6 +103,7 @@ bool findGroupRANSAC2D(
             if (status) {
                 for(size_t _ = 0 ; _ < max_blocks; _++){
                     bestGroup.push_back(*inliers[k + max_blocks].second);
+                    bestGroup.back().a = lineAngle + 90;
                 }
                 return true; // early exit if solution found
             }
