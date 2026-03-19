@@ -65,10 +65,10 @@ const position_t STOCK_POSITIONS_TABLE[] = {
 // The stock table is ordered following symetry of the table, could be ordered by proximity
 
 const position_t STOCK_OFFSETS[] = {
-    { 0, OFFSET_STOCK, -90},  //0 : Offset depuis droite
-    {0, - OFFSET_STOCK, 90},  //1 : Offset depuis gauche
-    { OFFSET_STOCK,0, 180 },  //2 : Offset depuis bas
-    { - OFFSET_STOCK,0, 0},  //3 : Offset depuis haut
+    { 12, OFFSET_STOCK, -90},  //0 : Offset depuis droite
+    {-12, - OFFSET_STOCK, 90},  //1 : Offset depuis gauche
+    { OFFSET_STOCK, -12, 180 },  //2 : Offset depuis bas
+    { - OFFSET_STOCK,12, 0},  //3 : Offset depuis haut
 }; 
 
 const int STOCK_OFFSET_MAPPING[STOCK_COUNT][2] = {

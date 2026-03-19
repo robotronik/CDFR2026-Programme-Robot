@@ -23,7 +23,7 @@ bool lowerClaws(){
                 state = 1;
                 return true;
             }
-            arduino.moveMotorDC(70, true);
+            arduino.moveMotorDC(100, true);
             startTime = _millis();
             state = 2;
             break;
@@ -50,7 +50,7 @@ bool raiseClaws(){
                 state = 1;
                 return true;
             }
-            arduino.moveMotorDC(150, false);
+            arduino.moveMotorDC(120, false);
             startTime = _millis();
             state = 2;
             break;
