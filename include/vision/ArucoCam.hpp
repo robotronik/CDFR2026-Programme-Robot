@@ -32,8 +32,11 @@ public:
     bool getObjectPos(double & x, double & y, double & a, bool& success);
     bool getObjectInfoColors(bool* order, double & x, double & y, double & a, bool& success);
     bool getBestIsolatedObject(double & x, double & y, double & a, bool& success);
+
     json getBestIsolatedObject_json();
-    
+    json getObjectPosition_json();
+    json getRobotPosition_json();
+
 private:
     std::string url;
     void reset_tracking();

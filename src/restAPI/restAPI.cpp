@@ -249,6 +249,20 @@ void StartAPIServer(){
         return crow::response(response.dump());
     });
 
+    CROW_ROUTE(app, "/get_blockPosition")
+    ([](){
+        json response;
+        response["object"] = arucoCam1.getObjectPosition_json();
+        return crow::response(response.dump());
+    });
+
+    CROW_ROUTE(app, "/position")
+    ([](){
+        json response;
+        response["object"] = arucoCam1.getRobotPosition_json();
+        return crow::response(response.dump());
+    });
+
     // ------------------------------- POST Routes -------------------------------
 
     // Define a route for a POST request that accepts JSON data and responds with a message
@@ -578,6 +592,7 @@ void StartAPIServer(){
         else if (req_value == "lowerClaws")       manual_currentFunc = lowerClaws;
         else if (req_value == "raiseClaws")       manual_currentFunc = raiseClaws;
         else if (req_value == "rotateTwoBlocks")  manual_currentFunc = rotateTwoBlocksDefault;
+        else if (req_value == "flipOneBlock")  manual_currentFunc = flipOneBlock;
         else {
             json response;
             response["message"] = "Invalid action requested";

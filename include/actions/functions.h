@@ -18,6 +18,9 @@ bool raiseClaws();
 bool rotateTwoBlocks(bool *order);
 bool rotateTwoBlocksDefault();
 bool dropBlock();
+bool enableCursor(bool enable);
+bool flipOneBlock();
+
 
 // Servo Control
 bool closeClaws();
@@ -27,6 +30,8 @@ bool snapClaws(bool closed, bool small);
 bool resetSpinClaws();
 bool spinAllClaws();
 bool spinClaws(bool spin1, bool spin2, bool spin3, bool spin4);
+bool moveServoAndWait(int servo, int target, int speed);
+
 
 // Stepper Control
 bool moveColumnsElevator(int level); // Example

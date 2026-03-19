@@ -113,36 +113,42 @@ bool chooseStockStrategy(int& stockNum, int& stockOffset){
 position_t calculateClosestArucoPosition(position_t currentPos, position_t& outPos){
     outPos = currentPos;
     position_t closestPos = ARUCO_POSITIONS_TABLE[0];
-    double dist20 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[0]);
-    double dist21 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[1]);
-    double dist22 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[2]);
-    double dist23 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[3]);
-    double minDistance = dist20;
-    if (dist21 < minDistance){
-        minDistance = dist21;
-        closestPos = ARUCO_POSITIONS_TABLE[1];
+    double minDistance = position_distance(currentPos, ARUCO_POSITIONS_TABLE[0]);
+    for (int i = 1; i < 4; i++){
+        double d = position_distance(currentPos, ARUCO_POSITIONS_TABLE[i]);
+        if (d < minDistance){
+            minDistance = d;
+            closestPos = ARUCO_POSITIONS_TABLE[i];
+        }
     }
-    if (dist22 < minDistance){
-        minDistance = dist22;
-        closestPos = ARUCO_POSITIONS_TABLE[2];
+    LOG_ERROR("Distance to closest aruco marker: ", minDistance);
+    const double target_distance_min = 300.0; // mm
+    const double target_distance_max = 700.0; // mm
+
+    // Direction du tag vers le robot (pour s’éloigner)
+    position_t dir;
+    dir.x = currentPos.x - closestPos.x;
+    dir.y = currentPos.y - closestPos.y;
+    position_normalize(dir);
+
+    if (minDistance < target_distance_min){
+        LOG_WARNING("Too close → moving away");
+
+        double displacement = target_distance_min - minDistance;
+        outPos.x += dir.x * displacement;
+        outPos.y += dir.y * displacement;
     }
-    if (dist23 < minDistance){
-        minDistance = dist23;
-        closestPos = ARUCO_POSITIONS_TABLE[3];
+    else if (minDistance > target_distance_max){
+        LOG_WARNING("Too far → moving closer");
+
+        double displacement = minDistance - target_distance_max;
+        outPos.x -= dir.x * displacement;
+        outPos.y -= dir.y * displacement;
     }
-    // Check if we are above the aruco marker
-    const double minimal_distance = 200.0; // 20cm
-    if (minDistance < minimal_distance){
-        LOG_WARNING("Above aruco marker, need to move away first");
-        double displacement = minimal_distance - minDistance + 1; //+margin
-        position_t tmp = position_vector(closestPos, currentPos);
-        position_normalize(tmp);
-        tmp.x *= displacement;
-        tmp.y *= displacement;
-        outPos.x += tmp.x;
-        outPos.y += tmp.y;
+    else {
+        LOG_DEBUG("Good distance → no movement");
     }
-    outPos.a = RAD_TO_DEG * position_angle(drive.position, closestPos) + OFFSET_CAM_A;
+    outPos.a = RAD_TO_DEG * position_angle(outPos, closestPos) + OFFSET_CAM_A;
 
     return closestPos;
 }
@@ -225,4 +231,14 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos){
         return bestPoss;
     }
     
+}
+
+position_t getBestIsolatedPosition(position_t centerPos, position_t fromPos){
+    const float recul = STOCKS_LENGTH / 2 + ROBOT_WIDTH / 2;
+    position_t vect = position_t{ .x  = sin(DEG_TO_RAD * (centerPos.a + 90)) * recul, .y = cos(DEG_TO_RAD * (centerPos.a + 90)) * recul, .a = 0};
+    position_t possTarget1 = position_sum(centerPos, vect);
+
+    vect = position_t{ .x  = sin(DEG_TO_RAD * (centerPos.a - 90)) * recul, .y = cos(DEG_TO_RAD * (centerPos.a - 90)) * recul, .a = 0};
+    position_t possTarget2 = position_sum(centerPos, vect);
+    return possTarget1;
 }

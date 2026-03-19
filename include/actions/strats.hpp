@@ -15,3 +15,5 @@ int GetBestDropZone(position_t fromPos);
 int getBestStockPositionOff(int stockNum, position_t fromPos);
 position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos);
 position_t calculateClosestArucoPosition(position_t currentPos, position_t& outPos);
+position_t getBestIsolatedPosition(position_t centerPos, position_t fromPos);
+
