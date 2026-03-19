@@ -507,13 +507,11 @@ void ActionFSM::SetBestAction(position_t position){
 ReturnFSM_t ActionFSM::Calibrate(){
     nav_return_t nav_ret;
     static position_t Calibrationtarget_;
-    static position_t arucoPos;
 
     switch (calibrationState){
         case FSM_CALCULATION:
-            arucoPos = calculateClosestArucoPosition(drive.position, Calibrationtarget_);
+            Calibrationtarget_ = calculateClosestArucoPosition(drive.position);
             calibrationState = FSM_CALIBRATION_NAV;
-            LOG_DEBUG("FSM_CALCULATION: closest aruco marker is at (", arucoPos.x, ", ", arucoPos.y, ", ", arucoPos.a, ")");
             break;
         case FSM_CALIBRATION_NAV:
             {

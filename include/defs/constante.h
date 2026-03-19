@@ -108,3 +108,14 @@ const position_t ARUCO_POSITIONS_TABLE[] = {
     position_t{.x = -400, .y = 900, .a = 0}, \
     position_t{.x = 400, .y = -900, .a = 0}, \
     position_t{.x = 400, .y = 900, .a = 0}};
+
+// Tableau de positions pour la calibration, orientation vers le code le plus proche
+const int ARUCO_CALIB_POSITIONS_COUNT = 6;
+// Valeurs uniquement pour le cote bleu
+const position_t ARUCO_CALIB_POSITIONS[] = {
+    position_t{.x = -125, .y = 350, .a = 0}, \
+    position_t{.x = -125, .y = 775, .a = 0}, \
+    position_t{.x = -125, .y = 1050, .a = 0}, \
+    position_t{.x = 150, .y = 1050, .a = 0}, \
+    position_t{.x = 550, .y = 650, .a = 0}, \
+    position_t{.x = 550, .y = 300, .a = 0}};
