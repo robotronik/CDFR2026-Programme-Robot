@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
                 arduino.RGB_Rainbow();
             }
 
-            if (readButtonSensor() & !readLatchSensor())
+            if (readButtonSensor() && !readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = WAITSTART;
             break;
         }
@@ -129,11 +129,11 @@ int main(int argc, char *argv[])
             // colorTeam_t color = readColorSensorSwitch();
             // switchTeamSide(color);
 
-            if (readLimitSwitchTop() and motorUpFirst){
+            if (readLimitSwitchTop() and motorUpFirst){ // Why TF is there an "and" 
                 arduino.moveMotorDC(20,false);
                 motorUpFirst = false;
             }
-
+            navigationGo(); // Calibrate the robot using the camera while waiting for the start signal
 
             if (readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = RUN;
