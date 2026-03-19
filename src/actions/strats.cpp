@@ -153,7 +153,7 @@ position_t calculateClosestArucoPosition(position_t currentPos){
     }
     outPos.a = RAD_TO_DEG * position_angle(outPos, closestPos) + OFFSET_CAM_A;
 
-    return closestPos;
+    return outPos;
 }
 
 /*
