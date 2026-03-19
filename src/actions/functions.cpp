@@ -320,7 +320,7 @@ void switchTeamSide(colorTeam_t color){
 
         position_t pos = StratStartingPos();
         drive.setCoordinates(pos);
-        drive.navigationGoTo(pos, true, true); // Go to starting pos with A* and slow mode to avoid collisions during the switch
+        navigationGoTo(pos, true, true); // Go to starting pos with A* and slow mode to avoid collisions during the switch
     }
 }
 void switchStrategy(int strategy){
