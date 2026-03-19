@@ -253,14 +253,18 @@ void StartAPIServer(){
     ([](){
         json response;
         response["object"] = arucoCam1.getObjectPosition_json();
-        return response;
+        crow::response res(response.dump());
+        res.set_header("Content-Type", "application/json");
+        return res;
     });
 
     CROW_ROUTE(app, "/position")
     ([](){
         json response;
         response["object"] = arucoCam1.getRobotPosition_json();
-        return response;
+        crow::response res(response.dump());
+        res.set_header("Content-Type", "application/json");
+        return res;
     });
 
     // ------------------------------- POST Routes -------------------------------
