@@ -207,9 +207,10 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 if(sucess){
                     //LOG_GREEN_INFO("pos aruco = ", x ," / ", y," / ",  a);
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Detection sucess calibration on blocks");
-                    targetStockPos = position_t{x + int(stockOff.x * mult_off), y + int(stockOff.y * mult_off), a};
+                    targetStockPos = position_t{x, y, a};
                 }else{
-                    //TODO handle error
+                    //TODO return done means the stock is empty
+                    // Change when debug is over
                     LOG_WARNING("FSM_GATHER_DETECT: Detection failed calibration on map");
                     targetStockPos = position_t{stockPos.x + int(stockOff.x * mult_off), stockPos.y + int(stockOff.y * mult_off), angle};
                 }

@@ -256,12 +256,9 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
         success = false;
         return true;
     }else if (count == 1){
-        //projection dans le repère de la table:
-        double a_rad = (a) * M_PI / 180.0;
-        double cos_a = cos(a_rad);
-        double sin_a = sin(a_rad);
-        x += visibleBlocks[0].x * cos_a - visibleBlocks[0].y * sin_a;
-        y += visibleBlocks[0].x * sin_a + visibleBlocks[0].y * cos_a;
+        x = visibleBlocks[0].x;
+        y = visibleBlocks[0].y;
+        a = visibleBlocks[0].a;
         success = true;
         LOG_GREEN_INFO("Single Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
         // Return true if the values were successfully extracted
@@ -270,35 +267,17 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
     else{
         for(size_t max_block = MIN(4,count); max_block > 1; max_block -- ){
             if(findGroupRANSAC2D(visibleBlocks,alignBlocks, max_block)){
-                //TODO properly align claws with blocks not with averge position
-                //TODO align robot taking angle into acount
-                double m_x,m_y;
+
                 if(max_block !=2){
-                    m_x = alignBlocks[1].x;
-                    m_y = alignBlocks[1].y;
-                    a+= alignBlocks[1].a;
+                    x = alignBlocks[1].x;
+                    y = alignBlocks[1].y;
+                    a = alignBlocks[1].a;
                 }else{
-                    m_x = alignBlocks[0].x;
-                    m_y = alignBlocks[0].y;
-                    a+= alignBlocks[0].a;
+                    x = alignBlocks[0].x;
+                    y = alignBlocks[0].y;
+                    a = alignBlocks[0].a;
                 }
 
-                
-                // Décalage pour le centre du robot
-                m_x += OFFSET_CAM_X;
-                m_y += OFFSET_CAM_Y + OFFSET_CLAW_Y;
-
-
-                //projection dans le repère de la table:
-                double a_rad = (a) * M_PI / 180.0;
-                double cos_a = cos(a_rad);
-                double sin_a = sin(a_rad);
-                x += m_x * cos_a - m_y * sin_a;
-                y += m_x * sin_a + m_y * cos_a;
-                success = true;
-                LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
-                // Return true if the values were successfully extracted
-                return true;
             }else{
                 LOG_WARNING("Ransac: Pas de solution à ", max_block);
             }
@@ -399,8 +378,29 @@ bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success){
     }else{
         return false;
     }
+    double tmp_x, tmp_y, tmp_a;
+    if( ToObjectPos(data, tmp_x, tmp_y, tmp_a, success)){
+        //Traitement pour passer dans les coordonnées de la table
+        float mult_param = 0.68;
+        // Décalage pour le centre du robot
+        tmp_x += OFFSET_CAM_X + OFFSET_STOCK * mult_param;
+        tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y;
 
-    return ToObjectPos(data, x, y, a, success);
+
+        //projection dans le repère de la table:
+        double a_rad = (a) * M_PI / 180.0;
+        double cos_a = cos(a_rad);
+        double sin_a = sin(a_rad);
+        x += tmp_x * cos_a - tmp_y * sin_a;
+        y += tmp_x * sin_a + tmp_y * cos_a;
+
+        LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+        // Return true if the values were successfully extracted
+        return true;
+    }else{
+        success = false;
+        return true;
+    }
 }
 
 json ArucoCam::getObjectPosition_json(){
