@@ -9,8 +9,8 @@
 #include <algorithm>
 
 #define PORT_OFFSET 5000
-#define SCAN_FAIL_FRAMES_NUM 10
-#define SCAN_DONE_FRAMES_NUM 25
+#define SCAN_FAIL_FRAMES_NUM 2
+#define SCAN_DONE_FRAMES_NUM 10
 
 pid_t startPythonProgram(char** args);
 void stopPythonProgram(pid_t pid);
