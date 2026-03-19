@@ -383,8 +383,8 @@ bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success){
         //Traitement pour passer dans les coordonnées de la table
         float mult_param = 0.68;
         // Décalage pour le centre du robot
-        tmp_x += OFFSET_CAM_X + OFFSET_STOCK * mult_param;
-        tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y;
+        tmp_x += OFFSET_CAM_X + OFFSET_STOCK * mult_param * cos(tmp_a);
+        tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y + OFFSET_STOCK * mult_param * sin(tmp_a);
 
 
         //projection dans le repère de la table:
@@ -393,7 +393,7 @@ bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success){
         double sin_a = sin(a_rad);
         x += tmp_x * cos_a - tmp_y * sin_a;
         y += tmp_x * sin_a + tmp_y * cos_a;
-
+        a += tmp_a;
         LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
         // Return true if the values were successfully extracted
         return true;
