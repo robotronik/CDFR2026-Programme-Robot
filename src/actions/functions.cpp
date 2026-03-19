@@ -19,6 +19,10 @@ bool lowerClaws(){
     switch (state){
         case 1: // descente rapide
             LOG_DEBUG("Lower Claws");
+            if (readLimitSwitchBottom()){
+                state = 1;
+                return true;
+            }
             arduino.moveMotorDC(70, true);
             startTime = _millis();
             state = 2;
@@ -42,6 +46,7 @@ bool raiseClaws(){
         case 1: // montée rapide
             LOG_DEBUG("Raise Claws");
             if (readLimitSwitchTop()){
+                arduino.keepMotorDCup();
                 state = 1;
                 return true;
             }
@@ -189,7 +194,7 @@ bool snapClaws(bool closed){
 
 bool snapClaws(bool closed, bool small){
     static int prevTarget = -1;
-    int target = closed ? 15 : (small ? 45 : 130);
+    int target = closed ? 10 : (small ? 45 : 130);
     if (prevTarget != target){
         arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 150);
         prevTarget = target;

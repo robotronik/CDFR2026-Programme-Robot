@@ -174,7 +174,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
     position_t stockOff = STOCK_OFFSETS[offset];
 
     double angle = RAD_TO_DEG*  position_angle(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a} , stockPos);
-    double mult_off = 0.68;
+    double mult_off = 0.69; // avance de 1 - mult_off, 
 
     switch (gatherStockState){
         case FSM_GATHER_NAV:
