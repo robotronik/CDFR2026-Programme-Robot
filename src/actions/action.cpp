@@ -515,8 +515,8 @@ ReturnFSM_t ActionFSM::Calibrate(){
             break;
         case FSM_CALIBRATION_NAV:
             {
-            // Look towards the closest aruco marker by only spinning in place
-            nav_ret = navigationGoTo(Calibrationtarget_);
+            // Look towards the closest aruco marker to recalibrate the position
+            nav_ret = navigationGoTo(Calibrationtarget_, true);
             if (nav_ret == NAV_DONE){
                 calibrationState = FSM_CALCULATION;
                 LOG_EXTENDED_DEBUG("FSM_CALIBRATION_NAV: Nav done, going to FSM_CALCULATION");
