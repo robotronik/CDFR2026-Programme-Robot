@@ -108,9 +108,10 @@ bool findGroupRANSAC2D(
             }
 
             if (status) {
-                for(size_t _ = 0 ; _ < max_blocks; _++){
-                    bestGroup.push_back(*inliers[_].second);
-                    //LOG_EXTENDED_DEBUG("Ransac: Adding point (", inliers[k + _].second->x, ", ", inliers[k + _].second->y, ") with angle ", inliers[k + _].second->a, " to best group");
+                bestGroup.clear();
+                for (size_t idx = 0; idx < max_blocks; ++idx) {
+                    bestGroup.push_back(*inliers[k + idx].second);
+                    //LOG_EXTENDED_DEBUG("Ransac: Adding point (", inliers[k + idx].second->x, ", ", inliers[k + idx].second->y, ") with angle ", inliers[k + idx].second->a, " to best group");
                 }
                 return true; // early exit if solution found
             }
