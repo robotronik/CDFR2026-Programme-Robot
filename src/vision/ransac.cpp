@@ -97,7 +97,7 @@ bool findGroupRANSAC2D(
 
             for(size_t spaces = 0; spaces < max_blocks-1; spaces ++ ){
                 float d1 = inliers[k + spaces + 1].first - inliers[k + spaces].first;
-                if(std::abs(d1) - spacing < spacingTol){
+                if(abs(abs(d1) - spacing) < spacingTol){
                     //LOG_EXTENDED_DEBUG("Ransac: Inliers OK at positions ", inliers[k + spaces].second->x, ", ", inliers[k + spaces].second->y, " and ", inliers[k + spaces + 1].second->x, ", ", inliers[k + spaces + 1].second->y, " have spacing ", d1, " which is within the tolerance");
                     continue;
                 }else{
