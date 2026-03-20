@@ -286,7 +286,9 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
             }
         }
     }
-
+    for(size_t i = 0 ; i < alignBlocks.size(); i++){
+        LOG_EXTENDED_DEBUG("Align block ", i, " position: { x = ", alignBlocks[i].x, ", y = ", alignBlocks[i].y, ", a = ", alignBlocks[i].a, " }");
+    }
     if(!success){
         LOG_ERROR("ArucoCam::getObjectPos() - No object position found");
     }else{
@@ -295,11 +297,11 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
         // Décalage pour le centre du robot
         tmp_a = (tmp_a > 0) ? tmp_a - 90 : tmp_a + 90;
         double rad_tmp_a = tmp_a * M_PI / 180.0;
-        LOG_EXTENDED_DEBUG("Position avant correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
-        LOG_EXTENDED_DEBUG("Décalage appliqué : { sin = ", OFFSET_STOCK * mult_param * sin(rad_tmp_a), ", cos = ", OFFSET_STOCK * mult_param * cos(rad_tmp_a), " }");
+        //LOG_EXTENDED_DEBUG("Position avant correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
+        //LOG_EXTENDED_DEBUG("Décalage appliqué : { sin = ", OFFSET_STOCK * mult_param * sin(rad_tmp_a), ", cos = ", OFFSET_STOCK * mult_param * cos(rad_tmp_a), " }");
         tmp_x += OFFSET_CAM_X - OFFSET_STOCK * mult_param * cos(rad_tmp_a);
         tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y - OFFSET_STOCK * mult_param * sin(rad_tmp_a);
-        LOG_EXTENDED_DEBUG("Position après correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
+        //LOG_EXTENDED_DEBUG("Position après correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
 
 
         //projection dans le repère de la table:
