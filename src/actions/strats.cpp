@@ -110,8 +110,9 @@ bool chooseStockStrategy(int& stockNum, int& stockOffset){
     return false;
 }
 
-position_t calculateClosestArucoPosition(position_t currentPos, position_t& outPos){
-    outPos = currentPos;
+// Return the closest position to look at an aruco marker
+position_t calculateClosestArucoPosition(position_t currentPos){
+    position_t outPos = currentPos;
     position_t closestPos = ARUCO_POSITIONS_TABLE[0];
     double minDistance = position_distance(currentPos, ARUCO_POSITIONS_TABLE[0]);
     for (int i = 1; i < 4; i++){
@@ -123,34 +124,36 @@ position_t calculateClosestArucoPosition(position_t currentPos, position_t& outP
     }
     LOG_ERROR("Distance to closest aruco marker: ", minDistance);
     const double target_distance_min = 300.0; // mm
-    const double target_distance_max = 700.0; // mm
+    const double target_distance_max = 650.0; // mm
 
-    // Direction du tag vers le robot (pour s’éloigner)
-    position_t dir;
-    dir.x = currentPos.x - closestPos.x;
-    dir.y = currentPos.y - closestPos.y;
-    position_normalize(dir);
-
-    if (minDistance < target_distance_min){
-        LOG_WARNING("Too close → moving away");
-
-        double displacement = target_distance_min - minDistance;
-        outPos.x += dir.x * displacement;
-        outPos.y += dir.y * displacement;
-    }
-    else if (minDistance > target_distance_max){
-        LOG_WARNING("Too far → moving closer");
-
-        double displacement = minDistance - target_distance_max;
-        outPos.x -= dir.x * displacement;
-        outPos.y -= dir.y * displacement;
+    if (minDistance < target_distance_min || minDistance > target_distance_max){
+        LOG_WARNING("Not in valid range, moving to preset position");
+        // Calculate the closest valid position using predetermined pos
+        outPos = ARUCO_CALIB_POSITIONS[0];
+        double minTargetDistance = 1e6;
+        for (int i = 0; i < ARUCO_CALIB_POSITIONS_COUNT; i++){
+            // Blue side
+            double d = position_distance(currentPos, ARUCO_CALIB_POSITIONS[i]);
+            if (d < minTargetDistance){
+                minTargetDistance = d;
+                outPos = ARUCO_CALIB_POSITIONS[i];
+            }
+            // Yellow side (mirrored)
+            position_t mirroredPos = ARUCO_CALIB_POSITIONS[i];
+            mirroredPos.y = -mirroredPos.y;
+            d = position_distance(currentPos, mirroredPos);
+            if (d < minTargetDistance){
+                minTargetDistance = d;
+                outPos = mirroredPos;
+            }
+        }
     }
     else {
         LOG_DEBUG("Good distance → no movement");
     }
     outPos.a = RAD_TO_DEG * position_angle(outPos, closestPos) + OFFSET_CAM_A;
 
-    return closestPos;
+    return outPos;
 }
 
 /*
