@@ -87,7 +87,7 @@ bool findGroupRANSAC2D(
         //LOG_EXTENDED_DEBUG("Ransac: Found ", inliers.size(), " inliers for line through points (", points[i].x, ", ", points[i].y, ") and (", points[j].x, ", ", points[j].y, ") with angle ", lineAngle);
         std::sort(inliers.begin(), inliers.end(),
                   [](const std::pair<float, const block_t*>& a, const std::pair<float, const block_t*>& b) {
-                      return a.second->y > b.second->y;
+                      return a.first > b.first;
                   });
         //LOG_EXTENDED_DEBUG("Ransac: Inliers sorted by projection: ", inliers.size(), " points");
 
@@ -113,6 +113,10 @@ bool findGroupRANSAC2D(
                     bestGroup.push_back(*inliers[k + idx].second);
                     //LOG_EXTENDED_DEBUG("Ransac: Adding point (", inliers[k + idx].second->x, ", ", inliers[k + idx].second->y, ") with angle ", inliers[k + idx].second->a, " to best group");
                 }
+                std::sort(bestGroup.begin(), bestGroup.end(),
+                  [](const const block_t& a, const block_t& b) {
+                      return a.y > b.y;
+                  });
                 return true; // early exit if solution found
             }
         }
