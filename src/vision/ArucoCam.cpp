@@ -153,12 +153,20 @@ bool ArucoCam::getObjectData(json& objects, int& sucess){
 bool sortBlockT(const block_t& a, const block_t& b){ return a.y < b.y;}
 
 bool ArucoCam::ToObjectColor(bool* order, int& success){
-    size_t start = 0;
+    // Edge case management
     if(alignBlocks.empty()){
         success = 1;
         LOG_ERROR("No objects but still searching for colors. Should not execute");
         return true;
+    }else if (alignBlocks.size()>4)
+    {
+        success = -1;
+        LOG_ERROR("To many objects found Error. Should not execute");
+        return true;
     }
+    
+    //proper color detection
+    size_t start = 0;
     if(alignBlocks.size()<=2){
         start = 1;
     }
