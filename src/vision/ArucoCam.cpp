@@ -297,8 +297,8 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
         double rad_tmp_a = tmp_a * M_PI / 180.0;
         LOG_EXTENDED_DEBUG("Position avant correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
         LOG_EXTENDED_DEBUG("Décalage appliqué : { sin = ", OFFSET_STOCK * mult_param * sin(rad_tmp_a), ", cos = ", OFFSET_STOCK * mult_param * cos(rad_tmp_a), " }");
-        tmp_x += OFFSET_CAM_X - OFFSET_STOCK * mult_param * sin(rad_tmp_a);
-        tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y + OFFSET_STOCK * mult_param * cos(rad_tmp_a);
+        tmp_x += OFFSET_CAM_X - OFFSET_STOCK * mult_param * cos(rad_tmp_a);
+        tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y - OFFSET_STOCK * mult_param * sin(rad_tmp_a);
         LOG_EXTENDED_DEBUG("Position après correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
 
 
@@ -308,7 +308,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
         double sin_a = sin(a_rad);
         x += tmp_x * cos_a - tmp_y * sin_a;
         y += tmp_x * sin_a + tmp_y * cos_a;
-        a = tmp_a;
+        a += tmp_a;
         LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
     }
     return true;
