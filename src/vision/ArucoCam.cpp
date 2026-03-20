@@ -152,25 +152,7 @@ bool ArucoCam::getObjectData(json& objects, bool& sucess){
 
 bool sortBlockT(const block_t& a, const block_t& b){ return a.y < b.y;}
 
-//return the order of the color in the stock in binary form
-// 0110 meaning Yellow Blue Blue Yellow
-bool ArucoCam::getObjectColor(bool* order, bool& success){
-    json data;
-    bool data_success;
-    success = false;
-    if(getObjectData(data, data_success)){
-        if(!data_success){
-            success = false;
-            return true;
-        }
-    }else{
-        return false;
-    }
-    return ToObjectColor(data, order, success);
-
-}
-
-bool ArucoCam::ToObjectColor(json& data, bool* order, bool& success){
+bool ArucoCam::ToObjectColor(bool* order, bool& success){
     size_t start = 0;
     if(alignBlocks.empty()){
         success = false;
@@ -429,7 +411,7 @@ bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double &
 
     if(ToObjectPos(data, x, y, a, success)){// Can not return False so first If is useless
         if(success){
-            if(ToObjectColor(data,order, success)){ // Can not return false either
+            if(ToObjectColor(order, success)){ // Can not return false either
                 return true; // exec finished 
             }else return false; // exec unfinished
         }else return true; // exec finished on fail

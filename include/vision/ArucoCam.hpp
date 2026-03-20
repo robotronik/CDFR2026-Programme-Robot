@@ -29,10 +29,9 @@ public:
     bool getObjectData(json& objects, bool& sucess);
 
     bool ToObjectPos(json& data, double & x, double & y, double & a, bool& success);
-    bool ToObjectColor(json& data, bool* order, bool& success);
+    bool ToObjectColor(bool* order, bool& success);
     bool ToIsolatedObject(json& data, double & x, double & y, double & a, bool& success);
 
-    bool getObjectColor(bool* order, bool& success);
     bool getObjectPos(double & x, double & y, double & a, bool& success);
     bool getObjectInfoColors(bool* order, double & x, double & y, double & a, bool& success);
     bool getBestIsolatedObject(double & x, double & y, double & a, bool& success);
