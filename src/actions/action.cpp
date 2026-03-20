@@ -212,6 +212,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 }else{
                     LOG_WARNING("FSM_GATHER_DETECT: Drop Zone is empty");
                     gatherStockState = FSM_GATHER_NAV;
+                    stock_num = -1;
                     return FSM_RETURN_DONE;
                 }
                 gatherStockState = FSM_GATHER_CLAWS;
