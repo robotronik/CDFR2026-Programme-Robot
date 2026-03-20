@@ -240,5 +240,9 @@ position_t getBestIsolatedPosition(position_t centerPos, position_t fromPos){
 
     vect = position_t{ .x  = sin(DEG_TO_RAD * (centerPos.a - 90)) * recul, .y = cos(DEG_TO_RAD * (centerPos.a - 90)) * recul, .a = 0};
     position_t possTarget2 = position_sum(centerPos, vect);
-    return possTarget1;
+
+    if(position_distance(fromPos, possTarget1) < position_distance(fromPos, possTarget2)){ //TODO replace with A*
+        return possTarget1;
+    }
+    return possTarget2;
 }

@@ -1,12 +1,15 @@
 #pragma once
 #include "utils/json.hpp" // For handling JSON
 #include <string>
+#include "vision/ransac.hpp"
 
 using json = nlohmann::json;
 
 #define OFFSET_CAM_X 129 // Offset of the camera in mm on the x axis
 #define OFFSET_CAM_Y 0 // Offset of the camera in mm on the y axis
 #define OFFSET_CAM_A 0 // Offset angle of the camera in degrees
+#define OFFSET_CLAW_Y -30 // Offset to align claw with block
+#define OFFSET_STOCK 300
 
 class ArucoCam {   
 private:
@@ -14,6 +17,7 @@ private:
     int id;
     bool status; // true if the camera is running, false otherwise
 public:
+    std::vector<block_t> alignBlocks;
     ArucoCam(int cam_number, const char* calibration_file_path);
     ~ArucoCam();
 
@@ -25,10 +29,9 @@ public:
     bool getObjectData(json& objects, bool& sucess);
 
     bool ToObjectPos(json& data, double & x, double & y, double & a, bool& success);
-    bool ToObjectColor(json& data, bool* order, bool& success);
+    bool ToObjectColor(bool* order, bool& success);
     bool ToIsolatedObject(json& data, double & x, double & y, double & a, bool& success);
 
-    bool getObjectColor(bool* order, bool& success);
     bool getObjectPos(double & x, double & y, double & a, bool& success);
     bool getObjectInfoColors(bool* order, double & x, double & y, double & a, bool& success);
     bool getBestIsolatedObject(double & x, double & y, double & a, bool& success);
