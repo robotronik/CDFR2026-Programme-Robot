@@ -26,14 +26,14 @@ public:
 
     bool getPos(double & x, double & y, double & a, bool& success);
     bool getRobotPos(double & x, double & y, double & a, bool& success);
-    bool getObjectData(json& objects, bool& sucess);
+    bool getObjectData(json& objects, int& sucess);
 
-    bool ToObjectPos(json& data, double & x, double & y, double & a, bool& success);
-    bool ToObjectColor(bool* order, bool& success);
+    bool ToObjectPos(json& data, double & x, double & y, double & a, int& success);
+    bool ToObjectColor(bool* order, int& success);
     bool ToIsolatedObject(json& data, double & x, double & y, double & a, bool& success);
 
-    bool getObjectPos(double & x, double & y, double & a, bool& success);
-    bool getObjectInfoColors(bool* order, double & x, double & y, double & a, bool& success);
+    bool getObjectPos(double & x, double & y, double & a, int& success);
+    bool getObjectInfoColors(bool* order, double & x, double & y, double & a, int& success);
     bool getBestIsolatedObject(double & x, double & y, double & a, bool& success);
 
     json getBestIsolatedObject_json();

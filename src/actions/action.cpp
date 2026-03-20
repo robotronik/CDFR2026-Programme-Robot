@@ -202,19 +202,22 @@ ReturnFSM_t ActionFSM::TakeStock(){
             double x = drive.position.x;
             double y = drive.position.y;
             double a = drive.position.a;
-            bool sucess = false;
+            int sucess = -1;
 
             if(arucoCam1.getObjectInfoColors(stockOrder,x,y,a,sucess)){
-                if(sucess){
+                if(!sucess){
                     //LOG_GREEN_INFO("pos aruco = ", x ," / ", y," / ",  a);
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Detection sucess calibration on blocks");
                     targetStockPos = position_t{x, y, a};
-                }else{
+                }else if(sucess == 1){
                     LOG_WARNING("FSM_GATHER_DETECT: Drop Zone is empty");
                     gatherStockState = FSM_GATHER_NAV;
                     tableStatus.setStockAsRemoved(stock_num);
                     stock_num = -1;
                     return FSM_RETURN_DONE;
+                }else{
+                    LOG_ERROR("FSM_GATHER_DETECT: Camera Error don't know what to do");
+                    return FSM_RETURN_ERROR;
                 }
                 gatherStockState = FSM_GATHER_CLAWS;
             }
