@@ -211,7 +211,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
             count++;
         }
     }
-
+    LOG_EXTENDED_DEBUG("Found ", count, " blocks for cam ", id);
     if(!count){
         LOG_ERROR("No object found Error stopping cam");
         success = false;
