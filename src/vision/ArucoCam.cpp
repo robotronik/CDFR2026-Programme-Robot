@@ -171,45 +171,21 @@ bool ArucoCam::getObjectColor(bool* order, bool& success){
 }
 
 bool ArucoCam::ToObjectColor(json& data, bool* order, bool& success){
-    int count = 0;
-    if (!data.contains("objects") || data["objects"].is_null() || !data["objects"].is_object()) {
-        LOG_ERROR("ArucoCam::ToObjectColor() - invalid or missing 'objects'");
-        success = false;
-        return true;
-    }
-    auto& objects = data["objects"];
-    std::vector<block_t> possible;
-    for (auto& [key, list] : objects.items()) {
-        for (auto& obj : list) {
-            
-            // On convertit vers le repère robot 
-            double a_tag_rad = obj.value("a",0.0) * M_PI / 180.0;
-            double sin_tag = sin(a_tag_rad);
-            double cos_tag = cos(a_tag_rad);
-            double x_tmp = obj.value("x", 0.0);
-            double y_tmp = obj.value("y", 0.0);
-            //m_x += x_tmp* cos_tag - y_tmp * sin_tag;
-            possible.push_back(block_t{
-                .y= x_tmp* sin_tag + y_tmp*cos_tag, 
-                .color = (obj.value("label", "") == "Blue")? true : false
-            }); 
-            count++;
-        }
-    }
-
-    if(possible.empty()){
+    size_t start = 0;
+    if(alignBlocks.empty()){
         success = false;
         LOG_ERROR("No object found Error stopping cam");
         return true;
     }
-
-    std::sort(possible.begin(), possible.end(), sortBlockT);
-    for(size_t i = 0 ; i< (size_t)4; i++){  
-        order[i] = possible[i].color;
-        if(possible[i].color){
-            LOG_DEBUG("Blue");
+    if(alignBlocks.size()<=2){
+        start = 1;
+    }
+    for(size_t i =  0; i< alignBlocks.size() + start; i++){  
+        order[start + i ] = alignBlocks[i].color;
+        if(alignBlocks[i].color){
+            LOG_EXTENDED_DEBUG("Blue");
         }else{
-            LOG_DEBUG("Yellow");
+            LOG_EXTENDED_DEBUG("Yellow");
         }
     }
     success = true;
@@ -229,7 +205,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
     int count = 0;
     auto& objects = data["objects"];
     std::vector<block_t> visibleBlocks;
-    std::vector<block_t> alignBlocks;
+    alignBlocks.clear();
     double tmp_x = 0;
     double tmp_y = 0;
     double tmp_a = 0;
@@ -262,6 +238,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
         tmp_x = visibleBlocks[0].x;
         tmp_y = visibleBlocks[0].y;
         tmp_a = visibleBlocks[0].a;
+        alignBlocks.push_back(visibleBlocks[0]);
         success = true;
         LOG_GREEN_INFO("Single Tag detection ", id, " position: { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
         // Return true if the values were successfully extracted
