@@ -226,6 +226,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
         // Return true if the values were successfully extracted
     }
     else{
+        success = false;
         for(size_t max_block = MIN(4,count); max_block > 1; max_block -- ){
             if(findGroupRANSAC2D(visibleBlocks,alignBlocks, max_block)){
 
@@ -243,6 +244,14 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
             }else{
                 LOG_WARNING("Ransac: Pas de solution à ", max_block);
             }
+        }
+        if(!success){
+            tmp_x = visibleBlocks[0].x;
+            tmp_y = visibleBlocks[0].y;
+            tmp_a = visibleBlocks[0].a;
+            alignBlocks.push_back(visibleBlocks[0]);
+            success = true;
+            LOG_GREEN_INFO("Going for single tag ", id, " position: { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
         }
     }
     for(size_t i = 0 ; i < alignBlocks.size(); i++){
