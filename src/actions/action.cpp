@@ -217,6 +217,8 @@ ReturnFSM_t ActionFSM::TakeStock(){
                     return FSM_RETURN_DONE;
                 }else{
                     LOG_ERROR("FSM_GATHER_DETECT: Camera Error don't know what to do");
+                    gatherStockState = FSM_GATHER_NAV;
+                    stock_num = -1;
                     return FSM_RETURN_ERROR;
                 }
                 gatherStockState = FSM_GATHER_CLAWS;
