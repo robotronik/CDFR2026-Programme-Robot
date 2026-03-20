@@ -211,10 +211,9 @@ ReturnFSM_t ActionFSM::TakeStock(){
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Detection sucess calibration on blocks");
                     targetStockPos = position_t{x, y, a};
                 }else{
-                    //TODO return done means the stock is empty
-                    // Change when debug is over
-                    LOG_WARNING("FSM_GATHER_DETECT: Detection failed calibration on map");
-                    targetStockPos = position_t{stockPos.x + int(stockOff.x * mult_off), stockPos.y + int(stockOff.y * mult_off), angle};
+                    LOG_WARNING("FSM_GATHER_DETECT: Drop Zone is empty");
+                    gatherStockState = FSM_GATHER_NAV;
+                    return FSM_RETURN_DONE;
                 }
                 gatherStockState = FSM_GATHER_CLAWS;
             }
