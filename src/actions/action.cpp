@@ -33,7 +33,9 @@ void ActionFSM::Reset(){
     targetStockPos = position_t{0,0,0};
     dropzonePos = position_t{0,0,0};
 
-    stockOrder[0] = false; stockOrder[1]=false; stockOrder[2]=false; stockOrder[3]=false;
+    for(size_t _ = 0; _<4 ; _++){
+        stockOrder[_] = (tableStatus.colorTeam == YELLOW) ? false : true;
+    }
     
     // TODO reset other states (num,offset, etc.)
 }

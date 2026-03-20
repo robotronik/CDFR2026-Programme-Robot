@@ -17,6 +17,7 @@ private:
     int id;
     bool status; // true if the camera is running, false otherwise
 public:
+    std::vector<block_t> alignBlocks;
     ArucoCam(int cam_number, const char* calibration_file_path);
     ~ArucoCam();
 
