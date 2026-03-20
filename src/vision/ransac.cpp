@@ -114,7 +114,7 @@ bool findGroupRANSAC2D(
                     //LOG_EXTENDED_DEBUG("Ransac: Adding point (", inliers[k + idx].second->x, ", ", inliers[k + idx].second->y, ") with angle ", inliers[k + idx].second->a, " to best group");
                 }
                 std::sort(bestGroup.begin(), bestGroup.end(),
-                  [](const const block_t& a, const block_t& b) {
+                  [](const block_t& a, const block_t& b) {
                       return a.y > b.y;
                   });
                 return true; // early exit if solution found
