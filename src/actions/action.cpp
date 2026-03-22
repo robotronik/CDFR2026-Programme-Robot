@@ -20,14 +20,14 @@ void ActionFSM::Reset(){
 
     /****** RESET OF FSM STATES *******/
     gatherStockState = FSM_GATHER_NAV;
-    gatherIsolatedStockState = FSM_GATHER_DETECT;
+    stealStockState = FSM_GATHER_DETECT;
     dropStockState = FSM_DROP_NONE;
     CursorState = CURSOR_RAISE_CLAW;
     calibrationCameraState = FSM_ARUCO_1;
     calibrationState = FSM_CALCULATION;
 
     /*RESET OF ACTION ID*/
-    dropzone_num = 0;
+    dropzone_num = -1;
     stock_num = -1;
     offset = 0;
     targetStockPos = position_t{0,0,0};
@@ -60,7 +60,7 @@ bool ActionFSM::RunFSM(){
         }
         break;
     case FSM_ACTION_GATHER_ISOLATED:
-        ret = TakeIsolatedStock();
+        ret = StealStock();
         if (ret == FSM_RETURN_DONE){
             LOG_INFO("FSM_ACTION_GATHER_ISOLATED: Finished gathering");
             return true;
@@ -210,7 +210,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Detection sucess calibration on blocks");
                     targetStockPos = position_t{x, y, a};
                 }else if(sucess == 1){
-                    LOG_WARNING("FSM_GATHER_DETECT: Drop Zone is empty");
+                    LOG_WARNING("FSM_GATHER_DETECT: Stock is empty");
                     gatherStockState = FSM_GATHER_NAV;
                     tableStatus.setStockAsRemoved(stock_num);
                     stock_num = -1;
@@ -260,50 +260,73 @@ ReturnFSM_t ActionFSM::TakeStock(){
     return FSM_RETURN_WORKING;
 }
 
-ReturnFSM_t ActionFSM::TakeIsolatedStock(){
+ReturnFSM_t ActionFSM::StealStock(){
     static position_t targetPos_; 
-    switch (gatherIsolatedStockState)
+    switch (stealStockState)
     {   
         case FSM_GATHER_COLLECTED:
             return FSM_RETURN_ERROR;
+
+        case FSM_GATHER_NAV:
+            {
+            position_t targetPos = getBestDropZonePosition(dropzone_num, drive.position);// ne devrait pas être recalculé
+            nav_ret = navigationGoTo(targetPos, true); // Enabeling A*
+            if (nav_ret == NAV_DONE){
+                LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to dropZone at postition (",targetPos.x,", ",targetPos.y, ") now searching for blocks");
+                stealStockState = FSM_GATHER_DETECT;
+            }else if(nav_ret == NAV_IN_PROCESS){
+                snapClaws(false,false);
+            }
+            else if (nav_ret == NAV_ERROR){
+                LOG_ERROR("FSM_GATHER_NAV: Navigation error while going to dropzone ", dropzone_num);
+                dropzone_num = -1;
+                stealStockState = FSM_GATHER_NAV;
+                return FSM_RETURN_DONE;
+            }
+            }
+            break;
 
         case FSM_GATHER_DETECT:
         {
             double x = drive.position.x;
             double y = drive.position.y;
             double a = drive.position.a;
-            bool sucess = false;
-            if(arucoCam1.getBestIsolatedObject(x,y,a,sucess)){
-                if(sucess){
-                    targetPos_ = getBestIsolatedPosition(position_t{x,y,a}, drive.position);
-                    gatherIsolatedStockState = FSM_GATHER_NAV;
-                    LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found an isolated object");
+            int sucess = -1;
+            if(arucoCam1.getObjectInfoColors(stockOrder, x, y, a, sucess)){
+                if(!sucess){
+                    targetPos_ = position_t{x,y,a};
+                    stealStockState = FSM_GATHER_NAV;
+                    LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found objects to steal");
+                }else if (sucess == 1){
+                    LOG_WARNING("FSM_GATHER_DETECT: DropZone was empty");
+                    stealStockState = FSM_GATHER_NAV;
+                    tableStatus.setDropzoneState(dropzone_num,tableStatus.DROPZONE_EMPTY);
+                    dropzone_num = -1;
+                    return FSM_RETURN_DONE;
                 }else{
-                    LOG_ERROR("FSM_GATHER_DETECT: Failed to find an isolated object");
+                    LOG_ERROR("FSM_GATHER_DETECT: Camera Error don't know what to do");
+                    stealStockState = FSM_GATHER_NAV;
+                    dropzone_num = -1;
                     return FSM_RETURN_ERROR;
                 }
             }
             break;
         }
-        case FSM_GATHER_NAV:
+        case FSM_GATHER_MOVE:
             nav_ret = navigationGoTo(targetPos_, true);
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to stock at postition (",targetPos_.x,", ",targetPos_.y, ")");
-                gatherIsolatedStockState = FSM_GATHER_COLLECT;
+                stealStockState = FSM_GATHER_COLLECT;
                 break;
             }
             break;
         case FSM_GATHER_COLLECT:
             //TODO add utilisation de la ventouse
-            gatherIsolatedStockState = FSM_GATHER_MOVE;
-            break;
-        case FSM_GATHER_MOVE:
-            //TODO add virer les blocks restant dans la zone
-            gatherIsolatedStockState = FSM_GATHER_CLAWS;
+            stealStockState = FSM_GATHER_MOVE;
             break;
         case FSM_GATHER_CLAWS:
             //TODO add drop du bon block
-            gatherIsolatedStockState = FSM_GATHER_DETECT;
+            stealStockState = FSM_GATHER_DETECT;
             return FSM_RETURN_DONE;
     }
     return FSM_RETURN_WORKING;

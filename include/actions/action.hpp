@@ -23,14 +23,14 @@ class ActionFSM{
         void SetBestAction(position_t position);
 
         ReturnFSM_t TakeStock();
-        ReturnFSM_t TakeIsolatedStock();
+        ReturnFSM_t StealStock();
         ReturnFSM_t DropStock();
         ReturnFSM_t Cursor();
         ReturnFSM_t Calibrate();
         ReturnFSM_t GetRobotCenter();
 
         int stock_num;// Num of stock
-        int dropzone_num;// Num of dropzone to drop the stock
+        int dropzone_num;// Num of dropzone to drop the stock or to steal from
         int offset;// Offset  is direction to take the stock from
         bool rotate_done = false;
         position_t backPos;
@@ -67,7 +67,7 @@ class ActionFSM{
         
         /************ FSM GATHER ISOLATED **************/
 
-        StateGatherStock_t gatherIsolatedStockState = FSM_GATHER_DETECT;
+        StateGatherStock_t stealStockState = FSM_GATHER_DETECT;
 
         /************  FSM DROP ************/
         typedef enum
