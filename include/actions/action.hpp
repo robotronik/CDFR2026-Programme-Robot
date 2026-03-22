@@ -68,7 +68,7 @@ class ActionFSM{
         } StateGatherStock_t;
         StateGatherStock_t gatherStockState = FSM_GATHER_NAV;
         
-        /************ FSM GATHER ISOLATED **************/
+        /************ FSM STEAL **************/
 
         StateGatherStock_t stealStockState = FSM_GATHER_DETECT;
 
