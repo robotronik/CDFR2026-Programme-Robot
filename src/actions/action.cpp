@@ -63,12 +63,12 @@ bool ActionFSM::RunFSM(){
     case FSM_ACTION_STEAL:
         ret = StealStock();
         if (ret == FSM_RETURN_DONE){
-            LOG_INFO("FSM_ACTION_GATHER_ISOLATED: Finished gathering");
+            LOG_INFO("FSM_ACTION_STEAL: Finished stealing");
             return true;
             //SetBestAction(drive.position);
         }
         else if (ret == FSM_RETURN_ERROR){
-            LOG_ERROR("FSM_ACTION_GATHER_ISOLATED: Couldn't gather");
+            LOG_ERROR("FSM_ACTION_STEAL: Couldn't steal");
             // TODO Handle error
         }
         break;
