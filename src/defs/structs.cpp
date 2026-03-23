@@ -10,6 +10,10 @@ position_t position_sum(position_t leftOp, position_t rightOp){
         .a = leftOp.a + rightOp.a
     };
 }
+// Return true if x y and a of both position_t are equals
+bool position_equals(position_t leftOp, position_t rightOp){
+    return leftOp.x == rightOp.x && leftOp.y == rightOp.y && leftOp.a == rightOp.a;
+}
 
 // Define a function to calculate the angle in rads from and to a position_t
 double position_angle(position_t from, position_t to){
