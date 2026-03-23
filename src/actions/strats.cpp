@@ -110,41 +110,50 @@ bool chooseStockStrategy(int& stockNum, int& stockOffset){
     return false;
 }
 
-position_t calculateClosestArucoPosition(position_t currentPos, position_t& outPos){
-    outPos = currentPos;
+// Return the closest position to look at an aruco marker
+position_t calculateClosestArucoPosition(position_t currentPos){
+    position_t outPos = currentPos;
     position_t closestPos = ARUCO_POSITIONS_TABLE[0];
-    double dist20 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[0]);
-    double dist21 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[1]);
-    double dist22 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[2]);
-    double dist23 = position_distance(currentPos, ARUCO_POSITIONS_TABLE[3]);
-    double minDistance = dist20;
-    if (dist21 < minDistance){
-        minDistance = dist21;
-        closestPos = ARUCO_POSITIONS_TABLE[1];
+    double minDistance = position_distance(currentPos, ARUCO_POSITIONS_TABLE[0]);
+    for (int i = 1; i < 4; i++){
+        double d = position_distance(currentPos, ARUCO_POSITIONS_TABLE[i]);
+        if (d < minDistance){
+            minDistance = d;
+            closestPos = ARUCO_POSITIONS_TABLE[i];
+        }
     }
-    if (dist22 < minDistance){
-        minDistance = dist22;
-        closestPos = ARUCO_POSITIONS_TABLE[2];
-    }
-    if (dist23 < minDistance){
-        minDistance = dist23;
-        closestPos = ARUCO_POSITIONS_TABLE[3];
-    }
-    // Check if we are above the aruco marker
-    const double minimal_distance = 200.0; // 20cm
-    if (minDistance < minimal_distance){
-        LOG_WARNING("Above aruco marker, need to move away first");
-        double displacement = minimal_distance - minDistance + 1; //+margin
-        position_t tmp = position_vector(closestPos, currentPos);
-        position_normalize(tmp);
-        tmp.x *= displacement;
-        tmp.y *= displacement;
-        outPos.x += tmp.x;
-        outPos.y += tmp.y;
-    }
-    outPos.a = RAD_TO_DEG * position_angle(drive.position, closestPos) + OFFSET_CAM_A;
+    LOG_ERROR("Distance to closest aruco marker: ", minDistance);
+    const double target_distance_min = 300.0; // mm
+    const double target_distance_max = 650.0; // mm
 
-    return closestPos;
+    if (minDistance < target_distance_min || minDistance > target_distance_max){
+        LOG_WARNING("Not in valid range, moving to preset position");
+        // Calculate the closest valid position using predetermined pos
+        outPos = ARUCO_CALIB_POSITIONS[0];
+        double minTargetDistance = 1e6;
+        for (int i = 0; i < ARUCO_CALIB_POSITIONS_COUNT; i++){
+            // Blue side
+            double d = position_distance(currentPos, ARUCO_CALIB_POSITIONS[i]);
+            if (d < minTargetDistance){
+                minTargetDistance = d;
+                outPos = ARUCO_CALIB_POSITIONS[i];
+            }
+            // Yellow side (mirrored)
+            position_t mirroredPos = ARUCO_CALIB_POSITIONS[i];
+            mirroredPos.y = -mirroredPos.y;
+            d = position_distance(currentPos, mirroredPos);
+            if (d < minTargetDistance){
+                minTargetDistance = d;
+                outPos = mirroredPos;
+            }
+        }
+    }
+    else {
+        LOG_DEBUG("Good distance → no movement");
+    }
+    outPos.a = RAD_TO_DEG * position_angle(outPos, closestPos) + OFFSET_CAM_A;
+
+    return outPos;
 }
 
 /*
@@ -225,4 +234,18 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos){
         return bestPoss;
     }
     
+}
+
+position_t getBestIsolatedPosition(position_t centerPos, position_t fromPos){
+    const float recul = STOCKS_LENGTH / 2 + ROBOT_WIDTH / 2;
+    position_t vect = position_t{ .x  = sin(DEG_TO_RAD * (centerPos.a + 90)) * recul, .y = cos(DEG_TO_RAD * (centerPos.a + 90)) * recul, .a = 0};
+    position_t possTarget1 = position_sum(centerPos, vect);
+
+    vect = position_t{ .x  = sin(DEG_TO_RAD * (centerPos.a - 90)) * recul, .y = cos(DEG_TO_RAD * (centerPos.a - 90)) * recul, .a = 0};
+    position_t possTarget2 = position_sum(centerPos, vect);
+
+    if(position_distance(fromPos, possTarget1) < position_distance(fromPos, possTarget2)){ //TODO replace with A*
+        return possTarget1;
+    }
+    return possTarget2;
 }

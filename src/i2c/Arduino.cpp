@@ -101,6 +101,19 @@ bool Arduino::readSensor(int SensorID, bool& value){
     return true;
 }
 
+bool Arduino::writeSensor(int SensorID, bool state){
+    if (i2cFile == -1) return true; // Emulation
+
+    uint8_t message[2];
+    uint8_t *ptr = message;
+
+    WriteUInt8(&ptr, SensorID);
+    WriteUInt8(&ptr, state);
+
+    I2cSendData(i2cFile, CMD_WRITE_PIN, message, 2);
+    return true;
+}
+
 void Arduino::enableStepper(int StepperID) {
     LOG_DEBUG("Enable Stepper #", StepperID);
     I2cSendData(i2cFile, CMD_ENABLE_STEPPER, (uint8_t*)&StepperID, 1);

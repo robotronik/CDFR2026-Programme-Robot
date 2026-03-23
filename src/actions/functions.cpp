@@ -19,7 +19,11 @@ bool lowerClaws(){
     switch (state){
         case 1: // descente rapide
             LOG_DEBUG("Lower Claws");
-            arduino.moveMotorDC(30, true);
+            if (readLimitSwitchBottom()){
+                state = 1;
+                return true;
+            }
+            arduino.moveMotorDC(100, true);
             startTime = _millis();
             state = 2;
             break;
@@ -41,7 +45,12 @@ bool raiseClaws(){
     switch(state){
         case 1: // montée rapide
             LOG_DEBUG("Raise Claws");
-            arduino.moveMotorDC(90, false);
+            if (readLimitSwitchTop()){
+                arduino.keepMotorDCup();
+                state = 1;
+                return true;
+            }
+            arduino.moveMotorDC(120, false);
             startTime = _millis();
             state = 2;
             break;
@@ -58,7 +67,7 @@ bool raiseClaws(){
 }
 
 bool rotateTwoBlocksDefault(){
-    bool order[4]{false,true,true,false};
+    bool order[4]{false,false,false,false};
     return rotateTwoBlocks(order);
 }
 
@@ -66,25 +75,19 @@ bool rotateTwoBlocks(bool *order){
     static int state = 1;
     switch (state){
         case 1:
-            if (closeClaws())
+            if (closeClaws() && raiseClaws())
                 state = 2;
             break;
-
         case 2:
-            if (raiseClaws()){
-                state = 3;
-            }
-            break;
-        case 3:
 
             bool any = order[0] || order[1] || order[2] || order[3];
             bool a=false,b=true,c=true,d=false;
 
             if (any){
                 if (tableStatus.colorTeam == colorTeam_t::BLUE){
-                    a = !order[3]; b = !order[2]; c = !order[1]; d = !order[0];
+                    a = !order[0]; b = !order[1]; c = !order[2]; d = !order[3];
                 }else{
-                    a = order[3]; b = order[2]; c = order[1]; d = order[0];
+                    a = order[0]; b = order[1]; c = order[2]; d = order[3];
                 }
             }
             spinClaws(a,b,c,d);
@@ -117,6 +120,62 @@ bool dropBlock(){
     return false;
 }
 
+bool enableCursor(bool enable){
+    int target = enable ? 150 : 90;
+
+    arduino.moveServo(SERVO_NUM_7, 90);
+    arduino.moveServo(SERVO_NUM_6, target);
+
+    int current = 0;
+    if (!arduino.getServo(SERVO_NUM_6, current)) 
+        return false;
+
+    return current == target;
+}
+
+bool flipOneBlock(){
+    static int state = 0;
+    static unsigned long startTime = 0;
+    //servo 7 : 90 = bras haut / 150 = intermédiaire / 180 = bras bas
+    //servo 8 : 170 = ventouse bas,  0 = ventouse haut 
+    switch(state){
+        case 0: //take block
+            if ( arduino.writeSensor(1, true) && moveServoAndWait(SERVO_NUM_7,180,200) && moveServoAndWait(SERVO_NUM_6,175,200)){
+                startTime = _millis();
+                state = 1;
+            }
+            break;
+
+        case 1: //monte bras
+            if (_millis() > startTime + 500){
+                if (moveServoAndWait(SERVO_NUM_6,150,200))
+                    state = 2;
+            }
+            break;
+
+        case 2: // tourne ventouse
+            if (moveServoAndWait(SERVO_NUM_7,0,200))
+                state = 3;
+            break;
+
+        case 3: //baisse bras
+            if (moveServoAndWait(SERVO_NUM_6,180,200)){
+                startTime = _millis();
+                state = 4;
+            }
+            break;
+        case 4: //lacher ventouse
+            if (arduino.writeSensor(1, false) &&  _millis() > startTime + 1000){
+                if (moveServoAndWait(SERVO_NUM_6,80,200) & moveServoAndWait(SERVO_NUM_7,180,200)){
+                    state = 0; 
+                    return true;
+                }
+            }
+            break;
+    }
+
+    return false;
+}
 
 // ------------------------------------------------------
 //                   SERVO CONTROL
@@ -135,7 +194,7 @@ bool snapClaws(bool closed){
 
 bool snapClaws(bool closed, bool small){
     static int prevTarget = -1;
-    int target = closed ? 15 : (small ? 45 : 130);
+    int target = closed ? 10 : (small ? 45 : 130);
     if (prevTarget != target){
         arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 150);
         prevTarget = target;
@@ -195,6 +254,22 @@ bool spinClaws(bool spin1, bool spin2, bool spin3, bool spin4){
     return (done1 && done2 && done3 && done4);
 }
 
+bool moveServoAndWait(int servo, int target, int speed){
+    static int prevServo = -1;
+    static int prevTarget = -1;
+
+    if (servo != prevServo || target != prevTarget){
+        arduino.moveServoSpeed(servo, target, speed);
+        prevServo = servo;
+        prevTarget = target;
+    }
+
+    int s;
+    if (!arduino.getServo(servo, s)) return false;
+
+    return s == target;
+}
+
 // ------------------------------------------------------
 //                   STEPPER CONTROL
 // ------------------------------------------------------
@@ -233,6 +308,7 @@ bool moveColumnsElevator(int level){
 
 // Returns true if actuators are home
 bool homeActuators(){
+    arduino.moveServo(SERVO_NUM_6, 90);
     return ( resetSpinClaws() & openClaws());
 }
 void enableActuators(){
@@ -262,6 +338,7 @@ bool returnToHome(){
     homePos.x = (time < 98000) ? -200 : -600;
     homePos.y = (tableStatus.colorTeam == BLUE) ? 1200 : -1200;
     homePos.a = 180;
+    raiseClaws();
     nav_return_t res = navigationGoTo(homePos, true);
     return res == NAV_DONE && isRobotInArrivalZone(drive.position);
 }

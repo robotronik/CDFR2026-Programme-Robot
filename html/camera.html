@@ -137,7 +137,7 @@
 
         async function fetchPosition() {
             try {
-                const data = await getJson("/position");
+                const data = await getJson_robot("/position");
                 positionOutput.textContent = jsonPretty(data);
                 setStatus("Position fetched", "success");
             } catch (error) {
@@ -148,7 +148,7 @@
 
         async function fetchObjects() {
             try {
-                const data = await getJson("/objects");
+                const data = await getJson_robot("/get_blockPosition");
                 objectsOutput.textContent = jsonPretty(data);
                 setStatus("Objects fetched", "success");
             } catch (error) {

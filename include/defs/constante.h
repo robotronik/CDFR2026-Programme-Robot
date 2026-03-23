@@ -43,7 +43,7 @@
 #define OFFSET_STOCK 300 // Offset to be in the middle of the stock, could be changed if we want to take the stock from the top or the bottom
 #define STOCK_COUNT  8
 #define DROPZONE_COUNT 10
-#define OFFSET_DROPZONE 220 // Offset to be in the middle of the dropzone, could be tweaked
+#define OFFSET_DROPZONE 250 // Offset to be in the middle of the dropzone, could be tweaked
 #define CALIBRATION_DEPLETION_TIME 2 // Max time between to calibration
 // Define the dimensions of the stocks
 #define STOCKS_WIDTH 200
@@ -65,10 +65,10 @@ const position_t STOCK_POSITIONS_TABLE[] = {
 // The stock table is ordered following symetry of the table, could be ordered by proximity
 
 const position_t STOCK_OFFSETS[] = {
-    { 0, OFFSET_STOCK, -90},  //0 : Offset depuis droite
-    {0, - OFFSET_STOCK, 90},  //1 : Offset depuis gauche
-    { OFFSET_STOCK,0, 180 },  //2 : Offset depuis bas
-    { - OFFSET_STOCK,0, 0},  //3 : Offset depuis haut
+    { 12, OFFSET_STOCK, -90},  //0 : Offset depuis droite
+    {-12, - OFFSET_STOCK, 90},  //1 : Offset depuis gauche
+    { OFFSET_STOCK, -12, 180 },  //2 : Offset depuis bas
+    { - OFFSET_STOCK,12, 0},  //3 : Offset depuis haut
 }; 
 
 const int STOCK_OFFSET_MAPPING[STOCK_COUNT][2] = {
@@ -108,3 +108,15 @@ const position_t ARUCO_POSITIONS_TABLE[] = {
     position_t{.x = -400, .y = 900, .a = 0}, \
     position_t{.x = 400, .y = -900, .a = 0}, \
     position_t{.x = 400, .y = 900, .a = 0}};
+
+// Tableau de positions pour la calibration, orientation vers le code le plus proche
+// Valeurs uniquement pour le cote bleu
+const position_t ARUCO_CALIB_POSITIONS[] = {
+    position_t{.x = -125, .y = 350, .a = 0}, \
+    position_t{.x = -125, .y = 775, .a = 0}, \
+    position_t{.x = -125, .y = 1050, .a = 0}, \
+    position_t{.x = 150, .y = 1050, .a = 0}, \
+    position_t{.x = 550, .y = 650, .a = 0}, \
+    position_t{.x = 550, .y = 300, .a = 0}};
+    
+const int ARUCO_CALIB_POSITIONS_COUNT = sizeof(ARUCO_CALIB_POSITIONS) / sizeof(position_t);
