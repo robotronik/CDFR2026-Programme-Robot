@@ -16,7 +16,7 @@ ActionFSM::ActionFSM(){
 ActionFSM::~ActionFSM(){}
 
 void ActionFSM::Reset(){
-    runState = FSM_ACTION_CALIBRATION;
+    runState = FSM_ACTION_GATHER;
 
     /****** RESET OF FSM STATES *******/
     gatherStockState = FSM_GATHER_NAV;
