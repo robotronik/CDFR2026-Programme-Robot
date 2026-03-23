@@ -70,7 +70,7 @@ class ActionFSM{
         
         /************ FSM STEAL **************/
 
-        StateGatherStock_t stealStockState = FSM_GATHER_DETECT;
+        StateGatherStock_t stealStockState = FSM_GATHER_NAV;
 
         /************  FSM DROP ************/
         typedef enum

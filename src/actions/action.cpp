@@ -20,7 +20,7 @@ void ActionFSM::Reset(){
 
     /****** RESET OF FSM STATES *******/
     gatherStockState = FSM_GATHER_NAV;
-    stealStockState = FSM_GATHER_DETECT;
+    stealStockState = FSM_GATHER_NAV;
     dropStockState = FSM_DROP_NONE;
     CursorState = CURSOR_RAISE_CLAW;
     calibrationCameraState = FSM_ARUCO_1;
@@ -64,8 +64,7 @@ bool ActionFSM::RunFSM(){
         ret = StealStock();
         if (ret == FSM_RETURN_DONE){
             LOG_INFO("FSM_ACTION_STEAL: Finished stealing");
-            return true;
-            //SetBestAction(drive.position);
+            SetBestAction(drive.position);
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("FSM_ACTION_STEAL: Couldn't steal");
@@ -277,7 +276,7 @@ ReturnFSM_t ActionFSM::StealStock(){
     if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV){
         //LOG_DEBUG("Getting next stock to take");
         if (!getBestStealZonePosition(drive.position, dropzone_num, dropzonePos)){
-            LOG_ERROR("ACTION_STEAL: No more dropZone to steal, exiting GatherStock");//Should never be catch
+            LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
             dropzone_num = -1;
             stealStockState = FSM_GATHER_NAV;
             return FSM_RETURN_DONE;
