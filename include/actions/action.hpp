@@ -41,8 +41,8 @@ class ActionFSM{
         position_t targetStockPos;
         bool stockOrder[4];
 
-        double closestStock;
-        double closestSteal;
+        int closestStock;
+        int closestSteal;
         position_t stockPos;
         position_t stockOff;
         
