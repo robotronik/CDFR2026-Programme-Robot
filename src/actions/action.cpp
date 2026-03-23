@@ -33,7 +33,9 @@ void ActionFSM::Reset(){
     targetStockPos = position_t{0,0,0};
     dropzonePos = position_t{0,0,0};
 
-    stockOrder[0] = false; stockOrder[1]=false; stockOrder[2]=false; stockOrder[3]=false;
+    for(size_t _ = 0; _<4 ; _++){
+        stockOrder[_] = (tableStatus.colorTeam == YELLOW) ? false : true;
+    }
     
     // TODO reset other states (num,offset, etc.)
 }
@@ -174,7 +176,6 @@ ReturnFSM_t ActionFSM::TakeStock(){
     position_t stockOff = STOCK_OFFSETS[offset];
 
     double angle = RAD_TO_DEG*  position_angle(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a} , stockPos);
-    double mult_off = 0.69; // avance de 1 - mult_off, 
 
     switch (gatherStockState){
         case FSM_GATHER_NAV:
@@ -201,17 +202,24 @@ ReturnFSM_t ActionFSM::TakeStock(){
             double x = drive.position.x;
             double y = drive.position.y;
             double a = drive.position.a;
-            bool sucess = false;
+            int sucess = -1;
 
             if(arucoCam1.getObjectInfoColors(stockOrder,x,y,a,sucess)){
-                if(sucess){
+                if(!sucess){
                     //LOG_GREEN_INFO("pos aruco = ", x ," / ", y," / ",  a);
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Detection sucess calibration on blocks");
-                    targetStockPos = position_t{x + int(stockOff.x * mult_off), y + int(stockOff.y * mult_off), angle};
+                    targetStockPos = position_t{x, y, a};
+                }else if(sucess == 1){
+                    LOG_WARNING("FSM_GATHER_DETECT: Drop Zone is empty");
+                    gatherStockState = FSM_GATHER_NAV;
+                    tableStatus.setStockAsRemoved(stock_num);
+                    stock_num = -1;
+                    return FSM_RETURN_DONE;
                 }else{
-                    //TODO handle error
-                    LOG_WARNING("FSM_GATHER_DETECT: Detection failed calibration on map");
-                    targetStockPos = position_t{stockPos.x + int(stockOff.x * mult_off), stockPos.y + int(stockOff.y * mult_off), angle};
+                    LOG_ERROR("FSM_GATHER_DETECT: Camera Error don't know what to do");
+                    gatherStockState = FSM_GATHER_NAV;
+                    stock_num = -1;
+                    return FSM_RETURN_ERROR;
                 }
                 gatherStockState = FSM_GATHER_CLAWS;
             }
@@ -256,12 +264,6 @@ ReturnFSM_t ActionFSM::TakeIsolatedStock(){
     static position_t targetPos_; 
     switch (gatherIsolatedStockState)
     {   
-        case FSM_GATHER_CLAWS:
-            return FSM_RETURN_ERROR;
-        case FSM_GATHER_MOVE:
-            return FSM_RETURN_ERROR;
-        case FSM_GATHER_COLLECT:
-            return FSM_RETURN_ERROR;
         case FSM_GATHER_COLLECTED:
             return FSM_RETURN_ERROR;
 
@@ -273,7 +275,7 @@ ReturnFSM_t ActionFSM::TakeIsolatedStock(){
             bool sucess = false;
             if(arucoCam1.getBestIsolatedObject(x,y,a,sucess)){
                 if(sucess){
-                    targetPos_ = position_t{x,y,a};
+                    targetPos_ = getBestIsolatedPosition(position_t{x,y,a}, drive.position);
                     gatherIsolatedStockState = FSM_GATHER_NAV;
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found an isolated object");
                 }else{
@@ -284,13 +286,25 @@ ReturnFSM_t ActionFSM::TakeIsolatedStock(){
             break;
         }
         case FSM_GATHER_NAV:
-            nav_ret = navigationGoTo(targetPos_, true); // Enabeling A*
+            nav_ret = navigationGoTo(targetPos_, true);
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to stock at postition (",targetPos_.x,", ",targetPos_.y, ")");
-                gatherIsolatedStockState = FSM_GATHER_DETECT;
-                return FSM_RETURN_DONE;
+                gatherIsolatedStockState = FSM_GATHER_COLLECT;
+                break;
             }
             break;
+        case FSM_GATHER_COLLECT:
+            //TODO add utilisation de la ventouse
+            gatherIsolatedStockState = FSM_GATHER_MOVE;
+            break;
+        case FSM_GATHER_MOVE:
+            //TODO add virer les blocks restant dans la zone
+            gatherIsolatedStockState = FSM_GATHER_CLAWS;
+            break;
+        case FSM_GATHER_CLAWS:
+            //TODO add drop du bon block
+            gatherIsolatedStockState = FSM_GATHER_DETECT;
+            return FSM_RETURN_DONE;
     }
     return FSM_RETURN_WORKING;
 }

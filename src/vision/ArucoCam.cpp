@@ -120,8 +120,8 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     return true;
 }
 
-bool ArucoCam::getObjectData(json& objects, bool& sucess){
-    sucess = false;
+bool ArucoCam::getObjectData(json& objects, int& sucess){
+    sucess = -1;
     if (id < 0) {
         // TODO change this to return a random position
         return true;
@@ -145,98 +145,62 @@ bool ArucoCam::getObjectData(json& objects, bool& sucess){
         LOG_ERROR("ArucoCam::getObjectData() - response is null, camera might not be running");
         return true;
     }
-    sucess = true;
+    sucess = 0;
     objects = response;
     return true;
 }
 
-
-typedef struct {
-    double x;
-    double y;
-    double a;
-    bool color; //true for Blue false for Yellow
-}block_t;
-
 bool sortBlockT(const block_t& a, const block_t& b){ return a.y < b.y;}
 
-//return the order of the color in the stock in binary form
-// 0110 meaning Yellow Blue Blue Yellow
-bool ArucoCam::getObjectColor(bool* order, bool& success){
-    json data;
-    bool data_success;
-    success = false;
-    if(getObjectData(data, data_success)){
-        if(!data_success){
-            success = false;
-            return true;
-        }
-    }else{
-        return false;
-    }
-    return ToObjectColor(data, order, success);
-
-}
-
-bool ArucoCam::ToObjectColor(json& data, bool* order, bool& success){
-    int count = 0;
-    if (!data.contains("objects") || data["objects"].is_null() || !data["objects"].is_object()) {
-        LOG_ERROR("ArucoCam::ToObjectColor() - invalid or missing 'objects'");
-        success = false;
+bool ArucoCam::ToObjectColor(bool* order, int& success){
+    // Edge case management
+    if(alignBlocks.empty()){
+        success = 1;
+        LOG_ERROR("No objects but still searching for colors. Should not execute");
+        return true;
+    }else if (alignBlocks.size()>4)
+    {
+        success = -1;
+        LOG_ERROR("To many objects found Error. Should not execute");
         return true;
     }
-    auto& objects = data["objects"];
-    std::vector<block_t> possible;
-    for (auto& [key, list] : objects.items()) {
-        for (auto& obj : list) {
-            
-            // On convertit vers le repère robot 
-            double a_tag_rad = obj.value("a",0.0) * M_PI / 180.0;
-            double sin_tag = sin(a_tag_rad);
-            double cos_tag = cos(a_tag_rad);
-            double x_tmp = obj.value("x", 0.0);
-            double y_tmp = obj.value("y", 0.0);
-            //m_x += x_tmp* cos_tag - y_tmp * sin_tag;
-            possible.push_back(block_t{
-                .y= x_tmp* sin_tag + y_tmp*cos_tag, 
-                .color = (obj.value("label", "") == "Blue")? true : false
-            }); 
-            count++;
-        }
+    
+    //proper color detection
+    size_t start = 0;
+    if(alignBlocks.size()<=2){
+        start = 1;
     }
-
-    if(possible.empty()){
-        success = false;
-        LOG_ERROR("No object found Error stopping cam");
-        return true;
-    }
-
-    std::sort(possible.begin(), possible.end(), sortBlockT);
-    for(size_t i = 0 ; i< (size_t)4; i++){  
-        order[i] = possible[i].color;
-        if(possible[i].color){
-            LOG_DEBUG("Blue");
+    for(size_t i =  0; i< alignBlocks.size() + start; i++){  
+        order[start + i ] = alignBlocks[i].color;
+        if(alignBlocks[i].color){
+            LOG_EXTENDED_DEBUG("Blue");
         }else{
-            LOG_DEBUG("Yellow");
+            LOG_EXTENDED_DEBUG("Yellow");
         }
     }
-    success = true;
+    success = 0;
     return true;
 }
 
 // Returns the position of the average position of the aruco tags detected on the table
 // Returns true when done
-bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool& success) {
-    
+bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& success) {
+
     if (!data.contains("objects") || data["objects"].is_null() || !data["objects"].is_object()) {
         LOG_ERROR("ArucoCam::ToObjectPos() - invalid or missing 'objects'");
-        success = false;
+        success = -1;
         return true;
+    }else{
+        success = 1; // l'erreur n'est plus une erreur de caméra
     }
 
     int count = 0;
     auto& objects = data["objects"];
     std::vector<block_t> visibleBlocks;
+    alignBlocks.clear();
+    double tmp_x = 0;
+    double tmp_y = 0;
+    double tmp_a = 0;
 
     for (auto& [key, list] : objects.items()) {
         for (auto& obj : list) {
@@ -247,7 +211,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
             double cos_tag = cos(a_tag_rad);
             double x_tmp = obj.value("x", 0.0);
             double y_tmp = obj.value("y", 0.0);
-            LOG_EXTENDED_DEBUG("Coord du tag dans le repère du robot ( ", -1*(x_tmp* cos_tag - y_tmp * sin_tag),", ",-1*(x_tmp* sin_tag + y_tmp*cos_tag), ")");
+            LOG_EXTENDED_DEBUG("Coord du tag dans le repère du robot ( ", -1*(x_tmp* cos_tag - y_tmp * sin_tag),", ",-1*(x_tmp* sin_tag + y_tmp*cos_tag),", ", -1 * obj.value("a",0.0), ")");
             visibleBlocks.push_back(block_t{
                 .x = -1*(x_tmp* cos_tag - y_tmp * sin_tag),
                 .y = -1*(x_tmp* sin_tag + y_tmp*cos_tag),
@@ -257,63 +221,75 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, bool&
             count++;
         }
     }
-
+    LOG_EXTENDED_DEBUG("Found ", count, " blocks for cam ", id);
     if(!count){
         LOG_ERROR("No object found Error stopping cam");
-        success = false;
+        success = 1;
         return true;
-    }else if (count == 4){
-        double m_x = 0, m_y = 0;
-
-        for(size_t i = 0 ; i< (size_t)4; i++){  
-            m_x += visibleBlocks[i].x;
-            m_y += visibleBlocks[i].y;
-        }   
-        m_x = m_x / count;
-        m_y = m_y / count;
-        
-        // Décalage pour le centre du robot
-        m_x += OFFSET_CAM_X;
-        m_y += OFFSET_CAM_Y;
-
-        //projection dans le repère de la table:
-        double a_rad = (a) * M_PI / 180.0;
-        double cos_a = cos(a_rad);
-        double sin_a = sin(a_rad);
-        x += m_x * cos_a - m_y * sin_a;
-        y += m_x * sin_a + m_y * cos_a;
-        success = true;
-        LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+    }else if (count == 1){
+        tmp_x = visibleBlocks[0].x;
+        tmp_y = visibleBlocks[0].y;
+        tmp_a = visibleBlocks[0].a;
+        alignBlocks.push_back(visibleBlocks[0]);
+        success = 0;
+        LOG_GREEN_INFO("Single Tag detection ", id, " position: { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
         // Return true if the values were successfully extracted
-        return true;
-    }else{
-        LOG_ERROR("Situation with more or less than 4 blocks not yet implemented");
-        //TODO
-        double m_x = 0, m_y = 0;
-
-        for(size_t i = 0 ; i< (size_t)count; i++){  
-            m_x += visibleBlocks[i].x;
-            m_y += visibleBlocks[i].y;
-        }   
-        m_x = m_x / count;
-        m_y = m_y / count;
-        
-        // Décalage pour le centre du robot
-        m_x += OFFSET_CAM_X;
-        m_y += OFFSET_CAM_Y;
-
-
-        //projection dans le repère de la table:
-        double a_rad = (a) * M_PI / 180.0;
-        double cos_a = cos(a_rad);
-        double sin_a = sin(a_rad);
-        x += m_x * cos_a - m_y * sin_a;
-        y += m_x * sin_a + m_y * cos_a;
-        success = true;
-        LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
-        // Return true if the values were successfully extracted
-        return true;
     }
+    else{
+        success = 1;
+        for(size_t max_block = MIN(4,count); max_block > 1; max_block -- ){
+            if(findGroupRANSAC2D(visibleBlocks,alignBlocks, max_block)){
+
+                if(max_block !=2){
+                    tmp_x = alignBlocks[1].x;
+                    tmp_y = alignBlocks[1].y;
+                    tmp_a = alignBlocks[1].a;
+                }else{
+                    tmp_x = alignBlocks[0].x;
+                    tmp_y = alignBlocks[0].y;
+                    tmp_a = alignBlocks[0].a;
+                }
+                success = 0;
+                break;
+            }else{
+                LOG_WARNING("Ransac: Pas de solution à ", max_block);
+            }
+        }
+        if(success){
+            tmp_x = visibleBlocks[0].x;
+            tmp_y = visibleBlocks[0].y;
+            tmp_a = visibleBlocks[0].a;
+            alignBlocks.push_back(visibleBlocks[0]);
+            success = 0;
+            LOG_GREEN_INFO("Going for single tag ", id, " position: { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
+        }
+    }
+    
+    if(success){
+        LOG_ERROR("ArucoCam::getObjectPos() - No object position found");
+    }else{
+        //Traitement pour passer dans les coordonnées de la table
+        float mult_param = 0.68;
+        // Décalage pour le centre du robot
+        tmp_a = (tmp_a > 0) ? tmp_a - 90 : tmp_a + 90;
+        double rad_tmp_a = tmp_a * M_PI / 180.0;
+        //LOG_EXTENDED_DEBUG("Position avant correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
+        //LOG_EXTENDED_DEBUG("Décalage appliqué : { sin = ", OFFSET_STOCK * mult_param * sin(rad_tmp_a), ", cos = ", OFFSET_STOCK * mult_param * cos(rad_tmp_a), " }");
+        tmp_x += OFFSET_CAM_X - OFFSET_STOCK * mult_param * cos(rad_tmp_a);
+        tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y - OFFSET_STOCK * mult_param * sin(rad_tmp_a);
+        //LOG_EXTENDED_DEBUG("Position après correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
+
+
+        //projection dans le repère de la table:
+        double a_rad = (a) * M_PI / 180.0;
+        double cos_a = cos(a_rad);
+        double sin_a = sin(a_rad);
+        x += tmp_x * cos_a - tmp_y * sin_a;
+        y += tmp_x * sin_a + tmp_y * cos_a;
+        a += tmp_a;
+        LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+    }
+    return true;
 }
 
 /*
@@ -365,10 +341,10 @@ bool ArucoCam::ToIsolatedObject(json& data, double & x, double & y, double & a, 
 
 bool ArucoCam::getBestIsolatedObject(double & x, double & y, double & a, bool& success){
     json data;
-    bool data_success;
+    int data_success;
     success = false;
     if(getObjectData(data, data_success)){
-        if(!data_success){
+        if(data_success){
             success = false;
             return true;
         }
@@ -393,27 +369,26 @@ json ArucoCam::getBestIsolatedObject_json(){
         {"a", a}};
 }
 
-bool ArucoCam::getObjectPos(double & x, double & y, double & a, bool& success){
+bool ArucoCam::getObjectPos(double & x, double & y, double & a, int& success){
     json data;
-    bool data_success;
-    success = false;
+    int data_success;
     if(getObjectData(data, data_success)){
         if(!data_success){
-            success = false;
+            success = -1;
             return true;
         }
     }else{
         return false;
     }
-
-    return ToObjectPos(data, x, y, a, success);
+    ToObjectPos(data, x, y, a, success);    
+    return true;
 }
 
 json ArucoCam::getObjectPosition_json(){
     double x = 0;
     double y = 0;
     double a = 0;
-    bool sucess = false;
+    int sucess = -1;
     while(!getObjectPos(x,y,a,sucess)){
         continue;
     }
@@ -437,13 +412,12 @@ json ArucoCam::getRobotPosition_json(){
         {"a", a}};
 }
 
-bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double & a, bool& success){
+bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double & a, int& success){
     json data;
-    bool data_success;
-    success = false;
+    int data_success;
     if(getObjectData(data, data_success)){
-        if(!data_success){
-            success = false;
+        if(data_success){
+            success = -1;
             return true;
         }
     }else{
@@ -451,8 +425,8 @@ bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double &
     }
 
     if(ToObjectPos(data, x, y, a, success)){// Can not return False so first If is useless
-        if(success){
-            if(ToObjectColor(data,order, success)){ // Can not return false either
+        if(!success){
+            if(ToObjectColor(order, success)){ // Can not return false either
                 return true; // exec finished 
             }else return false; // exec unfinished
         }else return true; // exec finished on fail
