@@ -109,7 +109,8 @@ int main(int argc, char *argv[])
         }
         //****************************************************************
         case WAITSTART:
-        {
+        {   
+            static nav_return_t nav_ret;
             if (initState){
                 LOG_GREEN_INFO("WAITSTART");  
                 enableActuators();
@@ -124,18 +125,24 @@ int main(int argc, char *argv[])
 
                 if (tableStatus.colorTeam == NONE)
                     arduino.RGB_Blinking(255, 0, 0); // Red Blinking
+                nav_ret = NAV_IN_PROCESS;
+                tableStatus.calibrationAge = -1;
             }
 
             // colorTeam_t color = readColorSensorSwitch();
             // switchTeamSide(color);
 
-            if (readLimitSwitchTop() and motorUpFirst){ // Why TF is there an "and" 
+            if (readLimitSwitchTop() && motorUpFirst){ // Why TF is there an "and" 
                 arduino.moveMotorDC(20,false);
                 motorUpFirst = false;
             }
-            LOG_DEBUG("Calibration age: ", tableStatus.calibrationAge);
-            if(tableStatus.calibrationAge !=0){
+            if (tableStatus.calibrationAge ==-1){
                 navigationGo(); // Calibrate the robot using the camera while waiting for the start signal
+            } else if (nav_ret == NAV_IN_PROCESS){
+                nav_ret = navigationGo();
+            }
+            if(nav_ret == NAV_ERROR){
+                LOG_ERROR("Error while calibrating in WAITSTART");
             }
 
             if (readLatchSensor() && tableStatus.colorTeam != NONE)
