@@ -205,9 +205,9 @@ int getBestStockPositionOff(int stockNum, position_t fromPos){
 }
 
 position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos){
-    if (dropzoneNum == 7 || dropzoneNum == 4 || dropzoneNum == 2 ){// deactivated for now
+    if (dropzoneNum == 7 || dropzoneNum == 4 || dropzoneNum == 2 ){
         position_t bestPoss = DROPZONE_POSITIONS_TABLE[dropzoneNum];
-        /*
+        /*deactivated for now
         position_t vect = position_vector(dropzonePos, fromPos);
         position_normalize(vect);
         position_t bestPoss = position_t{dropzonePos.x + int(vect.x * OFFSET_DROPZONE), dropzonePos.y + int(vect.y * OFFSET_DROPZONE), RAD_TO_DEG * position_angle(fromPos, dropzonePos)};
@@ -233,6 +233,26 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos){
         return bestPoss;
     }
     
+}
+
+/*
+    Determine the best drop zone from wich to steal
+    For now very simple 
+    TODO: developped with adversary position
+*/
+position_t getBestStealZonePosition(position_t fromPos){
+    double min_distance = INFINITY;
+    position_t best = fromPos;
+    for(int idx = 0; idx < DROPZONE_COUNT; idx++){
+        if(tableStatus.dropzone_states[idx] == (tableStatus.colorTeam == BLUE ? tableStatus.DROPZONE_BLUE : tableStatus.DROPZONE_YELLOW)) continue;
+        position_t tmp_pos = getBestDropZonePosition(idx, fromPos);
+        double tmp = position_distance(tmp_pos, fromPos);
+        if( tmp < min_distance){
+            best = tmp_pos;
+            min_distance = tmp;
+        }
+    }
+    return best;
 }
 
 position_t getBestIsolatedPosition(position_t centerPos, position_t fromPos){
