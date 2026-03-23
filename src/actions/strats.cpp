@@ -60,8 +60,6 @@ bool chooseStockStrategy(int& stockNum, int& stockOffset){
     switch (strategy)
     {   
         case 1:
-            todo_stocks[0] = 0;
-            num = 1;
             break;
         case 2:
             todo_stocks[0] = 7;
