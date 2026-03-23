@@ -205,7 +205,10 @@ int getBestStockPositionOff(int stockNum, position_t fromPos){
     return bestOff;
 }
 
-position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos){
+position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos, bool steal){
+    double dropZoneOffset = OFFSET_DROPZONE;
+    if(steal) dropZoneOffset = OFFSET_STOCK;
+
     if (dropzoneNum == 7 || dropzoneNum == 4 || dropzoneNum == 2 ){
         position_t bestPoss = DROPZONE_POSITIONS_TABLE[dropzoneNum];
         /*deactivated for now
@@ -213,22 +216,22 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos){
         position_normalize(vect);
         position_t bestPoss = position_t{dropzonePos.x + int(vect.x * OFFSET_DROPZONE), dropzonePos.y + int(vect.y * OFFSET_DROPZONE), RAD_TO_DEG * position_angle(fromPos, dropzonePos)};
         */
-        if(position_distance(fromPos, position_sum(bestPoss, position_t{.x = OFFSET_DROPZONE, .y=0}))
-            < position_distance(fromPos, position_sum(bestPoss, position_t{.x = - OFFSET_DROPZONE, .y=0}))){
-                bestPoss = position_sum(bestPoss, position_t{.x = OFFSET_DROPZONE, .y=0});
+        if(position_distance(fromPos, position_sum(bestPoss, position_t{.x = dropZoneOffset, .y=0}))
+            < position_distance(fromPos, position_sum(bestPoss, position_t{.x = -1 * dropZoneOffset, .y=0}))){
+                bestPoss = position_sum(bestPoss, position_t{.x = -1 * dropZoneOffset, .y=0});
                 bestPoss.a = 180;
         }else{
-            bestPoss = position_sum(bestPoss, position_t{.x = -OFFSET_DROPZONE, .y=0});
+            bestPoss = position_sum(bestPoss, position_t{.x = -dropZoneOffset, .y=0});
             bestPoss.a = 0;
         }
         return bestPoss;
     }else{
         position_t bestPoss = DROPZONE_POSITIONS_TABLE[dropzoneNum];
         if(MAX_WIDTH_TABLE - abs(bestPoss.x) < MAX_LENGTH_TABLE - abs(bestPoss.y)){
-            bestPoss.x += (bestPoss.x > 0? -1 : 1 ) * OFFSET_DROPZONE;
+            bestPoss.x += (bestPoss.x > 0? -1 : 1 ) * dropZoneOffset;
             bestPoss.a = (bestPoss.x > 0? 0 : 180);
         }else{
-            bestPoss.y += (bestPoss.y > 0? -1 : 1 ) * OFFSET_DROPZONE;
+            bestPoss.y += (bestPoss.y > 0? -1 : 1 ) * dropZoneOffset;
             bestPoss.a = (bestPoss.y > 0? 90 : -90);
         }
         return bestPoss;
