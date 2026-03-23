@@ -259,14 +259,10 @@ ReturnFSM_t ActionFSM::StealStock(){
     static position_t targetPos_; 
     if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV){
         //LOG_DEBUG("Getting next stock to take");
-        if (!getBestStealZonePosition(drive.position, dropzone_num, dropzonePos)){
-            LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
-            dropzone_num = -1;
-            stealStockState = FSM_GATHER_NAV;
-            return FSM_RETURN_DONE;
-        }
-        LOG_GREEN_INFO("ACTION_STEAL: Next dropZone to steal: ", dropzone_num);
+        LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
+        return FSM_RETURN_ERROR;
     }
+    LOG_GREEN_INFO("ACTION_STEAL: Next dropZone to steal: ", dropzone_num);
 
     switch (stealStockState)
     {   
@@ -548,6 +544,7 @@ void ActionFSM::SetBestAction(position_t position){
             LOG_WARNING("ACTION_GATHER: No more stocks to take");
             stock_num = -1;
             gatherStockState = FSM_GATHER_NAV;
+            closestStock = INFINITY;
         }else{
             stockPos = STOCK_POSITIONS_TABLE[stock_num];
             stockOff = STOCK_OFFSETS[offset];
@@ -555,22 +552,15 @@ void ActionFSM::SetBestAction(position_t position){
     }
 
     /************** CALCUL BEST STEAL *****************/
-    if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV){
+    if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV && tableStatus.dropToStealExist()){
         //LOG_DEBUG("Getting next stock to take");
-        if (!getBestStealZonePosition(drive.position, dropzone_num, dropzonePos)){
+        closestSteal = getBestStealZonePosition(drive.position, dropzone_num, dropzonePos);
+        if (!closestSteal){
             LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
             dropzone_num = -1;
             stealStockState = FSM_GATHER_NAV;
-            return FSM_RETURN_DONE;
+            closestSteal = INFINITY;
         }
-        LOG_GREEN_INFO("ACTION_STEAL: Next dropZone to steal: ", dropzone_num);
-    }
-
-    /*********************** CONDITION POUR VOLER UN STOCK ****************************/
-    if(stock_num == -1 && tableStatus.dropToStealExist()){
-        LOG_GREEN_INFO("Going for steal action");
-        runState = FSM_ACTION_STEAL;
-        return;
     }
 
     /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
@@ -588,11 +578,19 @@ void ActionFSM::SetBestAction(position_t position){
         return;
     }
 
-    /*****************CONDITIONS POUR RECUPERER UN STOCK **********************************/
-    if(tableStatus.remainingStocksExist() && stock_num == -1){// On ne se base plus sur l'état précédent mais sur la possibilité de réaliser l'action
-        runState = FSM_ACTION_GATHER;
-        LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
-        return;
+    if(closestSteal == INFINITY && closestStock == INFINITY){
+        LOG_ERROR("Nothing else to do waiting");
+    }else{
+        /*********************** CONDITION POUR VOLER UN STOCK OU TAKE STOCK ****************************/
+        if(closestSteal < closestStock){
+            LOG_GREEN_INFO("Going for steal action");
+            runState = FSM_ACTION_STEAL;
+            return;
+        }else{
+            runState = FSM_ACTION_GATHER;
+            LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
+            return;
+        }
     }
 
 }
