@@ -133,7 +133,10 @@ int main(int argc, char *argv[])
                 arduino.moveMotorDC(20,false);
                 motorUpFirst = false;
             }
-            navigationGo(); // Calibrate the robot using the camera while waiting for the start signal
+            LOG_DEBUG("Calibration age: ", tableStatus.calibrationAge);
+            if(tableStatus.calibrationAge !=0){
+                navigationGo(); // Calibrate the robot using the camera while waiting for the start signal
+            }
 
             if (readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = RUN;
