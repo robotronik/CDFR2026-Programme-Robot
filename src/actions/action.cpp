@@ -332,8 +332,8 @@ ReturnFSM_t ActionFSM::StealStock(){
         }
         case FSM_GATHER_CLAWS:
             if (lowerClaws()){
-                LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for stock ", stock_num);
-                gatherStockState = FSM_GATHER_MOVE;
+                LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for dropZone ", dropzone_num);
+                stealStockState = FSM_GATHER_MOVE;
                 //drive.is_slow_mode = true;
             }
             break;
