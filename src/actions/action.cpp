@@ -548,6 +548,21 @@ void ActionFSM::SetBestAction(position_t position){
         return;
     }
 
+    /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
+    if((false && !tableStatus.cursorIsDone()) && (position_distance(position, tableStatus.CursorPos) < 300 || stock_num == (tableStatus.colorTeam == YELLOW ? 5 : 1))){ // If we are close to the cursor position or if we are at stock 
+        LOG_GREEN_INFO("Going for cursor action");
+        runState = FSM_ACTION_CURSOR;
+        return;
+    }
+
+    /**************************** CONDITIONS POUR DROP UN STOCK ***************************************/
+    if(tableStatus.remainingDropExist() && stock_num != -1){ // On peut DROP à partir du moment où on a un stock et qu'il reste des drop zones
+        runState = FSM_ACTION_DROP;
+        tableStatus.calibrationAge += 1;
+        LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to drop a stock, going to FSM_ACTION_DROP");
+        return;
+    }
+
     /********** CALCUL BEST STOCK ************/
     if (stock_num == -1 && gatherStockState == FSM_GATHER_NAV){
         //LOG_DEBUG("Getting next stock to take");
@@ -575,21 +590,6 @@ void ActionFSM::SetBestAction(position_t position){
         }
     }
 
-    /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
-    if((false && !tableStatus.cursorIsDone()) && (position_distance(position, tableStatus.CursorPos) < 300 || stock_num == (tableStatus.colorTeam == YELLOW ? 5 : 1))){ // If we are close to the cursor position or if we are at stock 
-        LOG_GREEN_INFO("Going for cursor action");
-        runState = FSM_ACTION_CURSOR;
-        return;
-    }
-
-    /**************************** CONDITIONS POUR DROP UN STOCK ***************************************/
-    if(tableStatus.remainingDropExist() && stock_num != -1){ // On peut DROP à partir du moment où on a un stock et qu'il reste des drop zones
-        runState = FSM_ACTION_DROP;
-        tableStatus.calibrationAge += 1;
-        LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to drop a stock, going to FSM_ACTION_DROP");
-        return;
-    }
-
     if(closestSteal == std::numeric_limits<int>::max() && closestStock == std::numeric_limits<int>::max()){
         LOG_ERROR("Nothing else to do waiting");
     }else{
@@ -597,9 +597,11 @@ void ActionFSM::SetBestAction(position_t position){
         if(closestSteal < closestStock){
             LOG_GREEN_INFO("Going for steal action");
             runState = FSM_ACTION_STEAL;
+            stock_num = -1;
             return;
         }else{
             runState = FSM_ACTION_GATHER;
+            dropzone_num = -1;
             LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
             return;
         }
