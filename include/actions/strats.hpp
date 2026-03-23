@@ -14,7 +14,7 @@ bool chooseStockStrategy(int& stockNum, int& stockOffset);
 int GetBestDropZone(position_t fromPos);
 int getBestStockPositionOff(int stockNum, position_t fromPos);
 
-position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos);
+position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos, bool steal = false);
 bool getBestStealZonePosition(position_t fromPos, int& bestDropZone, position_t& bestPos);
 
 position_t calculateClosestArucoPosition(position_t currentPos);

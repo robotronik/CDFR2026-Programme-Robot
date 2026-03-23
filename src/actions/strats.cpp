@@ -248,7 +248,7 @@ bool getBestStealZonePosition(position_t fromPos, int& bestDropZone, position_t&
     double min_distance = INFINITY;
     for(int idx = 0; idx < DROPZONE_COUNT; idx++){
         if(tableStatus.dropzone_states[idx] == (tableStatus.colorTeam == BLUE ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE)){
-            position_t tmp_pos = getBestDropZonePosition(idx, fromPos);
+            position_t tmp_pos = getBestDropZonePosition(idx, fromPos, true);
             double tmp = position_distance(tmp_pos, fromPos);
             if( tmp < min_distance){
                 bestPos = tmp_pos;
