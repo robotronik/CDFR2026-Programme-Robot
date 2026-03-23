@@ -260,7 +260,7 @@ int getBestStealZonePosition(position_t fromPos, int& bestDropZone, position_t& 
             position_t tmp_pos = getBestDropZonePosition(idx, fromPos, true);
             position_t path[1024];
             int dist;
-            int tmp = pathfind(fromPos, tmp_pos, path, & dist);
+            if(!pathfind(fromPos, tmp_pos, path, & dist)) continue;
             if( dist < min_distance){
                 bestPos = tmp_pos;
                 min_distance = dist;
