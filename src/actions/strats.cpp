@@ -5,6 +5,7 @@
 #include "navigation/driveControl.h"
 #include <math.h>
 #include "main.hpp" // for tableStatus
+#include "navigation/pathfind.h"
 
 void check(colorTeam_t color, int strategy){
     // Check if the color and strategy are valid
@@ -47,9 +48,19 @@ int chooseNextStock(){
     }
 }
 
-bool chooseStockStrategy(int& stockNum, int& stockOffset){
-    // TODO check if stock is available
-    // Returns true if the robot can take a stock
+int toAStarDist(int& stockNum, int& stockOffset){
+    int lenght;
+    position_t stockPos = STOCK_POSITIONS_TABLE[stockNum];
+    position_t stockOff = STOCK_OFFSETS[stockOffset];
+    double angle = RAD_TO_DEG*  position_angle(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a} , stockPos);
+    position_t target = position_sum(stockPos, stockOff);
+    target.a = angle;
+    position_t path[1024];
+    pathfind(drive.position, target, path, &lenght);
+    return lenght;
+}
+
+int chooseStockStrategy(int& stockNum, int& stockOffset){
     colorTeam_t color = tableStatus.colorTeam;
     int strategy = tableStatus.strategy;
     check(color, strategy);
@@ -87,7 +98,7 @@ bool chooseStockStrategy(int& stockNum, int& stockOffset){
         if (tableStatus.avail_stocks[todo_stocks[i]]){
             stockNum = todo_stocks[i];
             stockOffset = getBestStockPositionOff(stockNum, drive.position);
-            return true;
+            return toAStarDist(stockNum, stockOffset);
         }
         i++;
     }
@@ -95,17 +106,18 @@ bool chooseStockStrategy(int& stockNum, int& stockOffset){
     if (endlessMode){
         stockNum = (stockNum + 1) % STOCK_COUNT; // In endless mode, we take the stocks in order
         stockOffset = getBestStockPositionOff(stockNum, drive.position);
-        return true;
+        
+        return toAStarDist(stockNum, stockOffset);
     }
 
     int nextStock = chooseNextStock(); // Choose the closest stock if the strategy stocks are not available
     if (nextStock != -1){
         stockNum = nextStock;
         stockOffset = getBestStockPositionOff(stockNum, drive.position);
-        return true;
+        return toAStarDist(stockNum, stockOffset);
     }
     //LOG_WARNING("No stock available");
-    return false;
+    return 0;
 }
 
 // Return the closest position to look at an aruco marker
@@ -242,23 +254,25 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos, bool ste
     For now very simple 
     TODO: developped with adversary position
 */
-bool getBestStealZonePosition(position_t fromPos, int& bestDropZone, position_t& bestPos){
-    double min_distance = INFINITY;
+int getBestStealZonePosition(position_t fromPos, int& bestDropZone, position_t& bestPos){
+    int min_distance = INFINITY;
     for(int idx = 0; idx < DROPZONE_COUNT; idx++){
         if(tableStatus.dropzone_states[idx] == (tableStatus.colorTeam == BLUE ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE)){
             position_t tmp_pos = getBestDropZonePosition(idx, fromPos, true);
-            double tmp = position_distance(tmp_pos, fromPos);
-            if( tmp < min_distance){
+            position_t path[1024];
+            int dist;
+            int tmp = pathfind(fromPos, tmp_pos, path, & dist);
+            if( dist < min_distance){
                 bestPos = tmp_pos;
-                min_distance = tmp;
+                min_distance = dist;
                 bestDropZone = idx;
             }
         }
     }
     if(position_equals(fromPos, bestPos)){
-        return false;
+        return 0;
     }
-    return true;
+    return min_distance;
 }
 
 position_t getBestIsolatedPosition(position_t centerPos, position_t fromPos){
@@ -274,3 +288,5 @@ position_t getBestIsolatedPosition(position_t centerPos, position_t fromPos){
     }
     return possTarget2;
 }
+
+
