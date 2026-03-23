@@ -24,7 +24,7 @@ void TableState::reset(){
     CursorPos = {625, 1220, 45};
     if (tableStatus.colorTeam == YELLOW) position_robot_flip(CursorPos);
 
-    calibrationAge = 1;
+    resetCalibrationAge();
     for (int i = 0; i < STOCK_COUNT; i++)
         avail_stocks[i] = true;
 
