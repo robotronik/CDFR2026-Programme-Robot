@@ -230,7 +230,7 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos, bool ste
                 bestPoss = position_sum(bestPoss, position_t{.x = -1 * dropZoneOffset, .y=0});
                 bestPoss.a = 180;
         }else{
-            bestPoss = position_sum(bestPoss, position_t{.x = -dropZoneOffset, .y=0});
+            bestPoss = position_sum(bestPoss, position_t{.x =  -1 * dropZoneOffset, .y=0});
             bestPoss.a = 0;
         }
         return bestPoss;
