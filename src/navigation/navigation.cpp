@@ -57,7 +57,8 @@ nav_return_t navigationGo(){
         bool cam_success;
         position_t robot_pos;
         if (arucoCam1.getRobotPos(robot_pos.x, robot_pos.y, robot_pos.a, cam_success)){
-            if (cam_success){
+            if (cam_success){               
+                LOG_GREEN_INFO("Old position: { x = ", drive.position.x, " y = ", drive.position.y, " a = ", drive.position.a, " }");
                 drive.setCoordinates(robot_pos);
                 tableStatus.resetCalibrationAge();
                 LOG_GREEN_INFO("Camera calibration during move successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
