@@ -15,9 +15,9 @@
 #include "utils/logger.hpp"
 #include "restAPI/restAPI.hpp"
 
+#define TEST_MODE
 #ifndef __CROSS_COMPILE_ARM__
     #define DISABLE_LIDAR
-    #define TEST_API_ONLY
     #define EMULATE_I2C
 #endif
 
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
                 arduino.RGB_Rainbow();
             }
 
-            if (readButtonSensor() && !readLatchSensor() && tableStatus.colorTeam != NONE)
+            if (readButtonSensor() && !readLatchSensor())
                 nextState = WAITSTART;
             break;
         }
@@ -129,6 +129,10 @@ int main(int argc, char *argv[])
                 tableStatus.calibrationAge = -1;
             }
 
+            #ifdef TEST_MODE
+                LOG_GREEN_INFO("Running in Test mode");
+                nextState = TEST;
+            #endif
             // colorTeam_t color = readColorSensorSwitch();
             // switchTeamSide(color);
 
@@ -270,14 +274,8 @@ int StartSequence()
     api_server_thread = std::thread([&]()
                                     { StartAPIServer(); });
 
-#ifdef TEST_API_ONLY
-    LOG_GREEN_INFO("Running in API test mode only");
-    currentState = TEST;
-    nextState = TEST;
-#else
     currentState = INIT;
     nextState = INIT;
-#endif // TEST_API_ONLY
 
     initState = true;
     manual_ctrl = false;
@@ -356,27 +354,12 @@ void EndSequence()
 
 void tests()
 {
-    TestAPIServer();
-    pathfind_setup();
-    
-    while(!exit_requested){
-        usleep(500000); 
+    static bool state = false;
+    position_t pos1 = {0.0, 0.0, 0.0};
+    pos1.y = state ? 900 : -900.0;
+    nav_return_t ret navigationGoTo(pos1, false, true);
+    if (ret == NAV_DONE)
+        state = !state;
 
-        //position depart et arrivé aléatoire
-        position_t target, start;
-        target.x = rand() % (600) - 600 / 2;
-        target.y = rand() % (600) - 600 / 2;
-
-        start.x = rand() % (1400) - 1400 / 2;
-        start.y = rand() % (1400) - 1400 / 2;
-        start.a = rand() % 360;
-        drive.setCoordinates(start);
-        
-        navigationGoTo(target, true);
-    }
-    StopAPIServer();
-    api_server_thread.join();
-
-    LOG_GREEN_INFO("Tests finished");
-    nextState = FIN;    
+    //New Scalar = Current Scalar * (Actual Distance / Reported Distance)
 }

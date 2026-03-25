@@ -34,7 +34,7 @@ enum class LogLevel {
 };
 
 // Only messages with a level equal to or above CURRENT_LOG_LEVEL will be printed.
-constexpr LogLevel CURRENT_LOG_LEVEL = LogLevel::EXTENDED_DEBUG;
+constexpr LogLevel CURRENT_LOG_LEVEL = LogLevel::INFO;
 
 // Base logger write function (already formatted message).
 void log_main(std::optional<Color> color, const std::string& message);
