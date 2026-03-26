@@ -6,8 +6,10 @@
 #include "navigation/pathfind.h"
 
 
-static bool is_robot_stalled = false;
+static bool is_robot_stalled = false;  // Because of opponent in direction of movement
+static bool is_robot_stuck = false;  // Because of no path found
 static unsigned long robot_stall_start_time;
+static unsigned long robot_stuck_start_time;
 
 static position_t current_pos_target;
 static bool current_use_astar;
@@ -26,9 +28,10 @@ nav_return_t navigationDrive(){
         //LOG_GREEN_INFO("Path length: ", len);
         if (currentPathLength <= 0){
             LOG_ERROR("No path found");
-            if (!is_robot_stalled){
-                is_robot_stalled = true;
-                robot_stall_start_time = _millis();
+            if (!is_robot_stuck){
+                is_robot_stuck = true;
+                robot_stuck_start_time = _millis();
+                drive.setBrakeState(true);
             }
             return NAV_IN_PROCESS;
         }
@@ -39,6 +42,12 @@ nav_return_t navigationDrive(){
     else{
         currentPathLength = 1;
         currentPath[0] = current_pos_target;
+    }
+    if (is_robot_stuck){
+        // Robot is now unstuck
+        is_robot_stuck = false;
+        if (!is_robot_stalled)
+            drive.setBrakeState(false);
     }
     bool done = drive.drive(currentPath, currentPathLength, current_slow_mode);
     if (done) return NAV_DONE;
