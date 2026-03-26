@@ -40,6 +40,9 @@ nav_return_t navigationDrive(){
     }
     bool done = drive.drive(currentPath, currentPathLength, current_slow_mode);
     if (done) return NAV_DONE;
+    navigationOpponentDetection(); // Check if its safe
+    if (is_robot_stalled && _millis() > robot_stall_start_time + 5000)
+        return NAV_ERROR; // We are stuck for too long
     return NAV_IN_PROCESS;
 }
 
@@ -95,21 +98,17 @@ void navigation_path_json(json& j){
 }
 
 void navigationOpponentDetection(){
-
-    return; // Disabled for now
-
     bool isEndangered = false;
-
-    if (true /* TODO dir != Direction::NONE */){
+    position_t t = drive.target;
+    position_t s = drive.position;
+    position_t g = current_pos_target;
+    if (position_distance(t, g) > 50){
         // Using the braking distance to calculate a point in front of the robot andh checking if the opponent is in the way
         double brakingDistance = 500;
-        /*
-        if (dir == Direction::BACKWARD){
-            brakingDistance = -brakingDistance;
-        }
-            */
+        // Angle at which we are going relative to the robot front
+        double angle = atan2(t.y, t.x) * RAD_TO_DEG - s.a;
         // Check if the opponent is in the way
-        isEndangered = opponent_collide_lidar(lidar.data, lidar.count, 300, brakingDistance, OPPONENT_ROBOT_RADIUS);
+        isEndangered = opponent_collide_lidar(lidar.data, lidar.count, 300, brakingDistance, OPPONENT_ROBOT_RADIUS, angle);
         if (isEndangered)
             LOG_WARNING("Opponent is in the way");
         else
@@ -120,9 +119,11 @@ void navigationOpponentDetection(){
         LOG_GREEN_INFO("Opponent is in the way, stopping the robot");
         is_robot_stalled = true;
         robot_stall_start_time = _millis();
+        drive.set_brake_state(true);
     }
     else if (!isEndangered && is_robot_stalled){
         LOG_GREEN_INFO("Opponent is no longer in the way, resuming the robot");
         is_robot_stalled = false;
+        drive.set_brake_state(false);
     }
 }

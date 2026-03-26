@@ -304,9 +304,6 @@ void GetLidar()
         convertAngularToAxialCompensated(lidar.data, lidar.count, prev_pos, prev_vel, time_s, 200);
         pathfind_fill_lidar();
         
-        if (currentState == RUN || currentState == MANUAL)
-            navigationOpponentDetection();
-        
         position_t pos_opponent;
         if (position_opponentV2(lidar.data, lidar.count, drive.position, pos_opponent)){
             // If it's the first reading, initialize the filtered position
