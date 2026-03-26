@@ -248,8 +248,8 @@ bool opponent_collide_lidar(lidarAnalize_t* data, int count, int width, int dept
         if (!data[i].onTable) continue;
         // Check if the circle made by the lidar point and radius margin
         // overlaps with the rectangle made by width and depth
-        int x = data[i].dist * cos((data[i].angle - angle) * DEG_TO_RAD); // front
-        int y = -data[i].dist * sin((data[i].angle - angle) * DEG_TO_RAD); // sides
+        double x = data[i].dist * cos((data[i].angle - angle) * DEG_TO_RAD); // front
+        double y = -data[i].dist * sin((data[i].angle - angle) * DEG_TO_RAD); // sides
         if (x < 0) // If behind
             continue;
 
