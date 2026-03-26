@@ -111,6 +111,7 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
     //LOG_DEBUG("Position error: ", distance_to_target, "mm, Velocity x: ", velocity.x, "mm/s, Velocity y: ", velocity.y, "mm/s, Angle error: ", error_heading, "deg, Angular velocity: ", fabs(velocity.a), "deg/s");
     //LOG_DEBUG("Current speed : ", position_length(velocity), "mm/s, Target speed: ", position_speed, "mm/s");
     //LOG_DEBUG("Current speed : ", fabs(velocity.a), "deg/s, Target speed: ", angle_speed, "deg/s");
+    target = pos_target; //Update Target
     if (is_done_pos && is_done_ang){
         if (complete_stop) // If came to a complete stop, set the robot's target to its actual position so it doesn't move more
             drive_interface::set_target(convertPositionToPacked(position));
