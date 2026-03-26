@@ -242,7 +242,7 @@ bool position_opponentV2(lidarAnalize_t* data, int count, position_t robot_pos, 
 // width is robot's width
 // depth is look distance
 // margin is the margin around radius a lidar point (Opponent radius)
-// angle is the angle in degress where we are going relative to front of robot (ex: 90 is going to the left)
+// angle is the angle in degrees where we are going relative to front of robot (ex: 90 is going to the left)
 bool opponent_collide_lidar(lidarAnalize_t* data, int count, int width, int depth, int margin, double angle){
     for (int i = 0; i < count; i++){
         if (!data[i].onTable) continue;
