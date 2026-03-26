@@ -43,8 +43,6 @@ nav_return_t navigationDrive(){
     bool done = drive.drive(currentPath, currentPathLength, current_slow_mode);
     if (done) return NAV_DONE;
     navigationOpponentDetection(); // Check if its safe
-    if (is_robot_stalled && _millis() > robot_stall_start_time + 5000)
-        return NAV_ERROR; // We are stuck for too long
     return NAV_IN_PROCESS;
 }
 
@@ -57,6 +55,8 @@ nav_return_t navigationGo(){
             LOG_EXTENDED_DEBUG("Navigation drive completed");
             driving = false;
         }
+        if (is_robot_stalled && _millis() > robot_stall_start_time + 5000)
+            return NAV_ERROR; // We are stuck for too long
     } else {
         // Calibrate using camera
         bool cam_success;
