@@ -5,7 +5,6 @@
 #include "lidar/lidarAnalize.h"
 #include "navigation/pathfind.h"
 
-
 static bool is_robot_stalled = false;  // Because of opponent in direction of movement
 static bool is_robot_stuck = false;  // Because of no path found
 static unsigned long robot_stall_start_time;
@@ -119,7 +118,7 @@ void navigationOpponentDetection(){
         // Using the braking distance to calculate a point in front of the robot and checking if the opponent is in the way
         double brakingDistance = 500;
         // Angle at which we are going relative to the robot front
-        double angle = atan2(t.y - s.y, t.x - s.x) * RAD_TO_DEG - s.a;
+        double angle = position_angle(s, t) - s.a;
         // Check if the opponent is in the way
         isEndangered = opponent_collide_lidar(lidar.data, lidar.count, 300, brakingDistance, OPPONENT_ROBOT_RADIUS, angle);
         if (isEndangered)
