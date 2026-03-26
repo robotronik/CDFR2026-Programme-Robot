@@ -106,7 +106,7 @@ void navigationOpponentDetection(){
     position_t t = drive.target;
     position_t s = drive.position;
     position_t g = current_pos_target;
-    if (position_distance(t, g) > 50){
+    if (position_distance(s, g) > 50){
         // Using the braking distance to calculate a point in front of the robot andh checking if the opponent is in the way
         double brakingDistance = 500;
         // Angle at which we are going relative to the robot front
