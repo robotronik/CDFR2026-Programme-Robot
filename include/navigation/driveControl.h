@@ -23,6 +23,7 @@ class DriveControl : private drive_interface {
 
         void enable();
         void disable();
+        void setBrakeState(bool brake);
 
         void setGreenLed(bool status);
         void setRedLed(bool status);

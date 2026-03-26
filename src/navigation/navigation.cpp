@@ -119,11 +119,11 @@ void navigationOpponentDetection(){
         LOG_GREEN_INFO("Opponent is in the way, stopping the robot");
         is_robot_stalled = true;
         robot_stall_start_time = _millis();
-        drive.set_brake_state(true);
+        drive.setBrakeState(true);
     }
     else if (!isEndangered && is_robot_stalled){
         LOG_GREEN_INFO("Opponent is no longer in the way, resuming the robot");
         is_robot_stalled = false;
-        drive.set_brake_state(false);
+        drive.setBrakeState(false);
     }
 }
