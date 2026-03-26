@@ -12,7 +12,7 @@ static unsigned long robot_stall_start_time;
 static position_t current_pos_target;
 static bool current_use_astar;
 static bool current_slow_mode;
-static bool current_complete_stop;
+static bool current_complete_stop = true;
 
 static position_t currentPath[1024];
 static int currentPathLength = 0;
