@@ -16,6 +16,8 @@ static bool current_slow_mode;
 static position_t currentPath[1024];
 static int currentPathLength = 0;
 
+void navigationOpponentDetection();
+
 nav_return_t navigationDrive(){
     // Calculate the path
     if (current_use_astar){
