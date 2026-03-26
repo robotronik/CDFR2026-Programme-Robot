@@ -374,8 +374,9 @@ ReturnFSM_t ActionFSM::DropStock(){
             }
             break;
         case FSM_DROP_NAV_BACK:
-        { 
-            nav_ret = navigationGoTo(backPos, false);
+        {
+            // We don't come to a complete stop when backing up
+            nav_ret = navigationGoTo(backPos, false, false, false);
         
             if (nav_ret == NAV_DONE) {
                 dropStockState = FSM_DROP_NONE;
