@@ -64,7 +64,7 @@ nav_return_t navigationGo(){
             LOG_EXTENDED_DEBUG("Navigation drive completed");
             driving = false;
         }
-        if (is_robot_stalled && _millis() > robot_stall_start_time + 5000)
+        if (is_robot_stalled && (_millis() - robot_stall_start_time > 5000))
             return NAV_ERROR; // We are stuck for too long
         else if (is_robot_stalled)
             return NAV_PAUSED;
