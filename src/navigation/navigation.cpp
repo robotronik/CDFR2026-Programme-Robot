@@ -110,7 +110,7 @@ void navigationOpponentDetection(){
         // Using the braking distance to calculate a point in front of the robot andh checking if the opponent is in the way
         double brakingDistance = 500;
         // Angle at which we are going relative to the robot front
-        double angle = atan2(t.y, t.x) * RAD_TO_DEG - s.a;
+        double angle = atan2(t.y - s.y, t.x - s.x) * RAD_TO_DEG - s.a;
         // Check if the opponent is in the way
         isEndangered = opponent_collide_lidar(lidar.data, lidar.count, 300, brakingDistance, OPPONENT_ROBOT_RADIUS, angle);
         if (isEndangered)
