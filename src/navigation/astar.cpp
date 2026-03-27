@@ -33,99 +33,89 @@ void astar_initialize_costmap(){
             costmap[x][y] = FREE_SPACE;
 }
 
-// Récupère le chemin dans points[], retourne la longueur
-int reconstruct_path(position_int_t start, position_int_t goal, position_int_t *path){
-    // Validate start and goal indices to avoid out-of-bounds access on nodes[][]
-    if (is_position_int_invalid(start) || is_position_int_invalid(goal)) {
-        printf("reconstruct_path: invalid indices");
-        return 0;
-    }
-    if(nodes[goal.x][goal.y].g == INT_MAX){
-        printf("Goal jamais atteint\n");
-        return 0;
-    }
-
-    int len = 0;
-    position_int_t p = goal;
-
-    while(!is_position_int_equal(p, start)){
-        path[len++] = p;
-        p = nodes[p.x][p.y].parent;
-        if(len >= MAX_PATH_LEN-1) break;
-    }
-
-    path[len++] = start;
-
-    // Reverse the path
-    for(int i = 0; i < len/2; i++){
-        position_int_t tmp = path[i];
-        path[i] = path[len-1-i];
-        path[len-1-i] = tmp;
-    }
-
-    return len;
-}
-int astar_pathfind(position_int_t start, position_int_t goal, position_int_t *path){
+int astar_pathfind(position_int_t start, position_int_t goal, position_int_t path[]) {
     if (is_position_int_invalid(start)) return -1;
     if (is_position_int_invalid(goal)) return -1;
 
-    for(int x=0;x<AS_HEIGHT;x++)
-        for(int y=0;y<AS_WIDTH;y++){
+    // Initialize nodes
+    for (int x = 0; x < AS_HEIGHT; x++) {
+        for (int y = 0; y < AS_WIDTH; y++) {
             nodes[x][y].g = INT_MAX;
             nodes[x][y].f = INT_MAX;
             nodes[x][y].visited = false;
             nodes[x][y].parent = {-1, -1};
+        }
     }
 
-    nodes[start.x][start.y].g = 0;
-    nodes[start.x][start.y].f = heuristic(start, goal);
+    // Start search from the goal
+    nodes[goal.x][goal.y].g = 0;
+    nodes[goal.x][goal.y].f = heuristic(goal, start);
 
-    position_int_t open[AS_HEIGHT*AS_WIDTH];
-    int open_size=0;
-    open[open_size++] = start;
-    int dirs[4][2]={{1,0},{-1,0},{0,1},{0,-1}};
+    position_int_t open[AS_HEIGHT * AS_WIDTH];
+    int open_size = 0;
+    open[open_size++] = goal;
+    int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
-    while(open_size>0){
+    while (open_size > 0) {
+        // Find the node with the lowest f-score
         int best = 0;
-        for(int i=1;i<open_size;i++){
-            if(nodes[open[i].x][open[i].y].f < nodes[open[best].x][open[best].y].f)
-                best=i;
+        for (int i = 1; i < open_size; i++) {
+            if (nodes[open[i].x][open[i].y].f < nodes[open[best].x][open[best].y].f)
+                best = i;
         }
 
         position_int_t curr = open[best];
         open[best] = open[--open_size];
-        if (is_position_int_equal(curr, goal)) break;
+        if (is_position_int_equal(curr, start)) break;
 
         nodes[curr.x][curr.y].visited = true;
 
-        for (int d=0; d<4; d++){
+        for (int d = 0; d < 4; d++) {
             position_int_t next = curr;
             next.x += dirs[d][0];
             next.y += dirs[d][1];
 
             if (is_position_int_invalid(next)) continue;
-            //if(costmap[next.x][next.y]==OBSTACLE_COST) continue;
             if (nodes[next.x][next.y].visited) continue;
 
-            // --- NOUVELLE LOGIQUE DE COÛT ---
-            int extra = 1; 
+            // --- Cost logic ---
+            int extra = 1;
             if (costmap[next.x][next.y] == OBSTACLE_COST) {
-                extra = 100; // Très coûteux, mais pas bloquant
+                extra = 100; // Very costly, but not blocking
             } else if (costmap[next.x][next.y] == MARGIN_COST) {
-                extra = 10;  // Coût intermédiaire
+                extra = 10;  // Intermediate cost
             }
-            
+
             int new_g = nodes[curr.x][curr.y].g + extra;
 
-            if (new_g < nodes[next.x][next.y].g){
+            if (new_g < nodes[next.x][next.y].g) {
                 nodes[next.x][next.y].g = new_g;
-                nodes[next.x][next.y].f = new_g + heuristic(next, goal);
+                nodes[next.x][next.y].f = new_g + heuristic(next, start);
                 nodes[next.x][next.y].parent = curr;
                 open[open_size++] = next;
             }
         }
     }
-    return reconstruct_path(start, goal, path);
+
+    // Reconstruct the path (no reversal needed)
+    int len = 0;
+    position_int_t p = start;
+
+    while (!is_position_int_invalid(p) && !is_position_int_equal(p, goal)) {
+        path[len++] = p;
+        if (len >= MAX_PATH_LEN) {
+            printf("Path exceeds maximum length\n");
+            return -1;
+        }
+        p = nodes[p.x][p.y].parent;
+    }
+
+    // Add the goal to the path
+    if (len < MAX_PATH_LEN) {
+        path[len++] = goal;
+    }
+
+    return len;
 }
 
 void fill_costmap_square(position_int_t s, position_int_t e, unsigned char cost){
