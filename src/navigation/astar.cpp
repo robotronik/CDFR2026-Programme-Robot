@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <string.h> // memset
 #include "utils/logger.hpp"
 
 typedef struct {
