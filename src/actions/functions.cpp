@@ -73,10 +73,12 @@ bool rotateTwoBlocksDefault(){
 
 bool rotateTwoBlocks(bool *order){  
     static int state = 1;
+    static unsigned long startTime = 0;
     switch (state){
         case 1:
             if (closeClaws() && raiseClaws())
                 state = 2;
+                startTime = _millis();
             break;
         case 2:
 
@@ -89,11 +91,13 @@ bool rotateTwoBlocks(bool *order){
                 }else{
                     a = order[0]; b = order[1]; c = order[2]; d = order[3];
                 }
+                
             }
             spinClaws(a,b,c,d);
-            state = 1;
-            return true;
-            
+            if (_millis() - startTime >= 150){ // Attendre bloc tourne un peu
+                state = 1;
+                return true;
+            }
             break;
     }
     return false;
