@@ -302,7 +302,7 @@ void GetLidar()
         double time_s = double(_millis() - prev_time_ms) / 1000.0; 
         //convertAngularToAxial(lidar.data, lidar.count, position, 200);
         convertAngularToAxialCompensated(lidar.data, lidar.count, prev_pos, prev_vel, time_s, 200);
-        pathfind_fill_lidar();
+        pathfind_fill_lidar(tableStatus.avail_stocks);
         
         if (currentState == RUN || currentState == MANUAL)
             navigationOpponentDetection();

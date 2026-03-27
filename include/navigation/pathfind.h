@@ -6,4 +6,4 @@
 int pathfind(position_t start, position_t goal, position_t path[], int* path_lenght_mm = nullptr);
 
 void pathfind_setup();
-void pathfind_fill_lidar();
+void pathfind_fill_lidar(bool tab[]);

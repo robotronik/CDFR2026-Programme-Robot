@@ -86,9 +86,15 @@ void pathfind_setup() {
     place_obstacle_with_margin( -775,    0, 1800,  450, RayonRobot, false);
 }
 
-void pathfind_fill_lidar(){
+void pathfind_fill_lidar(bool tab[]){
     pathfind_setup();
 
+    for (int i = 0; i < STOCK_COUNT; i++){
+        if (tab[i]){
+            position_t stock_pos = STOCK_POSITIONS_TABLE[i];
+            place_obstacle_with_margin(stock_pos.x, stock_pos.y, 150, 150, 150);
+        }
+    }
     for (int i = 0; i < lidar.count; i++){
         if (!lidar.data[i].onTable) continue;
         // TODO Dont add all of the lidar points to improve performance
