@@ -46,7 +46,7 @@ int reconstruct_path(position_int_t start, position_int_t goal, position_int_t *
     }
 
     int len = 0;
-    position_int_t p;
+    position_int_t p = goal;
 
     while(!is_position_int_equal(p, start)){
         path[len++] = p;
