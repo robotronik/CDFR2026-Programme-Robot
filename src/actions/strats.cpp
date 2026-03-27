@@ -197,8 +197,6 @@ int getBestStockPositionOff(int stockNum){
     int bestOff = -1;
     int bestDist2 = std::numeric_limits<int>::max();
 
-    position_t stockPos = STOCK_POSITIONS_TABLE[stockNum];
-
     for (int i = 0; i < 2; i++){
         int offNum = STOCK_OFFSET_MAPPING[stockNum][i];
         if (offNum == -1)
