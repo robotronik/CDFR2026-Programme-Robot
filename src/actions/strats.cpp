@@ -48,7 +48,7 @@ int chooseNextStock(){
     }
 }
 
-int toAStarDist(int& stockNum, int& stockOffset){
+int toAStarDist(int stockNum, int stockOffset){
     int lenght;
     position_t stockPos = STOCK_POSITIONS_TABLE[stockNum];
     position_t stockOff = STOCK_OFFSETS[stockOffset];
@@ -191,7 +191,7 @@ int GetBestDropZone(position_t fromPos){
 
 int getBestStockPositionOff(int stockNum, position_t fromPos){
     int bestOff = -1;
-    double bestDist2 = INFINITY;
+    int bestDist2 = std::numeric_limits<int>::max();
 
     position_t stockPos = STOCK_POSITIONS_TABLE[stockNum];
 
@@ -200,10 +200,7 @@ int getBestStockPositionOff(int stockNum, position_t fromPos){
         if (offNum == -1)
             continue;
 
-        position_t stockOff = STOCK_OFFSETS[offNum];
-        position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, 0};
-
-        double dist2 = position_distance(fromPos,targetPos);
+        int dist2 = toAStarDist(stockNum, offNum);
 
         if (dist2 < bestDist2){
             bestDist2 = dist2;

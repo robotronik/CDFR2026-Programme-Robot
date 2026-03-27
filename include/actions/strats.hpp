@@ -9,7 +9,7 @@ position_t StratStartingPos();
 
 int chooseNextStock();
 
-int toAStarDist(int& stockNum, int& stockOffset);
+int toAStarDist(int stockNum, int stockOffset);
 int chooseStockStrategy(int& stockNum, int& stockOffset);
 
 int GetBestDropZone(position_t fromPos);
