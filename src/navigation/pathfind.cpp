@@ -57,7 +57,7 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     //print_costmap_with_path(smooth_path_arr, smooth_len, k_start, k_goal);
     // Convert path to position_t coordinates
     for(int i = 0; i < smooth_len; i++){
-        path[i] = convert_from_astar(smooth_path_arr[i])
+        path[i] = convert_from_astar(smooth_path_arr[i]);
         path[i].a = goal.a;
     }
     path[smooth_len] = goal;
@@ -80,7 +80,7 @@ double pathfind_lenght_mm(position_t start, position_t goal){
     int smooth_len = smooth_path(astar_path, len, smooth_path_arr);
     // Convert path to position_t coordinates
     for(int i = 0; i < smooth_len; i++){
-        path[i] = convert_from_astar(smooth_path_arr[i])
+        path[i] = convert_from_astar(smooth_path_arr[i]);
         path[i].a = goal.a;
     }
     path[smooth_len] = goal;

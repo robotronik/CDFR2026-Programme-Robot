@@ -183,7 +183,7 @@ bool is_line_clear(position_int_t a, position_int_t b){
     return true;
 }
 
-int smooth_path(position_int_t *in, int in_len, position_int_t *out){
+int smooth_path(position_int_t in[], int in_len, position_int_t out[]){
     int out_len = 0, i = 0;
     while (i < in_len) {
         out[out_len++] = in[i];
