@@ -322,30 +322,37 @@ ReturnFSM_t ActionFSM::StealStock(){
             break;
         }
         case FSM_GATHER_CLAWS:
+        {
             if (lowerClaws()){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for dropZone ", dropzone_num);
                 stealStockState = FSM_GATHER_MOVE;
                 //drive.is_slow_mode = true;
             }
+        }
             break;
         case FSM_GATHER_MOVE:
+        {
             nav_ret = navigationGoTo(targetPos_, true);
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to dropZone at postition (",targetPos_.x,", ",targetPos_.y, ")");
                 stealStockState = FSM_GATHER_COLLECT;
                 break;
             }
+        }
             break;
         case FSM_GATHER_COLLECT:
             //TODO add utilisation de la ventouse ou pince
             // Collect the steal
+        {
             if (closeClaws()){
                 //drive.is_slow_mode = false;
                 LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: dropZone", dropzone_num, " collected");
                 stealStockState = FSM_GATHER_COLLECTED;
             }
+        }
             break;
         case FSM_GATHER_COLLECTED:
+        {
             if(steal_count == 4){
                 LOG_DEBUG("FSM_GATHER_COLLECTED: pas de déplacement de blocks tous les blocks ont été pris");// Si plus que 4 blocks?
             }else{
@@ -359,6 +366,7 @@ ReturnFSM_t ActionFSM::StealStock(){
             steal_count = -1;
             tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY);
             return FSM_RETURN_DONE;
+        }
     }
     return FSM_RETURN_WORKING;
 }
@@ -366,6 +374,7 @@ ReturnFSM_t ActionFSM::StealStock(){
 ReturnFSM_t ActionFSM::DropStock(){
     switch (dropStockState){
         case FSM_DROP_NONE:
+        {
             rotate_done = false;
             dropzone_num = GetBestDropZone();
             LOG_GREEN_INFO("FSM_DROP_NONE: Best drop zone for stock ", stock_num, " is ", dropzone_num);
@@ -377,6 +386,7 @@ ReturnFSM_t ActionFSM::DropStock(){
             LOG_EXTENDED_DEBUG("FSM_DROP_NONE: Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ", ", dropzonePos.y, ", ", dropzonePos.a , ")");
             LOG_EXTENDED_DEBUG("FSM_DROP_NONE -> FSM_DROP_NAV");
             dropStockState = FSM_DROP_NAV;
+        }
             break;
         case FSM_DROP_NAV:
         {               
