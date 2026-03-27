@@ -29,9 +29,9 @@ position_int_t smooth_path_arr[MAX_PATH_LEN];
 void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int RayonRobot, bool traversable = true)
 {
     position_int_t c = convert_to_astar(position_t{cx, cy, 0.0});
-    int w = (int)round(w_mm / SCALE);
-    int h = (int)round(h_mm / SCALE);
-    int margin = (int)round(RayonRobot / SCALE);
+    int w = w_mm / SCALE;
+    int h = h_mm / SCALE;
+    int margin = RayonRobot / SCALE;
     return astar_place_obstacle_with_margin(c, w, h, margin, traversable);
 }
 
