@@ -2,63 +2,92 @@
 #include "navigation/astar.h"
 #include "defs/constante.h"
 #include "utils/logger.hpp"
-#include "main.hpp"
+#include "main.hpp" //lidar
 
-//pathfind(start, goal, path, &len); // avec longueur chemin en mm
-//pathfind(start, goal, path);       // sans longueur chemin en mm
-int pathfind(position_t start, position_t goal, position_t path[], int* path_lenght_mm){
-    // Ajouter les obstacles du lidar
-    // pathfind_fill_lidar();
+// TODO Should this be round() or floor ?
+position_int_t convert_to_astar(position_t p){
+    position_int_t k;
+    k.x = (int)round(p.x + 1000) / SCALE;
+    k.y = (int)round(p.y + 1500) / SCALE;
+    if (k.x < 0) k.x = 0;
+    else if (k.x >= AS_HEIGHT) k.x = AS_HEIGHT - 1;
+    if (k.y < 0) k.y = 0;
+    else if (k.y >= AS_WIDTH) k.y = AS_WIDTH - 1;
+    return k;
+}
 
+position_t convert_from_astar(position_int_t k){
+    position_t p;
+    p.x = k.x * SCALE - 1000;
+    p.y = k.y * SCALE - 1500;
+    return p;
+}
+
+position_int_t astar_path[AS_HEIGHT + AS_WIDTH];
+position_int_t smooth_path_arr[AS_HEIGHT + AS_WIDTH];
+
+void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int RayonRobot, bool traversable = true)
+{
+    position_int_t c = convert_to_astar(position_t{cx, cy, 0.0});
+    int w = w_mm / SCALE;
+    int h = h_mm / SCALE;
+    int margin = RayonRobot / SCALE;
+    return astar_place_obstacle_with_margin(c, w, h, margin, traversable);
+}
+
+int pathfind(position_t start, position_t goal, position_t path[], double& path_lenght_mm){
     //LOG_INFO("Original start : ", start.x, " / ", start.y, " goal : ", goal.x, " / ", goal.y);
 
-    int sx = (start.x + 1000) / SCALE;
-    int sy = (start.y + 1500) / SCALE;
-    int gx = (goal.x + 1000) / SCALE;
-    int gy = (goal.y + 1500) / SCALE;
+    position_int_t k_start = convert_to_astar(start);
+    position_int_t k_goal = convert_to_astar(goal);
 
-    // Clamp grid indices to valid costmap bounds to avoid out-of-bounds access.
-    if (sx < 0) sx = 0;
-    else if (sx >= AS_HEIGHT) sx = AS_HEIGHT - 1;
-    if (gx < 0) gx = 0;
-    else if (gx >= AS_HEIGHT) gx = AS_HEIGHT - 1;
-    if (sy < 0) sy = 0;
-    else if (sy >= AS_WIDTH) sy = AS_WIDTH - 1;
-    if (gy < 0) gy = 0;
-    else if (gy >= AS_WIDTH) gy = AS_WIDTH - 1;
-    
-    //LOG_INFO("Converted start : ", sx, " / ", sy, " goal : ", gx, " / ", gy);
-
-    astar_pathfind(&sx, &sy, &gx, &gy);
-
-    //LOG_INFO("After escape start : ", sx, " / ", sy, " goal : ", gx, " / ", gy);
-
-    int len = reconstruct_path(sx, sy, gx, gy, path);
-    if (len <= 0 || costmap[gx][gy] > MARGIN_COST) {
-        LOG_WARNING("Goal unreachable, printing costmap with path:");
-        //print_costmap_with_path(path, len, position_int_t{sx, sy}, position_int_t{gx, gy});
+    if (get_cost(k_goal) > MARGIN_COST){
+        LOG_WARNING("Goal unreachable because of goal cost");
         return 0;
     }
 
-    int smooth_len = smooth_path(path, len, path);
-    //print_costmap_with_path(path, smooth_len, position_int_t{sx, sy}, position_int_t{gx, gy});
+    int len = astar_pathfind(k_start, k_goal, astar_path);
+    if (len <= 0) {
+        LOG_WARNING("Goal unreachable, printing costmap with path:");
+        //print_costmap_with_path(astar_path, len, k_start, k_goal);
+        return 0;
+    }
+
+    int smooth_len = smooth_path(astar_path, len, smooth_path_arr);
+    //print_costmap_with_path(smooth_path_arr, smooth_len, k_start, k_goal);
+    // Convert path to position_t coordinates
     for(int i = 0; i < smooth_len; i++){
-        path[i].x = path[i].x * SCALE - 1000;
-        path[i].y = path[i].y * SCALE - 1500;
+        path[i] = convert_from_astar(smooth_path_arr[i])
         path[i].a = goal.a;
     }
-    path[smooth_len] = (position_t){goal.x, goal.y, goal.a};
+    path[smooth_len] = goal;
     smooth_len++;
 
-    int computed_length = 0;
-    position_t prev = start;
-    for (int i = 0; i < smooth_len; i++) {
-        computed_length += position_distance(prev, path[i]);
-        prev = path[i];
-    }
-    if (path_lenght_mm != nullptr) *path_lenght_mm = computed_length;
+    path_lenght_mm = astart_path_lenght(smooth_path_arr, smooth_len) * SCALE;
 
     return smooth_len;
+}
+
+double pathfind_lenght_mm(position_t start, position_t goal){
+    position_int_t k_start = convert_to_astar(start);
+    position_int_t k_goal = convert_to_astar(goal);
+    int len = astar_pathfind(k_start, k_goal, astar_path);
+    if (len <= 0) {
+        LOG_WARNING("Unreachable");
+        return 1e6; //Big
+    }
+
+    int smooth_len = smooth_path(astar_path, len, smooth_path_arr);
+    // Convert path to position_t coordinates
+    for(int i = 0; i < smooth_len; i++){
+        path[i] = convert_from_astar(smooth_path_arr[i])
+        path[i].a = goal.a;
+    }
+    path[smooth_len] = goal;
+    smooth_len++;
+
+    // Compute path lenght
+    return(astart_path_lenght(smooth_path_arr, smooth_len) * SCALE);
 }
 
 void pathfind_setup() {
