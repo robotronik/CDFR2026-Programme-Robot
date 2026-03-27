@@ -4,11 +4,10 @@
 #include "utils/logger.hpp"
 #include "main.hpp" //lidar
 
-// TODO Should this be round() or floor ?
 position_int_t convert_to_astar(position_t p){
     position_int_t k;
-    k.x = (int)round(p.x + 1000) / SCALE;
-    k.y = (int)round(p.y + 1500) / SCALE;
+    k.x = (int)round((p.x + 1000.0) / SCALE);
+    k.y = (int)round((p.y + 1500.0) / SCALE);
     if (k.x < 0) k.x = 0;
     else if (k.x >= AS_HEIGHT) k.x = AS_HEIGHT - 1;
     if (k.y < 0) k.y = 0;
@@ -18,8 +17,8 @@ position_int_t convert_to_astar(position_t p){
 
 position_t convert_from_astar(position_int_t k){
     position_t p;
-    p.x = k.x * SCALE - 1000;
-    p.y = k.y * SCALE - 1500;
+    p.x = k.x * SCALE - 1000.0;
+    p.y = k.y * SCALE - 1500.0;
     return p;
 }
 
@@ -29,9 +28,9 @@ position_int_t smooth_path_arr[MAX_PATH_LEN];
 void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int RayonRobot, bool traversable = true)
 {
     position_int_t c = convert_to_astar(position_t{cx, cy, 0.0});
-    int w = w_mm / SCALE;
-    int h = h_mm / SCALE;
-    int margin = RayonRobot / SCALE;
+    int w = (int)round(w_mm / SCALE);
+    int h = (int)round(h_mm / SCALE);
+    int margin = (int)round(RayonRobot / SCALE);
     return astar_place_obstacle_with_margin(c, w, h, margin, traversable);
 }
 
