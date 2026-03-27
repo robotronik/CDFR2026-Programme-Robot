@@ -54,6 +54,7 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     }
 
     int smooth_len = smooth_path(astar_path, len, smooth_path_arr);
+    //int smooth_len = coarse_smooth_path(astar_path, len, smooth_path_arr);
     //print_costmap_with_path(smooth_path_arr, smooth_len, k_start, k_goal);
     // Compute pathlength
     path_length_mm = astar_path_length(smooth_path_arr, smooth_len) * SCALE;

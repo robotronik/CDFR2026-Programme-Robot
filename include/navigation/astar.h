@@ -22,6 +22,7 @@ void astar_initialize_costmap();
 void astar_place_obstacle_with_margin(position_int_t c, int w, int h, int margin, bool traversable = true);
 int astar_pathfind(position_int_t start, position_int_t goal, position_int_t path[]);
 int smooth_path(position_int_t in[], int in_len, position_int_t out[]);
+int coarse_smooth_path(position_int_t in[], int in_len, position_int_t out[]);
 void print_costmap_with_path(position_int_t path[], int len, position_int_t start, position_int_t goal);
 unsigned char get_cost(position_int_t p);
 double astar_path_length(position_int_t path[], int len);

@@ -28,9 +28,7 @@ inline bool is_position_int_equal(position_int_t a, position_int_t b){
 }
 
 void astar_initialize_costmap(){
-    for(int x = 0; x < AS_HEIGHT; x++)
-        for(int y = 0; y < AS_WIDTH; y++)
-            costmap[x][y] = FREE_SPACE;
+    memset(costmap, FREE_SPACE, sizeof(costmap));
 }
 
 int astar_pathfind(position_int_t start, position_int_t goal, position_int_t path[]) {
@@ -124,11 +122,12 @@ void fill_costmap_square(position_int_t s, position_int_t e, unsigned char cost)
     s.y = (s.y < 0) ? 0 : s.y;
     e.y = (e.y > AS_WIDTH) ? AS_WIDTH : e.y;
     
-    for(int x = s.x; x < e.x; x++)
-        for(int y = s.y; y < e.y; y++)
-            if (costmap[x][y] < cost) {
-                costmap[x][y] = cost;
-            }
+    const int width = e.y - s.y;
+    if (width <= 0 || e.x <= s.x) return;
+
+    for (int x = s.x; x < e.x; x++) {
+        memset(&costmap[x][s.y], cost, (size_t)width);
+    }
 }
 // c : position centrale en cells
 // w, h : largeur/hauteur de l'obstacle en cells
@@ -188,6 +187,26 @@ int smooth_path(position_int_t in[], int in_len, position_int_t out[]){
             }
         }
         i = best;
+    }
+    return out_len;
+}
+
+int coarse_smooth_path(position_int_t in[], int in_len, position_int_t out[]){
+    // Only smooth 1,1 diagonal moves to smooth corners while keeping the path close to the original one, which is important for the robot to be able to follow it more easily
+    int out_len = 0;
+    for (int i = 0; i < in_len; i++){
+        out[out_len++] = in[i];
+        if (i < in_len - 2){
+            position_int_t a = in[i];
+            position_int_t b = in[i+1];
+            position_int_t c = in[i+2];
+            if (abs(a.x - b.x) == 1 && abs(a.y - b.y) == 1 &&
+                abs(b.x - c.x) == 1 && abs(b.y - c.y) == 1 &&
+                (a.x == c.x || a.y == c.y)){
+                // Zig-zag corner: skip middle point if direct segment is clear
+                i++;
+            }
+        }
     }
     return out_len;
 }
