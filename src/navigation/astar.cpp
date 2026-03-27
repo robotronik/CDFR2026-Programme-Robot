@@ -126,7 +126,9 @@ void fill_costmap_square(position_int_t s, position_int_t e, unsigned char cost)
     
     for(int x = s.x; x < e.x; x++)
         for(int y = s.y; y < e.y; y++)
-            costmap[x][y] = cost;
+            if (costmap[x][y] < cost) {
+                costmap[x][y] = cost;
+            }
 }
 // c : position centrale en cells
 // w, h : largeur/hauteur de l'obstacle en cells
