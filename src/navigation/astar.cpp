@@ -201,9 +201,7 @@ int coarse_smooth_path(position_int_t in[], int in_len, position_int_t out[]){
             position_int_t a = in[i];
             position_int_t b = in[i+1];
             position_int_t c = in[i+2];
-            if (abs(a.x - b.x) == 1 && abs(a.y - b.y) == 1 &&
-                abs(b.x - c.x) == 1 && abs(b.y - c.y) == 1 &&
-                (a.x == c.x || a.y == c.y)){
+            if (abs(a.x - c.x) == 1 && abs(a.y - c.y) == 1){
                 // Zig-zag corner: skip middle point if direct segment is clear
                 i++;
             }

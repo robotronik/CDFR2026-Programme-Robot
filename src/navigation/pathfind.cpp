@@ -41,10 +41,10 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     position_int_t k_start = convert_to_astar(start);
     position_int_t k_goal = convert_to_astar(goal);
 
-    if (get_cost(k_goal) > MARGIN_COST){
+    /*if (get_cost(k_goal) > MARGIN_COST){
         LOG_WARNING("Goal unreachable because of goal cost");
         return 0;
-    }
+    }*/
 
     int len = astar_pathfind(k_start, k_goal, astar_path);
     if (len <= 0) {
@@ -53,8 +53,8 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
         return 0;
     }
 
-    int smooth_len = smooth_path(astar_path, len, smooth_path_arr);
-    //int smooth_len = coarse_smooth_path(astar_path, len, smooth_path_arr);
+    //int smooth_len = smooth_path(astar_path, len, smooth_path_arr);
+    int smooth_len = coarse_smooth_path(astar_path, len, smooth_path_arr);
     //print_costmap_with_path(smooth_path_arr, smooth_len, k_start, k_goal);
     // Compute pathlength
     path_length_mm = astar_path_length(smooth_path_arr, smooth_len) * SCALE;
