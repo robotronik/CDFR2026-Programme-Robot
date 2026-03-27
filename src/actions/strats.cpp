@@ -226,12 +226,12 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos, bool ste
         position_normalize(vect);
         position_t bestPoss = position_t{dropzonePos.x + int(vect.x * OFFSET_DROPZONE), dropzonePos.y + int(vect.y * OFFSET_DROPZONE), RAD_TO_DEG * position_angle(fromPos, dropzonePos)};
         */
-        if(position_distance(fromPos, position_sum(bestPoss, position_t{.x = dropZoneOffset, .y=0}))
-            < position_distance(fromPos, position_sum(bestPoss, position_t{.x = -1 * dropZoneOffset, .y=0}))){
-                bestPoss = position_sum(bestPoss, position_t{.x = -1 * dropZoneOffset, .y=0});
+        if(position_distance(fromPos, position_sum(bestPoss, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2}))
+            < position_distance(fromPos, position_sum(bestPoss, position_t{.x = -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2}))){
+                bestPoss = position_sum(bestPoss, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2});
                 bestPoss.a = 180;
         }else{
-            bestPoss = position_sum(bestPoss, position_t{.x =  -1 * dropZoneOffset, .y=0});
+            bestPoss = position_sum(bestPoss, position_t{.x =  -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2});
             bestPoss.a = 0;
         }
         return bestPoss;
@@ -239,9 +239,11 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos, bool ste
         position_t bestPoss = DROPZONE_POSITIONS_TABLE[dropzoneNum];
         if(MAX_WIDTH_TABLE - abs(bestPoss.x) < MAX_LENGTH_TABLE - abs(bestPoss.y)){
             bestPoss.x += (bestPoss.x > 0? -1 : 1 ) * dropZoneOffset;
+            bestPoss.y += (bestPoss.x > 0? 1 : -1) * OFFSET_CLAW_Y/2;
             bestPoss.a = (bestPoss.x > 0? 0 : 180);
         }else{
             bestPoss.y += (bestPoss.y > 0? -1 : 1 ) * dropZoneOffset;
+            bestPoss.x += (bestPoss.y > 0? -1 : 1 ) * OFFSET_CLAW_Y/2;
             bestPoss.a = (bestPoss.y > 0? 90 : -90);
         }
         return bestPoss;
