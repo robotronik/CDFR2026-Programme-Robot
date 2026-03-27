@@ -34,7 +34,7 @@ int pathfind(position_t start, position_t goal, position_t path[], int* path_len
     //LOG_INFO("After escape start : ", sx, " / ", sy, " goal : ", gx, " / ", gy);
 
     int len = reconstruct_path(sx, sy, gx, gy, path);
-    if (len <= 0) {
+    if (len <= 0 || costmap[gx][gy] > MARGIN_COST) {
         LOG_WARNING("Goal unreachable, printing costmap with path:");
         //print_costmap_with_path(path, len, position_int_t{sx, sy}, position_int_t{gx, gy});
         return 0;

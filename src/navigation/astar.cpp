@@ -24,40 +24,6 @@ void astar_initialize_costmap(){
             costmap[x][y]=FREE_SPACE;
 }
 
-void escape_from_obstacle(int *x,int *y){
-
-    if(*x<0||*x>=AS_HEIGHT||*y<0||*y>=AS_WIDTH) return;
-    if(costmap[*x][*y]<MARGIN_COST) return;
-
-    int dirs[4][2]={{1,0},{-1,0},{0,1},{0,-1}};
-    bool visited[AS_HEIGHT][AS_WIDTH]={0};
-    position_t queue[AS_HEIGHT*AS_WIDTH];
-    int qs=0,qe=0;
-    
-    queue[qe++] = (position_t){ static_cast<double>(*x), static_cast<double>(*y) };
-    visited[*x][*y]=true;
-
-    while(qs<qe){
-        position_t cur=queue[qs++];
-
-        for(int d=0;d<4;d++){
-            int nx=cur.x+dirs[d][0];
-            int ny=cur.y+dirs[d][1];
-
-            if(nx<0||ny<0||nx>=AS_HEIGHT||ny>=AS_WIDTH) continue;
-            if(visited[nx][ny]) continue;
-
-            visited[nx][ny]=true;
-
-            if(costmap[nx][ny]<MARGIN_COST){
-                *x=nx; *y=ny;
-                return;
-            }
-            queue[qe++]=(position_t){static_cast<double>(nx),static_cast<double>(ny)};
-        }
-    }
-}
-
 // Récupère le chemin dans points[], retourne la longueur
 int reconstruct_path(int sx,int sy,int gx,int gy,position_t *path){
 
@@ -141,7 +107,7 @@ void astar_pathfind(int *sx,int *sy,int *gx,int *gy){
             int ny=cy+dirs[d][1];
 
             if(nx<0||ny<0||nx>=AS_HEIGHT||ny>=AS_WIDTH) continue;
-            if(costmap[nx][ny]==OBSTACLE_COST) continue;
+            //if(costmap[nx][ny]==OBSTACLE_COST) continue;
             if(nodes[nx][ny].visited) continue;
 
             // --- NOUVELLE LOGIQUE DE COÛT ---
