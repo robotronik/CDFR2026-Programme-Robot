@@ -356,13 +356,13 @@ ReturnFSM_t ActionFSM::DropStock(){
     switch (dropStockState){
         case FSM_DROP_NONE:
             rotate_done = false;
-            dropzone_num = GetBestDropZone(drive.position);
+            dropzone_num = GetBestDropZone();
             LOG_GREEN_INFO("FSM_DROP_NONE: Best drop zone for stock ", stock_num, " is ", dropzone_num);
             if (dropzone_num == -1) {
                 LOG_ERROR("FSM_DROP_NONE: No more dropzone available, cannot drop stock ", stock_num);
                 return FSM_RETURN_ERROR;
             }
-            dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
+            dropzonePos = getBestDropZonePosition(dropzone_num);
             LOG_EXTENDED_DEBUG("FSM_DROP_NONE: Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ", ", dropzonePos.y, ", ", dropzonePos.a , ")");
             LOG_EXTENDED_DEBUG("FSM_DROP_NONE -> FSM_DROP_NAV");
             dropStockState = FSM_DROP_NAV;
@@ -382,7 +382,7 @@ ReturnFSM_t ActionFSM::DropStock(){
                 LOG_WARNING("FSM_DROP_NAV(NAV_ERROR): Navigation error while going to dropzone for stock ", stock_num);
                 tableStatus.setDropzoneAsError(dropzone_num);
                 
-                int dropzone_temp = GetBestDropZone(drive.position);
+                int dropzone_temp = GetBestDropZone();
                 if(dropzone_temp == -1){
                     LOG_ERROR("FSM_DROP_NAV(NAV_ERROR): No more dropzone available, cannot drop stock ", stock_num);
                     tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
@@ -390,7 +390,7 @@ ReturnFSM_t ActionFSM::DropStock(){
                 }else{
                     tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
                     dropzone_num = dropzone_temp;
-                    dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
+                    dropzonePos = getBestDropZonePosition(dropzone_num);
                     LOG_EXTENDED_DEBUG("FSM_DROP_NAV(NAV_ERROR): New dropzone position for stock ", stock_num, " is (", dropzonePos.x, ",", dropzonePos.y, ")");
                 }
 
@@ -569,7 +569,7 @@ void ActionFSM::SetBestAction(position_t position){
     /************** CALCUL BEST STEAL *****************/
     if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV && tableStatus.dropToStealExist()){
         //LOG_DEBUG("Getting next stock to take");
-        closestSteal = getBestStealZonePosition(drive.position, dropzone_num, dropzonePos);
+        closestSteal = getBestStealZonePosition(dropzone_num, dropzonePos);
         if (!closestSteal){
             LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
             dropzone_num = -1;

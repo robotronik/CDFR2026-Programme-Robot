@@ -101,7 +101,7 @@ int chooseStockStrategy(int& stockNum, int& stockOffset){
     while (i < num){
         if (tableStatus.avail_stocks[todo_stocks[i]]){
             stockNum = todo_stocks[i];
-            stockOffset = getBestStockPositionOff(stockNum, drive.position);
+            stockOffset = getBestStockPositionOff(stockNum);
             return toAStarDistStock(stockNum, stockOffset);
         }
         i++;
@@ -109,7 +109,7 @@ int chooseStockStrategy(int& stockNum, int& stockOffset){
 
     if (endlessMode){
         stockNum = (stockNum + 1) % STOCK_COUNT; // In endless mode, we take the stocks in order
-        stockOffset = getBestStockPositionOff(stockNum, drive.position);
+        stockOffset = getBestStockPositionOff(stockNum);
         
         return toAStarDistStock(stockNum, stockOffset);
     }
@@ -117,7 +117,7 @@ int chooseStockStrategy(int& stockNum, int& stockOffset){
     int nextStock = chooseNextStock(); // Choose the closest stock if the strategy stocks are not available
     if (nextStock != -1){
         stockNum = nextStock;
-        stockOffset = getBestStockPositionOff(stockNum, drive.position);
+        stockOffset = getBestStockPositionOff(stockNum);
         return toAStarDistStock(stockNum, stockOffset);
     }
     //LOG_WARNING("No stock available");
@@ -174,7 +174,7 @@ position_t calculateClosestArucoPosition(position_t currentPos){
     Return best drop zone id
     -1 if no drop zone available
 */
-int GetBestDropZone(position_t fromPos){
+int GetBestDropZone(){
     int bestDropZone = -1;
     double bestDist2 = INFINITY;
 
@@ -194,7 +194,7 @@ int GetBestDropZone(position_t fromPos){
     return bestDropZone;
 }
 
-int getBestStockPositionOff(int stockNum, position_t fromPos){
+int getBestStockPositionOff(int stockNum){
     int bestOff = -1;
     int bestDist2 = std::numeric_limits<int>::max();
 
@@ -257,14 +257,14 @@ position_t getBestDropZonePosition(int dropzoneNum, bool steal){
     For now very simple 
     TODO: developped with adversary position
 */
-int getBestStealZonePosition(position_t fromPos, int& bestDropZone, position_t& bestPos){
+int getBestStealZonePosition(int& bestDropZone, position_t& bestPos){
     int min_distance = INFINITY;
     for(int idx = 0; idx < DROPZONE_COUNT; idx++){
         if(tableStatus.dropzone_states[idx] == (tableStatus.colorTeam == BLUE ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE)){
             position_t tmp_pos = DROPZONE_POSITIONS_TABLE[idx];
             position_t path[1024];
             int dist;
-            if(!pathfind(fromPos, tmp_pos, path, & dist)) continue;
+            if(!pathfind(drive.position, tmp_pos, path, & dist)) continue;
             if( dist < min_distance){
                 bestPos = tmp_pos;
                 min_distance = dist;
@@ -272,7 +272,7 @@ int getBestStealZonePosition(position_t fromPos, int& bestDropZone, position_t& 
             }
         }
     }
-    if(position_equals(fromPos, bestPos)){
+    if(position_equals(drive.position, bestPos)){
         return 0;
     }
     bestPos = getBestDropZonePosition(bestDropZone, true);
