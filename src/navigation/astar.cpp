@@ -51,7 +51,7 @@ int reconstruct_path(position_int_t start, position_int_t goal, position_int_t *
     while(!is_position_int_equal(p, start)){
         path[len++] = p;
         p = nodes[p.x][p.y].parent;
-        if(len >= 500) break;
+        if(len >= MAX_PATH_LEN-1) break;
     }
 
     path[len++] = start;
@@ -204,7 +204,7 @@ unsigned char get_cost(position_int_t p){
     return costmap[p.x][p.y];
 }
 
-double astart_path_lenght(position_int_t path[], int len){
+double astar_path_length(position_int_t path[], int len){
     double path_lenght = 0;
     for (int i = 0; i < len - 1; i++){
         int dx = path[i+1].x - path[i].x;

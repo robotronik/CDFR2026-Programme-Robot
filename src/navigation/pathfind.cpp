@@ -23,8 +23,8 @@ position_t convert_from_astar(position_int_t k){
     return p;
 }
 
-position_int_t astar_path[AS_HEIGHT + AS_WIDTH];
-position_int_t smooth_path_arr[AS_HEIGHT + AS_WIDTH];
+position_int_t astar_path[MAX_PATH_LEN];
+position_int_t smooth_path_arr[MAX_PATH_LEN];
 
 void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int RayonRobot, bool traversable = true)
 {
@@ -63,7 +63,7 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     path[smooth_len] = goal;
     smooth_len++;
 
-    path_lenght_mm = astart_path_lenght(smooth_path_arr, smooth_len) * SCALE;
+    path_lenght_mm = astar_path_length(smooth_path_arr, smooth_len) * SCALE;
 
     return smooth_len;
 }
@@ -79,7 +79,7 @@ double pathfind_lenght_mm(position_t start, position_t goal){
 
     int smooth_len = smooth_path(astar_path, len, smooth_path_arr);
     // Compute path lenght
-    return(astart_path_lenght(smooth_path_arr, smooth_len) * SCALE);
+    return(astar_path_length(smooth_path_arr, smooth_len) * SCALE);
 }
 
 void pathfind_setup() {
