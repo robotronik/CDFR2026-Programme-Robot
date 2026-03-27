@@ -3,6 +3,7 @@
 #include "defs/constante.h"
 #include "utils/logger.hpp"
 #include "main.hpp" //lidar
+#include "math.h" // round()
 
 position_int_t convert_to_astar(position_t p){
     position_int_t k;
@@ -34,7 +35,7 @@ void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int Ra
     return astar_place_obstacle_with_margin(c, w, h, margin, traversable);
 }
 
-int pathfind(position_t start, position_t goal, position_t path[], double& path_lenght_mm){
+int pathfind(position_t start, position_t goal, position_t path[], double& path_length_mm){
     //LOG_INFO("Original start : ", start.x, " / ", start.y, " goal : ", goal.x, " / ", goal.y);
 
     position_int_t k_start = convert_to_astar(start);
@@ -54,6 +55,9 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
 
     int smooth_len = smooth_path(astar_path, len, smooth_path_arr);
     //print_costmap_with_path(smooth_path_arr, smooth_len, k_start, k_goal);
+    // Compute pathlength
+    path_length_mm = astar_path_length(smooth_path_arr, smooth_len) * SCALE;
+
     // Convert path to position_t coordinates
     for(int i = 0; i < smooth_len; i++){
         path[i] = convert_from_astar(smooth_path_arr[i]);
@@ -62,12 +66,10 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     path[smooth_len] = goal;
     smooth_len++;
 
-    path_lenght_mm = astar_path_length(smooth_path_arr, smooth_len) * SCALE;
-
     return smooth_len;
 }
 
-double pathfind_lenght_mm(position_t start, position_t goal){
+double pathfind_length_mm(position_t start, position_t goal){
     position_int_t k_start = convert_to_astar(start);
     position_int_t k_goal = convert_to_astar(goal);
     int len = astar_pathfind(k_start, k_goal, astar_path);
@@ -77,7 +79,7 @@ double pathfind_lenght_mm(position_t start, position_t goal){
     }
 
     int smooth_len = smooth_path(astar_path, len, smooth_path_arr);
-    // Compute path lenght
+    // Compute path length
     return(astar_path_length(smooth_path_arr, smooth_len) * SCALE);
 }
 

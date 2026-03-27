@@ -201,17 +201,19 @@ int smooth_path(position_int_t in[], int in_len, position_int_t out[]){
 }
 
 unsigned char get_cost(position_int_t p){
+    if (is_position_int_invalid(p))
+        return 0;
     return costmap[p.x][p.y];
 }
 
 double astar_path_length(position_int_t path[], int len){
-    double path_lenght = 0;
+    double path_length = 0;
     for (int i = 0; i < len - 1; i++){
         int dx = path[i+1].x - path[i].x;
         int dy = path[i+1].y - path[i].y;
-        path_lenght += sqrt((double)(dx*dx + dy*dy));
+        path_length += sqrt((double)(dx*dx + dy*dy));
     }
-    return path_lenght;
+    return path_length;
 }
 
 void print_costmap_with_path(position_int_t *path, int len, position_int_t start, position_int_t goal) {
