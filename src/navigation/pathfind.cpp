@@ -37,7 +37,7 @@ void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int Ra
 
 int pathfind(position_t start, position_t goal, position_t path[], double& path_length_mm){
     //LOG_INFO("Original start : ", start.x, " / ", start.y, " goal : ", goal.x, " / ", goal.y);
-
+    path_length_mm = 1e6; // In case of early exit
     position_int_t k_start = convert_to_astar(start);
     position_int_t k_goal = convert_to_astar(goal);
 
