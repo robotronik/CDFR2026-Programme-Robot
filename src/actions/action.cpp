@@ -559,7 +559,7 @@ void ActionFSM::SetBestAction(position_t position){
         tableStatus.calibrationAge += 1;
         LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to drop a stock, going to FSM_ACTION_DROP");
         return;
-    }
+    }//TODO cas pas de drop mais blocks dans la main -> poser 2 stocks même zone ou poser dans une zone adverse
 
     /********** CALCUL BEST STOCK ************/
     if (stock_num == -1 && gatherStockState == FSM_GATHER_NAV){
