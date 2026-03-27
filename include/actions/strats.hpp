@@ -9,13 +9,14 @@ position_t StratStartingPos();
 
 int chooseNextStock();
 
-int toAStarDist(int stockNum, int stockOffset);
+int toAStarDistStock(int stockNum, int stockOffset);
+int toAStarDist(position_t a);
 int chooseStockStrategy(int& stockNum, int& stockOffset);
 
 int GetBestDropZone(position_t fromPos);
 int getBestStockPositionOff(int stockNum, position_t fromPos);
 
-position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos, bool steal = false);
+position_t getBestDropZonePosition(int dropzoneNum, bool steal = false);
 int getBestStealZonePosition(position_t fromPos, int& bestDropZone, position_t& bestPos);
 
 position_t calculateClosestArucoPosition(position_t currentPos);
