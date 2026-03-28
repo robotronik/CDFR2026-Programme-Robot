@@ -10,17 +10,20 @@
 #define MARGIN_COST   200
 #define FREE_SPACE     0
 
+// Maximum possible path length on the A* grid (conservative bound).
+#define MAX_PATH_LEN (4 * (AS_HEIGHT + AS_WIDTH))
+
 typedef struct {
     int x;
     int y;
 } position_int_t;
 
-extern unsigned char costmap[AS_HEIGHT][AS_WIDTH];
-
 void astar_initialize_costmap();
-void place_obstacle_with_margin(int x0_mm,int y0_mm,int w_mm,int h_mm,int RayonRobot, bool traversable = true);
-void astar_pathfind(int *sx,int *sy,int *gx,int *gy);
-int reconstruct_path(int sx,int sy,int gx,int gy,position_t *path);
-int smooth_path(position_t *in,int in_len,position_t *out);
-void print_costmap_with_path(position_t *path, int len, position_int_t start, position_int_t goal);
+void astar_place_obstacle_with_margin(position_int_t c, int w, int h, int margin, bool traversable = true);
+int astar_pathfind(position_int_t start, position_int_t goal, position_int_t path[]);
+int smooth_path(position_int_t in[], int in_len, position_int_t out[]);
+int coarse_smooth_path(position_int_t in[], int in_len, position_int_t out[]);
+void print_costmap_with_path(position_int_t path[], int len, position_int_t start, position_int_t goal);
+unsigned char get_cost(position_int_t p);
+double astar_path_length(position_int_t path[], int len);
 json astar_get_costmap_json();

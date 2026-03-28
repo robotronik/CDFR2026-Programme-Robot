@@ -361,11 +361,11 @@ void tests()
 
         //position depart et arrivé aléatoire
         position_t target, start;
-        target.x = rand() % (600) - 600 / 2;
-        target.y = rand() % (600) - 600 / 2;
+        target.x = rand() % (800) - 800 / 2;
+        target.y = rand() % (1400) - 1400 / 2;
 
-        start.x = rand() % (1400) - 1400 / 2;
-        start.y = rand() % (1400) - 1400 / 2;
+        start.x = rand() % (800) - 800 / 2;
+        start.y = rand() % (2000) - 2000 / 2;
         start.a = rand() % 360;
         drive.setCoordinates(start);
         
