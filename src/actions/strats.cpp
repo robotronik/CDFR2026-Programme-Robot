@@ -262,6 +262,7 @@ int getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool steal){
         }
         if(min > d1){
             bestPoss = temp_pos;
+            dropzoneNum = k;
             min = d1;
         }
     }
