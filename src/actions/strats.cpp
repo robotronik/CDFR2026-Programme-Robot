@@ -184,7 +184,6 @@ position_t calculateClosestArucoPosition(position_t currentPos){
     return outPos;
 }
 
-
 int getBestStockPositionOff(int& stockNum, int& bestDist){
     int bestOff = -1;
     int bestDist2 = std::numeric_limits<int>::max();
@@ -227,25 +226,16 @@ int getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool steal){
         if(tableStatus.dropzone_states[k] != zone_of_interest) continue;
         if (k == 7 || k == 4 || k == 2 ){
             temp_pos = DROPZONE_POSITIONS_TABLE[k];
-            /*deactivated for now
-            position_t vect = position_vector(dropzonePos, fromPos);
-            position_normalize(vect);
-            position_t bestPoss = position_t{dropzonePos.x + int(vect.x * OFFSET_DROPZONE), dropzonePos.y + int(vect.y * OFFSET_DROPZONE), RAD_TO_DEG * position_angle(fromPos, dropzonePos)};
-            */
-           d1 = toAStarDist(position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2}));
-           int d2 = toAStarDist(position_sum(temp_pos, position_t{.x = -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2}));
-            if(d1 < d2 ){
-                    temp_pos = position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2});
-                    temp_pos.a = 180;
-            }else{
-                temp_pos = position_sum(temp_pos, position_t{.x =  -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2});
-                temp_pos.a = 0;
-                d1 = d2;
-            }
-            if(min > d1){
-                bestPoss = temp_pos;
-                min = d1;
-            }
+            d1 = toAStarDist(position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2}));
+            int d2 = toAStarDist(position_sum(temp_pos, position_t{.x = -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2}));
+                if(d1 < d2 ){
+                        temp_pos = position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2});
+                        temp_pos.a = 180;
+                }else{
+                    temp_pos = position_sum(temp_pos, position_t{.x =  -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2});
+                    temp_pos.a = 0;
+                    d1 = d2;
+                }
         }else{
             temp_pos = DROPZONE_POSITIONS_TABLE[dropzoneNum];
             if(MAX_WIDTH_TABLE - abs(temp_pos.x) < MAX_LENGTH_TABLE - abs(temp_pos.y)){
