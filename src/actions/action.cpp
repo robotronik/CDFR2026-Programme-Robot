@@ -374,7 +374,6 @@ ReturnFSM_t ActionFSM::DropStock(){
         {
             rotate_done = false;
             getBestDropZonePosition(dropzone_num, dropzonePos);
-            
             if (dropzone_num == -1) {
                 LOG_ERROR("FSM_DROP_NONE: No more dropzone available, cannot drop stock ", stock_num);
                 return FSM_RETURN_ERROR;
