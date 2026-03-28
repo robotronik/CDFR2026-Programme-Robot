@@ -101,7 +101,7 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
 
     bool is_done_pos, is_done_ang;
     if (complete_stop){
-        is_done_pos = distance_to_target < 5.0 && fabs(velocity.x) < 25.0 && fabs(velocity.y) < 25.0;
+        is_done_pos = distance_to_target < 5.0 && fabs(velocity.x) < 35.0 && fabs(velocity.y) < 35.0;
         is_done_ang = fabs(error_heading) < 1.0 && fabs(velocity.a) < 4.0;
     }else{
         is_done_pos = distance_to_target < 20.0 && fabs(velocity.x) < 200.0 && fabs(velocity.y) < 200.0;
@@ -116,6 +116,7 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
         if (complete_stop){ // If came to a complete stop, set the robot's target to its actual position so it doesn't move more
             drive_interface::set_target(convertPositionToPacked(position));
             target = position; //Update Target
+            LOG_DEBUG("set the pos to x: ", position.x, " y: ", position.y, " a: ", position.a);
         }
         return true;
     }    
