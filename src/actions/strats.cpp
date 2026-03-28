@@ -237,15 +237,17 @@ int getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool steal){
                     d1 = d2;
                 }
         }else{
-            temp_pos = DROPZONE_POSITIONS_TABLE[dropzoneNum];
+            temp_pos = DROPZONE_POSITIONS_TABLE[k];
             if(MAX_WIDTH_TABLE - abs(temp_pos.x) < MAX_LENGTH_TABLE - abs(temp_pos.y)){
-                temp_pos.x += (temp_pos.x > 0? -1 : 1 ) * dropZoneOffset;
-                temp_pos.y += (temp_pos.x > 0? 1 : -1) * OFFSET_CLAW_Y/2;
-                temp_pos.a = (temp_pos.x > 0? 0 : 180);
+                double signeX = (temp_pos.x > 0? 1 : -1 );
+                temp_pos.x += -1 * signeX * dropZoneOffset;
+                temp_pos.y += signeX * OFFSET_CLAW_Y/2;
+                temp_pos.a = (signeX > 0? 0 : 180);
             }else{
-                temp_pos.y += (temp_pos.y > 0? -1 : 1 ) * dropZoneOffset;
-                temp_pos.x += (temp_pos.y > 0? -1 : 1 ) * OFFSET_CLAW_Y/2;
-                temp_pos.a = (temp_pos.y > 0? 90 : -90);
+                double signeY = (temp_pos.y > 0? -1 : 1 );
+                temp_pos.y += signeY * dropZoneOffset;
+                temp_pos.x += signeY * OFFSET_CLAW_Y/2;
+                temp_pos.a = (signeY < 0? 90 : -90);
             }
             d1 = toAStarDist(temp_pos);
             
