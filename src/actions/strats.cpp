@@ -216,7 +216,7 @@ int getBestStockPositionOff(int stockNum){
 
 position_t getBestDropZonePosition(int dropzoneNum, bool steal){
     double dropZoneOffset = OFFSET_DROPZONE;
-    if(steal) dropZoneOffset = OFFSET_STOCK;
+    if(steal) dropZoneOffset = OFFSET_STOCK*1.2;
 
     if (dropzoneNum == 7 || dropzoneNum == 4 || dropzoneNum == 2 ){
         position_t bestPoss = DROPZONE_POSITIONS_TABLE[dropzoneNum];
