@@ -28,11 +28,11 @@ position_t StratStartingPos(){
 
 int chooseNextStock(){
     // Returns the number of the closest available stock to be taken
-    double min = INFINITY;
+    int min = std::numeric_limits<int>::max();
     int closest_stock = -1;
     for (int i = 0; i < STOCK_COUNT; i++){
         if (tableStatus.avail_stocks[i]){
-            double dist = toAStarDist(STOCK_POSITIONS_TABLE[i]);
+            int dist = toAStarDist(STOCK_POSITIONS_TABLE[i]);
             if (dist < min){
                 min = dist;
                 closest_stock = i;
@@ -72,6 +72,7 @@ int chooseStockStrategy(int& stockNum, int& stockOffset){
     int todo_stocks[9];
     int num = 0;
     bool endlessMode = false; // If true, the robot will take all the stocks in order, ignoring the strategy (for testing)
+    LOG_EXTENDED_DEBUG("Strategy", strategy);
     switch (strategy)
     {   
         case 1:
@@ -188,14 +189,14 @@ position_t calculateClosestArucoPosition(position_t currentPos){
 */
 int GetBestDropZone(){
     int bestDropZone = -1;
-    double bestDist2 = INFINITY;
+    int bestDist2 = std::numeric_limits<int>::max();
 
     for (int i = 0; i < DROPZONE_COUNT; i++){
         if (tableStatus.dropzone_states[i] != TableState::DROPZONE_EMPTY)
             continue;
 
         position_t dropzonePos = DROPZONE_POSITIONS_TABLE[i];
-        double dist2 = toAStarDist(dropzonePos);
+        int dist2 = toAStarDist(dropzonePos);
 
         if (dist2 < bestDist2){
             bestDist2 = dist2;
