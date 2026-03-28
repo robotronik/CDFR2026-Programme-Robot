@@ -255,7 +255,7 @@ position_t getBestDropZonePosition(int dropzoneNum, bool steal){
     TODO: developped with adversary position
 */
 int getBestStealZonePosition(int& bestDropZone, position_t& bestPos){
-    int min_distance = INFINITY;
+    int min_distance = std::numeric_limits<int>::max();
     for(int idx = 0; idx < DROPZONE_COUNT; idx++){
         if(tableStatus.dropzone_states[idx] == (tableStatus.colorTeam == BLUE ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE)){
             position_t tmp_pos = DROPZONE_POSITIONS_TABLE[idx];
