@@ -26,21 +26,30 @@ position_t StratStartingPos(){
     return pos;
 }
 
-int chooseNextStock(){
+int chooseNextStock(int& closest_stock, int& closest_offset){
     // Returns the number of the closest available stock to be taken
     int min = std::numeric_limits<int>::max();
-    int closest_stock = -1;
+    closest_stock = -1;
+    closest_offset = -1;
     for (int i = 0; i < STOCK_COUNT; i++){
-        if (tableStatus.avail_stocks[i]){
-            int dist = toAStarDist(STOCK_POSITIONS_TABLE[i]);
-            if (dist < min){
-                min = dist;
-                closest_stock = i;
+        if (tableStatus.avail_stocks[i]){            
+            for (int j = 0; j < 2; j++){
+                int offNum = STOCK_OFFSET_MAPPING[i][j];
+                if (offNum == -1)
+                    continue;
+
+                int dist2 = toAStarDistStock(i, offNum);
+
+                if (dist2 < min){
+                    min = dist2;
+                    closest_stock = i;
+                    closest_offset = offNum;
+                }
             }
         }
     }
     if (closest_stock == -1){
-        LOG_GREEN_INFO("No next stock available");
+        LOG_WARNING("No next stock available");
         return -1;
     }else{
         //LOG_INFO("Next stock to take: ", closest_stock);
@@ -102,8 +111,7 @@ int chooseStockStrategy(int& stockNum, int& stockOffset){
     while (i < num){
         if (tableStatus.avail_stocks[todo_stocks[i]]){
             stockNum = todo_stocks[i];
-            int dist;
-            stockOffset = getBestStockPositionOff(stockNum, dist);
+            int dist = getBestStockPositionOff(stockNum, stockOffset);
             if(!dist){
                 return std::numeric_limits<int>::max();
             }
@@ -114,8 +122,7 @@ int chooseStockStrategy(int& stockNum, int& stockOffset){
 
     if (endlessMode){
         stockNum = (stockNum + 1) % STOCK_COUNT; // In endless mode, we take the stocks in order
-        int dist;
-        stockOffset = getBestStockPositionOff(stockNum, dist);
+        int dist = getBestStockPositionOff(stockNum, stockOffset);
         
         if(!dist){
                 return std::numeric_limits<int>::max();
@@ -123,15 +130,9 @@ int chooseStockStrategy(int& stockNum, int& stockOffset){
             return dist;
     }
 
-    int nextStock = chooseNextStock(); // Choose the closest stock if the strategy stocks are not available
-    if (nextStock != -1){
-        stockNum = nextStock;
-        int dist;
-        stockOffset = getBestStockPositionOff(stockNum, dist);
-        if(!dist){
-                return std::numeric_limits<int>::max();
-            }
-            return dist;
+    int dist = chooseNextStock(stockNum, stockOffset); // Choose the closest stock if the strategy stocks are not available
+    if (stockNum != -1){
+        return dist;
     }
     //LOG_WARNING("No stock available");
     return 0;
@@ -207,14 +208,14 @@ int GetBestDropZone(){
     return bestDropZone;
 }
 
-int getBestStockPositionOff(int stockNum, int& bestDist){
+int getBestStockPositionOff(int& stockNum, int& bestDist){
     int bestOff = -1;
     int bestDist2 = std::numeric_limits<int>::max();
 
     if(STOCK_OFFSET_MAPPING[stockNum][1] == -1){
         return 0;
     }
-    
+
     for (int i = 0; i < 2; i++){
         int offNum = STOCK_OFFSET_MAPPING[stockNum][i];
         if (offNum == -1)
@@ -231,40 +232,63 @@ int getBestStockPositionOff(int stockNum, int& bestDist){
     return bestOff;
 }
 
-position_t getBestDropZonePosition(int dropzoneNum, bool steal){
+int getBestDropZonePosition(int dropzoneNum, position_t& bestPoss, bool steal){
     double dropZoneOffset = OFFSET_DROPZONE;
-    if(steal) dropZoneOffset = OFFSET_STOCK*1.2;
-
-    if (dropzoneNum == 7 || dropzoneNum == 4 || dropzoneNum == 2 ){
-        position_t bestPoss = DROPZONE_POSITIONS_TABLE[dropzoneNum];
-        /*deactivated for now
-        position_t vect = position_vector(dropzonePos, fromPos);
-        position_normalize(vect);
-        position_t bestPoss = position_t{dropzonePos.x + int(vect.x * OFFSET_DROPZONE), dropzonePos.y + int(vect.y * OFFSET_DROPZONE), RAD_TO_DEG * position_angle(fromPos, dropzonePos)};
-        */
-        if(toAStarDist(position_sum(bestPoss, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2}))
-            < toAStarDist(position_sum(bestPoss, position_t{.x = -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2}))){
-                bestPoss = position_sum(bestPoss, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2});
-                bestPoss.a = 180;
-        }else{
-            bestPoss = position_sum(bestPoss, position_t{.x =  -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2});
-            bestPoss.a = 0;
-        }
-        return bestPoss;
-    }else{
-        position_t bestPoss = DROPZONE_POSITIONS_TABLE[dropzoneNum];
-        if(MAX_WIDTH_TABLE - abs(bestPoss.x) < MAX_LENGTH_TABLE - abs(bestPoss.y)){
-            bestPoss.x += (bestPoss.x > 0? -1 : 1 ) * dropZoneOffset;
-            bestPoss.y += (bestPoss.x > 0? 1 : -1) * OFFSET_CLAW_Y/2;
-            bestPoss.a = (bestPoss.x > 0? 0 : 180);
-        }else{
-            bestPoss.y += (bestPoss.y > 0? -1 : 1 ) * dropZoneOffset;
-            bestPoss.x += (bestPoss.y > 0? -1 : 1 ) * OFFSET_CLAW_Y/2;
-            bestPoss.a = (bestPoss.y > 0? 90 : -90);
-        }
-        return bestPoss;
+    TableState::dropzone_state_t zone_of_interest = TableState::DROPZONE_EMPTY;
+    if(steal){
+        dropZoneOffset = OFFSET_STOCK*1.2;
+        zone_of_interest = (tableStatus.colorTeam == YELLOW ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);
     }
-    
+
+    int min = std::numeric_limits<int>::max();
+    dropzoneNum = -1;
+
+    int d1;
+    position_t temp_pos;
+
+    for(int k = 0; k< DROPZONE_COUNT; k++){
+        if(tableStatus.dropzone_states[k] != zone_of_interest) continue;
+        if (k == 7 || k == 4 || k == 2 ){
+            temp_pos = DROPZONE_POSITIONS_TABLE[k];
+            /*deactivated for now
+            position_t vect = position_vector(dropzonePos, fromPos);
+            position_normalize(vect);
+            position_t bestPoss = position_t{dropzonePos.x + int(vect.x * OFFSET_DROPZONE), dropzonePos.y + int(vect.y * OFFSET_DROPZONE), RAD_TO_DEG * position_angle(fromPos, dropzonePos)};
+            */
+           d1 = toAStarDist(position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2}));
+           int d2 = toAStarDist(position_sum(temp_pos, position_t{.x = -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2}));
+            if(d1 < d2 ){
+                    temp_pos = position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2});
+                    temp_pos.a = 180;
+            }else{
+                temp_pos = position_sum(temp_pos, position_t{.x =  -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2});
+                temp_pos.a = 0;
+                d1 = d2;
+            }
+            if(min > d1){
+                bestPoss = temp_pos;
+                min = d1;
+            }
+        }else{
+            temp_pos = DROPZONE_POSITIONS_TABLE[dropzoneNum];
+            if(MAX_WIDTH_TABLE - abs(temp_pos.x) < MAX_LENGTH_TABLE - abs(temp_pos.y)){
+                temp_pos.x += (temp_pos.x > 0? -1 : 1 ) * dropZoneOffset;
+                temp_pos.y += (temp_pos.x > 0? 1 : -1) * OFFSET_CLAW_Y/2;
+                temp_pos.a = (temp_pos.x > 0? 0 : 180);
+            }else{
+                temp_pos.y += (temp_pos.y > 0? -1 : 1 ) * dropZoneOffset;
+                temp_pos.x += (temp_pos.y > 0? -1 : 1 ) * OFFSET_CLAW_Y/2;
+                temp_pos.a = (temp_pos.y > 0? 90 : -90);
+            }
+            d1 = toAStarDist(temp_pos);
+            
+        }
+        if(min > d1){
+            bestPoss = temp_pos;
+            min = d1;
+        }
+    }
+    return (dropzoneNum != -1 ? min : 0);
 }
 
 /*
@@ -273,25 +297,7 @@ position_t getBestDropZonePosition(int dropzoneNum, bool steal){
     TODO: developped with adversary position
 */
 int getBestStealZonePosition(int& bestDropZone, position_t& bestPos){
-    int min_distance = std::numeric_limits<int>::max();
-    for(int idx = 0; idx < DROPZONE_COUNT; idx++){
-        if(tableStatus.dropzone_states[idx] == (tableStatus.colorTeam == BLUE ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE)){
-            position_t tmp_pos = DROPZONE_POSITIONS_TABLE[idx];
-            position_t path[1024];
-            int dist;
-            if(!pathfind(drive.position, tmp_pos, path, & dist)) continue;
-            if( dist < min_distance){
-                bestPos = tmp_pos;
-                min_distance = dist;
-                bestDropZone = idx;
-            }
-        }
-    }
-    if(position_equals(drive.position, bestPos)){
-        return 0;
-    }
-    bestPos = getBestDropZonePosition(bestDropZone, true);
-    return min_distance;
+    return getBestDropZonePosition(bestDropZone, bestPos, true);
 }
 
 position_t getBestIsolatedPosition(position_t centerPos, position_t fromPos){
