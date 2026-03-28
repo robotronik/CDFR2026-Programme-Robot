@@ -210,6 +210,10 @@ int getBestStockPositionOff(int stockNum, int& bestDist){
     int bestOff = -1;
     int bestDist2 = std::numeric_limits<int>::max();
 
+    if(STOCK_OFFSET_MAPPING[stockNum][1] == -1){
+        return 0;
+    }
+    
     for (int i = 0; i < 2; i++){
         int offNum = STOCK_OFFSET_MAPPING[stockNum][i];
         if (offNum == -1)
