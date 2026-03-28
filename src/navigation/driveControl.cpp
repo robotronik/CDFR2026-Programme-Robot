@@ -108,7 +108,7 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
         is_done_ang = fabs(error_heading) < 2.0 && fabs(velocity.a) < 40.0;
     }
         
-    //LOG_DEBUG("Position error: ", distance_to_target, "mm, Velocity x: ", velocity.x, "mm/s, Velocity y: ", velocity.y, "mm/s, Angle error: ", error_heading, "deg, Angular velocity: ", fabs(velocity.a), "deg/s");
+    LOG_DEBUG("Pos err: ", distance_to_target, "mm, Vel x: ", velocity.x, "mm/s, Vel y: ", velocity.y, "mm/s, Ang err: ", error_heading, "deg, Ang vel: ", fabs(velocity.a), "deg/s");
     //LOG_DEBUG("Current speed : ", position_length(velocity), "mm/s, Target speed: ", position_speed, "mm/s");
     //LOG_DEBUG("Current speed : ", fabs(velocity.a), "deg/s, Target speed: ", angle_speed, "deg/s");
     target = pos_target; //Update Target
