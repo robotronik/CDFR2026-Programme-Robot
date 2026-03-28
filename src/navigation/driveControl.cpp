@@ -34,7 +34,6 @@ void DriveControl::reset() {
 
 // Returns true if done or point reached
 bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_stop) {
-bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_stop) {
     if (!is_enabled){
         LOG_WARNING("Not enabled");
         return false;
