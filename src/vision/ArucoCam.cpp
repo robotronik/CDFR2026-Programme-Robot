@@ -114,7 +114,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     y = position.value("y", -1.0);
     a = position.value("a", -1.0);
     success = true;
-    LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " } with sucess frames : ", sucessFrames, " and failed frames : ", failedFrames);
+    // LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " } with sucess frames : ", sucessFrames, " and failed frames : ", failedFrames);
     // Return true if the values were successfully extracted
     waiting_for_pos = false;
     return true;

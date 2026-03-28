@@ -16,7 +16,7 @@ class DriveControl : private drive_interface {
         bool is_slow_mode;
 
         // Sets the target position, true when done
-        bool drive(position_t pos[], int n, bool is_slow_mode = false);
+        bool drive(position_t pos[], int n, bool is_slow_mode = false, bool complete_stop = true);
 
         // Updates the motion and target
         void update();

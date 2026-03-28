@@ -363,8 +363,8 @@ ReturnFSM_t ActionFSM::DropStock(){
                 LOG_EXTENDED_DEBUG("FSM_DROP: Stock ", stock_num, " dropped");
                 dropStockState = FSM_DROP_NAV_BACK;
                 backPos = drive.position;
-                backPos.x -= 50 * cos(DEG_TO_RAD * drive.position.a);
-                backPos.y -= 50 * sin(DEG_TO_RAD * drive.position.a);
+                backPos.x -= 100 * cos(DEG_TO_RAD * drive.position.a);
+                backPos.y -= 100 * sin(DEG_TO_RAD * drive.position.a);
 
                 //No more stock in hand
                 stock_num = -1;
@@ -374,8 +374,9 @@ ReturnFSM_t ActionFSM::DropStock(){
             }
             break;
         case FSM_DROP_NAV_BACK:
-        { 
-            nav_ret = navigationGoTo(backPos, false);
+        {
+            // We don't come to a complete stop when backing up
+            nav_ret = navigationGoTo(backPos, false, false, false);
         
             if (nav_ret == NAV_DONE) {
                 dropStockState = FSM_DROP_NONE;

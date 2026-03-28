@@ -33,7 +33,7 @@ void DriveControl::reset() {
 }
 
 // Returns true if done or point reached
-bool DriveControl::drive(position_t pos[], int n, bool slow_mode) {
+bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_stop) {
     if (!is_enabled){
         LOG_WARNING("Not enabled");
         return false;
@@ -99,13 +99,25 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode) {
     }
     drive_interface::set_target(convertPositionToPacked(pos_target));
 
-    bool is_done_pos = distance_to_target < 5.0 && fabs(velocity.x) < 25.0 && fabs(velocity.y) < 25.0;
-    bool is_done_ang = fabs(error_heading) < 1.0 && fabs(velocity.a) < 4.0;
-    //LOG_DEBUG("Position error: ", distance_to_target, "mm, Velocity x: ", velocity.x, "mm/s, Velocity y: ", velocity.y, "mm/s, Angle error: ", error_heading, "deg, Angular velocity: ", fabs(velocity.a), "deg/s");
+    bool is_done_pos, is_done_ang;
+    if (complete_stop){
+        is_done_pos = distance_to_target < 5.0 && fabs(velocity.x) < 35.0 && fabs(velocity.y) < 35.0;
+        is_done_ang = fabs(error_heading) < 1.0 && fabs(velocity.a) < 4.0;
+    }else{
+        is_done_pos = distance_to_target < 20.0 && fabs(velocity.x) < 200.0 && fabs(velocity.y) < 200.0;
+        is_done_ang = fabs(error_heading) < 2.0 && fabs(velocity.a) < 40.0;
+    }
+        
+    LOG_DEBUG("Pos err: ", distance_to_target, "mm, Vel x: ", velocity.x, "mm/s, Vel y: ", velocity.y, "mm/s, Ang err: ", error_heading, "deg, Ang vel: ", fabs(velocity.a), "deg/s");
     //LOG_DEBUG("Current speed : ", position_length(velocity), "mm/s, Target speed: ", position_speed, "mm/s");
     //LOG_DEBUG("Current speed : ", fabs(velocity.a), "deg/s, Target speed: ", angle_speed, "deg/s");
     target = pos_target; //Update Target
     if (is_done_pos && is_done_ang){
+        if (complete_stop){ // If came to a complete stop, set the robot's target to its actual position so it doesn't move more
+            drive_interface::set_target(convertPositionToPacked(position));
+            target = position; //Update Target
+            LOG_DEBUG("set the pos to x: ", position.x, " y: ", position.y, " a: ", position.a);
+        }
         return true;
     }    
     return false; // Not done
