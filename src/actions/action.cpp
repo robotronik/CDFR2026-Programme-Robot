@@ -167,7 +167,6 @@ ReturnFSM_t ActionFSM::TakeStock(){
         LOG_ERROR("No stock to take");
         return FSM_RETURN_ERROR;
     }
-    LOG_GREEN_INFO("ACTION_GATHER: Next stock to take: ", stock_num, " offset: ", offset);
 
     double angle = RAD_TO_DEG*  position_angle(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a} , stockPos);
 
@@ -272,7 +271,6 @@ ReturnFSM_t ActionFSM::StealStock(){
         LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
         return FSM_RETURN_ERROR;
     }
-    LOG_GREEN_INFO("ACTION_STEAL: Next dropZone to steal: ", dropzone_num);
 
     switch (stealStockState)
     {   
@@ -604,7 +602,8 @@ void ActionFSM::SetBestAction(position_t position){
     }else{
         /*********************** CONDITION POUR VOLER UN STOCK OU TAKE STOCK ****************************/
         if(closestSteal < closestStock){
-            LOG_GREEN_INFO("Going for steal action");
+            LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to steal a drop, going to FSM_ACTION_STEAL");
+            LOG_GREEN_INFO("ACTION_STEAL: Next dropZone to steal: ", dropzone_num);
             runState = FSM_ACTION_STEAL;
             stock_num = -1;
             return;
@@ -612,6 +611,7 @@ void ActionFSM::SetBestAction(position_t position){
             runState = FSM_ACTION_GATHER;
             dropzone_num = -1;
             LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
+            LOG_GREEN_INFO("ACTION_GATHER: Next stock to take: ", stock_num, " offset: ", offset);
             return;
         }
     }
