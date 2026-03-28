@@ -15,8 +15,6 @@ ActionFSM::ActionFSM(){
 ActionFSM::~ActionFSM(){}
 
 void ActionFSM::Reset(){
-    runState = FSM_ACTION_GATHER;
-
     /****** RESET OF FSM STATES *******/
     gatherStockState = FSM_GATHER_NAV;
     stealStockState = FSM_GATHER_NAV;
@@ -40,7 +38,8 @@ void ActionFSM::Reset(){
     for(size_t _ = 0; _<4 ; _++){
         stockOrder[_] = (tableStatus.colorTeam == YELLOW) ? false : true;
     }
-    
+    runState = FSM_ACTION_GATHER;
+    SetBestAction(drive.position);
     // TODO reset other states (num,offset, etc.)
 }
 
