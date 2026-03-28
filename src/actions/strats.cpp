@@ -101,24 +101,36 @@ int chooseStockStrategy(int& stockNum, int& stockOffset){
     while (i < num){
         if (tableStatus.avail_stocks[todo_stocks[i]]){
             stockNum = todo_stocks[i];
-            stockOffset = getBestStockPositionOff(stockNum);
-            return toAStarDistStock(stockNum, stockOffset);
+            int dist;
+            stockOffset = getBestStockPositionOff(stockNum, dist);
+            if(!dist){
+                return std::numeric_limits<int>::max();
+            }
+            return dist;
         }
         i++;
     }
 
     if (endlessMode){
         stockNum = (stockNum + 1) % STOCK_COUNT; // In endless mode, we take the stocks in order
-        stockOffset = getBestStockPositionOff(stockNum);
+        int dist;
+        stockOffset = getBestStockPositionOff(stockNum, dist);
         
-        return toAStarDistStock(stockNum, stockOffset);
+        if(!dist){
+                return std::numeric_limits<int>::max();
+            }
+            return dist;
     }
 
     int nextStock = chooseNextStock(); // Choose the closest stock if the strategy stocks are not available
     if (nextStock != -1){
         stockNum = nextStock;
-        stockOffset = getBestStockPositionOff(stockNum);
-        return toAStarDistStock(stockNum, stockOffset);
+        int dist;
+        stockOffset = getBestStockPositionOff(stockNum, dist);
+        if(!dist){
+                return std::numeric_limits<int>::max();
+            }
+            return dist;
     }
     //LOG_WARNING("No stock available");
     return 0;
@@ -194,7 +206,7 @@ int GetBestDropZone(){
     return bestDropZone;
 }
 
-int getBestStockPositionOff(int stockNum){
+int getBestStockPositionOff(int stockNum, int& bestDist){
     int bestOff = -1;
     int bestDist2 = std::numeric_limits<int>::max();
 
@@ -210,7 +222,7 @@ int getBestStockPositionOff(int stockNum){
             bestOff = offNum;
         }
     }
-
+    bestDist = bestDist2;
     return bestOff;
 }
 
