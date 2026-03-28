@@ -41,10 +41,10 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     position_int_t k_start = convert_to_astar(start);
     position_int_t k_goal = convert_to_astar(goal);
 
-    /*if (get_cost(k_goal) > MARGIN_COST){
+    if (get_cost(k_goal) > MARGIN_COST){
         LOG_WARNING("Goal unreachable because of goal cost");
         return 0;
-    }*/
+    }
 
     int len = astar_pathfind(k_start, k_goal, astar_path);
     if (len <= 0) {
@@ -86,7 +86,7 @@ double pathfind_length_mm(position_t start, position_t goal){
 
 void pathfind_setup() {
     astar_initialize_costmap();
-    int RayonRobot=200;
+    int RayonRobot=195;
 
     // ===== DROP ZONES =====
     place_obstacle_with_margin( 200,  1400, 200, 200, RayonRobot);
@@ -106,7 +106,7 @@ void pathfind_setup() {
     place_obstacle_with_margin(    0, 1500,   50, 2000, RayonRobot, false);
     place_obstacle_with_margin(-1000,    0, 3000,   50, RayonRobot, false);
     place_obstacle_with_margin( 1000,    0, 3000,   50, RayonRobot, false);
-    place_obstacle_with_margin( -775,    0, 1800,  450, RayonRobot, false);
+    place_obstacle_with_margin( -775,    0, 1800,  440, RayonRobot, false);
 }
 
 void pathfind_fill_lidar(){
