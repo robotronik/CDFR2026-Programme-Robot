@@ -373,15 +373,16 @@ ReturnFSM_t ActionFSM::DropStock(){
         case FSM_DROP_NONE:
         {
             rotate_done = false;
-            dropzone_num = GetBestDropZone();
-            LOG_GREEN_INFO("FSM_DROP_NONE: Best drop zone for stock ", stock_num, " is ", dropzone_num);
+            getBestDropZonePosition(dropzone_num, dropzonePos);
+            
             if (dropzone_num == -1) {
                 LOG_ERROR("FSM_DROP_NONE: No more dropzone available, cannot drop stock ", stock_num);
                 return FSM_RETURN_ERROR;
+            }else{
+                LOG_GREEN_INFO("FSM_DROP_NONE: Best drop zone for stock ", stock_num, " is ", dropzone_num);
+                LOG_EXTENDED_DEBUG("FSM_DROP_NONE: Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ", ", dropzonePos.y, ", ", dropzonePos.a , ")");
+                LOG_EXTENDED_DEBUG("FSM_DROP_NONE -> FSM_DROP_NAV");
             }
-            dropzonePos = getBestDropZonePosition(dropzone_num);
-            LOG_EXTENDED_DEBUG("FSM_DROP_NONE: Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ", ", dropzonePos.y, ", ", dropzonePos.a , ")");
-            LOG_EXTENDED_DEBUG("FSM_DROP_NONE -> FSM_DROP_NAV");
             dropStockState = FSM_DROP_NAV;
         }
             break;
@@ -400,7 +401,8 @@ ReturnFSM_t ActionFSM::DropStock(){
                 LOG_WARNING("FSM_DROP_NAV(NAV_ERROR): Navigation error while going to dropzone for stock ", stock_num);
                 tableStatus.setDropzoneAsError(dropzone_num);
                 
-                int dropzone_temp = GetBestDropZone();
+                int dropzone_temp = -1; 
+                getBestDropZonePosition(dropzone_temp, dropzonePos);
                 if(dropzone_temp == -1){
                     LOG_ERROR("FSM_DROP_NAV(NAV_ERROR): No more dropzone available, cannot drop stock ", stock_num);
                     tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
@@ -408,7 +410,6 @@ ReturnFSM_t ActionFSM::DropStock(){
                 }else{
                     tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
                     dropzone_num = dropzone_temp;
-                    dropzonePos = getBestDropZonePosition(dropzone_num);
                     LOG_EXTENDED_DEBUG("FSM_DROP_NAV(NAV_ERROR): New dropzone position for stock ", stock_num, " is (", dropzonePos.x, ",", dropzonePos.y, ")");
                 }
 
