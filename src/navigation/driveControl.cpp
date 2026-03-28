@@ -97,7 +97,6 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
         pos_target.x = position.x + vec.x;
         pos_target.y = position.y + vec.y;
     }
-    drive_interface::set_target(convertPositionToPacked(pos_target));
 
     bool is_done_pos, is_done_ang;
     if (complete_stop){
@@ -108,18 +107,20 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
         is_done_ang = fabs(error_heading) < 2.0 && fabs(velocity.a) < 40.0;
     }
         
-    LOG_DEBUG("Pos err: ", distance_to_target, "mm, Vel x: ", velocity.x, "mm/s, Vel y: ", velocity.y, "mm/s, Ang err: ", error_heading, "deg, Ang vel: ", fabs(velocity.a), "deg/s");
+    //LOG_DEBUG("Pos err: ", distance_to_target, "mm, Vel x: ", velocity.x, "mm/s, Vel y: ", velocity.y, "mm/s, Ang err: ", error_heading, "deg, Ang vel: ", fabs(velocity.a), "deg/s");
     //LOG_DEBUG("Current speed : ", position_length(velocity), "mm/s, Target speed: ", position_speed, "mm/s");
     //LOG_DEBUG("Current speed : ", fabs(velocity.a), "deg/s, Target speed: ", angle_speed, "deg/s");
-    target = pos_target; //Update Target
     if (is_done_pos && is_done_ang){
         if (complete_stop){ // If came to a complete stop, set the robot's target to its actual position so it doesn't move more
             drive_interface::set_target(convertPositionToPacked(position));
             target = position; //Update Target
-            LOG_DEBUG("set the pos to x: ", position.x, " y: ", position.y, " a: ", position.a);
+            //LOG_DEBUG("set the pos to x: ", position.x, " y: ", position.y, " a: ", position.a);
         }
         return true;
-    }    
+    }
+    drive_interface::set_target(convertPositionToPacked(pos_target));
+    target = pos_target; //Update Target
+
     return false; // Not done
 }
 
