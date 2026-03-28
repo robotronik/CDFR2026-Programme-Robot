@@ -15,5 +15,4 @@ typedef enum {
 // Navigation functions
 nav_return_t navigationGoTo(position_t pos, bool useAStar = false, bool slow_mode = false, bool complete_stop = true);
 void navigation_path_json(json& j);
-void navigationOpponentDetection();
 nav_return_t navigationGo();

@@ -240,20 +240,21 @@ bool position_opponentV2(lidarAnalize_t* data, int count, position_t robot_pos, 
 }
 
 // width is robot's width
-// depth is brake distance
-// margin is the margin around radius a lidar point
-bool opponent_collide_lidar(lidarAnalize_t* data, int count, int width, int depth, int margin){
+// depth is look distance
+// margin is the margin around radius a lidar point (Opponent radius)
+// angle is the angle in degrees where we are going relative to front of robot (ex: 90 is going to the left)
+bool opponent_collide_lidar(lidarAnalize_t* data, int count, int width, int depth, int margin, double angle){
     for (int i = 0; i < count; i++){
         if (!data[i].onTable) continue;
         // Check if the circle made by the lidar point and radius margin
         // overlaps with the rectangle made by width and depth
-        int x = data[i].dist * cos(data[i].angle * DEG_TO_RAD); // front
-        int y = -data[i].dist * sin(data[i].angle * DEG_TO_RAD); // sides
-        // skip points that are outside the robot's depth
-        if (x * depth < 0) continue;
+        double x = data[i].dist * cos((data[i].angle - angle) * DEG_TO_RAD); // front
+        double y = -data[i].dist * sin((data[i].angle - angle) * DEG_TO_RAD); // sides
+        if (x < 0) // If behind
+            continue;
 
-        if (x + margin >= -abs(depth) && 
-            x - margin <= abs(depth) && 
+        if (x + margin >= 0 && 
+            x - margin <= depth && 
             y + margin >= -width/2 && 
             y - margin <= width/2){
             return true;
