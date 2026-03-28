@@ -208,7 +208,7 @@ int getBestStockPositionOff(int& stockNum, int& bestDist){
     return bestOff;
 }
 
-int getBestDropZonePosition(int dropzoneNum, position_t& bestPoss, bool steal){
+int getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool steal){
     double dropZoneOffset = OFFSET_DROPZONE;
     TableState::dropzone_state_t zone_of_interest = TableState::DROPZONE_EMPTY;
     if(steal){
