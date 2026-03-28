@@ -184,29 +184,6 @@ position_t calculateClosestArucoPosition(position_t currentPos){
     return outPos;
 }
 
-/*
-    Return best drop zone id
-    -1 if no drop zone available
-*/
-int GetBestDropZone(){
-    int bestDropZone = -1;
-    int bestDist2 = std::numeric_limits<int>::max();
-
-    for (int i = 0; i < DROPZONE_COUNT; i++){
-        if (tableStatus.dropzone_states[i] != TableState::DROPZONE_EMPTY)
-            continue;
-
-        position_t dropzonePos = DROPZONE_POSITIONS_TABLE[i];
-        int dist2 = toAStarDist(dropzonePos);
-
-        if (dist2 < bestDist2){
-            bestDist2 = dist2;
-            bestDropZone = i;
-        }
-    }
-
-    return bestDropZone;
-}
 
 int getBestStockPositionOff(int& stockNum, int& bestDist){
     int bestOff = -1;
