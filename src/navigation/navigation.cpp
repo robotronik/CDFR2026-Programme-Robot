@@ -5,9 +5,10 @@
 #include "lidar/lidarAnalize.h"
 #include "navigation/pathfind.h"
 
-
-static bool is_robot_stalled = false;
+static bool is_robot_stalled = false;  // Because of opponent in direction of movement
+static bool is_robot_stuck = false;  // Because of no path found
 static unsigned long robot_stall_start_time;
+static unsigned long robot_stuck_start_time;
 
 static position_t current_pos_target;
 static bool current_use_astar;
@@ -17,6 +18,8 @@ static bool current_complete_stop = true;
 static position_t currentPath[1024];
 static int currentPathLength = 0;
 
+void navigationOpponentDetection();
+
 nav_return_t navigationDrive(){
     // Calculate the path
     if (current_use_astar){
@@ -25,10 +28,6 @@ nav_return_t navigationDrive(){
         //LOG_GREEN_INFO("Path length: ", len);
         if (currentPathLength <= 0){
             LOG_ERROR("No path found");
-            if (!is_robot_stalled){
-                is_robot_stalled = true;
-                robot_stall_start_time = _millis();
-            }
             return NAV_ERROR;
         }
         else {
@@ -41,6 +40,7 @@ nav_return_t navigationDrive(){
     }
     bool done = drive.drive(currentPath, currentPathLength, current_slow_mode, current_complete_stop);
     if (done) return NAV_DONE;
+    navigationOpponentDetection(); // Check if its safe
     return NAV_IN_PROCESS;
 }
 
@@ -55,7 +55,16 @@ nav_return_t navigationGo(){
                 driving = false;
             else
                 return NAV_DONE;
+        } else if (result == NAV_ERROR){
+            LOG_ERROR("Navigation drive error");
+            return NAV_ERROR;
         }
+        if (is_robot_stalled && (_millis() - robot_stall_start_time > 1000)){
+            LOG_WARNING("Robot has been stalled for more than 1 second, returning NAV_ERROR");
+            return NAV_ERROR; // We are stuck for too long
+        }
+        else if (is_robot_stalled)
+            return NAV_PAUSED;
     } else {
         // Calibrate using camera
         bool cam_success;
@@ -100,21 +109,17 @@ void navigation_path_json(json& j){
 }
 
 void navigationOpponentDetection(){
-
-    return; // Disabled for now
-
     bool isEndangered = false;
-
-    if (true /* TODO dir != Direction::NONE */){
-        // Using the braking distance to calculate a point in front of the robot andh checking if the opponent is in the way
+    position_t t = drive.target;
+    position_t s = drive.position;
+    position_t g = current_pos_target;
+    if (position_distance(s, g) > 50){
+        // Using the braking distance to calculate a point in front of the robot and checking if the opponent is in the way
         double brakingDistance = 500;
-        /*
-        if (dir == Direction::BACKWARD){
-            brakingDistance = -brakingDistance;
-        }
-            */
+        // Angle at which we are going relative to the robot front
+        double angle = position_angle(s, t) * RAD_TO_DEG - s.a;
         // Check if the opponent is in the way
-        isEndangered = opponent_collide_lidar(lidar.data, lidar.count, 300, brakingDistance, OPPONENT_ROBOT_RADIUS);
+        isEndangered = opponent_collide_lidar(lidar.data, lidar.count, 300, brakingDistance, OPPONENT_ROBOT_RADIUS, angle);
         if (isEndangered)
             LOG_WARNING("Opponent is in the way");
         else
@@ -125,9 +130,11 @@ void navigationOpponentDetection(){
         LOG_GREEN_INFO("Opponent is in the way, stopping the robot");
         is_robot_stalled = true;
         robot_stall_start_time = _millis();
+        drive.setBrakeState(true);
     }
     else if (!isEndangered && is_robot_stalled){
         LOG_GREEN_INFO("Opponent is no longer in the way, resuming the robot");
         is_robot_stalled = false;
+        drive.setBrakeState(false);
     }
 }
