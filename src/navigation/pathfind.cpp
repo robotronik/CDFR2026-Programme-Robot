@@ -115,6 +115,6 @@ void pathfind_fill_lidar(){
     for (int i = 0; i < lidar.count; i++){
         if (!lidar.data[i].onTable) continue;
         // TODO Dont add all of the lidar points to improve performance
-        place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y,150, 150,150,false);
+        place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y, 400, 400, 220, false);
     }
 }

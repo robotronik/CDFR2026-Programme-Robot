@@ -28,12 +28,7 @@ nav_return_t navigationDrive(){
         //LOG_GREEN_INFO("Path length: ", len);
         if (currentPathLength <= 0){
             LOG_ERROR("No path found");
-            if (!is_robot_stuck){
-                is_robot_stuck = true;
-                robot_stuck_start_time = _millis();
-                drive.setBrakeState(true);
-            }
-            return NAV_IN_PROCESS;
+            return NAV_ERROR;
         }
         else {
             // LOG_GREEN_INFO("Path found!");
@@ -42,12 +37,6 @@ nav_return_t navigationDrive(){
     else{
         currentPathLength = 1;
         currentPath[0] = current_pos_target;
-    }
-    if (is_robot_stuck){
-        // Robot is now unstuck
-        is_robot_stuck = false;
-        if (!is_robot_stalled)
-            drive.setBrakeState(false);
     }
     bool done = drive.drive(currentPath, currentPathLength, current_slow_mode, current_complete_stop);
     if (done) return NAV_DONE;
@@ -66,9 +55,14 @@ nav_return_t navigationGo(){
                 driving = false;
             else
                 return NAV_DONE;
+        } else if (result == NAV_ERROR){
+            LOG_ERROR("Navigation drive error");
+            return NAV_ERROR;
         }
-        if (is_robot_stalled && (_millis() - robot_stall_start_time > 5000))
+        if (is_robot_stalled && (_millis() - robot_stall_start_time > 1000)){
+            LOG_WARNING("Robot has been stalled for more than 1 second, returning NAV_ERROR");
             return NAV_ERROR; // We are stuck for too long
+        }
         else if (is_robot_stalled)
             return NAV_PAUSED;
     } else {

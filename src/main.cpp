@@ -305,13 +305,13 @@ void GetLidar()
         pathfind_fill_lidar();
         
         position_t pos_opponent;
-        if (position_opponentV2(lidar.data, lidar.count, drive.position, pos_opponent)){
+        if ((fabs(drive.velocity.a) <= 45.0) && position_opponentV2(lidar.data, lidar.count, drive.position, pos_opponent)){
             // If it's the first reading, initialize the filtered position
             // Apply the low-pass filter
             tableStatus.pos_opponent.x = pos_opponent.x;
             tableStatus.pos_opponent.y = pos_opponent.y;
 
-            if ((currentState == RUN || currentState == MANUAL) && (_millis() > tableStatus.startTime + 1000) && (fabs(drive.velocity.a) <= 45)){ // Only update opponent position if the robot is not moving too fast to avoid noise, and after 1 second from the start to avoid false readings at the beginning
+            if ((currentState == RUN || currentState == MANUAL) && (_millis() - tableStatus.startTime > 1000)){ // Only update opponent position if the robot is not moving too fast to avoid noise, and after 1 second from the start to avoid false readings at the beginning
                 opponentInAction(pos_opponent);            
             }
         }
