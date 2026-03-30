@@ -60,6 +60,7 @@ class ActionFSM{
             FSM_GATHER_NAV,
             FSM_GATHER_DETECT,
             FSM_GATHER_CLAWS,
+            FSM_GATHER_PREMOVE,
             FSM_GATHER_MOVE,
             FSM_GATHER_COLLECT,
             FSM_GATHER_COLLECTED

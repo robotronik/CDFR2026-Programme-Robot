@@ -229,12 +229,22 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_CLAWS:
             if (lowerClaws()){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for stock ", stock_num);
+                gatherStockState = FSM_GATHER_PREMOVE;
+            }
+            break;
+        case FSM_GATHER_PREMOVE:
+            {
+            
+            nav_ret = navigationGoTo(targetStockFirstPos, false, true); // Slow mode for more precision
+            //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
+            if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_MOVE;
+                LOG_EXTENDED_DEBUG("FSM_GATHER_PREMOVE: Pre-Moving to stock ", stock_num, " at position (", targetStockFirstPos.x, ",", targetStockFirstPos.y, ") with angle ", targetStockFirstPos.a);
+            }
             }
             break;
         case FSM_GATHER_MOVE:
             {
-            
             nav_ret = navigationGoTo(targetStockPos, false, true); // Slow mode for more precision
             //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
             if (nav_ret == NAV_DONE){
