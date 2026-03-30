@@ -32,7 +32,7 @@ void ActionFSM::Reset(){
     offset = 0;
     targetStockPos = position_t{0,0,0};
     dropzonePos = position_t{0,0,0};
-
+    targetStockFirstPos = position_t{0,0,0};
     for(size_t _ = 0; _<4 ; _++){
         stockOrder[_] = (tableStatus.colorTeam == YELLOW) ? false : true;
     }
@@ -209,6 +209,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
                     //LOG_GREEN_INFO("pos aruco = ", x ," / ", y," / ",  a);
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Detection sucess calibration on blocks");
                     targetStockPos = position_t{x, y, a};
+                    targetStockFirstPos = toFirstStockPos(targetStockPos);
                 }else if(sucess == 1){
                     LOG_WARNING("FSM_GATHER_DETECT: Drop Zone is empty");
                     gatherStockState = FSM_GATHER_NAV;

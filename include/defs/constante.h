@@ -40,7 +40,8 @@
 
 #define MAX_WIDTH_TABLE 1000
 #define MAX_LENGTH_TABLE 1500
-#define OFFSET_STOCK 300 // Offset to be in the middle of the stock, could be changed if we want to take the stock from the top or the bottom
+#define OFFSET_STOCK 300 // Offset to be in the middle of the stock, could be changed if we want to take the stock from the top or the bottom*
+#define MULT_PARAM 0.68
 #define STOCK_COUNT  8
 #define DROPZONE_COUNT 10
 #define OFFSET_DROPZONE 250 // Offset to be in the middle of the dropzone, could be tweaked

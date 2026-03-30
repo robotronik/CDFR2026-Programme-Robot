@@ -38,6 +38,7 @@ class ActionFSM{
         nav_return_t nav_ret;
         position_t dropzonePos;
         position_t targetStockPos;
+        position_t targetStockFirstPos;
         bool stockOrder[4];
 
         /************  FSM GLOBAL ************/
