@@ -235,7 +235,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_PREMOVE:
             {
             
-            nav_ret = navigationGoTo(targetStockFirstPos, false, true); // Slow mode for more precision
+            nav_ret = navigationGoTo(targetStockFirstPos, false, false, false); // Slow mode for more precision
             //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
             if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_MOVE;
