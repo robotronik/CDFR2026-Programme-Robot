@@ -52,7 +52,6 @@ int chooseNextStock(int& closest_stock, int& closest_offset){
         LOG_WARNING("No next stock available");
         return 0;
     }else{
-        LOG_INFO("Best stock to take: ", closest_stock);
         return min;
     }
 }
@@ -115,6 +114,7 @@ int chooseStockStrategy(int& stockNum, int& stockOffset){
             if(!dist){
                 return std::numeric_limits<int>::max();
             }
+            LOG_INFO("Best stock to take: ", stockNum);
             return dist;
         }
         i++;
@@ -125,13 +125,15 @@ int chooseStockStrategy(int& stockNum, int& stockOffset){
         int dist = getBestStockPositionOff(stockNum, stockOffset);
         
         if(!dist){
-                return std::numeric_limits<int>::max();
-            }
-            return dist;
+            return std::numeric_limits<int>::max();
+        }
+        LOG_INFO("Best stock to take: ", stockNum);
+        return dist;
     }
 
     int dist = chooseNextStock(stockNum, stockOffset); // Choose the closest stock if the strategy stocks are not available
     if (stockNum != -1){
+        LOG_INFO("Best stock to take: ", stockNum, " at dist: ", dist);
         return dist;
     }
     //LOG_WARNING("No stock available");

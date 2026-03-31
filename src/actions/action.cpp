@@ -22,6 +22,7 @@ void ActionFSM::Reset(){
     CursorState = CURSOR_RAISE_CLAW;
     calibrationCameraState = FSM_ARUCO_1;
     calibrationState = FSM_CALCULATION;
+    waitState = FSM_WAIT_NAV;
 
     /*RESET OF ACTION ID*/
     dropzone_num = -1;
@@ -93,7 +94,15 @@ bool ActionFSM::RunFSM(){
             SetBestAction(drive.position);
         }
         break;
-    
+    case FSM_ACTION_WAIT:
+        ret = Wait();
+        if (ret == FSM_RETURN_DONE){
+            SetBestAction(drive.position);
+        }
+        else if (ret == FSM_RETURN_ERROR){
+            SetBestAction(drive.position); // Choisit une nouvelle action, le curseur étant indisponible
+        }
+        break;
     /*
         Action Curseur
         En cas d'erreur on lance une nouvelle action et retentera plus tard
@@ -517,6 +526,24 @@ ReturnFSM_t ActionFSM::Cursor(){
     return FSM_RETURN_WORKING;
 }
 
+ReturnFSM_t ActionFSM::Wait(){
+    switch (waitState)
+    {
+    case FSM_WAIT_NAV:
+    {   
+        nav_ret = navigationGoTo(position_t{0,0,0}, true, false); //false sinon il va pas vouloir y aller car trop proche du mur
+        if ((nav_ret == NAV_DONE)){ 
+            LOG_EXTENDED_DEBUG("FSM_WAIT_NAV: Nav done");
+            return FSM_RETURN_DONE;
+        }
+        else if (nav_ret == NAV_ERROR){
+            LOG_WARNING("FSM_WAIT_NAV: Navigation error while going to wait position");
+            return FSM_RETURN_ERROR;
+        }
+        break;
+    }
+    }
+}
 /*
     Plus l'action est prioritaire plus elle apparaît tôt dans le code.
         Ex: le retour êtant prioritaire sur toutes les autres actions on fera toujours le retour si les conditions sont remplies
@@ -562,7 +589,7 @@ void ActionFSM::SetBestAction(position_t position){
     if (stock_num == -1 && gatherStockState == FSM_GATHER_NAV){
         //LOG_DEBUG("Getting next stock to take");
         closestStock = chooseStockStrategy(stock_num, offset);
-        if (!closestStock){
+        if (stock_num == -1){
             LOG_WARNING("ACTION_GATHER: No more stocks to take");
             stock_num = -1;
             gatherStockState = FSM_GATHER_NAV;
@@ -587,6 +614,7 @@ void ActionFSM::SetBestAction(position_t position){
 
     if(closestSteal == std::numeric_limits<int>::max() && closestStock == std::numeric_limits<int>::max()){
         LOG_ERROR("Nothing else to do waiting");
+        runState = FSM_ACTION_WAIT;
     }else{
         /*********************** CONDITION POUR VOLER UN STOCK OU TAKE STOCK ****************************/
         if(closestSteal < closestStock){
