@@ -45,8 +45,6 @@
 #define STOCK_COUNT  8
 #define DROPZONE_COUNT 10
 #define OFFSET_DROPZONE 250 // Offset to be in the middle of the dropzone, could be tweaked
-#define OFFSET_STEALX 50
-#define OFFSET_STEALY 200
 #define CALIBRATION_DEPLETION_TIME 2 // Max time between to calibration
 // Define the dimensions of the stocks
 #define STOCKS_WIDTH 200
