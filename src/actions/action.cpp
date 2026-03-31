@@ -356,6 +356,7 @@ ReturnFSM_t ActionFSM::StealStock(){
             }
             // Force le drop dans la même zone
             dropStockState = FSM_DROP_NAV;
+            dropzonePos = targetPos_; // à changer en cas de virage de blocks
             rotate_done = false;
             stock_num = steal_count; // marking random value to pass Best Action condition on drop action
             steal_count = -1;
