@@ -50,10 +50,10 @@ int chooseNextStock(int& closest_stock, int& closest_offset){
     }
     if (closest_stock == -1){
         LOG_WARNING("No next stock available");
-        return -1;
+        return 0;
     }else{
-        //LOG_INFO("Next stock to take: ", closest_stock);
-        return closest_stock;
+        LOG_INFO("Best stock to take: ", closest_stock);
+        return min;
     }
 }
 
