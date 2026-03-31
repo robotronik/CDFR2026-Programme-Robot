@@ -235,11 +235,13 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_PREMOVE:
             {
             
-            nav_ret = navigationGoTo(targetStockFirstPos, false, false, false); // Slow mode for more precision
+            nav_ret = navigationGoTo(targetStockFirstPos, false, true, false); // Slow mode for more precision
             //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
             if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_MOVE;
                 LOG_EXTENDED_DEBUG("FSM_GATHER_PREMOVE: Pre-Moving to stock ", stock_num, " at position (", targetStockFirstPos.x, ",", targetStockFirstPos.y, ") with angle ", targetStockFirstPos.a);
+                //target stock pos = targetStockFirstPos 30cm à gauche (du robot)
+                targetStockPos = position_t{targetStockFirstPos.x - int(300 * sin(DEG_TO_RAD*targetStockFirstPos.a)), targetStockFirstPos.y - int(300 * cos(DEG_TO_RAD*targetStockFirstPos.a)), targetStockFirstPos.a};
             }
             }
             break;
