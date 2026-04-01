@@ -7,3 +7,4 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
 
 void pathfind_setup();
 void pathfind_fill_lidar();
+void costmap_firstinit();

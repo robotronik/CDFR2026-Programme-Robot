@@ -12,7 +12,7 @@ typedef struct {
     position_int_t parent;
     bool visited;
 } Node;
-
+unsigned char saved_costmap[AS_HEIGHT][AS_WIDTH];
 unsigned char costmap[AS_HEIGHT][AS_WIDTH];
 Node nodes[AS_HEIGHT][AS_WIDTH];
 
@@ -28,6 +28,9 @@ inline bool is_position_int_equal(position_int_t a, position_int_t b){
     return (a.x == b.x && a.y == b.y);
 }
 
+void astar_void_savedmap(){
+    memset(saved_costmap, FREE_SPACE, sizeof(saved_costmap));
+}
 void astar_initialize_costmap(){
     memset(costmap, FREE_SPACE, sizeof(costmap));
 }
@@ -79,10 +82,18 @@ int astar_pathfind(position_int_t start, position_int_t goal, position_int_t pat
 
             // --- Cost logic ---
             int extra = 1;
-            if (costmap[next.x][next.y] == OBSTACLE_COST) {
+            switch (costmap[next.x][next.y] > saved_costmap[next.x][next.y] ? 
+                costmap[next.x][next.y] : saved_costmap[next.x][next.y])
+            {
+            case OBSTACLE_COST:
                 extra = 100; // Very costly, but not blocking
-            } else if (costmap[next.x][next.y] == MARGIN_COST) {
+                break;
+            case MARGIN_COST:
                 extra = 10;  // Intermediate cost
+                break;
+            default:
+                extra = 1;
+                break;
             }
 
             int new_g = nodes[curr.x][curr.y].g + extra;
@@ -127,6 +138,20 @@ void fill_costmap_square(position_int_t s, position_int_t e, unsigned char cost)
     if (width <= 0 || e.x <= s.x) return;
 
     for (int x = s.x; x < e.x; x++) {
+        memset(&saved_costmap[x][s.y], cost, (size_t)width);
+    }
+}
+
+void fill_adversary_square(position_int_t s, position_int_t e, unsigned char cost){
+    s.x = (s.x < 0) ? 0 : s.x;
+    e.x = (e.x > AS_HEIGHT) ? AS_HEIGHT : e.x;
+    s.y = (s.y < 0) ? 0 : s.y;
+    e.y = (e.y > AS_WIDTH) ? AS_WIDTH : e.y;
+    
+    const int width = e.y - s.y;
+    if (width <= 0 || e.x <= s.x) return;
+
+    for (int x = s.x; x < e.x; x++) {
         memset(&costmap[x][s.y], cost, (size_t)width);
     }
 }
@@ -135,7 +160,7 @@ void fill_costmap_square(position_int_t s, position_int_t e, unsigned char cost)
 // margin : marge autour de l'obstacle
 // traversable : true = A* peut traverser si nécessaire (MARGIN_COST)
 //               false = infranchissable (OBSTACLE_COST)
-void astar_place_obstacle_with_margin(position_int_t c, int w, int h, int margin, bool traversable) {
+void astar_place_obstacle_with_margin(position_int_t c, int w, int h, int margin, bool traversable, bool remove, bool advers) {
     position_int_t s, e;
     s.x = c.x - h/2;
     e.x = s.x + h;
@@ -148,8 +173,11 @@ void astar_place_obstacle_with_margin(position_int_t c, int w, int h, int margin
     // Définir la marge autour de l'obstacle
     s.x -= margin; e.x += margin;
     s.y -= margin; e.y += margin;
-    
-    fill_costmap_square(s, e, traversable ? MARGIN_COST : OBSTACLE_COST);
+    if(advers){
+        fill_adversary_square(s, e, remove ? FREE_SPACE : traversable ? MARGIN_COST : OBSTACLE_COST);
+    }else{
+        fill_costmap_square(s, e, remove ? FREE_SPACE : traversable ? MARGIN_COST : OBSTACLE_COST);
+    }
 }
 
 bool is_line_clear(position_int_t a, position_int_t b){

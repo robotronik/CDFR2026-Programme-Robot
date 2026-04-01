@@ -26,13 +26,13 @@ position_t convert_from_astar(position_int_t k){
 position_int_t astar_path[MAX_PATH_LEN];
 position_int_t smooth_path_arr[MAX_PATH_LEN];
 
-void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int RayonRobot, bool traversable = true)
+void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int RayonRobot, bool traversable = true, bool remove = false, bool advers = false)
 {
     position_int_t c = convert_to_astar(position_t{cx, cy, 0.0});
     int w = w_mm / SCALE;
     int h = h_mm / SCALE;
     int margin = RayonRobot / SCALE;
-    return astar_place_obstacle_with_margin(c, w, h, margin, traversable);
+    return astar_place_obstacle_with_margin(c, w, h, margin, traversable, remove, advers);
 }
 
 int pathfind(position_t start, position_t goal, position_t path[], double& path_length_mm){
@@ -84,29 +84,42 @@ double pathfind_length_mm(position_t start, position_t goal){
     return(astar_path_length(smooth_path_arr, smooth_len) * SCALE);
 }
 
-void pathfind_setup() {
-    astar_initialize_costmap();
+void costmap_firstinit(){
+    astar_void_savedmap();
     int RayonRobot=195;
-
-    // ===== DROP ZONES =====
-    place_obstacle_with_margin( 200,  1400, 200, 200, RayonRobot);
-    place_obstacle_with_margin( 900,   800, 200, 200, RayonRobot);
-    place_obstacle_with_margin( 200,   700, 200, 200, RayonRobot);
-    place_obstacle_with_margin(-450,   250, 200, 200, RayonRobot);
-    place_obstacle_with_margin( 200,     0, 200, 200, RayonRobot);
-
-    place_obstacle_with_margin( 200, -1400, 200, 200, RayonRobot);
-    place_obstacle_with_margin( 900,  -800, 200, 200, RayonRobot);
-    place_obstacle_with_margin( 200,  -700, 200, 200, RayonRobot);
-    place_obstacle_with_margin(-450,  -250, 200, 200, RayonRobot);
-    place_obstacle_with_margin( 900,     0, 200, 200, RayonRobot);
-
     // ===== TABLE BORDER ===== 
     place_obstacle_with_margin(    0,-1500,   50, 2000, RayonRobot, false);
     place_obstacle_with_margin(    0, 1500,   50, 2000, RayonRobot, false);
     place_obstacle_with_margin(-1000,    0, 3000,   50, RayonRobot, false);
     place_obstacle_with_margin( 1000,    0, 3000,   50, RayonRobot, false);
     place_obstacle_with_margin( -775,    0, 1800,  440, RayonRobot, false);
+
+    // ===== STOCKS ===== 
+    for(size_t i = 0; i< STOCK_COUNT; i ++){
+        if(tableStatus.avail_stocks[i]){
+            place_obstacle_with_margin(STOCK_POSITIONS_TABLE[i].x, STOCK_POSITIONS_TABLE[i].y, 200, 200, RayonRobot, true);
+        }
+    }
+
+}
+
+void pathfind_setup() {
+    astar_initialize_costmap();
+    int RayonRobot=195;
+
+    // ===== DROP ZONES =====
+    for(size_t i = 0; i< STOCK_COUNT; i ++){
+        if(tableStatus.dropzone_states[i] != TableState::DROPZONE_EMPTY){
+            place_obstacle_with_margin(STOCK_POSITIONS_TABLE[i].x, STOCK_POSITIONS_TABLE[i].y, 200, 200, RayonRobot, true);
+        }
+    }
+    // ===== STOCKS ===== 
+    for(size_t i = 0; i< STOCK_COUNT; i ++){
+        if(!tableStatus.avail_stocks[i]){
+            place_obstacle_with_margin(STOCK_POSITIONS_TABLE[i].x, STOCK_POSITIONS_TABLE[i].y, 200, 200, RayonRobot, true, true);
+        }
+    }
+
 }
 
 void pathfind_fill_lidar(){
@@ -115,6 +128,6 @@ void pathfind_fill_lidar(){
     for (int i = 0; i < lidar.count; i++){
         if (!lidar.data[i].onTable) continue;
         // TODO Dont add all of the lidar points to improve performance
-        place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y,150, 150,150,false);
+        place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y,150, 150,150,false, false, true);
     }
 }
