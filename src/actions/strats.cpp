@@ -61,6 +61,7 @@ int toAStarDistStock(int stockNum, int stockOffset){
     position_t stockOff = STOCK_OFFSETS[stockOffset];
     double angle = RAD_TO_DEG*  position_angle(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a} , stockPos);
     position_t target = position_sum(stockPos, stockOff);
+    LOG_EXTENDED_DEBUG("Calculating dist A* to stock: ", stockNum, " at pos { ",target.x, ", ", target.y,", ", target.a,"}");
     target.a = angle;
     return toAStarDist(target);
 }
