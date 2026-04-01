@@ -238,10 +238,12 @@ ReturnFSM_t ActionFSM::TakeStock(){
             nav_ret = navigationGoTo(targetStockFirstPos, false, true, false); // Slow mode for more precision
             //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
             if (nav_ret == NAV_DONE){
-                gatherStockState = FSM_GATHER_MOVE;
-                LOG_EXTENDED_DEBUG("FSM_GATHER_PREMOVE: Pre-Moving to stock ", stock_num, " at position (", targetStockFirstPos.x, ",", targetStockFirstPos.y, ") with angle ", targetStockFirstPos.a);
-                //target stock pos = targetStockFirstPos 30cm à gauche (du robot)
-                targetStockPos = position_t{targetStockFirstPos.x - int(300 * sin(DEG_TO_RAD*targetStockFirstPos.a)), targetStockFirstPos.y - int(300 * cos(DEG_TO_RAD*targetStockFirstPos.a)), targetStockFirstPos.a};
+                if (moveServoAndWait(SERVO_NUM_6, 180, 200)){
+                    gatherStockState = FSM_GATHER_MOVE;
+                    LOG_EXTENDED_DEBUG("FSM_GATHER_PREMOVE: Pre-Moving to stock ", stock_num, " at position (", targetStockFirstPos.x, ",", targetStockFirstPos.y, ") with angle ", targetStockFirstPos.a);
+                    //target stock pos = targetStockFirstPos 30cm à gauche (du robot)
+                    targetStockPos = position_t{targetStockFirstPos.x - int(300 * sin(DEG_TO_RAD*targetStockFirstPos.a)), targetStockFirstPos.y - int(300 * cos(DEG_TO_RAD*targetStockFirstPos.a)), targetStockFirstPos.a};
+                } 
             }
             }
             break;
@@ -257,7 +259,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             break;
         case FSM_GATHER_COLLECT:
             // Collect the stock
-            if (closeClaws()){
+            if (closeClaws() && moveServoAndWait(SERVO_NUM_6, 90, 200)){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: Stock", stock_num, " collected");
                 tableStatus.setStockAsRemoved(stock_num);
                 gatherStockState = FSM_GATHER_COLLECTED;
