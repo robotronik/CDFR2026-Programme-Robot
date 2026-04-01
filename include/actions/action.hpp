@@ -23,15 +23,17 @@ class ActionFSM{
         void SetBestAction(position_t position);
 
         ReturnFSM_t TakeStock();
-        ReturnFSM_t TakeIsolatedStock();
+        ReturnFSM_t StealStock();
         ReturnFSM_t DropStock();
         ReturnFSM_t Cursor();
         ReturnFSM_t Calibrate();
         ReturnFSM_t GetRobotCenter();
+        ReturnFSM_t Wait();
 
         int stock_num;// Num of stock
-        int dropzone_num;// Num of dropzone to drop the stock
+        int dropzone_num;// Num of dropzone to drop the stock or to steal from
         int offset;// Offset  is direction to take the stock from
+        int steal_count; // Number of blocks taken from dropZone
         bool rotate_done = false;
         position_t backPos;
 
@@ -40,16 +42,22 @@ class ActionFSM{
         position_t targetStockPos;
         bool stockOrder[4];
 
+        int closestStock;
+        int closestSteal;
+        position_t stockPos;
+        position_t stockOff;
+        
         /************  FSM GLOBAL ************/
         typedef enum
         {
             FSM_ACTION_GATHER,
-            FSM_ACTION_GATHER_ISOLATED,
+            FSM_ACTION_STEAL,
             FSM_ACTION_DROP,
             FSM_ACTION_CURSOR,
             FSM_ACTION_NAV_HOME,
             FSM_ACTION_CALIBRATION,
-            FSM_CENTER_CALIBRATION
+            FSM_CENTER_CALIBRATION,
+            FSM_ACTION_WAIT
         } StateRun_t;
         StateRun_t runState = FSM_ACTION_GATHER;
 
@@ -65,9 +73,9 @@ class ActionFSM{
         } StateGatherStock_t;
         StateGatherStock_t gatherStockState = FSM_GATHER_NAV;
         
-        /************ FSM GATHER ISOLATED **************/
+        /************ FSM STEAL **************/
 
-        StateGatherStock_t gatherIsolatedStockState = FSM_GATHER_DETECT;
+        StateGatherStock_t stealStockState = FSM_GATHER_NAV;
 
         /************  FSM DROP ************/
         typedef enum
@@ -89,6 +97,13 @@ class ActionFSM{
             FSM_CURSOR_END
         } StateCursor_t;
         StateCursor_t CursorState = CURSOR_RAISE_CLAW;
+
+        /************  FSM WAIT ************/
+        typedef enum
+        {   
+            FSM_WAIT_NAV
+        } StateWait_t;
+        StateWait_t waitState = FSM_WAIT_NAV;
 
         /************  FSM CALIBRATION ************/
         typedef enum
