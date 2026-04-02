@@ -28,7 +28,7 @@ bool lowerClaws(){
             state = 2;
             break;
         case 2: // approche lente jusqu'au switch
-            if (readLimitSwitchBottom() || (_millis() - startTime >= 1500)){
+            if (readLimitSwitchBottom() || (_millis() - startTime >= 1000)){
                 arduino.stopMotorDC();
                 state = 1;
                 return true;
