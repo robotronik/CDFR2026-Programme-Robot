@@ -158,25 +158,41 @@ void fill_adversary_square(position_int_t s, position_int_t e, unsigned char cos
 // c : position centrale en cells
 // w, h : largeur/hauteur de l'obstacle en cells
 // margin : marge autour de l'obstacle
-// traversable : true = A* peut traverser si nécessaire (MARGIN_COST)
-//               false = infranchissable (OBSTACLE_COST)
+// traversable : true = A* peut traverser si nécessaire (MARGIN_COST au centre et sur les bords)
+//               false = infranchissable (OBSTACLE_COST au centre, MARGIN_COST sur les bords)
 void astar_place_obstacle_with_margin(position_int_t c, int w, int h, int margin, bool traversable, bool remove, bool advers) {
-    position_int_t s, e;
-    s.x = c.x - h/2;
-    e.x = s.x + h;
-    s.y = c.y - w/2;
-    e.y = s.y + w;
+    // 1. Calcul des limites de l'obstacle central (inner)
+    position_int_t s_inner, e_inner;
+    s_inner.x = c.x - h/2;
+    e_inner.x = s_inner.x + h;
+    s_inner.y = c.y - w/2;
+    e_inner.y = s_inner.y + w;
 
-    // Only fill the margins
-    //fill_costmap_square(s, e, traversable ? MARGIN_COST : OBSTACLE_COST);
+    // 2. Calcul des limites incluant la marge (outer)
+    position_int_t s_outer, e_outer;
+    s_outer.x = s_inner.x - margin;
+    e_outer.x = e_inner.x + margin;
+    s_outer.y = s_inner.y - margin;
+    e_outer.y = e_inner.y + margin;
 
-    // Définir la marge autour de l'obstacle
-    s.x -= margin; e.x += margin;
-    s.y -= margin; e.y += margin;
-    if(advers){
-        fill_adversary_square(s, e, remove ? FREE_SPACE : traversable ? MARGIN_COST : OBSTACLE_COST);
-    }else{
-        fill_costmap_square(s, e, remove ? FREE_SPACE : traversable ? MARGIN_COST : OBSTACLE_COST);
+    // Le coût de base pour la zone globale (soit on efface, soit on met la marge par défaut)
+    unsigned char base_cost = remove ? FREE_SPACE : MARGIN_COST;
+
+    // 3. Remplissage de toute la zone (centre + marges) avec le coût de base
+    if (advers) {
+        fill_adversary_square(s_outer, e_outer, base_cost);
+    } else {
+        fill_costmap_square(s_outer, e_outer, base_cost);
+    }
+
+    // 4. Si l'obstacle n'est pas traversable et qu'on l'ajoute, 
+    // on écrase la zone centrale avec OBSTACLE_COST
+    if (!traversable && !remove) {
+        if (advers) {
+            fill_adversary_square(s_inner, e_inner, OBSTACLE_COST);
+        } else {
+            fill_costmap_square(s_inner, e_inner, OBSTACLE_COST);
+        }
     }
 }
 
