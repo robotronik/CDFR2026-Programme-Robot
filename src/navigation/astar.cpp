@@ -12,7 +12,7 @@ typedef struct {
     position_int_t parent;
     bool visited;
 } Node;
-
+unsigned char saved_costmap[AS_HEIGHT][AS_WIDTH];
 unsigned char costmap[AS_HEIGHT][AS_WIDTH];
 Node nodes[AS_HEIGHT][AS_WIDTH];
 
@@ -28,6 +28,9 @@ inline bool is_position_int_equal(position_int_t a, position_int_t b){
     return (a.x == b.x && a.y == b.y);
 }
 
+void astar_void_savedmap(){
+    memset(saved_costmap, FREE_SPACE, sizeof(saved_costmap));
+}
 void astar_initialize_costmap(){
     memset(costmap, FREE_SPACE, sizeof(costmap));
 }
@@ -79,10 +82,18 @@ int astar_pathfind(position_int_t start, position_int_t goal, position_int_t pat
 
             // --- Cost logic ---
             int extra = 1;
-            if (costmap[next.x][next.y] == OBSTACLE_COST) {
+            switch (costmap[next.x][next.y] > saved_costmap[next.x][next.y] ? 
+                costmap[next.x][next.y] : saved_costmap[next.x][next.y])
+            {
+            case OBSTACLE_COST:
                 extra = 100; // Very costly, but not blocking
-            } else if (costmap[next.x][next.y] == MARGIN_COST) {
+                break;
+            case MARGIN_COST:
                 extra = 10;  // Intermediate cost
+                break;
+            default:
+                extra = 1;
+                break;
             }
 
             int new_g = nodes[curr.x][curr.y].g + extra;
@@ -127,29 +138,62 @@ void fill_costmap_square(position_int_t s, position_int_t e, unsigned char cost)
     if (width <= 0 || e.x <= s.x) return;
 
     for (int x = s.x; x < e.x; x++) {
+        memset(&saved_costmap[x][s.y], cost, (size_t)width);
+    }
+}
+
+void fill_adversary_square(position_int_t s, position_int_t e, unsigned char cost){
+    s.x = (s.x < 0) ? 0 : s.x;
+    e.x = (e.x > AS_HEIGHT) ? AS_HEIGHT : e.x;
+    s.y = (s.y < 0) ? 0 : s.y;
+    e.y = (e.y > AS_WIDTH) ? AS_WIDTH : e.y;
+    
+    const int width = e.y - s.y;
+    if (width <= 0 || e.x <= s.x) return;
+
+    for (int x = s.x; x < e.x; x++) {
         memset(&costmap[x][s.y], cost, (size_t)width);
     }
 }
 // c : position centrale en cells
 // w, h : largeur/hauteur de l'obstacle en cells
 // margin : marge autour de l'obstacle
-// traversable : true = A* peut traverser si nécessaire (MARGIN_COST)
-//               false = infranchissable (OBSTACLE_COST)
-void astar_place_obstacle_with_margin(position_int_t c, int w, int h, int margin, bool traversable) {
-    position_int_t s, e;
-    s.x = c.x - h/2;
-    e.x = s.x + h;
-    s.y = c.y - w/2;
-    e.y = s.y + w;
+// traversable : true = A* peut traverser si nécessaire (MARGIN_COST au centre et sur les bords)
+//               false = infranchissable (OBSTACLE_COST au centre, MARGIN_COST sur les bords)
+void astar_place_obstacle_with_margin(position_int_t c, int w, int h, int margin, bool traversable, bool remove, bool advers) {
+    // 1. Calcul des limites de l'obstacle central (inner)
+    position_int_t s_inner, e_inner;
+    s_inner.x = c.x - h/2;
+    e_inner.x = s_inner.x + h;
+    s_inner.y = c.y - w/2;
+    e_inner.y = s_inner.y + w;
 
-    // Only fill the margins
-    //fill_costmap_square(s, e, traversable ? MARGIN_COST : OBSTACLE_COST);
+    // 2. Calcul des limites incluant la marge (outer)
+    position_int_t s_outer, e_outer;
+    s_outer.x = s_inner.x - margin;
+    e_outer.x = e_inner.x + margin;
+    s_outer.y = s_inner.y - margin;
+    e_outer.y = e_inner.y + margin;
 
-    // Définir la marge autour de l'obstacle
-    s.x -= margin; e.x += margin;
-    s.y -= margin; e.y += margin;
-    
-    fill_costmap_square(s, e, traversable ? MARGIN_COST : OBSTACLE_COST);
+    // Le coût de base pour la zone globale (soit on efface, soit on met la marge par défaut)
+    unsigned char base_cost = remove ? FREE_SPACE : MARGIN_COST;
+
+    // 3. Remplissage de toute la zone (centre + marges) avec le coût de base
+    if (advers) {
+        fill_adversary_square(s_outer, e_outer, base_cost);
+    } else {
+        fill_costmap_square(s_outer, e_outer, base_cost);
+    }
+
+    // 4. Si l'obstacle n'est pas traversable et qu'on l'ajoute, 
+    // on écrase la zone centrale avec OBSTACLE_COST
+    if (!traversable && !remove) {
+        if (advers) {
+            fill_adversary_square(s_inner, e_inner, OBSTACLE_COST);
+        } else {
+            fill_costmap_square(s_inner, e_inner, OBSTACLE_COST);
+        }
+    }
 }
 
 bool is_line_clear(position_int_t a, position_int_t b){
