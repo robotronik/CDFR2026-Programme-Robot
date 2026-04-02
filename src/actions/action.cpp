@@ -241,8 +241,8 @@ ReturnFSM_t ActionFSM::TakeStock(){
                 if (moveServoAndWait(SERVO_NUM_6, 180, 200)){
                     gatherStockState = FSM_GATHER_MOVE;
                     LOG_EXTENDED_DEBUG("FSM_GATHER_PREMOVE: Pre-Moving to stock ", stock_num, " at position (", targetStockFirstPos.x, ",", targetStockFirstPos.y, ") with angle ", targetStockFirstPos.a);
-                    //target stock pos = targetStockFirstPos 30cm à gauche (du robot)
-                    targetStockPos = position_t{targetStockFirstPos.x - int(300 * sin(DEG_TO_RAD*targetStockFirstPos.a)), targetStockFirstPos.y - int(300 * cos(DEG_TO_RAD*targetStockFirstPos.a)), targetStockFirstPos.a};
+                    //target stock pos = targetStockFirstPos 30cm à gauche (du robot) et avance de 2cm
+                    targetStockPos = position_t{targetStockFirstPos.x - int(300 * sin(DEG_TO_RAD*targetStockFirstPos.a)) + int(20 * cos(DEG_TO_RAD*targetStockFirstPos.a)), targetStockFirstPos.y - int(300 * cos(DEG_TO_RAD*targetStockFirstPos.a)) + int(20 * sin(DEG_TO_RAD*targetStockFirstPos.a)), targetStockFirstPos.a};
                 } 
             }
             }

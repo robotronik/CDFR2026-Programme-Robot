@@ -253,8 +253,8 @@ position_t getBestIsolatedPosition(position_t centerPos, position_t fromPos){
 position_t toFirstStockPos(position_t targetPos){
     position_t firstPos;
     double a_block_rad = (targetPos.a - drive.position.a) * DEG_TO_RAD;
-    double offsetX = OFFSET_CAM_X - OFFSET_STEALX - OFFSET_STOCK * (1 - MULT_PARAM) * cos(a_block_rad);
-    double offsetY = OFFSET_CAM_Y - OFFSET_STEALY - OFFSET_STOCK * (1 - MULT_PARAM) * sin(a_block_rad);
+    double offsetX = - OFFSET_STEALX;
+    double offsetY = - OFFSET_STEALY ;
     double cos_a = cos(drive.position.a * DEG_TO_RAD);
     double sin_a = sin(drive.position.a * DEG_TO_RAD);
     firstPos.a = targetPos.a;//On veut l'angle final
