@@ -81,21 +81,28 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
     // Linear motion
     double position_acceleration = (is_slow_mode ? 80.0 : 250.0); // mm/s²
     double position_top_speed    =  (is_slow_mode ? 400.0 : 2000.0); // mm/s
-    double current_linear_velocity = position_length(velocity); // mm/s
-    double position_speed; // mm/s
-
-    position_speed = MIN(current_linear_velocity + position_acceleration, position_top_speed);
-    
-    // Distance to final target
-    double distance_to_target = position_distance(position, pos[n - 1]);
+    position_t position_speed; // mm/s
 
     position_t vec;
     vec.x = pos_target.x - position.x;
     vec.y = pos_target.y - position.y;
     position_normalize(vec);
+
+    position_speed.x = velocity.x + vec.x * position_acceleration;
+    position_speed.y = velocity.y + vec.y * position_acceleration;
+    double s = position_length(position_speed);
+    position_normalize(position_speed);
+    if (s > position_top_speed)
+        s = position_top_speed;
+    position_speed.x *= s;
+    position_speed.y *= s;
+    
+    // Distance to final target
+    double distance_to_target = position_distance(position, pos[n - 1]);
+
     const double kP_lin = 5.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
-    vec.x *= position_speed / kP_lin;
-    vec.y *= position_speed / kP_lin;
+    vec.x = position_speed.x / kP_lin;
+    vec.y = position_speed.y / kP_lin;
     if (distance_to_target > position_length(vec) && distance_to_target > 30.0) {
         pos_target.x = position.x + vec.x;
         pos_target.y = position.y + vec.y;
