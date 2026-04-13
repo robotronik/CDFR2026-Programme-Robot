@@ -114,7 +114,7 @@ bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
     y = position.value("y", -1.0);
     a = position.value("a", -1.0);
     success = true;
-    LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " } with sucess frames : ", sucessFrames, " and failed frames : ", failedFrames);
+    // LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " } with sucess frames : ", sucessFrames, " and failed frames : ", failedFrames);
     // Return true if the values were successfully extracted
     waiting_for_pos = false;
     return true;
@@ -256,6 +256,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
             }
         }
         if(success){
+            //TODO replace with getIsolated when is better
             tmp_x = visibleBlocks[0].x;
             tmp_y = visibleBlocks[0].y;
             tmp_a = visibleBlocks[0].a;
@@ -269,14 +270,13 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
         LOG_ERROR("ArucoCam::getObjectPos() - No object position found");
     }else{
         //Traitement pour passer dans les coordonnées de la table
-        float mult_param = 0.68;
         // Décalage pour le centre du robot
         tmp_a = (tmp_a > 0) ? tmp_a - 90 : tmp_a + 90;
         double rad_tmp_a = tmp_a * M_PI / 180.0;
         //LOG_EXTENDED_DEBUG("Position avant correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
         //LOG_EXTENDED_DEBUG("Décalage appliqué : { sin = ", OFFSET_STOCK * mult_param * sin(rad_tmp_a), ", cos = ", OFFSET_STOCK * mult_param * cos(rad_tmp_a), " }");
-        tmp_x += OFFSET_CAM_X - OFFSET_STOCK * mult_param * cos(rad_tmp_a);
-        tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y - OFFSET_STOCK * mult_param * sin(rad_tmp_a);
+        tmp_x += OFFSET_CAM_X - OFFSET_STOCK * MULT_PARAM * cos(rad_tmp_a);
+        tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y - OFFSET_STOCK * MULT_PARAM * sin(rad_tmp_a);
         //LOG_EXTENDED_DEBUG("Position après correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
 
 

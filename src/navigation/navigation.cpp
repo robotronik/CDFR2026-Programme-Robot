@@ -12,6 +12,7 @@ static unsigned long robot_stall_start_time;
 static position_t current_pos_target;
 static bool current_use_astar;
 static bool current_slow_mode;
+static bool current_complete_stop = true;
 
 static position_t currentPath[1024];
 static int currentPathLength = 0;
@@ -19,8 +20,8 @@ static int currentPathLength = 0;
 nav_return_t navigationDrive(){
     // Calculate the path
     if (current_use_astar){
-        int len;
-        currentPathLength = pathfind(drive.position, current_pos_target, currentPath, &len);
+        double len;
+        currentPathLength = pathfind(drive.position, current_pos_target, currentPath, len);
         //LOG_GREEN_INFO("Path length: ", len);
         if (currentPathLength <= 0){
             LOG_ERROR("No path found");
@@ -38,7 +39,7 @@ nav_return_t navigationDrive(){
         currentPathLength = 1;
         currentPath[0] = current_pos_target;
     }
-    bool done = drive.drive(currentPath, currentPathLength, current_slow_mode);
+    bool done = drive.drive(currentPath, currentPathLength, current_slow_mode, current_complete_stop);
     if (done) return NAV_DONE;
     return NAV_IN_PROCESS;
 }
@@ -50,7 +51,10 @@ nav_return_t navigationGo(){
         nav_return_t result = navigationDrive();
         if (result == NAV_DONE){
             LOG_EXTENDED_DEBUG("Navigation drive completed");
-            driving = false;
+            if (current_complete_stop) // If came to a complete stop, calibrate using camera, else nav is done
+                driving = false;
+            else
+                return NAV_DONE;
         }
     } else {
         // Calibrate using camera
@@ -73,7 +77,7 @@ nav_return_t navigationGo(){
     return NAV_IN_PROCESS;
 }
 
-nav_return_t navigationGoTo(position_t pos, bool useAStar, bool slow_mode){
+nav_return_t navigationGoTo(position_t pos, bool useAStar, bool slow_mode, bool complete_stop){
     if (current_pos_target.x != pos.x || 
         current_pos_target.y != pos.y || 
         current_pos_target.a != pos.a || 
@@ -83,6 +87,7 @@ nav_return_t navigationGoTo(position_t pos, bool useAStar, bool slow_mode){
         current_use_astar = useAStar;
     }
     current_slow_mode = slow_mode;
+    current_complete_stop = complete_stop;
 
     return navigationGo();
 }

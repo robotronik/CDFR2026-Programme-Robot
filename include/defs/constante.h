@@ -40,7 +40,8 @@
 
 #define MAX_WIDTH_TABLE 1000
 #define MAX_LENGTH_TABLE 1500
-#define OFFSET_STOCK 300 // Offset to be in the middle of the stock, could be changed if we want to take the stock from the top or the bottom
+#define OFFSET_STOCK 300 // Offset to be in the middle of the stock, could be changed if we want to take the stock from the top or the bottom*
+#define MULT_PARAM 0.68
 #define STOCK_COUNT  8
 #define DROPZONE_COUNT 10
 #define OFFSET_DROPZONE 250 // Offset to be in the middle of the dropzone, could be tweaked
@@ -65,10 +66,10 @@ const position_t STOCK_POSITIONS_TABLE[] = {
 // The stock table is ordered following symetry of the table, could be ordered by proximity
 
 const position_t STOCK_OFFSETS[] = {
-    { 12, OFFSET_STOCK, -90},  //0 : Offset depuis droite
-    {-12, - OFFSET_STOCK, 90},  //1 : Offset depuis gauche
-    { OFFSET_STOCK, -12, 180 },  //2 : Offset depuis bas
-    { - OFFSET_STOCK,12, 0},  //3 : Offset depuis haut
+    { 0, OFFSET_STOCK, -90},  //0 : Offset depuis droite
+    { 0, - OFFSET_STOCK, 90},  //1 : Offset depuis gauche
+    { OFFSET_STOCK, 0, 180 },  //2 : Offset depuis bas
+    { - OFFSET_STOCK,0, 0},  //3 : Offset depuis haut
 }; 
 
 const int STOCK_OFFSET_MAPPING[STOCK_COUNT][2] = {

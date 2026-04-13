@@ -32,7 +32,7 @@ void ActionFSM::Reset(){
     offset = 0;
     targetStockPos = position_t{0,0,0};
     dropzonePos = position_t{0,0,0};
-
+    targetStockFirstPos = position_t{0,0,0};
     for(size_t _ = 0; _<4 ; _++){
         stockOrder[_] = (tableStatus.colorTeam == YELLOW) ? false : true;
     }
@@ -209,6 +209,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
                     //LOG_GREEN_INFO("pos aruco = ", x ," / ", y," / ",  a);
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Detection sucess calibration on blocks");
                     targetStockPos = position_t{x, y, a};
+                    targetStockFirstPos = toFirstStockPos(targetStockPos);
                 }else if(sucess == 1){
                     LOG_WARNING("FSM_GATHER_DETECT: Drop Zone is empty");
                     gatherStockState = FSM_GATHER_NAV;
@@ -228,12 +229,22 @@ ReturnFSM_t ActionFSM::TakeStock(){
         case FSM_GATHER_CLAWS:
             if (lowerClaws()){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for stock ", stock_num);
+                gatherStockState = FSM_GATHER_PREMOVE;
+            }
+            break;
+        case FSM_GATHER_PREMOVE:
+            {
+            
+            nav_ret = navigationGoTo(targetStockFirstPos, false, false, false); // Slow mode for more precision
+            //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
+            if (nav_ret == NAV_DONE){
                 gatherStockState = FSM_GATHER_MOVE;
+                LOG_EXTENDED_DEBUG("FSM_GATHER_PREMOVE: Pre-Moving to stock ", stock_num, " at position (", targetStockFirstPos.x, ",", targetStockFirstPos.y, ") with angle ", targetStockFirstPos.a);
+            }
             }
             break;
         case FSM_GATHER_MOVE:
             {
-            
             nav_ret = navigationGoTo(targetStockPos, false, true); // Slow mode for more precision
             //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
             if (nav_ret == NAV_DONE){
@@ -363,8 +374,8 @@ ReturnFSM_t ActionFSM::DropStock(){
                 LOG_EXTENDED_DEBUG("FSM_DROP: Stock ", stock_num, " dropped");
                 dropStockState = FSM_DROP_NAV_BACK;
                 backPos = drive.position;
-                backPos.x -= 50 * cos(DEG_TO_RAD * drive.position.a);
-                backPos.y -= 50 * sin(DEG_TO_RAD * drive.position.a);
+                backPos.x -= 100 * cos(DEG_TO_RAD * drive.position.a);
+                backPos.y -= 100 * sin(DEG_TO_RAD * drive.position.a);
 
                 //No more stock in hand
                 stock_num = -1;
@@ -374,8 +385,9 @@ ReturnFSM_t ActionFSM::DropStock(){
             }
             break;
         case FSM_DROP_NAV_BACK:
-        { 
-            nav_ret = navigationGoTo(backPos, false);
+        {
+            // We don't come to a complete stop when backing up
+            nav_ret = navigationGoTo(backPos, false, false, false);
         
             if (nav_ret == NAV_DONE) {
                 dropStockState = FSM_DROP_NONE;
