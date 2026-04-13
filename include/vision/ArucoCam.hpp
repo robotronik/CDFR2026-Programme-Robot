@@ -10,6 +10,7 @@ using json = nlohmann::json;
 #define OFFSET_CAM_A 0 // Offset angle of the camera in degrees
 #define OFFSET_CLAW_Y -32 // Offset to align claw with block, diminuer = plus à droite
 #define OFFSET_STOCK 300
+#define MULT_PARAM 0.68
 
 class ArucoCam {   
 private:
