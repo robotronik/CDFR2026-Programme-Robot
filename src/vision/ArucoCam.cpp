@@ -275,8 +275,9 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
         double rad_tmp_a = tmp_a * M_PI / 180.0;
         //LOG_EXTENDED_DEBUG("Position avant correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
         //LOG_EXTENDED_DEBUG("Décalage appliqué : { sin = ", OFFSET_STOCK * mult_param * sin(rad_tmp_a), ", cos = ", OFFSET_STOCK * mult_param * cos(rad_tmp_a), " }");
-        tmp_x += OFFSET_CAM_X - OFFSET_STOCK * MULT_PARAM * cos(rad_tmp_a);
-        tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y - OFFSET_STOCK * MULT_PARAM * sin(rad_tmp_a);
+        const double off_s = 85; // Augmenter pour se rapprocher
+        tmp_x += OFFSET_CAM_X - (OFFSET_STOCK - off_s) * cos(rad_tmp_a);
+        tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y - (OFFSET_STOCK - off_s) * sin(rad_tmp_a);
         //LOG_EXTENDED_DEBUG("Position après correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
 
 
