@@ -355,9 +355,8 @@ void EndSequence()
 void tests()
 {
     static bool state = false;
-    position_t pos1 = {400.0, 0.0, -90.0};
+    position_t pos1 = {-100.0, 0.0, 0.0};
     pos1.y = state ? 900 : -900.0;
-    pos1.y += 300.0;
     nav_return_t ret = navigationGoTo(pos1, false, true);
     if (ret == NAV_DONE)
         state = !state;

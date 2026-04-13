@@ -34,7 +34,7 @@ enum class LogLevel {
 };
 
 // Only messages with a level equal to or above CURRENT_LOG_LEVEL will be printed.
-constexpr LogLevel CURRENT_LOG_LEVEL = LogLevel::INFO;
+constexpr LogLevel CURRENT_LOG_LEVEL = LogLevel::GREENINFO;
 
 // Base logger write function (already formatted message).
 void log_main(std::optional<Color> color, const std::string& message);
@@ -79,13 +79,7 @@ inline void log_main(std::optional<Color> color,
     std::ostringstream oss;
     appendMessage(oss, message, args...);
 
-    std::ostringstream payload;
-    payload << currentTimeFormatted() << " "
-            << std::left << std::setw(10) << ("[" + getLevelString(level) + "]")
-            << std::left << std::setw(30) << ("[" + file + ":" + std::to_string(line) + "]") << "  "
-            << oss.str();
-
-    log_main(color, payload.str());
+    log_main(color, oss.str());
 }
 
 // Convenience macros that automatically pass file and line.
