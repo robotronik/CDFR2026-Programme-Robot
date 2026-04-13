@@ -88,8 +88,8 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
     vec.y = pos_target.y - position.y;
     position_normalize(vec);
 
-    position_speed.x = velocity.x + vec.x * position_acceleration;
-    position_speed.y = velocity.y + vec.y * position_acceleration;
+    position_speed.x = velocity.x / 3.0 + vec.x * position_acceleration;
+    position_speed.y = velocity.y / 3.0 + vec.y * position_acceleration;
     double s = position_length(position_speed);
     position_normalize(position_speed);
     if (s > position_top_speed)
