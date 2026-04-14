@@ -32,6 +32,7 @@ class ActionFSM{
         int stock_num;// Num of stock
         int dropzone_num;// Num of dropzone to drop the stock or to steal from
         int offset;// Offset  is direction to take the stock from
+        int steal_count; // Number of blocks taken from dropZone
         bool rotate_done = false;
         position_t backPos;
 
@@ -45,7 +46,7 @@ class ActionFSM{
         typedef enum
         {
             FSM_ACTION_GATHER,
-            FSM_ACTION_GATHER_ISOLATED,
+            FSM_ACTION_STEAL,
             FSM_ACTION_DROP,
             FSM_ACTION_CURSOR,
             FSM_ACTION_NAV_HOME,

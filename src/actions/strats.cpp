@@ -240,19 +240,23 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos){
     For now very simple 
     TODO: developped with adversary position
 */
-position_t getBestStealZonePosition(position_t fromPos){
+bool getBestStealZonePosition(position_t fromPos, int& bestDropZone, position_t& bestPos){
     double min_distance = INFINITY;
-    position_t best = fromPos;
     for(int idx = 0; idx < DROPZONE_COUNT; idx++){
-        if(tableStatus.dropzone_states[idx] == (tableStatus.colorTeam == BLUE ? tableStatus.DROPZONE_BLUE : tableStatus.DROPZONE_YELLOW)) continue;
-        position_t tmp_pos = getBestDropZonePosition(idx, fromPos);
-        double tmp = position_distance(tmp_pos, fromPos);
-        if( tmp < min_distance){
-            best = tmp_pos;
-            min_distance = tmp;
+        if(tableStatus.dropzone_states[idx] == (tableStatus.colorTeam == BLUE ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE)){
+            position_t tmp_pos = getBestDropZonePosition(idx, fromPos);
+            double tmp = position_distance(tmp_pos, fromPos);
+            if( tmp < min_distance){
+                bestPos = tmp_pos;
+                min_distance = tmp;
+                bestDropZone = idx;
+            }
         }
     }
-    return best;
+    if(position_equals(fromPos, bestPos)){
+        return false;
+    }
+    return true;
 }
 
 position_t getBestIsolatedPosition(position_t centerPos, position_t fromPos){
