@@ -60,6 +60,10 @@ void drive_interface::enable()
 {
     I2cSendData(i2cFile, CMD_ENABLE, nullptr, 0);
 }
+void drive_interface::calibrate_otos()
+{
+    I2cSendData(i2cFile, CMD_CALIBRATE_OTOS, nullptr, 0);
+}
 packed_motor_t drive_interface::get_current()
 {
     packed_motor_t current;
