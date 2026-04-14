@@ -42,6 +42,11 @@ class ActionFSM{
         position_t targetStockFirstPos;
         bool stockOrder[4];
 
+        double closestStock;
+        double closestSteal;
+        position_t stockPos;
+        position_t stockOff;
+        
         /************  FSM GLOBAL ************/
         typedef enum
         {

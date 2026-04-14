@@ -8,7 +8,6 @@
 #include "main.hpp"
 #include "defs/constante.h"
 
-
 ActionFSM::ActionFSM(){
     Reset();
 }
@@ -34,6 +33,10 @@ void ActionFSM::Reset(){
     targetStockPos = position_t{0,0,0};
     dropzonePos = position_t{0,0,0};
     targetStockFirstPos = position_t{0,0,0};
+    closestStock = INFINITY;
+    closestSteal = INFINITY;
+    stockPos = position_t{0,0,0};
+    stockOff = position_t{0,0,0};
     for(size_t _ = 0; _<4 ; _++){
         stockOrder[_] = (tableStatus.colorTeam == YELLOW) ? false : true;
     }
@@ -162,18 +165,10 @@ bool ActionFSM::RunFSM(){
 ReturnFSM_t ActionFSM::TakeStock(){
     //LOG_INFO("TakeStock state: ", gatherStockState, " stock_num: ", stock_num);
     if (stock_num == -1 && gatherStockState == FSM_GATHER_NAV){
-        //LOG_DEBUG("Getting next stock to take");
-        if (!chooseStockStrategy(stock_num, offset)){
-            LOG_ERROR("ACTION_GATHER: No more stocks to take, exiting GatherStock");//Should never be catch
-            stock_num = -1;
-            gatherStockState = FSM_GATHER_NAV;
-            return FSM_RETURN_DONE;
-        }
-        LOG_GREEN_INFO("ACTION_GATHER: Next stock to take: ", stock_num, " offset: ", offset);
+        LOG_ERROR("No stock to take");
+        return FSM_RETURN_ERROR;
     }
-
-    position_t stockPos = STOCK_POSITIONS_TABLE[stock_num];
-    position_t stockOff = STOCK_OFFSETS[offset];
+    LOG_GREEN_INFO("ACTION_GATHER: Next stock to take: ", stock_num, " offset: ", offset);
 
     double angle = RAD_TO_DEG*  position_angle(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a} , stockPos);
 
@@ -555,6 +550,32 @@ void ActionFSM::SetBestAction(position_t position){
         runState = FSM_ACTION_CALIBRATION;
         LOG_GREEN_INFO("Calibration aged is greater than 2 going for forced calibration");
         return;
+    }
+
+    /********** CALCUL BEST STOCK ************/
+    if (stock_num == -1 && gatherStockState == FSM_GATHER_NAV){
+        //LOG_DEBUG("Getting next stock to take");
+        closestStock = chooseStockStrategy(stock_num, offset);
+        if (!closestStock){
+            LOG_WARNING("ACTION_GATHER: No more stocks to take");
+            stock_num = -1;
+            gatherStockState = FSM_GATHER_NAV;
+        }else{
+            stockPos = STOCK_POSITIONS_TABLE[stock_num];
+            stockOff = STOCK_OFFSETS[offset];
+        }
+    }
+
+    /************** CALCUL BEST STEAL *****************/
+    if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV){
+        //LOG_DEBUG("Getting next stock to take");
+        if (!getBestStealZonePosition(drive.position, dropzone_num, dropzonePos)){
+            LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
+            dropzone_num = -1;
+            stealStockState = FSM_GATHER_NAV;
+            return FSM_RETURN_DONE;
+        }
+        LOG_GREEN_INFO("ACTION_STEAL: Next dropZone to steal: ", dropzone_num);
     }
 
     /*********************** CONDITION POUR VOLER UN STOCK ****************************/
