@@ -283,8 +283,7 @@ int StartSequence()
     manual_ctrl = false;
     manual_currentFunc = NULL;
 
-    pathfind_setup();
-
+    costmap_firstinit();
     drive.reset();
 
     LOG_GREEN_INFO("Init sequence done");
