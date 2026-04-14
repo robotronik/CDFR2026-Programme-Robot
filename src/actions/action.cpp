@@ -7,7 +7,6 @@
 #include "utils/logger.hpp"
 #include "main.hpp"
 #include "defs/constante.h"
-#include <limits>
 ActionFSM::ActionFSM(){
     Reset();
 }
@@ -32,8 +31,8 @@ void ActionFSM::Reset(){
     targetStockPos = position_t{0,0,0};
     dropzonePos = position_t{0,0,0};
     targetStockFirstPos = position_t{0,0,0};
-    closestStock = std::numeric_limits<int>::max();
-    closestSteal = std::numeric_limits<int>::max();
+    closestStock = INFINITY;
+    closestSteal = INFINITY;
     stockPos = position_t{0,0,0};
     stockOff = position_t{0,0,0};
     for(size_t _ = 0; _<4 ; _++){
@@ -229,9 +228,11 @@ ReturnFSM_t ActionFSM::TakeStock(){
             }
             break;
         case FSM_GATHER_CLAWS:
+            {
             if (lowerClaws()){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for stock ", stock_num);
                 gatherStockState = FSM_GATHER_PREMOVE;
+            }
             }
             break;
         case FSM_GATHER_PREMOVE:
@@ -328,13 +329,24 @@ ReturnFSM_t ActionFSM::StealStock(){
             break;
         }
         case FSM_GATHER_CLAWS:
-        {
+            {
             if (lowerClaws()){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for dropZone ", dropzone_num);
                 stealStockState = FSM_GATHER_MOVE;
                 //drive.is_slow_mode = true;
             }
-        }
+            }
+            break;
+        case FSM_GATHER_PREMOVE:
+            {
+            
+            nav_ret = navigationGoTo(targetStockFirstPos, false, false, false); // Slow mode for more precision
+            //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
+            if (nav_ret == NAV_DONE){
+                gatherStockState = FSM_GATHER_MOVE;
+                LOG_EXTENDED_DEBUG("FSM_GATHER_PREMOVE: Pre-Moving to stock ", stock_num, " at position (", targetStockFirstPos.x, ",", targetStockFirstPos.y, ") with angle ", targetStockFirstPos.a);
+            }
+            }
             break;
         case FSM_GATHER_MOVE:
         {
@@ -606,7 +618,7 @@ void ActionFSM::SetBestAction(position_t position){
             LOG_WARNING("ACTION_GATHER: No more stocks to take");
             stock_num = -1;
             gatherStockState = FSM_GATHER_NAV;
-            closestStock = std::numeric_limits<int>::max();
+            closestStock = INFINITY;
         }else{
             stockPos = STOCK_POSITIONS_TABLE[stock_num];
             stockOff = STOCK_OFFSETS[offset];
@@ -621,11 +633,11 @@ void ActionFSM::SetBestAction(position_t position){
             LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
             dropzone_num = -1;
             stealStockState = FSM_GATHER_NAV;
-            closestSteal = std::numeric_limits<int>::max();
+            closestSteal = INFINITY;
         }
     }
 
-    if(closestSteal == std::numeric_limits<int>::max() && closestStock == std::numeric_limits<int>::max()){
+    if(closestSteal == INFINITY && closestStock == INFINITY){
         LOG_ERROR("Nothing else to do waiting");
         runState = FSM_ACTION_WAIT;
     }else{
