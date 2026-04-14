@@ -7,7 +7,7 @@
 #include "utils/logger.hpp"
 #include "main.hpp"
 #include "defs/constante.h"
-
+#include <limits>
 ActionFSM::ActionFSM(){
     Reset();
 }
@@ -33,8 +33,8 @@ void ActionFSM::Reset(){
     targetStockPos = position_t{0,0,0};
     dropzonePos = position_t{0,0,0};
     targetStockFirstPos = position_t{0,0,0};
-    closestStock = INFINITY;
-    closestSteal = INFINITY;
+    closestStock = std::numeric_limits<int>::max();
+    closestSteal = std::numeric_limits<int>::max();
     stockPos = position_t{0,0,0};
     stockOff = position_t{0,0,0};
     for(size_t _ = 0; _<4 ; _++){
@@ -556,7 +556,7 @@ void ActionFSM::SetBestAction(position_t position){
             LOG_WARNING("ACTION_GATHER: No more stocks to take");
             stock_num = -1;
             gatherStockState = FSM_GATHER_NAV;
-            closestStock = INFINITY;
+            closestStock = std::numeric_limits<int>::max();
         }else{
             stockPos = STOCK_POSITIONS_TABLE[stock_num];
             stockOff = STOCK_OFFSETS[offset];
@@ -571,7 +571,7 @@ void ActionFSM::SetBestAction(position_t position){
             LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
             dropzone_num = -1;
             stealStockState = FSM_GATHER_NAV;
-            closestSteal = INFINITY;
+            closestSteal = std::numeric_limits<int>::max();
         }
     }
 
@@ -590,7 +590,7 @@ void ActionFSM::SetBestAction(position_t position){
         return;
     }
 
-    if(closestSteal == INFINITY && closestStock == INFINITY){
+    if(closestSteal == std::numeric_limits<int>::max() && closestStock == std::numeric_limits<int>::max()){
         LOG_ERROR("Nothing else to do waiting");
     }else{
         /*********************** CONDITION POUR VOLER UN STOCK OU TAKE STOCK ****************************/
