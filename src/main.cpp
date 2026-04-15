@@ -146,22 +146,37 @@ int main(int argc, char *argv[])
             }
 
             if (readLatchSensor() && tableStatus.colorTeam != NONE)
-                nextState = RUN;
+                nextState = SECURITY_RUN;
             if (manual_ctrl)
                 nextState = MANUAL;
             break;
         }
         //****************************************************************
-        case RUN:
+        case SECURITY_RUN:
         {
+            static nav_return_t nav_ret;
             if (initState){
                 LOG_GREEN_INFO("RUN");
                 tableStatus.reset();
                 tableStatus.startTime = _millis();
                 action.Reset();
                 arduino.keepMotorDCup();
-
             }
+            position_t target = {-410.0,(tableStatus.colorTeam == BLUE ? 1120.0 : -1120.0),(tableStatus.colorTeam == BLUE ? 60.0 : -60.0)};
+            nav_ret = navigationGoTo(target, false, false, false);
+
+            if (nav_ret == NAV_DONE){
+                LOG_DEBUG("Finished security run");
+                nextState = RUN;
+            }
+            else if (nav_ret == NAV_ERROR){
+                LOG_WARNING("Security run failed → skipping");
+                nextState = RUN;
+            }
+            break;
+        }
+        case RUN:
+        {
             bool finished = action.RunFSM();
 
             if (_millis() > tableStatus.startTime + 100000 || finished || readButtonSensor())
