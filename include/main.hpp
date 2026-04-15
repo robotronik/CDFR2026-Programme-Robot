@@ -10,11 +10,10 @@
 typedef enum {
     INIT = 0,
     WAITSTART = 3,
-    SECURITY_RUN = 4,
-    RUN = 5,
-    FIN = 6,
-    TEST = 7,
-    MANUAL = 8
+    RUN = 4,
+    FIN = 5,
+    TEST = 6,
+    MANUAL = 7
 } main_State_t;
 
 
