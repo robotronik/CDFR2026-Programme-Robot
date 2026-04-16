@@ -262,20 +262,34 @@ position_t toFirstStockPos(position_t targetPos){
     return firstPos;
 }
 
-position_t NearestValidZone(position_t pos){
-
+// Clamp the position to be in the valid area of the table, returns true if the position was modified
+bool NearestValidZone(position_t* pos){
     const float MARGIN = 350.0;
-
     const float X_MIN = -550.0 + MARGIN, X_MAX = 1000.0 - MARGIN;
     const float Y_MIN = -1500.0 + MARGIN, Y_MAX = 1500.0 - MARGIN;
+    bool modified = false;
 
-    position_t corrected = pos;
+    // Clamp X
+    if (pos->x < X_MIN){
+        pos->x = X_MIN;
+        modified = true;
+    }
+    else if (pos->x > X_MAX){
+        pos->x = X_MAX;
+        modified = true;
+    }
 
-    if (corrected.x < X_MIN) corrected.x = X_MIN;
-    else if (corrected.x > X_MAX) corrected.x = X_MAX;
-
-    if (corrected.y < Y_MIN) corrected.y = Y_MIN;
-    else if (corrected.y > Y_MAX) corrected.y = Y_MAX;
-
-    return corrected;
+    // Clamp Y
+    if (pos->y < Y_MIN){
+        pos->y = Y_MIN;
+        modified = true;
+    }
+    else if (pos->y > Y_MAX){
+        pos->y = Y_MAX;
+        modified = true;
+    }
+    if (modified){
+        LOG_WARNING("Position out of bounds, clamping to nearest valid zone: (", pos->x, ", ", pos->y, ")");
+    }
+    return modified;
 }

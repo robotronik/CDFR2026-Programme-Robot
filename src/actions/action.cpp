@@ -531,7 +531,7 @@ ReturnFSM_t ActionFSM::BalayageSteal(int numDropZone){
                     targetStockPos.x += 150.0 * sin(DEG_TO_RAD * targetStockPos.a);
                     targetStockPos.x -= 40.0 * cos(DEG_TO_RAD * targetStockPos.a); // Se reculer un peu
                     targetStockPos.y -= 40.0 * sin(DEG_TO_RAD * targetStockPos.a);
-                    targetPos = NearestValidZone(targetPos);
+                    NearestValidZone(&targetStockPos);
                     LOG_GREEN_INFO("Target stock position is (", targetStockPos.x, ", ", targetStockPos.y, ", ", targetStockPos.a, ")");
                 }else if(sucess == 1){
                     LOG_WARNING("FSM_SWEEP_DETECT: Drop Zone is empty");
@@ -555,7 +555,7 @@ ReturnFSM_t ActionFSM::BalayageSteal(int numDropZone){
                 targetStockPos.x -= 200.0 * sin(DEG_TO_RAD * targetStockPos.a);
                 targetStockPos.x += 50.0 * cos(DEG_TO_RAD * targetStockPos.a); // S'avancer un peu
                 targetStockPos.y += 50.0 * sin(DEG_TO_RAD * targetStockPos.a);
-                targetPos = NearestValidZone(targetPos);
+                NearestValidZone(&targetStockPos);
 
                 LOG_EXTENDED_DEBUG("FSM_SWEEP_NAV_RIGHT: Moving to right of the stock " " at position (", targetStockPos.x, ",", targetStockPos.y, ") with angle ", targetStockPos.a);
             }
@@ -565,12 +565,15 @@ ReturnFSM_t ActionFSM::BalayageSteal(int numDropZone){
         {
             nav_ret = navigationGoTo(targetStockPos, false, true, false); // Slow mode for more precision
             if (nav_ret == NAV_DONE){
-                sweepState = FSM_SWEEP_COLLECT;
+                
                 targetStockPos.y += 100.0 * cos(DEG_TO_RAD * targetStockPos.a); // Se décaler à gauche du stock
                 targetStockPos.x -= 100.0 * sin(DEG_TO_RAD * targetStockPos.a);
                 targetStockPos.x += 50.0 * cos(DEG_TO_RAD * targetStockPos.a); // S'avancer avant de prendre le stock
                 targetStockPos.y += 50.0 * sin(DEG_TO_RAD * targetStockPos.a);
-                targetPos = NearestValidZone(targetPos);
+                if (NearestValidZone(&targetStockPos)){
+                    LOG_WARNING("Position out of bounds, clamping to nearest valid zone");
+                }
+                sweepState = FSM_SWEEP_COLLECT;
                 LOG_EXTENDED_DEBUG("FSM_SWEEP_NAV_LEFT: Moving to left of the stock " " at position (", targetStockPos.x, ",", targetStockPos.y, ") with angle ", targetStockPos.a);
             }
             break;
