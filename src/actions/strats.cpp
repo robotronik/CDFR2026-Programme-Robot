@@ -64,9 +64,8 @@ bool chooseStockStrategy(int& stockNum, int& stockOffset){
             num = 1;
             break;
         case 2:
-            todo_stocks[0] = 7;
-            todo_stocks[1] = 6;
-            num = 2;
+            todo_stocks[0] = 5;
+            num = 1;
             break;
         case 3:
             todo_stocks[0] = 3;
@@ -169,7 +168,7 @@ int GetBestDropZone(position_t fromPos){
             continue;
 
         position_t dropzonePos = DROPZONE_POSITIONS_TABLE[i];
-        double dist2 = position_distance(fromPos, dropzonePos) + fabs( tableStatus.colorTeam == BLUE ? dropzonePos.y - 1500 : dropzonePos.y + 1500); // We want to favor the dropzones on our side of the table
+        double dist2 = position_distance(fromPos, dropzonePos);
 
         if (dist2 < bestDist2){
             bestDist2 = dist2;

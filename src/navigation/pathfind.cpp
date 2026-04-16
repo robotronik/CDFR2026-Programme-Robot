@@ -88,19 +88,6 @@ void pathfind_setup() {
     astar_initialize_costmap();
     int RayonRobot=195;
 
-    // ===== DROP ZONES =====
-    place_obstacle_with_margin( 200,  1400, 200, 200, RayonRobot);
-    place_obstacle_with_margin( 900,   800, 200, 200, RayonRobot);
-    place_obstacle_with_margin( 200,   700, 200, 200, RayonRobot);
-    place_obstacle_with_margin(-450,   250, 200, 200, RayonRobot);
-    place_obstacle_with_margin( 200,     0, 200, 200, RayonRobot);
-
-    place_obstacle_with_margin( 200, -1400, 200, 200, RayonRobot);
-    place_obstacle_with_margin( 900,  -800, 200, 200, RayonRobot);
-    place_obstacle_with_margin( 200,  -700, 200, 200, RayonRobot);
-    place_obstacle_with_margin(-450,  -250, 200, 200, RayonRobot);
-    place_obstacle_with_margin( 900,     0, 200, 200, RayonRobot);
-
     // ===== TABLE BORDER ===== 
     place_obstacle_with_margin(    0,-1500,   50, 2000, RayonRobot, false);
     place_obstacle_with_margin(    0, 1500,   50, 2000, RayonRobot, false);
@@ -111,10 +98,22 @@ void pathfind_setup() {
 
 void pathfind_fill_lidar(){
     pathfind_setup();
+    //place stock zone if available
+    for (int i = 0; i < STOCK_COUNT; i++){
+        if (!tableStatus.avail_stocks[i]) continue;
+        position_t stock_pos = STOCK_POSITIONS_TABLE[i];
+        place_obstacle_with_margin(stock_pos.x, stock_pos.y, STOCKS_WIDTH, STOCKS_WIDTH, 220, true);
+    }
+    //place dropzones if not empty
+    for (int i = 0; i < DROPZONE_COUNT; i++){
+        if (tableStatus.dropzone_states[i] == TableState::DROPZONE_EMPTY) continue;
+        position_t dropzone_pos = DROPZONE_POSITIONS_TABLE[i];
+        place_obstacle_with_margin(dropzone_pos.x, dropzone_pos.y, DROPZONE_WIDTH, DROPZONE_LENGTH, 220, true);
+    }
 
     for (int i = 0; i < lidar.count; i++){
         if (!lidar.data[i].onTable) continue;
         // TODO Dont add all of the lidar points to improve performance
-        place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y,150, 150,150,false);
+        place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y, 400, 400, 220, false);
     }
 }

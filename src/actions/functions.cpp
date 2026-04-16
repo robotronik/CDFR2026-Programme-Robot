@@ -363,10 +363,7 @@ bool m_isPointInsideRectangle(float px, float py, float cx, float cy, float w, f
 void opponentInAction(position_t position){
     for(int i = 0; i < STOCK_COUNT; i++){
         position_t stock_pos = STOCK_POSITIONS_TABLE[i];
-        if (tableStatus.avail_stocks[i] && m_isPointInsideRectangle(position.x, position.y, stock_pos.x, stock_pos.y, 
-            OPPONENT_ROBOT_RADIUS * 2 + (stock_pos.a == 90 ? STOCKS_LENGTH : STOCKS_WIDTH), 
-            OPPONENT_ROBOT_RADIUS * 2 + (stock_pos.a == 90 ? STOCKS_WIDTH : STOCKS_LENGTH)) )// we  consider stock orientation
-        {
+        if (tableStatus.avail_stocks[i] && m_isPointInsideRectangle(position.x, position.y, stock_pos.x, stock_pos.y, OPPONENT_ROBOT_RADIUS * 2, OPPONENT_ROBOT_RADIUS * 2)){
             LOG_INFO("Opponent in action at stock ", i, " at position ", position.x, " / ", position.y);
             tableStatus.avail_stocks[i] = false;
             return;

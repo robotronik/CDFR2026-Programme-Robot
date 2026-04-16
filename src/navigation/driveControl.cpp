@@ -151,6 +151,10 @@ void DriveControl::disable(){
     drive_interface::disable();
 }
 
+void DriveControl::setBrakeState(bool brake){
+    drive_interface::set_brake_state(brake);
+}
+
 void DriveControl::setGreenLed(bool status){
     drive_interface::set_green_led(status);
 }
