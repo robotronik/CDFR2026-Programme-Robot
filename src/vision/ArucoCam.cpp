@@ -426,7 +426,7 @@ bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double &
     }
 
     if(ToObjectPos(data, x, y, a, success)){// Can not return False so first If is useless
-        if(!success){
+        if(success > 0){
             if(ToObjectColor(order, success)){ // Can not return false either
                 return true; // exec finished 
             }else return false; // exec unfinished
