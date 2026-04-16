@@ -26,6 +26,7 @@ class ActionFSM{
         ReturnFSM_t TakeIsolatedStock();
         ReturnFSM_t DropStock();
         ReturnFSM_t Cursor();
+        ReturnFSM_t BalayageSteal(position_t stockPos);
         ReturnFSM_t Calibrate();
         ReturnFSM_t GetRobotCenter();
 
@@ -48,6 +49,7 @@ class ActionFSM{
             FSM_ACTION_GATHER_ISOLATED,
             FSM_ACTION_DROP,
             FSM_ACTION_CURSOR,
+            FSM_TEST_ACTION_STEAL,
             FSM_ACTION_NAV_HOME,
             FSM_ACTION_CALIBRATION,
             FSM_CENTER_CALIBRATION
@@ -91,6 +93,20 @@ class ActionFSM{
             FSM_CURSOR_END
         } StateCursor_t;
         StateCursor_t CursorState = CURSOR_RAISE_CLAW;
+
+        /************  FSM BALAYAGE STEAL ************/
+        typedef enum {
+            FSM_SWEEP_INIT,
+            FSM_SWEEP_NAV,
+            FSM_SWEEP_DETECT,
+            FSM_SWEEP_NAV_RIGHT,
+            FSM_SWEEP_NAV_LEFT,
+            FSM_SWEEP_COLLECT,
+            FSM_SWEEP_DROP,
+            FSM_SWEEP_DONE
+        } StateSteal_t;
+
+        StateSteal_t sweepState = FSM_SWEEP_INIT;
 
         /************  FSM CALIBRATION ************/
         typedef enum
