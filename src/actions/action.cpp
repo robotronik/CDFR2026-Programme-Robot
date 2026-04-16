@@ -46,9 +46,7 @@ bool ActionFSM::RunFSM(){
     {
     case FSM_TEST_ACTION_STEAL:
     {
-        position_t stockPos = DROPZONE_POSITIONS_TABLE[7]; // On choisit le stock 7 pour le test
-        stockPos.a = 0; // pour arriver avec un angle de 0°
-        ret = BalayageSteal(stockPos);
+        ret = BalayageSteal(7); // Essayer de voler le stock de la dropzone 7
         if (ret == FSM_RETURN_DONE){
             LOG_INFO("ACTION_STEAL: Finished steal action");
             runState = FSM_ACTION_GATHER;
@@ -484,18 +482,20 @@ ReturnFSM_t ActionFSM::Cursor(){
     return FSM_RETURN_WORKING;
 }
 
-ReturnFSM_t ActionFSM::BalayageSteal(position_t stockPos){
+ReturnFSM_t ActionFSM::BalayageSteal(int numDropZone){
     static position_t targetPos;
+    static position_t stockPos;
     switch(sweepState){
 
         case FSM_SWEEP_INIT: //
         {
             LOG_INFO("SWEEP: init");
-            float dist = 300.0;
-
-            targetPos.x = stockPos.x - dist * cos(DEG_TO_RAD * stockPos.a);
-            targetPos.y = stockPos.y - dist * sin(DEG_TO_RAD * stockPos.a);
-            targetPos.a = RAD_TO_DEG * position_angle(targetPos, stockPos); //L'angle pour être face au stock
+            float dist = 100.0;
+            stockPos = DROPZONE_POSITIONS_TABLE[numDropZone];
+            dropzonePos = getBestDropZonePosition(numDropZone, drive.position);
+            targetPos.a = RAD_TO_DEG * position_angle(dropzonePos, stockPos); //L'angle pour être face au stock
+            targetPos.x = dropzonePos.x - dist * cos(DEG_TO_RAD * targetPos.a);
+            targetPos.y = dropzonePos.y - dist * sin(DEG_TO_RAD * targetPos.a);
             sweepState = FSM_SWEEP_NAV;
             break;
         }
@@ -527,8 +527,6 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t stockPos){
                     LOG_GREEN_INFO("pos aruco = ", x ," / ", y," / ",  a);
                     LOG_EXTENDED_DEBUG("FSM_SWEEP_DETECT: Detection sucess calibration on blocks");
                     targetStockPos = position_t{x, y, a};
-                    dropzonePos = targetStockPos; //TODO drop on the dropzone
-                    
                     targetStockPos.y -= 150.0 * cos(DEG_TO_RAD * targetStockPos.a); // Se décaler à droite du stock
                     targetStockPos.x += 150.0 * sin(DEG_TO_RAD * targetStockPos.a);
                     targetStockPos.x -= 40.0 * cos(DEG_TO_RAD * targetStockPos.a); // Se reculer un peu

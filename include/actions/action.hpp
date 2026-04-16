@@ -26,7 +26,7 @@ class ActionFSM{
         ReturnFSM_t TakeIsolatedStock();
         ReturnFSM_t DropStock();
         ReturnFSM_t Cursor();
-        ReturnFSM_t BalayageSteal(position_t stockPos);
+        ReturnFSM_t BalayageSteal(int numDropZone);
         ReturnFSM_t Calibrate();
         ReturnFSM_t GetRobotCenter();
 
