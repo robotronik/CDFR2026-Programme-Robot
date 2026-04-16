@@ -46,14 +46,33 @@ bool ActionFSM::RunFSM(){
     {
     case FSM_TEST_ACTION_STEAL:
     {
-        ret = BalayageSteal(7); // Essayer de voler le stock de la dropzone 7
+        if (currentStealZone == -1){
+            // trouver une dropzone valide
+            //TODO chercher la dropzone la plus proche
+            for (size_t i = 0; i < DROPZONE_COUNT; i++){
+                if (tableStatus.dropzone_states[i] == ((tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE)){
+                    currentStealZone = i;
+                    LOG_INFO("Selected dropzone ", i);
+                    break;
+                }
+            }
+
+            if (currentStealZone == -1){
+                LOG_WARNING("No valid dropzone to steal");
+                SetBestAction(drive.position);
+                break;
+            }
+        }
+
+        ret = BalayageSteal(currentStealZone);
         if (ret == FSM_RETURN_DONE){
-            LOG_INFO("ACTION_STEAL: Finished steal action");
-            runState = FSM_ACTION_GATHER;
-            return true; // Robot is done
+            LOG_INFO("ACTION_STEAL: Finished steal on zone ", currentStealZone);
+            currentStealZone = -1; // reset pour prochaine zone
+            SetBestAction(drive.position);
         }
         break;
     }
+
     case FSM_ACTION_GATHER:
         ret = TakeStock();
         if (ret == FSM_RETURN_DONE){
@@ -386,7 +405,7 @@ ReturnFSM_t ActionFSM::DropStock(){
                 //No more stock in hand
                 stock_num = -1;
                 gatherStockState = FSM_GATHER_NAV;
-                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE);  
+                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
 
             }
             break;
@@ -638,7 +657,9 @@ ReturnFSM_t ActionFSM::BalayageSteal(int numDropZone){
         }   
         case FSM_SWEEP_DONE:
         {
+            tableStatus.setDropzoneState(numDropZone, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
             sweepState = FSM_SWEEP_INIT; // reset pour reuse
+            servoDone = false;
             return FSM_RETURN_DONE;
         }
     }
@@ -693,6 +714,23 @@ void ActionFSM::SetBestAction(position_t position){
         LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
         return;
     }
+
+    /*****************CONDITIONS POUR VOLER UN STOCK DANS UNE DROPZONE **********************************/
+    if(tableStatus.remainingDropToStealExist()){
+        runState = FSM_TEST_ACTION_STEAL;
+        LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to steal a stock, going to FSM_TEST_ACTION_STEAL");
+        return;
+    }
+
+    if (!tableStatus.remainingDropToStealExist()){
+        LOG_WARNING("No more action possible, changing color");
+        tableStatus.startTime = _millis(); // reset start time
+        tableStatus.colorTeam = (tableStatus.colorTeam == BLUE) ? YELLOW : BLUE;
+        runState = FSM_TEST_ACTION_STEAL;
+        return;
+    }
+
+     LOG_ERROR("SetBestAction: No action found for position (", position.x, ", ", position.y, ") this should not happen");
 
 }
 

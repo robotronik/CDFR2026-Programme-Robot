@@ -34,6 +34,7 @@ class ActionFSM{
         int dropzone_num;// Num of dropzone to drop the stock
         int offset;// Offset  is direction to take the stock from
         bool rotate_done = false;
+        int currentStealZone = -1;
         position_t backPos;
 
         nav_return_t nav_ret;
