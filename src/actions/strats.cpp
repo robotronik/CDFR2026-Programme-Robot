@@ -261,3 +261,21 @@ position_t toFirstStockPos(position_t targetPos){
     firstPos.y = targetPos.y + offsetX * sin_a + offsetY * cos_a;
     return firstPos;
 }
+
+position_t NearestValidZone(position_t pos){
+
+    const float MARGIN = 350.0;
+
+    const float X_MIN = -550.0 + MARGIN, X_MAX = 1000.0 - MARGIN;
+    const float Y_MIN = -1500.0 + MARGIN, Y_MAX = 1500.0 - MARGIN;
+
+    position_t corrected = pos;
+
+    if (corrected.x < X_MIN) corrected.x = X_MIN;
+    else if (corrected.x > X_MAX) corrected.x = X_MAX;
+
+    if (corrected.y < Y_MIN) corrected.y = Y_MIN;
+    else if (corrected.y > Y_MAX) corrected.y = Y_MAX;
+
+    return corrected;
+}
