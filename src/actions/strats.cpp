@@ -32,7 +32,7 @@ int chooseNextStock(){
     int closest_stock = -1;
     for (int i = 0; i < STOCK_COUNT; i++){
         if (tableStatus.avail_stocks[i]){
-            double dist = position_distance(drive.position, STOCK_POSITIONS_TABLE[i]);
+            double dist = toAStarDist(STOCK_POSITIONS_TABLE[i]);
             if (dist < min){
                 min = dist;
                 closest_stock = i;
@@ -48,15 +48,19 @@ int chooseNextStock(){
     }
 }
 
-int toAStarDist(int stockNum, int stockOffset){
-    int lenght;
+int toAStarDistStock(int stockNum, int stockOffset){
     position_t stockPos = STOCK_POSITIONS_TABLE[stockNum];
     position_t stockOff = STOCK_OFFSETS[stockOffset];
     double angle = RAD_TO_DEG*  position_angle(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a} , stockPos);
     position_t target = position_sum(stockPos, stockOff);
     target.a = angle;
+    return toAStarDist(target);
+}
+
+int toAStarDist(position_t a){
+    int lenght;
     position_t path[1024];
-    pathfind(drive.position, target, path, &lenght);
+    pathfind(drive.position, a, path, &lenght);
     return lenght;
 }
 
@@ -97,7 +101,7 @@ int chooseStockStrategy(int& stockNum, int& stockOffset){
         if (tableStatus.avail_stocks[todo_stocks[i]]){
             stockNum = todo_stocks[i];
             stockOffset = getBestStockPositionOff(stockNum, drive.position);
-            return toAStarDist(stockNum, stockOffset);
+            return toAStarDistStock(stockNum, stockOffset);
         }
         i++;
     }
@@ -106,14 +110,14 @@ int chooseStockStrategy(int& stockNum, int& stockOffset){
         stockNum = (stockNum + 1) % STOCK_COUNT; // In endless mode, we take the stocks in order
         stockOffset = getBestStockPositionOff(stockNum, drive.position);
         
-        return toAStarDist(stockNum, stockOffset);
+        return toAStarDistStock(stockNum, stockOffset);
     }
 
     int nextStock = chooseNextStock(); // Choose the closest stock if the strategy stocks are not available
     if (nextStock != -1){
         stockNum = nextStock;
         stockOffset = getBestStockPositionOff(stockNum, drive.position);
-        return toAStarDist(stockNum, stockOffset);
+        return toAStarDistStock(stockNum, stockOffset);
     }
     //LOG_WARNING("No stock available");
     return 0;
@@ -178,7 +182,7 @@ int GetBestDropZone(position_t fromPos){
             continue;
 
         position_t dropzonePos = DROPZONE_POSITIONS_TABLE[i];
-        double dist2 = position_distance(fromPos, dropzonePos);
+        double dist2 = toAStarDist(dropzonePos);
 
         if (dist2 < bestDist2){
             bestDist2 = dist2;
@@ -200,7 +204,7 @@ int getBestStockPositionOff(int stockNum, position_t fromPos){
         if (offNum == -1)
             continue;
 
-        int dist2 = toAStarDist(stockNum, offNum);
+        int dist2 = toAStarDistStock(stockNum, offNum);
 
         if (dist2 < bestDist2){
             bestDist2 = dist2;
@@ -211,7 +215,7 @@ int getBestStockPositionOff(int stockNum, position_t fromPos){
     return bestOff;
 }
 
-position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos, bool steal){
+position_t getBestDropZonePosition(int dropzoneNum, bool steal){
     double dropZoneOffset = OFFSET_DROPZONE;
     if(steal) dropZoneOffset = OFFSET_STOCK;
 
@@ -222,8 +226,8 @@ position_t getBestDropZonePosition(int dropzoneNum, position_t fromPos, bool ste
         position_normalize(vect);
         position_t bestPoss = position_t{dropzonePos.x + int(vect.x * OFFSET_DROPZONE), dropzonePos.y + int(vect.y * OFFSET_DROPZONE), RAD_TO_DEG * position_angle(fromPos, dropzonePos)};
         */
-        if(position_distance(fromPos, position_sum(bestPoss, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2}))
-            < position_distance(fromPos, position_sum(bestPoss, position_t{.x = -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2}))){
+        if(toAStarDist(position_sum(bestPoss, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2}))
+            < toAStarDist(position_sum(bestPoss, position_t{.x = -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2}))){
                 bestPoss = position_sum(bestPoss, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2});
                 bestPoss.a = 180;
         }else{
@@ -256,7 +260,7 @@ int getBestStealZonePosition(position_t fromPos, int& bestDropZone, position_t& 
     int min_distance = INFINITY;
     for(int idx = 0; idx < DROPZONE_COUNT; idx++){
         if(tableStatus.dropzone_states[idx] == (tableStatus.colorTeam == BLUE ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE)){
-            position_t tmp_pos = getBestDropZonePosition(idx, fromPos, true);
+            position_t tmp_pos = DROPZONE_POSITIONS_TABLE[idx];
             position_t path[1024];
             int dist;
             if(!pathfind(fromPos, tmp_pos, path, & dist)) continue;
@@ -270,6 +274,7 @@ int getBestStealZonePosition(position_t fromPos, int& bestDropZone, position_t& 
     if(position_equals(fromPos, bestPos)){
         return 0;
     }
+    bestPos = getBestDropZonePosition(bestDropZone, true);
     return min_distance;
 }
 
