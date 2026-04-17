@@ -61,7 +61,7 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
     // Calculate position_speed with acceleration, top speed, and deceleration
     // Angular motion
     double angle_acceleration = (is_slow_mode ? 40.0 : 150.0); // deg/s
-    double angle_top_speed   = (is_slow_mode ? 350.0 : 600.0); // deg/s
+    double angle_top_speed   = (is_slow_mode ? 200.0 : 600.0); // deg/s
 
     double current_angular_velocity = fabs(velocity.a); // deg/s
     double angle_speed;
