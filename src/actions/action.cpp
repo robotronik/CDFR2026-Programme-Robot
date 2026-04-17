@@ -629,7 +629,7 @@ void ActionFSM::SetBestAction(position_t position){
     if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV && tableStatus.dropToStealExist()){
         //LOG_DEBUG("Getting next stock to take");
         closestSteal = getBestStealZonePosition(dropzone_num, dropzonePos);
-        if (closestSteal == -1){
+        if (dropzone_num == -1){
             LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
             dropzone_num = -1;
             stealStockState = FSM_GATHER_NAV;
