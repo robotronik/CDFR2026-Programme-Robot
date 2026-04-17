@@ -455,7 +455,7 @@ ReturnFSM_t ActionFSM::DropStock(){
                 steal_count = -1;
                 gatherStockState = FSM_GATHER_NAV;
                 stealStockState = FSM_GATHER_NAV;
-                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE);  
+                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
 
             }
             break;
