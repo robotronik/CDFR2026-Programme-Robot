@@ -616,6 +616,9 @@ ReturnFSM_t ActionFSM::BalayageSteal(int numDropZone){
                     //LEFT 50mm while turning 60°
                     targetStockPos.y += 250.0 * cosinus; // Se décaler à gauche du stock
                     targetStockPos.x -= 250.0 * sinus;
+                    targetStockPos.x += 50.0 * cosinus; // S'avancer avant de prendre le stock
+                    targetStockPos.y += 50.0 * sinus;
+
                     targetStockPos.a += 90.0;
                     
                 } else {
