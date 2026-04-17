@@ -28,7 +28,6 @@ class ActionFSM{
         ReturnFSM_t Cursor();
         ReturnFSM_t Calibrate();
         ReturnFSM_t GetRobotCenter();
-        ReturnFSM_t Wait();
 
         int stock_num;// Num of stock
         int dropzone_num;// Num of dropzone to drop the stock or to steal from
@@ -99,13 +98,6 @@ class ActionFSM{
             FSM_CURSOR_END
         } StateCursor_t;
         StateCursor_t CursorState = CURSOR_RAISE_CLAW;
-
-        /************  FSM WAIT ************/
-        typedef enum
-        {   
-            FSM_WAIT_NAV
-        } StateWait_t;
-        StateWait_t waitState = FSM_WAIT_NAV;
 
         /************  FSM CALIBRATION ************/
         typedef enum

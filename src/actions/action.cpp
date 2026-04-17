@@ -94,13 +94,7 @@ bool ActionFSM::RunFSM(){
         }
         break;
     case FSM_ACTION_WAIT:
-        ret = Wait();
-        if (ret == FSM_RETURN_DONE){
-            SetBestAction(drive.position);
-        }
-        else if (ret == FSM_RETURN_ERROR){
-            SetBestAction(drive.position); // Choisit une nouvelle action, le curseur étant indisponible
-        }
+        SetBestAction(drive.position);
         break;
     /*
         Action Curseur
@@ -551,24 +545,6 @@ ReturnFSM_t ActionFSM::Cursor(){
     return FSM_RETURN_WORKING;
 }
 
-ReturnFSM_t ActionFSM::Wait(){
-    switch (waitState)
-    {
-    case FSM_WAIT_NAV:
-    {   
-        nav_ret = navigationGoTo(position_t{0,0,0}, true, false); //false sinon il va pas vouloir y aller car trop proche du mur
-        if ((nav_ret == NAV_DONE)){ 
-            LOG_EXTENDED_DEBUG("FSM_WAIT_NAV: Nav done");
-            return FSM_RETURN_DONE;
-        }
-        else if (nav_ret == NAV_ERROR){
-            LOG_WARNING("FSM_WAIT_NAV: Navigation error while going to wait position");
-            return FSM_RETURN_ERROR;
-        }
-        break;
-    }
-    }
-}
 /*
     Plus l'action est prioritaire plus elle apparaît tôt dans le code.
         Ex: le retour êtant prioritaire sur toutes les autres actions on fera toujours le retour si les conditions sont remplies
