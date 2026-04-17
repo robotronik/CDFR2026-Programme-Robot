@@ -269,27 +269,40 @@ bool NearestValidZone(position_t* pos){
     const float Y_MIN = -1500.0 + MARGIN, Y_MAX = 1500.0 - MARGIN;
     bool modified = false;
 
+    bool hitLeft = false, hitRight = false, hitBottom = false, hitTop = false;
+
     // Clamp X
     if (pos->x < X_MIN){
         pos->x = X_MIN;
+        hitBottom = true;
         modified = true;
     }
     else if (pos->x > X_MAX){
         pos->x = X_MAX;
+        hitTop = true;
         modified = true;
     }
 
     // Clamp Y
     if (pos->y < Y_MIN){
         pos->y = Y_MIN;
+        hitRight = true;
         modified = true;
     }
     else if (pos->y > Y_MAX){
         pos->y = Y_MAX;
+        hitLeft = true;
         modified = true;
     }
+
     if (modified){
-        LOG_WARNING("Position out of bounds, clamping to nearest valid zone: (", pos->x, ", ", pos->y, ")");
+        //Corriger l'angle pour regarder le mur
+        if (hitLeft)        pos->a = 90.0;     // regarde vers +X
+        else if (hitRight)  pos->a = -90.0;   // regarde vers -X
+        else if (hitBottom) pos->a = 180.0;    // regarde vers +Y
+        else if (hitTop)    pos->a = 0.0;   // regarde vers -Y
+        LOG_WARNING("Position clamped + angle corrected: (", pos->x, ", ", pos->y, ", ", pos->a, ")");
     }
+
     return modified;
 }
