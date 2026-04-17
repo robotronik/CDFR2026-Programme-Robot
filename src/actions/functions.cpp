@@ -90,16 +90,19 @@ bool rotateTwoBlocks(bool *order){
         case 2:
 
             bool any = order[0] || order[1] || order[2] || order[3];
-            bool a=false,b=true,c=true,d=false;
+            bool a,b,c,d;
+            bool target[4];
 
-            if (any){
-                if (tableStatus.colorTeam == colorTeam_t::BLUE){
-                    a = !order[0]; b = !order[1]; c = !order[2]; d = !order[3];
-                }else{
-                    a = order[0]; b = order[1]; c = order[2]; d = order[3];
-                }
-                
+            if (tableStatus.colorTeam == BLUE){
+                target[0]=1; target[1]=0; target[2]=1; target[3]=0;
+            }else{
+                target[0]=0; target[1]=1; target[2]=0; target[3]=1;
             }
+            a = (order[0] != target[0]);
+            b = (order[1] != target[1]);
+            c = (order[2] != target[2]);
+            d = (order[3] != target[3]);
+
             if (!any || spinClaws(a,b,c,d) || _millis() - startTime >= 150){ // Attendre bloc tourne un peu
                 state = 1;
                 return true;
