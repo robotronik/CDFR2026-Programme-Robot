@@ -21,7 +21,6 @@ void ActionFSM::Reset(){
     CursorState = CURSOR_RAISE_CLAW;
     calibrationCameraState = FSM_ARUCO_1;
     calibrationState = FSM_CALCULATION;
-    waitState = FSM_WAIT_NAV;
 
     /*RESET OF ACTION ID*/
     dropzone_num = -1;
@@ -443,14 +442,14 @@ ReturnFSM_t ActionFSM::DropStock(){
                 backPos.x -= 100 * cos(DEG_TO_RAD * drive.position.a);
                 backPos.y -= 100 * sin(DEG_TO_RAD * drive.position.a);
 
-                //No more stock in hand
-                stock_num = -1;
-                dropzone_num = -1;
-                steal_count = -1;
                 gatherStockState = FSM_GATHER_NAV;
                 stealStockState = FSM_GATHER_NAV;
                 tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
 
+                //No more stock in hand
+                stock_num = -1;
+                dropzone_num = -1;
+                steal_count = -1;
             }
             break;
         case FSM_DROP_NAV_BACK:
