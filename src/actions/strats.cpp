@@ -225,41 +225,44 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
     position_t temp_pos;
 
     for(int k = 0; k< DROPZONE_COUNT; k++){
-        if(tableStatus.dropzone_states[k] != zone_of_interest) continue;
-        if (k == 7 || k == 4 || k == 2 ){
-            temp_pos = DROPZONE_POSITIONS_TABLE[k];
-            d1 = toAStarDist(position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2}));
-
-            double d2 = toAStarDist(position_sum(temp_pos, position_t{.x = -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2}));
-            if(d1 < d2 ){
-                    temp_pos = position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2});
-                    temp_pos.a = 180;
-            }else{
-                temp_pos = position_sum(temp_pos, position_t{.x =  -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2});
-                temp_pos.a = 0;
-                d1 = d2;
-            }
-
+        if(tableStatus.dropzone_states[k] != zone_of_interest){
+            continue;
         }else{
-            temp_pos = DROPZONE_POSITIONS_TABLE[k];
-            if(MAX_WIDTH_TABLE - abs(temp_pos.x) < MAX_LENGTH_TABLE - abs(temp_pos.y)){
-                double signeX = (temp_pos.x > 0? 1 : -1 );
-                temp_pos.x += -1 * signeX * dropZoneOffset;
-                temp_pos.y += signeX * OFFSET_CLAW_Y/2;
-                temp_pos.a = (signeX > 0? 0 : 180);
+            if (k == 7 || k == 4 || k == 2 ){
+                temp_pos = DROPZONE_POSITIONS_TABLE[k];
+                d1 = toAStarDist(position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2}));
+
+                double d2 = toAStarDist(position_sum(temp_pos, position_t{.x = -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2}));
+                if(d1 < d2 ){
+                        temp_pos = position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2});
+                        temp_pos.a = 180;
+                }else{
+                    temp_pos = position_sum(temp_pos, position_t{.x =  -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2});
+                    temp_pos.a = 0;
+                    d1 = d2;
+                }
+
             }else{
-                double signeY = (temp_pos.y > 0? -1 : 1 );
-                temp_pos.y += signeY * dropZoneOffset;
-                temp_pos.x += signeY * OFFSET_CLAW_Y/2;
-                temp_pos.a = (signeY < 0? 90 : -90);
+                temp_pos = DROPZONE_POSITIONS_TABLE[k];
+                if(MAX_WIDTH_TABLE - abs(temp_pos.x) < MAX_LENGTH_TABLE - abs(temp_pos.y)){
+                    double signeX = (temp_pos.x > 0? 1 : -1 );
+                    temp_pos.x += -1 * signeX * dropZoneOffset;
+                    temp_pos.y += signeX * OFFSET_CLAW_Y/2;
+                    temp_pos.a = (signeX > 0? 0 : 180);
+                }else{
+                    double signeY = (temp_pos.y > 0? -1 : 1 );
+                    temp_pos.y += signeY * dropZoneOffset;
+                    temp_pos.x += signeY * OFFSET_CLAW_Y/2;
+                    temp_pos.a = (signeY < 0? 90 : -90);
+                }
+                d1 = toAStarDist(temp_pos);
+                
             }
-            d1 = toAStarDist(temp_pos);
-            
-        }
-        if(min > d1){
-            bestPoss = temp_pos;
-            dropzoneNum = k;
-            min = d1;
+            if(min > d1){
+                bestPoss = temp_pos;
+                dropzoneNum = k;
+                min = d1;
+            }
         }
     }
     return (dropzoneNum != -1 ? min : INFINITY);
