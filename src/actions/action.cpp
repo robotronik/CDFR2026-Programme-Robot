@@ -611,11 +611,9 @@ ReturnFSM_t ActionFSM::BalayageSteal(int numDropZone){
                 if (needRotationAfterMove){
                     sweepState = FSM_SWEEP_ROTATION;
                     //LEFT 50mm while turning 60°
-                    targetStockPos.a += 60.0;
-                    cosinus = cos(DEG_TO_RAD * targetStockPos.a); 
-                    sinus = sin(DEG_TO_RAD * targetStockPos.a);
-                    targetStockPos.y += 50.0 * cosinus; // Se décaler à gauche du stock
-                    targetStockPos.x -= 50.0 * sinus;
+                    targetStockPos.y += 250.0 * cosinus; // Se décaler à gauche du stock
+                    targetStockPos.x -= 250.0 * sinus;
+                    targetStockPos.a += 90.0;
                     
                 } else {
                     sweepState = FSM_SWEEP_COLLECT;

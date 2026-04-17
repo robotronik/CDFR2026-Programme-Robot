@@ -264,7 +264,7 @@ position_t toFirstStockPos(position_t targetPos){
 
 // Clamp the position to be in the valid area of the table, returns true if the position was modified
 bool NearestValidZone(position_t* pos){
-    const float MARGIN = 350.0;
+    const float MARGIN = 370.0;
     const float X_MIN = -550.0 + MARGIN, X_MAX = 1000.0 - MARGIN;
     const float Y_MIN = -1500.0 + MARGIN, Y_MAX = 1500.0 - MARGIN;
     bool modified = false;
