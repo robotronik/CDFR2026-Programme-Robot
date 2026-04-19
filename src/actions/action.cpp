@@ -22,7 +22,7 @@ void ActionFSM::Reset(){
     gatherStockState = FSM_GATHER_NAV;
     gatherIsolatedStockState = FSM_GATHER_DETECT;
     dropStockState = FSM_DROP_NONE;
-    CursorState = CURSOR_RAISE_CLAW;
+    CursorState = FSM_CURSOR_NAV;
     calibrationCameraState = FSM_ARUCO_1;
     calibrationState = FSM_CALCULATION;
 
@@ -404,34 +404,25 @@ ReturnFSM_t ActionFSM::DropStock(){
 }
 
 ReturnFSM_t ActionFSM::Cursor(){
-    position_t navTarget = {800.0, 1300.0, -180.0};
+    position_t navTarget = {800.0, 1300.0, -135.0};
     position_t navTargetRot = navTarget;
-    navTargetRot.a = -120.0;
-
+    navTargetRot.a = -180.0;
     position_t moveTarget = navTargetRot;
     moveTarget.y -= 500.0;
     
     if (tableStatus.colorTeam == YELLOW){
         position_robot_flip(navTarget);
         position_robot_flip(navTargetRot);
-        navTargetRot.a = -120.0;
         position_robot_flip(moveTarget);
-        moveTarget.a = -120.0;
     }
 
     switch (CursorState){
-        case CURSOR_RAISE_CLAW:
-            if (rotateTwoBlocks(stockOrder)){
-                LOG_EXTENDED_DEBUG("CURSOR_RAISE_CLAW: going to FSM_CURSOR_NAV");
-                CursorState = FSM_CURSOR_NAV;
-            }
-            break;
         case FSM_CURSOR_NAV:
-            nav_ret = navigationGoTo(navTarget, false); //false sinon il va pas vouloir y aller car trop proche du mur
+            nav_ret = navigationGoTo(navTarget, true); //false sinon il va pas vouloir y aller car trop proche du mur
             if ((nav_ret == NAV_DONE)){ 
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Nav done, going to FSM_CURSOR");
                 if (enableCursor(true)){
-                    LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Ventouse lowered at cursor position, going to FSM_CURSOR_LOW_CLAW");
+                    LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Cursor enabled, going to FSM_CURSOR_LOW_CLAW");
                     CursorState = FSM_CURSOR_LOW_CLAW;
                 }
             }
@@ -445,11 +436,7 @@ ReturnFSM_t ActionFSM::Cursor(){
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_LOW_CLAW: Nav done for lowerClaws, going to FSM_CURSOR_MOVE");
                 CursorState = FSM_CURSOR_MOVE;
-            }
-            else if (nav_ret == NAV_ERROR){
-                LOG_WARNING("FSM_CURSOR_LOW_CLAW: Navigation error while going to cursor position for lowerClaws");
-                return FSM_RETURN_ERROR;
-            }       
+            }    
             break;
 
         case FSM_CURSOR_MOVE:
@@ -458,16 +445,12 @@ ReturnFSM_t ActionFSM::Cursor(){
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_MOVE: Nav done , going to FSM_CURSOR");
                 CursorState = FSM_CURSOR_END;
             }
-            else if (nav_ret == NAV_ERROR){
-                LOG_WARNING("FSM_CURSOR_MOVE: Navigation error while moving to cursor position for raiseClaws");
-                return FSM_RETURN_ERROR;
-            }
             break;
 
         case FSM_CURSOR_END:
             if (enableCursor(false)){
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_END: Cursor action done");
-                CursorState = CURSOR_RAISE_CLAW;
+                CursorState = FSM_CURSOR_NAV;
                 return FSM_RETURN_DONE;
             }
             break;

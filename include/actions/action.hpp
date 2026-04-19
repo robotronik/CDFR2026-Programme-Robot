@@ -84,13 +84,12 @@ class ActionFSM{
         /************  FSM CURSOR ************/
         typedef enum
         {
-            CURSOR_RAISE_CLAW,
             FSM_CURSOR_NAV,
             FSM_CURSOR_LOW_CLAW,
             FSM_CURSOR_MOVE,
             FSM_CURSOR_END
         } StateCursor_t;
-        StateCursor_t CursorState = CURSOR_RAISE_CLAW;
+        StateCursor_t CursorState = FSM_CURSOR_NAV;
 
         /************  FSM CALIBRATION ************/
         typedef enum
