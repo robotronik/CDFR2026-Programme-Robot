@@ -89,8 +89,13 @@ bool rotateTwoBlocks(bool *order){
             break;
         case 2:
 
-            bool any = order[0] || order[1] || order[2] || order[3];
-            bool a=false,b=true,c=true,d=false;
+            bool any;
+            if (tableStatus.colorTeam == colorTeam_t::YELLOW){
+                any = order[0] || order[1] || order[2] || order[3] ;//if jaune
+            }else{
+                any = !(order[0] && order[1] && order[2] && order[3]); // if bleu
+            }
+            bool a=false,b=false,c=false,d=false;
 
             if (any){
                 if (tableStatus.colorTeam == colorTeam_t::BLUE){
