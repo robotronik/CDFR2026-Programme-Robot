@@ -100,10 +100,9 @@ class ActionFSM{
             FSM_SWEEP_INIT,
             FSM_SWEEP_NAV,
             FSM_SWEEP_DETECT,
+            FSM_SWEEP_WALL,
             FSM_SWEEP_NAV_RIGHT,
             FSM_SWEEP_NAV_LEFT,
-            FSM_SWEEP_NAV_LEFT2,
-            FSM_SWEEP_ROTATION,
             FSM_SWEEP_COLLECT,
             FSM_SWEEP_DROP,
             FSM_SWEEP_DONE

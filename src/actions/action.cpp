@@ -500,34 +500,31 @@ ReturnFSM_t ActionFSM::Cursor(){
     }
     return FSM_RETURN_WORKING;
 }
-
 ReturnFSM_t ActionFSM::BalayageSteal(int numDropZone){
-    static position_t targetPos, stockPos;
-    static bool needRotationAfterMove = false;
-    static float cosinus, sinus;
-    static bool servoDone = false;
+    static double cosinus, sinus;
+    static position_t targetPos1,targetPos2, targetPos3, stockPos;
+    static double startTime = 0;
+    static bool needToGoToWall = false, claws_done = false;
+
     switch(sweepState){
 
         case FSM_SWEEP_INIT: //
         {
             LOG_INFO("SWEEP: init");
             float dist = 100.0;
-            servoDone = false;
+            startTime = 0;
+            needToGoToWall = false, claws_done = false;
             stockPos = DROPZONE_POSITIONS_TABLE[numDropZone];
             dropzonePos = getBestDropZonePosition(numDropZone, drive.position);
-            //Calcul premier déplacement = devant la dropzone
-            targetPos.a = RAD_TO_DEG * position_angle(dropzonePos, stockPos); //L'angle pour être face au stock
-            cosinus = cos(DEG_TO_RAD * targetPos.a); 
-            sinus = sin(DEG_TO_RAD * targetPos.a);
-            targetPos.x = dropzonePos.x - dist * cosinus;
-            targetPos.y = dropzonePos.y - dist * sinus;
+            targetPos1.a = RAD_TO_DEG * position_angle(dropzonePos, stockPos); //L'angle pour être face au stock
+            targetPos1.x = dropzonePos.x - dist * cos(DEG_TO_RAD * targetPos1.a); //marge de 10cm en plus de celle de base
+            targetPos1.y = dropzonePos.y - dist * sin(DEG_TO_RAD * targetPos1.a);
             sweepState = FSM_SWEEP_NAV;
             break;
         }
 
         case FSM_SWEEP_NAV:{
-            nav_ret = navigationGoTo(targetPos, true); //premier déplacement
-
+            nav_ret = navigationGoTo(targetPos1, true);
             if (nav_ret == NAV_DONE){
                 LOG_INFO("SWEEP: arrivé devant zone");
                 sweepState = FSM_SWEEP_DETECT;
@@ -544,24 +541,33 @@ ReturnFSM_t ActionFSM::BalayageSteal(int numDropZone){
         {
             double x = drive.position.x, y = drive.position.y, a = drive.position.a;
             int sucess = -1;
-            //TODO not the right getObjectInfoColors because it give the position to align the claws with the stock and not the center of it and delete some color
             if(arucoCam1.getObjectInfoColors(stockOrder,x,y,a,sucess)){
                 if(!sucess){
                     LOG_GREEN_INFO("pos aruco = ", x ," / ", y," / ",  a);
                     LOG_DEBUG("FSM_SWEEP_DETECT: Detection sucess calibration on blocks");
-                    //calcul second déplacement = position droite du stock
-                    targetStockPos = position_t{x, y, a};
-                    cosinus = cos(DEG_TO_RAD * targetStockPos.a);
-                    sinus   = sin(DEG_TO_RAD * targetStockPos.a);
-                    targetStockPos.y -= 150.0 * cosinus ; // Se décaler à droite du stock
-                    targetStockPos.x += 150.0 * sinus;
-                    targetStockPos.x -= 40.0 * cosinus; // Se reculer un peu
-                    targetStockPos.y -= 40.0 * sinus;
-                    NearestValidZone(&targetStockPos);
-                    LOG_GREEN_INFO("Target stock position is (", targetStockPos.x, ", ", targetStockPos.y, ", ", targetStockPos.a, ")");
+                    targetPos1 = position_t{x, y, a};
+                    cosinus = cos(DEG_TO_RAD * targetPos1.a);
+                    sinus   = sin(DEG_TO_RAD * targetPos1.a);
+                    // Se décaler 150mm à droite du stock et reculer de 40mm
+                    targetPos1.y -= 100.0 * cosinus - 40.0 * sinus;
+                    targetPos1.x += 100.0 * sinus - 40.0 * cosinus;
+                    
+                    // Se décaler 200mm à gauche du stock et avancer de 40mm
+                    targetPos2.y = targetPos1.y + 200.0 * cosinus + 40.0 * sinus;
+                    targetPos2.x = targetPos1.x - 200.0 * sinus + 40.0 * cosinus;
+
+                    startTime = 0;
+                    if (NearestValidZone(&targetPos1) || NearestValidZone(&targetPos2)){
+                        needToGoToWall = true;
+                    }
+                    // S'avancer pour prendre le stock
+                    targetPos3.y = targetPos2.y + 25.0 * sinus;
+                    targetPos3.x = targetPos2.x + 25.0 * cosinus;
+
+                    sweepState = FSM_SWEEP_NAV_RIGHT;
                 }else if(sucess == 1){
                     LOG_WARNING("FSM_SWEEP_DETECT: Drop Zone is empty");
-                    tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY);
+                    tableStatus.setDropzoneState(numDropZone, TableState::DROPZONE_EMPTY);
                     sweepState = FSM_SWEEP_INIT;
                     return FSM_RETURN_DONE;
                 }else{
@@ -569,79 +575,59 @@ ReturnFSM_t ActionFSM::BalayageSteal(int numDropZone){
                     sweepState = FSM_SWEEP_INIT;
                     return FSM_RETURN_ERROR;
                 }
-                sweepState = FSM_SWEEP_NAV_RIGHT;
             }
             break;
         }
         case FSM_SWEEP_NAV_RIGHT:
         {
-            nav_ret = navigationGoTo(targetStockPos, false, false, false); //second déplacement
-            if (nav_ret == NAV_DONE && snapClaws(false,false) && moveServoAndWait(SERVO_NUM_6, 170, 200) && lowerClaws()){
-                sweepState = FSM_SWEEP_NAV_LEFT;
-                //calcul troisième déplacement = position gauche du stock
-                cosinus = cos(DEG_TO_RAD * targetStockPos.a);
-                sinus   = sin(DEG_TO_RAD * targetStockPos.a);
-                targetStockPos.y += 200.0 * cosinus; // Se décaler à gauche du stock
-                targetStockPos.x -= 200.0 * sinus;
-                targetStockPos.x += 20.0 * cosinus; // S'avancer un peu
-                targetStockPos.y += 20.0 * sinus;
-                NearestValidZone(&targetStockPos);
+            nav_ret = navigationGoTo(targetPos1, false, false, false); //First Move
+            snapClaws(false,false);
+            moveServoAndWait(SERVO_NUM_6, 170, 200);
+            if (!claws_done) claws_done = lowerClaws();
+    
+            if (nav_ret == NAV_DONE && claws_done){
+                LOG_DEBUG("FSM_SWEEP_NAV_RIGHT: Moving to right of the stock at position (", targetStockPos.x, ",", targetStockPos.y, ") with angle ", targetStockPos.a);
 
-                LOG_DEBUG("FSM_SWEEP_NAV_RIGHT: Moving to right of the stock " " at position (", targetStockPos.x, ",", targetStockPos.y, ") with angle ", targetStockPos.a);
+                if (needToGoToWall){
+                    targetPos1.y += 50.0 * sinus;
+                    targetPos1.x += 50.0 * cosinus;
+                    startTime = _millis();
+                    needToGoToWall = false;
+                    sweepState = FSM_SWEEP_WALL;
+                    break;
+                }
+                sweepState = FSM_SWEEP_NAV_LEFT;
+            }
+            break;
+        }
+        case FSM_SWEEP_WALL:
+        {
+            nav_ret = navigationGoTo(targetPos1, false, true, false); // Go slowly to the wall
+            if (nav_ret == NAV_DONE || ((_millis() - startTime > 2000) && startTime != 0)){ // If stuck > 2 seconds, we are against the wall
+                LOG_INFO("SWEEP: arrived at wall");
+                sweepState = FSM_SWEEP_NAV_LEFT;
             }
             break;
         }
         case FSM_SWEEP_NAV_LEFT:
         {
-            nav_ret = navigationGoTo(targetStockPos, false, true, false); // Troisième déplacement Slow mode
+            nav_ret = navigationGoTo(targetPos2, false, true, false); // Second Move, Slow mode
             if (nav_ret == NAV_DONE){
-                //calcul quatrième déplacement = position plus à gauche du stock 
-                targetStockPos.y += 100.0 * cosinus; // Se décaler à gauche du stock
-                targetStockPos.x -= 100.0 * sinus;
-                targetStockPos.x += 50.0 * cosinus; // S'avancer avant de prendre le stock
-                targetStockPos.y += 50.0 * sinus;
-
-                needRotationAfterMove = NearestValidZone(&targetStockPos);
-                sweepState = FSM_SWEEP_NAV_LEFT2;
+                moveServoAndWait(SERVO_NUM_6, 90, 200);
+                startTime = _millis();
+                sweepState = FSM_SWEEP_COLLECT;
                 LOG_DEBUG("FSM_SWEEP_NAV_LEFT: Moving to left of the stock " " at position (", targetStockPos.x, ",", targetStockPos.y, ") with angle ", targetStockPos.a);
             }
             break;
         }
-        case FSM_SWEEP_NAV_LEFT2:
-        {
-            nav_ret = navigationGoTo(targetStockPos, false, true, false); // Quatrième déplacement Slow mode
-            if (nav_ret == NAV_DONE){
-                if (needRotationAfterMove){
-                    sweepState = FSM_SWEEP_ROTATION;
-                    //LEFT 50mm while turning 60°
-                    targetStockPos.y += 250.0 * cosinus; // Se décaler à gauche du stock
-                    targetStockPos.x -= 250.0 * sinus;
-                    targetStockPos.x += 50.0 * cosinus; // S'avancer avant de prendre le stock
-                    targetStockPos.y += 50.0 * sinus;
-
-                    targetStockPos.a += 90.0;
-                    
-                } else {
-                    sweepState = FSM_SWEEP_COLLECT;
-                }
-            }
-            break;
-        }
-        case FSM_SWEEP_ROTATION:
-        {
-            nav_ret = navigationGoTo(targetStockPos, false, true, false);
-            if (nav_ret == NAV_DONE){
-                sweepState = FSM_SWEEP_COLLECT;
-            }
-             break;
-        }
         case FSM_SWEEP_COLLECT:
         {
-            if (!servoDone) servoDone = moveServoAndWait(SERVO_NUM_6, 90, 200);
-            
-            if (rotateTwoBlocks(stockOrder) && servoDone){
+            nav_ret = navigationGoTo(targetPos3, false, true, false);
+            bool nav_done = (nav_ret == NAV_DONE) || ((_millis() - startTime > 2000) && startTime != 0);
+
+            if (rotateTwoBlocks(stockOrder) && nav_done) { // Do both at the same time
                 LOG_DEBUG("FSM_SWEEP_COLLECT: Stock collected");
-                servoDone = false;
+                startTime = 0;
                 sweepState = FSM_SWEEP_DROP;
             }
             break;
@@ -652,12 +638,12 @@ ReturnFSM_t ActionFSM::BalayageSteal(int numDropZone){
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_SWEEP_DROP: Arrived at dropzone position, dropping stock");
                 if (dropBlock()){
-                    // recule 
+                    // recule après drop
                     dropzonePos.x -= 100 * cos(DEG_TO_RAD * dropzonePos.a);
                     dropzonePos.y -= 100 * sin(DEG_TO_RAD * dropzonePos.a);
                     LOG_DEBUG("FSM_SWEEP_DROP: Stock dropped");
                     sweepState = FSM_SWEEP_DONE;
-            }
+                }
             }
             
             break;
@@ -668,8 +654,7 @@ ReturnFSM_t ActionFSM::BalayageSteal(int numDropZone){
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_SWEEP_DONE: Finished sweep steal action");
                 tableStatus.setDropzoneState(numDropZone, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
-                sweepState = FSM_SWEEP_INIT; // reset pour reuse
-                servoDone = false;
+                sweepState = FSM_SWEEP_INIT; // reset
                 return FSM_RETURN_DONE;
             }
              break;
