@@ -555,6 +555,9 @@ ReturnFSM_t ActionFSM::Cursor(){
         - Take
 */
 void ActionFSM::SetBestAction(position_t position){
+    /*********************** RESET DES DISTANCES POUR BEST ACTIONS *********************/
+    closestStock = INFINITY;
+    closestSteal = INFINITY;
 
     /********************* CONDITIONS POUR LE RETURN HOME ***********************/
     if(_millis() > tableStatus.startTime + 95000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
@@ -634,6 +637,14 @@ void ActionFSM::SetBestAction(position_t position){
 
 }
 
+
+/*
+********************************************************************************************
+*  SECTION CALIBRATION
+*
+********************************************************************************************
+*/
+
 /*
     Force la calibration en se tournant vers un tag ou s'éloignant d'un tag aruco
     Si la navigation échoue la calibration est considérée échouée et sera retentée une action plus tard
@@ -665,6 +676,10 @@ ReturnFSM_t ActionFSM::Calibrate(){
     return FSM_RETURN_WORKING;
 }
 
+
+/*
+* FSM de récupération du centre du robot
+*/
 ReturnFSM_t ActionFSM::GetRobotCenter(){
     nav_return_t nav_ret;
     static position_t aruco1;
