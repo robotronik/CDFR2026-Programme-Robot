@@ -16,6 +16,7 @@ void to_json(json& j, const position_t& p);
 // Define a function to calculate the angle in rads from and to a position_t
 double position_angle(position_t from, position_t to);
 position_t position_sum(position_t leftOp, position_t rightOp);
+bool position_equals(position_t leftOp, position_t rightOp);
 
 // Define a function to calculate the distance from and to a position_t
 double position_distance(position_t from, position_t to);

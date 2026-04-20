@@ -155,7 +155,7 @@ bool sortBlockT(const block_t& a, const block_t& b){ return a.y < b.y;}
 bool ArucoCam::ToObjectColor(bool* order, int& success){
     // Edge case management
     if(alignBlocks.empty()){
-        success = 1;
+        success = -2;
         LOG_ERROR("No objects but still searching for colors. Should not execute");
         return true;
     }else if (alignBlocks.size()>4)
@@ -178,7 +178,7 @@ bool ArucoCam::ToObjectColor(bool* order, int& success){
             LOG_EXTENDED_DEBUG("Yellow");
         }
     }
-    success = 0;
+    success = alignBlocks.size();
     return true;
 }
 
@@ -191,7 +191,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
         success = -1;
         return true;
     }else{
-        success = 1; // l'erreur n'est plus une erreur de caméra
+        success = -2; // l'erreur n'est plus une erreur de caméra
     }
 
     int count = 0;
@@ -211,7 +211,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
             double cos_tag = cos(a_tag_rad);
             double x_tmp = obj.value("x", 0.0);
             double y_tmp = obj.value("y", 0.0);
-            LOG_EXTENDED_DEBUG("Coord du tag dans le repère du robot ( ", -1*(x_tmp* cos_tag - y_tmp * sin_tag),", ",-1*(x_tmp* sin_tag + y_tmp*cos_tag),", ", -1 * obj.value("a",0.0), ")");
+            //LOG_EXTENDED_DEBUG("Coord du tag dans le repère du robot ( ", -1*(x_tmp* cos_tag - y_tmp * sin_tag),", ",-1*(x_tmp* sin_tag + y_tmp*cos_tag),", ", -1 * obj.value("a",0.0), ")");
             visibleBlocks.push_back(block_t{
                 .x = -1*(x_tmp* cos_tag - y_tmp * sin_tag),
                 .y = -1*(x_tmp* sin_tag + y_tmp*cos_tag),
@@ -224,7 +224,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
     LOG_EXTENDED_DEBUG("Found ", count, " blocks for cam ", id);
     if(!count){
         LOG_ERROR("No object found Error stopping cam");
-        success = 1;
+        success = -2;
         return true;
     }else if (count == 1){
         tmp_x = visibleBlocks[0].x;
@@ -236,7 +236,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
         // Return true if the values were successfully extracted
     }
     else{
-        success = 1;
+        success = -2;
         for(size_t max_block = MIN(4,count); max_block > 1; max_block -- ){
             if(findGroupRANSAC2D(visibleBlocks,alignBlocks, max_block)){
 
@@ -249,24 +249,23 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
                     tmp_y = alignBlocks[0].y;
                     tmp_a = alignBlocks[0].a;
                 }
-                success = 0;
+                success = max_block;
                 break;
             }else{
                 LOG_WARNING("Ransac: Pas de solution à ", max_block);
             }
         }
-        if(success){
-            //TODO replace with getIsolated when is better
+        if(success < 0){
             tmp_x = visibleBlocks[0].x;
             tmp_y = visibleBlocks[0].y;
             tmp_a = visibleBlocks[0].a;
             alignBlocks.push_back(visibleBlocks[0]);
-            success = 0;
+            success = 1;
             LOG_GREEN_INFO("Going for single tag ", id, " position: { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
         }
     }
     
-    if(success){
+    if(success < 0){
         LOG_ERROR("ArucoCam::getObjectPos() - No object position found");
     }else{
         //Traitement pour passer dans les coordonnées de la table
@@ -396,7 +395,8 @@ json ArucoCam::getObjectPosition_json(){
     return json{
         {"x", x},
         {"y", y},
-        {"a", a}};
+        {"a", a},
+        {"Nombres objets", sucess}};
 }
 
 json ArucoCam::getRobotPosition_json(){
@@ -426,7 +426,7 @@ bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double &
     }
 
     if(ToObjectPos(data, x, y, a, success)){// Can not return False so first If is useless
-        if(!success){
+        if(success > 0){
             if(ToObjectColor(order, success)){ // Can not return false either
                 return true; // exec finished 
             }else return false; // exec unfinished

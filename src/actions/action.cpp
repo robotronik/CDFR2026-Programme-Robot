@@ -7,8 +7,6 @@
 #include "utils/logger.hpp"
 #include "main.hpp"
 #include "defs/constante.h"
-
-
 ActionFSM::ActionFSM(){
     Reset();
 }
@@ -16,27 +14,31 @@ ActionFSM::ActionFSM(){
 ActionFSM::~ActionFSM(){}
 
 void ActionFSM::Reset(){
-    runState = FSM_ACTION_GATHER;
-
     /****** RESET OF FSM STATES *******/
     gatherStockState = FSM_GATHER_NAV;
-    gatherIsolatedStockState = FSM_GATHER_DETECT;
+    stealStockState = FSM_GATHER_NAV;
     dropStockState = FSM_DROP_NONE;
     CursorState = FSM_CURSOR_NAV;
     calibrationCameraState = FSM_ARUCO_1;
     calibrationState = FSM_CALCULATION;
 
     /*RESET OF ACTION ID*/
-    dropzone_num = 0;
+    dropzone_num = -1;
     stock_num = -1;
+    steal_count = 0;
     offset = 0;
     targetStockPos = position_t{0,0,0};
     dropzonePos = position_t{0,0,0};
     targetStockFirstPos = position_t{0,0,0};
+    closestStock = INFINITY;
+    closestSteal = INFINITY;
+    stockPos = position_t{0,0,0};
+    stockOff = position_t{0,0,0};
     for(size_t _ = 0; _<4 ; _++){
         stockOrder[_] = (tableStatus.colorTeam == YELLOW) ? false : true;
     }
-    
+    runState = FSM_ACTION_GATHER;
+    SetBestAction(drive.position);
     // TODO reset other states (num,offset, etc.)
 }
 
@@ -59,15 +61,14 @@ bool ActionFSM::RunFSM(){
             // TODO Handle error
         }
         break;
-    case FSM_ACTION_GATHER_ISOLATED:
-        ret = TakeIsolatedStock();
+    case FSM_ACTION_STEAL:
+        ret = StealStock();
         if (ret == FSM_RETURN_DONE){
-            LOG_INFO("FSM_ACTION_GATHER_ISOLATED: Finished gathering");
-            return true;
-            //SetBestAction(drive.position);
+            LOG_INFO("FSM_ACTION_STEAL: Finished stealing");
+            SetBestAction(drive.position);
         }
         else if (ret == FSM_RETURN_ERROR){
-            LOG_ERROR("FSM_ACTION_GATHER_ISOLATED: Couldn't gather");
+            LOG_ERROR("FSM_ACTION_STEAL: Couldn't steal");
             // TODO Handle error
         }
         break;
@@ -91,7 +92,9 @@ bool ActionFSM::RunFSM(){
             SetBestAction(drive.position);
         }
         break;
-    
+    case FSM_ACTION_WAIT:
+        SetBestAction(drive.position);
+        break;
     /*
         Action Curseur
         En cas d'erreur on lance une nouvelle action et retentera plus tard
@@ -162,18 +165,9 @@ bool ActionFSM::RunFSM(){
 ReturnFSM_t ActionFSM::TakeStock(){
     //LOG_INFO("TakeStock state: ", gatherStockState, " stock_num: ", stock_num);
     if (stock_num == -1 && gatherStockState == FSM_GATHER_NAV){
-        //LOG_DEBUG("Getting next stock to take");
-        if (!chooseStockStrategy(stock_num, offset)){
-            LOG_ERROR("ACTION_GATHER: No more stocks to take, exiting GatherStock");//Should never be catch
-            stock_num = -1;
-            gatherStockState = FSM_GATHER_NAV;
-            return FSM_RETURN_DONE;
-        }
-        LOG_GREEN_INFO("ACTION_GATHER: Next stock to take: ", stock_num, " offset: ", offset);
+        LOG_ERROR("No stock to take");
+        return FSM_RETURN_ERROR;
     }
-
-    position_t stockPos = STOCK_POSITIONS_TABLE[stock_num];
-    position_t stockOff = STOCK_OFFSETS[offset];
 
     double angle = RAD_TO_DEG*  position_angle(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a} , stockPos);
 
@@ -205,18 +199,18 @@ ReturnFSM_t ActionFSM::TakeStock(){
             int sucess = -1;
 
             if(arucoCam1.getObjectInfoColors(stockOrder,x,y,a,sucess)){
-                if(!sucess){
+                if(sucess >=0){
                     //LOG_GREEN_INFO("pos aruco = ", x ," / ", y," / ",  a);
-                    LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Detection sucess calibration on blocks");
+                    LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Detection sucess calibration on ", sucess, " blocks");
                     targetStockPos = position_t{x, y, a};
                     targetStockFirstPos = toFirstStockPos(targetStockPos);
-                }else if(sucess == 1){
-                    LOG_WARNING("FSM_GATHER_DETECT: Drop Zone is empty");
+                }else if(sucess == -2){
+                    LOG_WARNING("FSM_GATHER_DETECT: Stock is empty");
                     gatherStockState = FSM_GATHER_NAV;
                     tableStatus.setStockAsRemoved(stock_num);
                     stock_num = -1;
                     return FSM_RETURN_DONE;
-                }else{
+                }else if(sucess == -1){
                     LOG_ERROR("FSM_GATHER_DETECT: Camera Error don't know what to do");
                     gatherStockState = FSM_GATHER_NAV;
                     stock_num = -1;
@@ -227,9 +221,11 @@ ReturnFSM_t ActionFSM::TakeStock(){
             }
             break;
         case FSM_GATHER_CLAWS:
+            {
             if (lowerClaws()){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for stock ", stock_num);
                 gatherStockState = FSM_GATHER_PREMOVE;
+            }
             }
             break;
         case FSM_GATHER_PREMOVE:
@@ -271,51 +267,118 @@ ReturnFSM_t ActionFSM::TakeStock(){
     return FSM_RETURN_WORKING;
 }
 
-ReturnFSM_t ActionFSM::TakeIsolatedStock(){
+ReturnFSM_t ActionFSM::StealStock(){
     static position_t targetPos_; 
-    switch (gatherIsolatedStockState)
+    if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV){
+        //LOG_DEBUG("Getting next stock to take");
+        LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
+        return FSM_RETURN_ERROR;
+    }
+
+    switch (stealStockState)
     {   
-        case FSM_GATHER_COLLECTED:
-            return FSM_RETURN_ERROR;
+
+        case FSM_GATHER_NAV:
+            {
+            nav_ret = navigationGoTo(dropzonePos, true); // Enabeling A*
+            if (nav_ret == NAV_DONE){
+                LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to dropZone at postition (",dropzonePos.x,", ",dropzonePos.y, ") now searching for blocks");
+                stealStockState = FSM_GATHER_DETECT;
+            }else if(nav_ret == NAV_IN_PROCESS){
+                snapClaws(false,false);
+            }
+            else if (nav_ret == NAV_ERROR){
+                LOG_ERROR("FSM_GATHER_NAV: Navigation error while going to dropzone ", dropzone_num);
+                dropzone_num = -1;
+                stealStockState = FSM_GATHER_NAV;
+                return FSM_RETURN_DONE;
+            }
+            }
+            break;
 
         case FSM_GATHER_DETECT:
         {
             double x = drive.position.x;
             double y = drive.position.y;
             double a = drive.position.a;
-            bool sucess = false;
-            if(arucoCam1.getBestIsolatedObject(x,y,a,sucess)){
-                if(sucess){
-                    targetPos_ = getBestIsolatedPosition(position_t{x,y,a}, drive.position);
-                    gatherIsolatedStockState = FSM_GATHER_NAV;
-                    LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found an isolated object");
-                }else{
-                    LOG_ERROR("FSM_GATHER_DETECT: Failed to find an isolated object");
+            if(arucoCam1.getObjectInfoColors(stockOrder, x, y, a, steal_count)){
+                if(steal_count>=0){
+                    targetPos_ = position_t{x,y,a};
+                    stealStockState = FSM_GATHER_CLAWS;
+                    LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found ", steal_count, " objects to steal");
+                }else if (steal_count == -2){
+                    LOG_WARNING("FSM_GATHER_DETECT: DropZone was empty");
+                    stealStockState = FSM_GATHER_NAV;
+                    tableStatus.setDropzoneState(dropzone_num,TableState::DROPZONE_EMPTY);
+                    dropzone_num = -1;
+                    return FSM_RETURN_DONE;
+                }else if(steal_count == -1){
+                    LOG_ERROR("FSM_GATHER_DETECT: Camera Error don't know what to do");
+                    stealStockState = FSM_GATHER_NAV;
+                    dropzone_num = -1;
                     return FSM_RETURN_ERROR;
                 }
             }
             break;
         }
-        case FSM_GATHER_NAV:
-            nav_ret = navigationGoTo(targetPos_, true);
-            if (nav_ret == NAV_DONE){
-                LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to stock at postition (",targetPos_.x,", ",targetPos_.y, ")");
-                gatherIsolatedStockState = FSM_GATHER_COLLECT;
-                break;
+        case FSM_GATHER_CLAWS:
+            {
+            if (lowerClaws()){
+                LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for dropZone ", dropzone_num);
+                stealStockState = FSM_GATHER_MOVE;
+                //drive.is_slow_mode = true;
+            }
             }
             break;
-        case FSM_GATHER_COLLECT:
-            //TODO add utilisation de la ventouse
-            gatherIsolatedStockState = FSM_GATHER_MOVE;
+        case FSM_GATHER_PREMOVE:
+            {
+            
+            nav_ret = navigationGoTo(targetStockFirstPos, false, false, false); // Slow mode for more precision
+            //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
+            if (nav_ret == NAV_DONE){
+                gatherStockState = FSM_GATHER_MOVE;
+                LOG_EXTENDED_DEBUG("FSM_GATHER_PREMOVE: Pre-Moving to stock ", stock_num, " at position (", targetStockFirstPos.x, ",", targetStockFirstPos.y, ") with angle ", targetStockFirstPos.a);
+            }
+            }
             break;
         case FSM_GATHER_MOVE:
-            //TODO add virer les blocks restant dans la zone
-            gatherIsolatedStockState = FSM_GATHER_CLAWS;
+        {
+            nav_ret = navigationGoTo(targetPos_, true);
+            if (nav_ret == NAV_DONE){
+                LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to dropZone at postition (",targetPos_.x,", ",targetPos_.y, ")");
+                stealStockState = FSM_GATHER_COLLECT;
+                break;
+            }
+        }
             break;
-        case FSM_GATHER_CLAWS:
-            //TODO add drop du bon block
-            gatherIsolatedStockState = FSM_GATHER_DETECT;
+        case FSM_GATHER_COLLECT:
+            //TODO add utilisation de la ventouse ou pince
+            // Collect the steal
+        {
+            if (closeClaws()){
+                //drive.is_slow_mode = false;
+                LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: dropZone", dropzone_num, " collected");
+                stealStockState = FSM_GATHER_COLLECTED;
+            }
+        }
+            break;
+        case FSM_GATHER_COLLECTED:
+        {
+            if(steal_count == 4){
+                LOG_DEBUG("FSM_GATHER_COLLECTED: pas de déplacement de blocks tous les blocks ont été pris");// Si plus que 4 blocks?
+            }else{
+                //TODO tej les blocks restant.
+                LOG_ERROR("FSM_GATHER_COLLECTED: Tej des blocks pas encore implémenté");
+            }
+            // Force le drop dans la même zone
+            dropStockState = FSM_DROP_NAV;
+            dropzonePos = targetPos_; // à changer en cas de virage de blocks
+            rotate_done = false;
+            stock_num = steal_count; // marking random value to pass Best Action condition on drop action
+            steal_count = -1;
+            tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY);
             return FSM_RETURN_DONE;
+        }
     }
     return FSM_RETURN_WORKING;
 }
@@ -323,17 +386,19 @@ ReturnFSM_t ActionFSM::TakeIsolatedStock(){
 ReturnFSM_t ActionFSM::DropStock(){
     switch (dropStockState){
         case FSM_DROP_NONE:
+        {
             rotate_done = false;
-            dropzone_num = GetBestDropZone(drive.position);
-            LOG_GREEN_INFO("FSM_DROP_NONE: Best drop zone for stock ", stock_num, " is ", dropzone_num);
+            getBestDropZonePosition(dropzone_num, dropzonePos);
             if (dropzone_num == -1) {
                 LOG_ERROR("FSM_DROP_NONE: No more dropzone available, cannot drop stock ", stock_num);
                 return FSM_RETURN_ERROR;
+            }else{
+                LOG_GREEN_INFO("FSM_DROP_NONE: Best drop zone for stock ", stock_num, " is ", dropzone_num);
+                LOG_EXTENDED_DEBUG("FSM_DROP_NONE: Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ", ", dropzonePos.y, ", ", dropzonePos.a , ")");
+                LOG_EXTENDED_DEBUG("FSM_DROP_NONE -> FSM_DROP_NAV");
             }
-            dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
-            LOG_EXTENDED_DEBUG("FSM_DROP_NONE: Dropzone position for stock ", stock_num, " is (", dropzonePos.x, ", ", dropzonePos.y, ", ", dropzonePos.a , ")");
-            LOG_EXTENDED_DEBUG("FSM_DROP_NONE -> FSM_DROP_NAV");
             dropStockState = FSM_DROP_NAV;
+        }
             break;
         case FSM_DROP_NAV:
         {               
@@ -350,7 +415,8 @@ ReturnFSM_t ActionFSM::DropStock(){
                 LOG_WARNING("FSM_DROP_NAV(NAV_ERROR): Navigation error while going to dropzone for stock ", stock_num);
                 tableStatus.setDropzoneAsError(dropzone_num);
                 
-                int dropzone_temp = GetBestDropZone(drive.position);
+                int dropzone_temp = -1; 
+                getBestDropZonePosition(dropzone_temp, dropzonePos);
                 if(dropzone_temp == -1){
                     LOG_ERROR("FSM_DROP_NAV(NAV_ERROR): No more dropzone available, cannot drop stock ", stock_num);
                     tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
@@ -358,7 +424,6 @@ ReturnFSM_t ActionFSM::DropStock(){
                 }else{
                     tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY); // Reset previous dropzone state
                     dropzone_num = dropzone_temp;
-                    dropzonePos = getBestDropZonePosition(dropzone_num, drive.position);
                     LOG_EXTENDED_DEBUG("FSM_DROP_NAV(NAV_ERROR): New dropzone position for stock ", stock_num, " is (", dropzonePos.x, ",", dropzonePos.y, ")");
                 }
 
@@ -377,11 +442,14 @@ ReturnFSM_t ActionFSM::DropStock(){
                 backPos.x -= 100 * cos(DEG_TO_RAD * drive.position.a);
                 backPos.y -= 100 * sin(DEG_TO_RAD * drive.position.a);
 
+                gatherStockState = FSM_GATHER_NAV;
+                stealStockState = FSM_GATHER_NAV;
+                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
+
                 //No more stock in hand
                 stock_num = -1;
-                gatherStockState = FSM_GATHER_NAV;
-                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE);  
-
+                dropzone_num = -1;
+                steal_count = -1;
             }
             break;
         case FSM_DROP_NAV_BACK:
@@ -476,6 +544,10 @@ ReturnFSM_t ActionFSM::Cursor(){
 */
 void ActionFSM::SetBestAction(position_t position){
 
+    /*********************** RESET DES DISTANCES POUR BEST ACTIONS *********************/
+    closestStock = INFINITY;
+    closestSteal = INFINITY;
+
     /********************* CONDITIONS POUR LE RETURN HOME ***********************/
     if(_millis() > tableStatus.startTime + 95000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
         LOG_GREEN_INFO("95 seconds passed, switching to NAV_HOME");
@@ -503,16 +575,66 @@ void ActionFSM::SetBestAction(position_t position){
         tableStatus.calibrationAge += 1;
         LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to drop a stock, going to FSM_ACTION_DROP");
         return;
+    }//TODO cas pas de drop mais blocks dans la main -> poser 2 stocks même zone ou poser dans une zone adverse
+
+    /********** CALCUL BEST STOCK ************/
+    if (stock_num == -1 && gatherStockState == FSM_GATHER_NAV){
+        //LOG_DEBUG("Getting next stock to take");
+        closestStock = chooseStockStrategy(stock_num, offset);
+        if (stock_num == -1){
+            LOG_WARNING("ACTION_GATHER: No more stocks to take");
+            stock_num = -1;
+            gatherStockState = FSM_GATHER_NAV;
+            closestStock = INFINITY;
+        }else{
+            stockPos = STOCK_POSITIONS_TABLE[stock_num];
+            stockOff = STOCK_OFFSETS[offset];
+        }
     }
 
-    /*****************CONDITIONS POUR RECUPERER UN STOCK **********************************/
-    if(tableStatus.remainingStocksExist() && stock_num == -1){// On ne se base plus sur l'état précédent mais sur la possibilité de réaliser l'action
-        runState = FSM_ACTION_GATHER;
-        LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
-        return;
+    /************** CALCUL BEST STEAL *****************/
+    if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV && tableStatus.dropToStealExist()){
+        //LOG_DEBUG("Getting next stock to take");
+        closestSteal = getBestStealZonePosition(dropzone_num, dropzonePos);
+        if (dropzone_num == -1){
+            LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
+            dropzone_num = -1;
+            stealStockState = FSM_GATHER_NAV;
+            closestSteal = INFINITY;
+        }
+    }
+
+    if(closestSteal == INFINITY && closestStock == INFINITY){
+        LOG_ERROR("Nothing else to do waiting");
+        runState = FSM_ACTION_WAIT;
+    }else{
+        /*********************** CONDITION POUR VOLER UN STOCK OU TAKE STOCK ****************************/
+        if(closestSteal < closestStock){
+            LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to steal a drop, going to FSM_ACTION_STEAL");
+            LOG_GREEN_INFO("ACTION_STEAL: Next dropZone to steal: ", dropzone_num);
+            runState = FSM_ACTION_STEAL;
+            stock_num = -1;
+            /*********************TESTING OPTION **********************************/
+            tableStatus.startTime = _millis();
+            return;
+        }else{
+            runState = FSM_ACTION_GATHER;
+            dropzone_num = -1;
+            LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
+            LOG_GREEN_INFO("ACTION_GATHER: Next stock to take: ", stock_num, " offset: ", offset);
+            return;
+        }
     }
 
 }
+
+
+/*
+********************************************************************************************
+*  SECTION CALIBRATION
+*
+********************************************************************************************
+*/
 
 /*
     Force la calibration en se tournant vers un tag ou s'éloignant d'un tag aruco
@@ -545,6 +667,10 @@ ReturnFSM_t ActionFSM::Calibrate(){
     return FSM_RETURN_WORKING;
 }
 
+
+/*
+* FSM de récupération du centre du robot
+*/
 ReturnFSM_t ActionFSM::GetRobotCenter(){
     nav_return_t nav_ret;
     static position_t aruco1;
