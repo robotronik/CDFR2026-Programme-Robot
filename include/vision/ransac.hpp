@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include "utils/logger.hpp"
-
+ 
 typedef struct {
     double x = 0;
     double y = 0;
@@ -26,6 +26,9 @@ inline float pointLineDistance(const block_t& p, const Line& l);
 // projection scalaire
 inline float project(const block_t& p, const Line& l);
 
+/*
+* RANSAC developped for take action considering it will be mainly perfect placment blocks
+*/
 bool findGroupRANSAC2D(
     const std::vector<block_t>& points,
     std::vector<block_t>& bestGroup,
