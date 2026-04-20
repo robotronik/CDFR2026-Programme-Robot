@@ -371,7 +371,7 @@ void opponentInAction(position_t position){
     }
     for(int i = 0; i < DROPZONE_COUNT; i++){
         position_t dropzone_pos = DROPZONE_POSITIONS_TABLE[i];
-        if (tableStatus.dropzone_states[i] == TableState::DROPZONE_EMPTY && m_isPointInsideRectangle(position.x, position.y, dropzone_pos.x, dropzone_pos.y, OPPONENT_ROBOT_RADIUS + DROPZONE_WIDTH, OPPONENT_ROBOT_RADIUS + DROPZONE_LENGTH))
+        if (m_isPointInsideRectangle(position.x, position.y, dropzone_pos.x, dropzone_pos.y, OPPONENT_ROBOT_RADIUS + DROPZONE_WIDTH, OPPONENT_ROBOT_RADIUS + DROPZONE_LENGTH))
         {
             LOG_INFO("Opponent at dropzone ", i ," at position ", position.x, position.y);
             tableStatus.dropzone_states[i] = (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE;
