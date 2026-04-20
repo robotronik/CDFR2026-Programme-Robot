@@ -555,6 +555,14 @@ ReturnFSM_t ActionFSM::Cursor(){
         - Take
 */
 void ActionFSM::SetBestAction(position_t position){
+
+    /*********************TESTING OPTION **********************************/
+    /* 
+    if(_millis() - tableStatus.startTime > 50 * 1000){
+        tableStatus.startTime = _millis();
+    } 
+    */
+    
     /*********************** RESET DES DISTANCES POUR BEST ACTIONS *********************/
     closestStock = INFINITY;
     closestSteal = INFINITY;
