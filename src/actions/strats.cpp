@@ -214,7 +214,7 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
     double dropZoneOffset = OFFSET_DROPZONE;
     TableState::dropzone_state_t zone_of_interest = TableState::DROPZONE_EMPTY;
     if(steal){
-        dropZoneOffset = OFFSET_STOCK*1.2;
+        dropZoneOffset = OFFSET_STOCK*1.3;
         zone_of_interest = (tableStatus.colorTeam == YELLOW ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);
     }
 
