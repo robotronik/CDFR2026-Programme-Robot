@@ -33,7 +33,6 @@ bool findGroupRANSAC2D(
     const std::vector<block_t>& points,
     std::vector<block_t>& bestGroup,
     size_t max_blocks = 4,
-    int maxIterations = 80,
     float lineTol = 10.0f,
     float spacing = 50.0f,
     float spacingTol = 10.0f,
