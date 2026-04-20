@@ -114,14 +114,11 @@ int main(int argc, char *argv[])
             if (initState){
                 LOG_GREEN_INFO("WAITSTART");  
                 enableActuators();
-                arduino.setStepper(0, 1);
-                arduino.setStepper(0, 2);
-                arduino.setStepper(0, 3);
-                arduino.setStepper(0, 4);
                 homeActuators();
                 lidar.startSpin();
                 arucoCam1.start();
                 arduino.moveMotorDC(80, false);
+                enableCursor(false);
 
                 if (tableStatus.colorTeam == NONE)
                     arduino.RGB_Blinking(255, 0, 0); // Red Blinking

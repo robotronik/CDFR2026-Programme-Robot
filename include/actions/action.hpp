@@ -85,7 +85,7 @@ class ActionFSM{
         typedef enum
         {
             FSM_CURSOR_NAV,
-            FSM_CURSOR_LOW_CLAW,
+            FSM_CURSOR_ROT_NAV,
             FSM_CURSOR_MOVE,
             FSM_CURSOR_END
         } StateCursor_t;
