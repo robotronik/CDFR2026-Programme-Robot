@@ -26,6 +26,8 @@ inline float pointLineDistance(const block_t& p, const Line& l);
 // projection scalaire
 inline float project(const block_t& p, const Line& l);
 
+bool acceptableAngle(const block_t* b1, const block_t* b2, float angleTol);
+
 /*
 * RANSAC developped for take action considering it will be mainly perfect placment blocks
 */
@@ -37,4 +39,17 @@ bool findGroupRANSAC2D(
     float spacing = 50.0f,
     float spacingTol = 10.0f,
     float angleTol = 15.0f  // tolérance orientation
+);
+
+/*
+* RANSAC developped for steal action considering it will be a shinanigan
+*/
+bool findGroupStealRANSAC2D(
+    const std::vector<block_t>& points,
+    std::vector<block_t>& bestGroup,
+    size_t max_blocks = 4,
+    float lineTol = 40.0f,
+    float spacing = 50.0f,
+    float spacingTol = 100.0f,
+    float angleTol = 45.0f  // tolérance orientation
 );
