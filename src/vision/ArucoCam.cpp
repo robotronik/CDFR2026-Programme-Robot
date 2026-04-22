@@ -222,6 +222,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
         }
     }
     LOG_EXTENDED_DEBUG("Found ", count, " blocks for cam ", id);
+
     if(!count){
         LOG_ERROR("No object found Error stopping cam");
         success = -2;
@@ -253,10 +254,11 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
                 success = max_block;
                 break;
             }else{
-                LOG_WARNING("Ransac: Pas de solution à ", max_block);
+                //LOG_WARNING("Ransac: Pas de solution à ", max_block);
             }
         }
         if(success < 0){
+            alignBlocks.clear();
             tmp_x = visibleBlocks[0].x;
             tmp_y = visibleBlocks[0].y;
             tmp_a = visibleBlocks[0].a;

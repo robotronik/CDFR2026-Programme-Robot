@@ -188,10 +188,11 @@ bool findGroupRANSAC2D(
     float angleTol // tolérance orientation
 ) {
     block_t robotPos = bestGroup.back();
-    bestGroup.pop_back();
+    bestGroup.clear();
 
     for (size_t i = 0; i < points.size(); i++) {
-        for(size_t j = i + 1; j < points.size(); i++){
+        for(size_t j = i + 1; j < points.size(); j++){
+            //LOG_EXTENDED_DEBUG("Ransac: Testing line through points (", points[i].x, ", ", points[i].y, ") and (", points[j].x, ", ", points[j].y, ")");
             float dx = points[j].x - points[i].x;
             float dy = points[j].y - points[i].y;
 
@@ -257,8 +258,11 @@ bool findGroupRANSAC2D(
                         break;
                     }
                 }
-
-                if (status && !blockInFrontInterface(inliers,points)) {
+                if(blockInFrontInterface(std::vector<std::pair<float, const block_t*>>(inliers.begin() + k, inliers.begin() + k + max_blocks), points)){
+                    //LOG_EXTENDED_DEBUG("Ransac: Group of inliers at positions ", inliers[k].second->x, ", ", inliers[k].second->y, " to ", inliers[k + max_blocks - 1].second->x, ", ", inliers[k + max_blocks - 1].second->y, " is in front of the robot, rejecting this group");
+                    status = false;
+                }
+                if (status) {
                     bestGroup.clear();
                     for (size_t idx = 0; idx < max_blocks; ++idx) {
                         bestGroup.push_back(*inliers[k + idx].second);
@@ -274,7 +278,7 @@ bool findGroupRANSAC2D(
         }
         
     }
-
+    LOG_WARNING("Ransac take: No valid group of ", max_blocks, " inliers found");
     return false;
 }
 
@@ -288,7 +292,7 @@ bool findGroupStealRANSAC2D(
     float angleTol
 ){
     block_t robotPos = bestGroup.back();
-    bestGroup.pop_back();
+    bestGroup.clear();
 
     for (size_t i = 0; i < points.size(); i++) {
         for(size_t j = i + 1; j < points.size(); j++){
