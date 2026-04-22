@@ -23,7 +23,6 @@ class ActionFSM{
         void SetBestAction(position_t position);
 
         ReturnFSM_t TakeStock();
-        ReturnFSM_t TakeIsolatedStock();
         ReturnFSM_t DropStock();
         ReturnFSM_t Cursor();
         ReturnFSM_t BalayageSteal(int numDropZone);
@@ -47,7 +46,6 @@ class ActionFSM{
         typedef enum
         {
             FSM_ACTION_GATHER,
-            FSM_ACTION_GATHER_ISOLATED,
             FSM_ACTION_DROP,
             FSM_ACTION_CURSOR,
             FSM_TEST_ACTION_STEAL,
