@@ -679,7 +679,6 @@ void ActionFSM::SetBestAction(position_t position){
     Si la navigation échoue la calibration est considérée échouée et sera retentée une action plus tard
 */
 ReturnFSM_t ActionFSM::Calibrate(){
-    nav_return_t nav_ret;
     static position_t Calibrationtarget_;
 
     switch (calibrationState){
@@ -710,7 +709,6 @@ ReturnFSM_t ActionFSM::Calibrate(){
 * FSM de récupération du centre du robot
 */
 ReturnFSM_t ActionFSM::GetRobotCenter(){
-    nav_return_t nav_ret;
     static position_t aruco1;
     static position_t aruco2;
     static position_t target_ = {drive.position.x, drive.position.y, drive.position.a + 180}; // Look in the opposite direction to find the second aruco marker
