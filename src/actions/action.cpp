@@ -359,6 +359,7 @@ ReturnFSM_t ActionFSM::StealStock(){
             if (closeClaws()){
                 //drive.is_slow_mode = false;
                 LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: dropZone", dropzone_num, " collected");
+                tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY);
                 stealStockState = FSM_GATHER_COLLECTED;
             }
         }
