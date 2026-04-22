@@ -47,8 +47,31 @@ nav_return_t navigationDrive(){
 nav_return_t navigationGo(){
     // FSM which does drive and calibration
     static bool driving = true;
+    static position_t last_pos = {0,0,0};
+    static unsigned long stuck_start = 0;
     if (driving){
         nav_return_t result = navigationDrive();
+
+        double dist = position_distance(drive.position, current_pos_target);
+        double move = position_distance(drive.position, last_pos);
+        //LOG_DEBUG("NAV: Distance to target: ", dist, "mm, movement since last check: ", move, "mm");
+        if (dist > 20 && move < 4){
+            if (stuck_start == 0) stuck_start = _millis();
+            if (_millis() - stuck_start > 200.0)
+                LOG_WARNING("NAV: Robot might be stuck, distance to target: ", dist, "mm, movement since last check: ", move, "mm, time stuck: ", _millis() - stuck_start, "ms");
+            
+
+            if (_millis() - stuck_start > 1000){
+                LOG_ERROR("NAV: Robot stuck");
+                stuck_start = 0;
+                return NAV_ERROR;
+            }
+        }else{
+            stuck_start = 0;
+        }
+
+        last_pos = drive.position;
+
         if (result == NAV_DONE){
             LOG_EXTENDED_DEBUG("Navigation drive completed");
             if (current_complete_stop) // If came to a complete stop, calibrate using camera, else nav is done
