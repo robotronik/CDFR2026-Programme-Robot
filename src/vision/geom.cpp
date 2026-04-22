@@ -1,13 +1,13 @@
 #include "vision/geom.hpp"
 
 // normalisation angle [-180, 180]
-inline float angleDiff(float a, float b) {
+float angleDiff(float a, float b) {
     float d = fmodf(a - b + 180.0f, 360.0f) - 180.0f;
     return std::abs(d);
 }
 
 // distance point-droite 2D
-inline float pointLineDistance(const block_t& p, const Line& l) {
+float pointLineDistance(const block_t& p, const Line& l) {
     float vx = p.x - l.x;
     float vy = p.y - l.y;
 
@@ -16,7 +16,7 @@ inline float pointLineDistance(const block_t& p, const Line& l) {
 }
 
 // projection scalaire
-inline float project(const block_t& p, const Line& l) {
+float project(const block_t& p, const Line& l) {
     return (p.x - l.x) * l.dx +
            (p.y - l.y) * l.dy;
 }
@@ -39,7 +39,7 @@ bool acceptableAngle(const block_t* b1, const block_t* b2, float angleTol){
     return angleDiff(b1->a, lineAngle) < angleTol;
 }
 
-inline float cross2d(float x1, float y1, float x2, float y2) {
+float cross2d(float x1, float y1, float x2, float y2) {
     return x1 * y2 - y1 * x2;
 }
 

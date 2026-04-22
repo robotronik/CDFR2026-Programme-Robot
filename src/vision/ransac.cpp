@@ -1,8 +1,10 @@
 #include "vision/ransac.hpp"
 
+/*
 block_t startPosition(const std::vector<const block_t*>& choosen, const std::vector<block_t>& points, const block_t& robotPos){
 
 }
+*/
 
 bool findGroupRANSAC2D(
     const std::vector<block_t>& points,

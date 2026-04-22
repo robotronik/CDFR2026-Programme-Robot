@@ -25,16 +25,16 @@ struct Line {
 };
 
 // normalisation angle [-180, 180]
-inline float angleDiff(float a, float b);
+float angleDiff(float a, float b);
 
 // distance point-droite 2D
-inline float pointLineDistance(const block_t& p, const Line& l);
+float pointLineDistance(const block_t& p, const Line& l);
 
 // projection scalaire
-inline float project(const block_t& p, const Line& l);
+float project(const block_t& p, const Line& l);
 
 // Produit vectoriel 2D (déterminant) pour savoir de quel côté on est
-inline float cross2d(float x1, float y1, float x2, float y2);
+float cross2d(float x1, float y1, float x2, float y2);
 
 //détermine si un angle entre 2 blocks est inférieur à la tolérance
 bool acceptableAngle(const block_t* b1, const block_t* b2, float angleTol);
