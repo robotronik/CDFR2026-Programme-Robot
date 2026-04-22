@@ -562,13 +562,6 @@ void ActionFSM::SetBestAction(position_t position){
         return;
     }
 
-    /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
-    if((false && !tableStatus.cursorIsDone()) && (position_distance(position, tableStatus.CursorPos) < 300 || stock_num == (tableStatus.colorTeam == YELLOW ? 5 : 1))){ // If we are close to the cursor position or if we are at stock 
-        LOG_GREEN_INFO("Going for cursor action");
-        runState = FSM_ACTION_CURSOR;
-        return;
-    }
-
     /**************************** CONDITIONS POUR DROP UN STOCK ***************************************/
     if(tableStatus.remainingDropExist() && stock_num != -1){ // On peut DROP à partir du moment où on a un stock et qu'il reste des drop zones
         runState = FSM_ACTION_DROP;
@@ -605,6 +598,12 @@ void ActionFSM::SetBestAction(position_t position){
     }
 
     if(closestSteal == INFINITY && closestStock == INFINITY){
+        /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
+        if(!tableStatus.cursorIsDone()){ 
+            LOG_GREEN_INFO("Going for cursor action");
+            runState = FSM_ACTION_CURSOR;
+            return;
+        }
         LOG_ERROR("Nothing else to do waiting");
         runState = FSM_ACTION_WAIT;
     }else{
