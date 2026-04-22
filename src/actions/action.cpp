@@ -17,6 +17,7 @@ void ActionFSM::Reset(){
     /****** RESET OF FSM STATES *******/
     gatherStockState = FSM_GATHER_NAV;
     stealStockState = FSM_GATHER_NAV;
+    sweepState = FSM_SWEEP_INIT;
     dropStockState = FSM_DROP_NONE;
     CursorState = FSM_CURSOR_NAV;
     calibrationCameraState = FSM_ARUCO_1;
@@ -336,7 +337,7 @@ ReturnFSM_t ActionFSM::StealStock(){
             nav_ret = navigationGoTo(targetStockFirstPos, false, false, false); // Slow mode for more precision
             //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
             if (nav_ret == NAV_DONE){
-                gatherStockState = FSM_GATHER_MOVE;
+                stealStockState = FSM_GATHER_MOVE;
                 LOG_EXTENDED_DEBUG("FSM_GATHER_PREMOVE: Pre-Moving to stock ", stock_num, " at position (", targetStockFirstPos.x, ",", targetStockFirstPos.y, ") with angle ", targetStockFirstPos.a);
             }
             }
@@ -379,6 +380,132 @@ ReturnFSM_t ActionFSM::StealStock(){
             tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY);
             return FSM_RETURN_DONE;
         }
+    }
+    return FSM_RETURN_WORKING;
+}
+
+ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos){
+    //targetPos1 = position premier block à voler
+    double distanceBalayage = 200.0;
+    double margeBalayage = 50.0;
+    distanceBalayage += margeBalayage;
+    
+    static double cosinus, sinus;
+    static position_t targetPos1,targetPos2, targetPos3, targetPos4;
+    static double startTime = 0;
+    static bool needToGoToWall = false, claws_done = false;
+
+    switch(sweepState){
+
+        case FSM_SWEEP_INIT: //
+        {
+            LOG_INFO("SWEEP: init");
+            startTime = 0;
+            needToGoToWall = false, claws_done = false;
+            sweepState = FSM_SWEEP_DETECT;
+            break;
+        }
+
+        case FSM_SWEEP_DETECT:
+        {
+            LOG_DEBUG("FSM_SWEEP_DETECT: Detection sucess calibration on blocks");
+            targetPos1 = targetPos;
+            cosinus = cos(DEG_TO_RAD * targetPos1.a);
+            sinus   = sin(DEG_TO_RAD * targetPos1.a);
+            
+            // Se décaler 200mm à gauche du stock et avancer de 40mm
+            targetPos2.y = targetPos1.y + distanceBalayage * cosinus + 40.0 * sinus;
+            targetPos2.x = targetPos1.x - distanceBalayage * sinus + 40.0 * cosinus;
+            targetPos2.a = targetPos1.a;
+
+            startTime = 0;
+            bool tp2 = NearestValidZone(&targetPos2);
+            if (NearestValidZone(&targetPos1) || tp2){
+                needToGoToWall = true;
+            }
+            // S'avancer pour prendre le stock de 50 et se décaler de 20mm à gauche
+            targetPos3.y = targetPos2.y + 50.0 * sinus + 75.0 * cosinus;
+            targetPos3.x = targetPos2.x + 50.0 * cosinus - 75.0 * sinus;
+            targetPos3.a = targetPos2.a - 10.0; //Se remet face au mur
+
+            //Se décaler sur la gauche pour collect
+            targetPos4.y = targetPos3.y + 50.0 * cosinus;
+            targetPos4.x = targetPos3.x - 50.0 * sinus; 
+            targetPos4.a = targetPos3.a;
+
+            sweepState = FSM_SWEEP_NAV_RIGHT;
+            break;
+        }
+        case FSM_SWEEP_NAV_RIGHT:
+        {
+            nav_ret = navigationGoTo(targetPos1, false, false, false); //First Move
+            snapClaws(false,false);
+            moveServoAndWait(SERVO_NUM_6, 170, 200);
+            if (!claws_done) claws_done = lowerClaws();
+    
+            if (nav_ret == NAV_DONE && claws_done){
+                LOG_DEBUG("FSM_SWEEP_NAV_RIGHT: Moving to right of the stock at position (", targetPos1.x, ",", targetPos1.y, ") with angle ", targetPos1.a);
+
+                if (needToGoToWall){
+                    targetPos1.y += 50.0 * sinus;
+                    targetPos1.x += 50.0 * cosinus;
+                    startTime = _millis();
+                    needToGoToWall = false;
+                    sweepState = FSM_SWEEP_WALL;
+                    break;
+                }
+                sweepState = FSM_SWEEP_NAV_LEFT;
+            }
+            break;
+        }
+        case FSM_SWEEP_WALL:
+        {
+            nav_ret = navigationGoTo(targetPos1, false, true, false); // Go slowly to the wall
+            if (nav_ret == NAV_DONE || ((_millis() - startTime > 1000) && startTime != 0)){ // If stuck > 1 second, we are against the wall
+                LOG_INFO("SWEEP: arrived at wall");
+                sweepState = FSM_SWEEP_NAV_LEFT;
+            }
+            break;
+        }
+        case FSM_SWEEP_NAV_LEFT:
+        {
+            nav_ret = navigationGoTo(targetPos2, false, true, false); // Second Move, Slow mode
+            if (nav_ret == NAV_DONE){
+                startTime = _millis();
+                sweepState = FSM_SWEEP_PRE_COLLECT;
+                LOG_DEBUG("FSM_SWEEP_NAV_LEFT: Moving to left of the stock " " at position (", targetPos2.x, ",", targetPos2.y, ") with angle ", targetPos2.a);
+            }
+            break;
+        }
+        case FSM_SWEEP_PRE_COLLECT:
+        {
+            nav_ret = navigationGoTo(targetPos3, false, true, false);
+            if ((nav_ret == NAV_DONE) || ((_millis() - startTime > 2000) && startTime != 0)) {
+                if (openClaws()){
+                    snapClaws(false,false);
+                    LOG_EXTENDED_DEBUG("FSM_SWEEP_PRE_COLLECT: Opened and closed claws to prepare for collection");
+                    startTime = 0;
+                    sweepState = FSM_SWEEP_COLLECT;
+                }
+                
+            }
+            break;
+        }
+        case FSM_SWEEP_COLLECT:
+        {
+            nav_ret = navigationGoTo(targetPos4, false, true, false);
+            if ((nav_ret == NAV_DONE)) {
+                moveServoAndWait(SERVO_NUM_6, 90, 200);
+                if (rotateTwoBlocks(stockOrder)){
+                    LOG_EXTENDED_DEBUG("FSM_SWEEP_COLLECT: Claws rotated for collection");
+                    LOG_DEBUG("FSM_SWEEP_COLLECT: Stock collected");
+                    startTime = 0;
+                    sweepState = FSM_SWEEP_INIT; // reset
+                    return FSM_RETURN_DONE;
+                }
+            }
+            break;
+        } 
     }
     return FSM_RETURN_WORKING;
 }

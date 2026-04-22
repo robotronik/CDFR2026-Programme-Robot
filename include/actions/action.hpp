@@ -24,6 +24,7 @@ class ActionFSM{
 
         ReturnFSM_t TakeStock();
         ReturnFSM_t StealStock();
+        ReturnFSM_t BalayageSteal(position_t targetPos1);
         ReturnFSM_t DropStock();
         ReturnFSM_t Cursor();
         ReturnFSM_t Calibrate();
@@ -77,6 +78,21 @@ class ActionFSM{
         /************ FSM STEAL **************/
 
         StateGatherStock_t stealStockState = FSM_GATHER_NAV;
+
+        /************  FSM BALAYAGE ************/
+        typedef enum
+        {
+            FSM_SWEEP_INIT,
+            FSM_SWEEP_NAV,
+            FSM_SWEEP_DETECT,
+            FSM_SWEEP_NAV_RIGHT,
+            FSM_SWEEP_WALL,
+            FSM_SWEEP_NAV_LEFT,
+            FSM_SWEEP_PRE_COLLECT,
+            FSM_SWEEP_COLLECT
+
+        } StateSweepSteal_t;
+        StateSweepSteal_t sweepState = FSM_SWEEP_INIT;
 
         /************  FSM DROP ************/
         typedef enum
