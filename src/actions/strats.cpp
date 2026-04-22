@@ -264,7 +264,7 @@ position_t toFirstStockPos(position_t targetPos){
 
 // Clamp the position to be in the valid area of the table, returns true if the position was modified
 bool NearestValidZone(position_t* pos){
-    const float MARGIN = 370.0;
+    const float MARGIN = 380.0;
     const float X_MIN = -550.0 + MARGIN, X_MAX = 1000.0 - MARGIN;
     const float Y_MIN = -1500.0 + MARGIN, Y_MAX = 1500.0 - MARGIN;
     bool modified = false;
@@ -276,11 +276,13 @@ bool NearestValidZone(position_t* pos){
         pos->x = X_MIN;
         hitBottom = true;
         modified = true;
+        LOG_ERROR("Hit bottom wall");
     }
     else if (pos->x > X_MAX){
         pos->x = X_MAX;
         hitTop = true;
         modified = true;
+        LOG_ERROR("Hit top wall");
     }
 
     // Clamp Y
@@ -288,19 +290,21 @@ bool NearestValidZone(position_t* pos){
         pos->y = Y_MIN;
         hitRight = true;
         modified = true;
+        LOG_ERROR("Hit right wall");
     }
     else if (pos->y > Y_MAX){
         pos->y = Y_MAX;
         hitLeft = true;
         modified = true;
+        LOG_ERROR("Hit left wall");
     }
 
     if (modified){
         //Corriger l'angle pour regarder le mur
-        if (hitLeft)        pos->a = 90.0;     // regarde vers +X
-        else if (hitRight)  pos->a = -90.0;   // regarde vers -X
-        else if (hitBottom) pos->a = 180.0;    // regarde vers +Y
-        else if (hitTop)    pos->a = 0.0;   // regarde vers -Y
+        if (hitLeft)        pos->a = 90.0 + 10;     // regarde vers +Y
+        else if (hitRight)  pos->a = -90.0 + 10;   // regarde vers -Y
+        else if (hitBottom) pos->a = 180.0 + 10;    // regarde vers +X
+        else if (hitTop)    pos->a = 0.0 + 10;   // regarde vers -X
         LOG_WARNING("Position clamped + angle corrected: (", pos->x, ", ", pos->y, ", ", pos->a, ")");
     }
 

@@ -209,7 +209,7 @@ bool snapClaws(bool closed){
 
 bool snapClaws(bool closed, bool small){
     static int prevTarget = -1;
-    int target = closed ? 10 : (small ? 45 : 130);
+    int target = closed ? 5 : (small ? 30 : 110);
     if (prevTarget != target){
         arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 200);
         prevTarget = target;
@@ -283,6 +283,36 @@ bool moveServoAndWait(int servo, int target, int speed){
     if (!arduino.getServo(servo, s)) return false;
 
     return s == target;
+}
+
+bool openCloseClawsTimed(){
+    static int state = 0;
+    static unsigned long startTime = 0;
+
+    switch(state){
+        case 0: // ouvrir
+            if (openClaws()){
+                startTime = _millis();
+                state = 1;
+            }
+            break;
+
+        case 1: // attendre 200 ms
+            if (_millis() - startTime >= 200){
+                state = 2;
+            }
+            break;
+
+        case 2: // fermer
+            if (snapClaws(false,false) && _millis() - startTime >= 200){
+                state = 0;
+                startTime = 0;
+                return true;
+            }
+            break;
+    }
+
+    return false;
 }
 
 // ------------------------------------------------------

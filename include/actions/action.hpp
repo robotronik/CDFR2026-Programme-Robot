@@ -103,6 +103,7 @@ class ActionFSM{
             FSM_SWEEP_WALL,
             FSM_SWEEP_NAV_RIGHT,
             FSM_SWEEP_NAV_LEFT,
+            FSM_SWEEP_PRE_COLLECT,
             FSM_SWEEP_COLLECT,
             FSM_SWEEP_DROP,
             FSM_SWEEP_DONE
