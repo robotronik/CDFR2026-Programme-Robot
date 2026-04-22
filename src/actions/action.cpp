@@ -37,8 +37,8 @@ void ActionFSM::Reset(){
     for(size_t _ = 0; _<4 ; _++){
         stockOrder[_] = (tableStatus.colorTeam == YELLOW) ? false : true;
     }
-    runState = FSM_ACTION_GATHER;
-    SetBestAction(drive.position);
+    runState = FSM_ACTION_SAFESTART;
+    //SetBestAction(drive.position);
     // TODO reset other states (num,offset, etc.)
 }
 
@@ -46,10 +46,21 @@ bool ActionFSM::RunFSM(){
     ReturnFSM_t ret;
     switch (runState)
     {
-    /*
-        Action Gather:
+    case FSM_ACTION_SAFESTART:
+        ret = SafeStart();
 
-    */
+        if (ret == FSM_RETURN_DONE){
+            LOG_INFO("SAFE_START: completed, switching to normal FSM");
+            SetBestAction(drive.position);
+            runState = FSM_ACTION_GATHER;
+        }
+        else if (ret == FSM_RETURN_ERROR){
+            LOG_ERROR("SAFE_START: failed, forcing normal FSM start");
+            SetBestAction(drive.position);
+            runState = FSM_ACTION_GATHER;
+
+        }
+        break;
     case FSM_ACTION_GATHER:
         ret = TakeStock();
         if (ret == FSM_RETURN_DONE){
@@ -162,6 +173,29 @@ bool ActionFSM::RunFSM(){
     return false;
 }
 
+ReturnFSM_t ActionFSM::SafeStart(){
+    static bool init = false;
+    static position_t safePos;
+
+    if (!init){
+        safePos = position_t{-400, 1075, 45};
+
+        if (tableStatus.colorTeam == YELLOW)
+            position_robot_flip(safePos);
+        init = true;
+    }
+
+    nav_ret = navigationGoTo(safePos, false, false, false);
+
+    if (nav_ret == NAV_DONE){
+        LOG_INFO("SAFE_START: Arrived at safe position");
+        init = false;
+        runState = FSM_ACTION_GATHER;
+        return FSM_RETURN_DONE;
+    }
+
+    return FSM_RETURN_WORKING;
+}
 ReturnFSM_t ActionFSM::TakeStock(){
     //LOG_INFO("TakeStock state: ", gatherStockState, " stock_num: ", stock_num);
     if (stock_num == -1 && gatherStockState == FSM_GATHER_NAV){
