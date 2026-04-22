@@ -46,8 +46,25 @@ bool ActionFSM::RunFSM(){
     {
     case FSM_TEST_ACTION_STEAL:
     {
+        if (currentStealZone == -1){
+            // trouver une dropzone valide
+            //TODO chercher la dropzone la plus proche
+            for (size_t i = 0; i < DROPZONE_COUNT; i++){
+                if (tableStatus.dropzone_states[i] == ((tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE)){
+                    currentStealZone = i;
+                    LOG_INFO("Selected dropzone ", i);
+                    break;
+                }
+            }
 
-        ret = BalayageSteal(5);
+            if (currentStealZone == -1){
+                LOG_WARNING("No valid dropzone to steal");
+                SetBestAction(drive.position);
+                break;
+            }
+        }
+
+        ret = BalayageSteal(currentStealZone);
         if (ret == FSM_RETURN_DONE){
             LOG_INFO("ACTION_STEAL: Finished steal on zone ", currentStealZone);
             currentStealZone = -1; // reset pour prochaine zone
