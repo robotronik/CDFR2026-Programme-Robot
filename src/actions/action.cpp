@@ -121,7 +121,7 @@ bool ActionFSM::RunFSM(){
             LOG_ERROR("ACTION_CURSOR: Couldn't do cursor action");
             tableStatus.setCursorIsDone(true); // Place le curseur comme virtuellement fait
             SetBestAction(drive.position); // Choisit une nouvelle action, le curseur étant indisponible
-            tableStatus.setCursorIsDone(false); // Rend le curseur de nouveau disponible
+            //tableStatus.setCursorIsDone(false); // Rend le curseur de nouveau disponible
         }
         break;
 
@@ -550,6 +550,11 @@ ReturnFSM_t ActionFSM::Cursor(){
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_MOVE: Nav done , going to FSM_CURSOR");
                 CursorState = FSM_CURSOR_END;
+            }
+            else if (nav_ret == NAV_ERROR){
+                LOG_WARNING("FSM_CURSOR_MOVE: Navigation error while going to cursor position for lowerClaws");
+                enableCursor(false);
+                return FSM_RETURN_ERROR;
             }
             break;
 
