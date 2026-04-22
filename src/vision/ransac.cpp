@@ -1,181 +1,7 @@
 #include "vision/ransac.hpp"
 
-// normalisation angle [-180, 180]
-inline float angleDiff(float a, float b) {
-    float d = fmodf(a - b + 180.0f, 360.0f) - 180.0f;
-    return std::abs(d);
-}
+block_t startPosition(const std::vector<const block_t*>& choosen, const std::vector<block_t>& points, const block_t& robotPos){
 
-// distance point-droite 2D
-inline float pointLineDistance(const block_t& p, const Line& l) {
-    float vx = p.x - l.x;
-    float vy = p.y - l.y;
-
-    float cross = std::abs(vx * l.dy - vy * l.dx);
-    return cross; // car dir normalisée
-}
-
-// projection scalaire
-inline float project(const block_t& p, const Line& l) {
-    return (p.x - l.x) * l.dx +
-           (p.y - l.y) * l.dy;
-}
-
-bool acceptableAngle(const block_t* b1, const block_t* b2, float angleTol){
-    float dx = b2->x - b1->x;
-    float dy = b2->y - b1->y;
-
-    float norm = std::sqrt(dx*dx + dy*dy);
-    if (norm < 1e-6f) return false;
-
-    Line line;
-    line.x = b1->x;
-    line.y = b1->y;
-    line.dx = dx / norm;
-    line.dy = dy / norm;
-
-    // angle de la ligne (en degrés)
-    float lineAngle = std::atan2(line.dy, line.dx) * 180.0f / M_PI;
-    return angleDiff(b1->a, lineAngle) < angleTol;
-}
-
-inline float cross2d(float x1, float y1, float x2, float y2) {
-    return x1 * y2 - y1 * x2;
-}
-
-bool checkSegment(float px, float py, float tx, float ty) {
-    float len = std::sqrt(tx*tx + ty*ty);
-    if (len < 1e-6f) return false;
-    
-    float ux = tx / len;
-    float uy = ty / len;
-    
-    // Projection scalaire du point sur le segment
-    float t = px * ux + py * uy;
-    
-    // On vérifie si on est devant le robot et avant la cible (marge incluse)
-    if (t > -ROBOT_RADIUS && t < len - TARGET_MARGIN) {
-        float proj_x = t * ux;
-        float proj_y = t * uy;
-        float d = std::sqrt((px - proj_x)*(px - proj_x) + (py - proj_y)*(py - proj_y));
-        return d < CORRIDOR_THRESHOLD;
-    }
-    return false;
-};
-
-bool blockInFrontInterface(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points) {
-    std::vector<const block_t*> block_temps;
-
-    block_temps.reserve(choosen.size()); 
-    
-    for (const auto& c : choosen) {
-        block_temps.push_back(std::get<1>(c));
-    }
-    return blockInFront(block_temps, points);
-}
-
-bool blockInFrontInterface(const std::vector<std::pair<float, const block_t*>>& choosen, const std::vector<block_t>& points) {
-    std::vector<const block_t*> block_temps;
-
-    block_temps.reserve(choosen.size()); 
-    
-    for (const auto& c : choosen) {
-        block_temps.push_back(c.second);
-    }
-    return blockInFront(block_temps, points);
-}
-
-bool blockInFront(const std::vector<const block_t*>& choosen, const std::vector<block_t>& points) {
-    if (choosen.empty()) return false;
-    if (choosen.size() == points.size()) return false;
-
-    // Les deux blocs extrêmes qui définissent notre zone
-    const block_t* blockA = choosen.front();
-    const block_t* blockB = choosen.back();
-
-    float ax = static_cast<float>(blockA->x);
-    float ay = static_cast<float>(blockA->y);
-    float bx = static_cast<float>(blockB->x);
-    float by = static_cast<float>(blockB->y);
-
-    // Vecteur du segment AB
-    float abx = bx - ax;
-    float aby = by - ay;
-    float len_ab = std::sqrt(abx*abx + aby*aby);
-
-    bool is_single_line = (len_ab < 1e-6f); // Vrai si A et B sont quasiment au même endroit (le même block)
-
-    // Calcul de la normale à AB pointant vers l'origine (le robot)
-    float nx = 0, ny = 0;
-    if (!is_single_line) {
-        nx = -aby;
-        ny = abx;
-        // On s'assure que la normale pointe vers l'origine (0,0)
-        // Produit scalaire entre la normale et le vecteur A->Origine (-ax, -ay)
-        if ((nx * (-ax) + ny * (-ay)) < 0) {
-            nx = -nx;
-            ny = -ny;
-        }
-        float len_n = std::sqrt(nx*nx + ny*ny);
-        nx /= len_n;
-        ny /= len_n;
-    }
-
-    for (const block_t& p : points) { 
-        // 1. Vérifier si 'p' est une de nos cibles
-        bool is_chosen = false;
-        for (const block_t* c : choosen) {
-            if (&p == c) {
-                is_chosen = true;
-                break;
-            }
-        }
-        if (is_chosen) continue; 
-
-        float px = static_cast<float>(p.x);
-        float py = static_cast<float>(p.y);
-
-        // Si A et B sont confondus (ex: 1 seul bloc choisi), on fait juste un test de segment classique
-        if (is_single_line) {
-            if (checkSegment(px, py, ax, ay)) {
-                return true;
-            }
-            continue;
-        }
-
-        // --- Vérification géométrique complexe (Triangle OAB et bordures) ---
-
-        // A. Vérifier si le point est dans le "cône" infini formé par l'origine, A et B
-        float cab = cross2d(ax, ay, bx, by);
-        float cross_AP = cross2d(ax, ay, px, py);
-        float cross_BP = cross2d(bx, by, px, py);
-
-        bool is_inside_cone = false;
-        if (cab >= 0) {
-            is_inside_cone = (cross_AP >= 0 && cross_BP <= 0);
-        } else {
-            is_inside_cone = (cross_BP >= 0 && cross_AP <= 0);
-        }
-
-        // B. Si le point est dans le cône, est-il bien "devant" la ligne AB ?
-        if (is_inside_cone) {
-            // Distance du point P à la droite AB (orientée vers l'origine)
-            float dist_to_AB = (px - ax) * nx + (py - ay) * ny;
-            
-            // Si la distance est supérieure à la marge, le point est sur la route du robot
-            if (dist_to_AB > TARGET_MARGIN) {
-                return true; 
-            }
-        }
-
-        // C. Si le point n'est pas dans le triangle strict, il pourrait quand même "déborder" 
-        // sur les trajectoires latérales du robot à cause de son diamètre (CORRIDOR_THRESHOLD)
-        if (checkSegment(px, py, ax, ay) || checkSegment(px, py, bx, by)) {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 bool findGroupRANSAC2D(
@@ -189,7 +15,7 @@ bool findGroupRANSAC2D(
 ) {
     block_t robotPos = bestGroup.back();
     bestGroup.clear();
-
+    
     for (size_t i = 0; i < points.size(); i++) {
         for(size_t j = i + 1; j < points.size(); j++){
             //LOG_EXTENDED_DEBUG("Ransac: Testing line through points (", points[i].x, ", ", points[i].y, ") and (", points[j].x, ", ", points[j].y, ")");
@@ -263,7 +89,12 @@ bool findGroupRANSAC2D(
                     status = false;
                 }
                 if (status) {
+                    block_t pouss = interfacePlacePoussoir(std::vector<std::pair<float, const block_t*>>(inliers.begin() + k, inliers.begin() + k + max_blocks), points);
                     bestGroup.clear();
+                    if(pouss.x != 0 && pouss.y != 0){
+                        bestGroup.push_back(pouss);
+                        return true;
+                    }
                     for (size_t idx = 0; idx < max_blocks; ++idx) {
                         bestGroup.push_back(*inliers[k + idx].second);
                         //LOG_EXTENDED_DEBUG("Ransac: Adding point (", inliers[k + idx].second->x, ", ", inliers[k + idx].second->y, ") with angle ", inliers[k + idx].second->a, " to best group");
@@ -393,8 +224,9 @@ bool findGroupStealRANSAC2D(
             if(!status) continue;
 
             if(blockInFrontInterface(sol_temp, points)){
-                return false;
-            }else{
+                continue;
+                //TODO gérer et trouver une solution en passant par l'autre coté?
+            }else if(false){//block behind
                 //TODO
             }
         }

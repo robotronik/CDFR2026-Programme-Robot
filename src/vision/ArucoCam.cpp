@@ -241,6 +241,12 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
         alignBlocks.push_back(block_t{.x = x, .y = y, .a = a, .color = false});
         for(size_t max_block = MIN(4,count); max_block > 1; max_block -- ){
             if(findGroupRANSAC2D(visibleBlocks,alignBlocks, max_block)){
+                /*TEST*/
+                tmp_x = alignBlocks[0].x;
+                tmp_y = alignBlocks[0].y;
+                tmp_a = alignBlocks[0].a;
+                success = 1;
+                break;
 
                 if(max_block !=2){
                     tmp_x = alignBlocks[1].x;
@@ -263,6 +269,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
             tmp_y = visibleBlocks[0].y;
             tmp_a = visibleBlocks[0].a;
             alignBlocks.push_back(visibleBlocks[0]);
+            //TODO utiliser best isolated block
             success = 1;
             LOG_GREEN_INFO("Going for single tag ", id, " position: { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
         }
@@ -278,8 +285,8 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
         //LOG_EXTENDED_DEBUG("Position avant correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
         //LOG_EXTENDED_DEBUG("Décalage appliqué : { sin = ", OFFSET_STOCK * mult_param * sin(rad_tmp_a), ", cos = ", OFFSET_STOCK * mult_param * cos(rad_tmp_a), " }");
         const double off_s = 85; // Augmenter pour se rapprocher
-        tmp_x += OFFSET_CAM_X - (OFFSET_STOCK - off_s) * cos(rad_tmp_a);
-        tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y - (OFFSET_STOCK - off_s) * sin(rad_tmp_a);
+        tmp_x += OFFSET_CAM_X - (OFFSET_STOCK - off_s) * cos(rad_tmp_a) -270;
+        tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y - (OFFSET_STOCK - off_s) * sin(rad_tmp_a) + 125;
         //LOG_EXTENDED_DEBUG("Position après correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
 
 
