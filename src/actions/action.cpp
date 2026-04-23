@@ -553,7 +553,7 @@ ReturnFSM_t ActionFSM::Cursor(){
             break;
         case FSM_CURSOR_ROT_NAV:
             if (_millis() - startTime > 250){
-                nav_ret = navigationGoTo(navTargetRot, false, true, false); //false sinon il va pas vouloir y aller car trop proche du mur
+                nav_ret = navigationGoTo(navTargetRot, true, true, false);
                 if (nav_ret == NAV_DONE){
                     LOG_EXTENDED_DEBUG("FSM_CURSOR_LOW_CLAW: Nav done for lowerClaws, going to FSM_CURSOR_MOVE");
                             CursorState = FSM_CURSOR_MOVE;
@@ -564,7 +564,7 @@ ReturnFSM_t ActionFSM::Cursor(){
             break;
 
         case FSM_CURSOR_MOVE:
-            nav_ret = navigationGoTo(moveTarget, false, true);
+            nav_ret = navigationGoTo(moveTarget, true, true);
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_MOVE: Nav done , going to FSM_CURSOR");
                 CursorState = FSM_CURSOR_END;
