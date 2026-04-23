@@ -63,14 +63,17 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
     double angle_acceleration = (is_slow_mode ? 40.0 : 150.0); // deg/s
     double angle_top_speed   = (is_slow_mode ? 350.0 : 600.0); // deg/s
 
-    double current_angular_velocity = fabs(velocity.a); // deg/s
     double angle_speed;
     
     double error_heading = pos[n-1].a - position.a;
     while (error_heading > 180.0) error_heading -= 360.0;
     while (error_heading < -180.0) error_heading += 360.0;
     
-    angle_speed = MIN(current_angular_velocity + angle_acceleration, angle_top_speed);
+    if (error_heading > 0.0)
+        angle_speed = fabs(velocity.a + angle_acceleration); 
+    else
+        angle_speed = fabs(velocity.a - angle_acceleration);
+    angle_speed = MIN(angle_speed, angle_top_speed);
 
     const double kP_ang = 10.0;  // Gain for angular speed (deg/s per deg error) (Defined in drive)
     pos_target.a = position.a + MIN(MAX(error_heading, -angle_speed/kP_ang), angle_speed/kP_ang);
@@ -78,21 +81,28 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
     // Linear motion
     double position_acceleration = (is_slow_mode ? 80.0 : 250.0); // mm/s²
     double position_top_speed    =  (is_slow_mode ? 400.0 : 2000.0); // mm/s
-    double current_linear_velocity = position_length(velocity); // mm/s
-    double position_speed; // mm/s
-
-    position_speed = MIN(current_linear_velocity + position_acceleration, position_top_speed);
-    
-    // Distance to final target
-    double distance_to_target = position_distance(position, pos[n - 1]);
+    position_t position_speed; // mm/s
 
     position_t vec;
     vec.x = pos_target.x - position.x;
     vec.y = pos_target.y - position.y;
     position_normalize(vec);
+
+    position_speed.x = velocity.x / 3.0 + vec.x * position_acceleration;
+    position_speed.y = velocity.y / 3.0 + vec.y * position_acceleration;
+    double s = position_length(position_speed);
+    position_normalize(position_speed);
+    if (s > position_top_speed)
+        s = position_top_speed;
+    position_speed.x *= s;
+    position_speed.y *= s;
+    
+    // Distance to final target
+    double distance_to_target = position_distance(position, pos[n - 1]);
+
     const double kP_lin = 5.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
-    vec.x *= position_speed / kP_lin;
-    vec.y *= position_speed / kP_lin;
+    vec.x = position_speed.x / kP_lin;
+    vec.y = position_speed.y / kP_lin;
     if (distance_to_target > position_length(vec) && distance_to_target > 30.0) {
         pos_target.x = position.x + vec.x;
         pos_target.y = position.y + vec.y;

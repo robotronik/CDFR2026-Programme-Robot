@@ -44,8 +44,11 @@ position_t position_vector(position_t from, position_t to){
 void position_normalize(position_t& pos){
     // Normalize the vector
     double norm = position_length(pos);
-    pos.x /= norm;
-    pos.y /= norm;
+    if (norm != 0.0){ // Avoid divide by zero
+        pos.x /= norm;
+        pos.y /= norm;
+    }
+
     // Normalize the angle
     if (pos.a > 180)
         pos.a -= 360;
