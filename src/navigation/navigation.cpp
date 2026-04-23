@@ -55,13 +55,13 @@ nav_return_t navigationGo(){
         double dist = position_distance(drive.position, current_pos_target);
         double move = position_distance(drive.position, last_pos);
         //LOG_DEBUG("NAV: Distance to target: ", dist, "mm, movement since last check: ", move, "mm");
-        if (dist > 20 && move < 4){
+        if (dist > 10 && move < 4){
             if (stuck_start == 0) stuck_start = _millis();
             if (_millis() - stuck_start > 200.0)
                 LOG_WARNING("NAV: Robot might be stuck, distance to target: ", dist, "mm, movement since last check: ", move, "mm, time stuck: ", _millis() - stuck_start, "ms");
             
 
-            if (_millis() - stuck_start > 1000){
+            if (_millis() - stuck_start > 1500){
                 LOG_ERROR("NAV: Robot stuck");
                 stuck_start = 0;
                 return NAV_ERROR;
