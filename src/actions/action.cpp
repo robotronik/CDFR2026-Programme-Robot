@@ -522,11 +522,14 @@ ReturnFSM_t ActionFSM::Cursor(){
     navTargetRot.a = -180.0;
     position_t moveTarget = navTargetRot;
     moveTarget.y -= 350.0;
+    position_t moveSafeTarget = moveTarget;
+    moveSafeTarget.x -= 250.0;
     
     if (tableStatus.colorTeam == YELLOW){
         position_robot_flip(navTarget);
         position_robot_flip(navTargetRot);
         position_robot_flip(moveTarget);
+        position_robot_flip(moveSafeTarget);
     }
 
     switch (CursorState){
@@ -571,12 +574,18 @@ ReturnFSM_t ActionFSM::Cursor(){
             break;
 
         case FSM_CURSOR_END:
-            if (enableCursor(false)){
-                LOG_EXTENDED_DEBUG("FSM_CURSOR_END: Cursor action done");
-                CursorState = FSM_CURSOR_NAV;
-                startTime = 0;
-                return FSM_RETURN_DONE;
+            nav_ret = navigationGoTo(moveSafeTarget, false, true);
+            if (nav_ret == NAV_DONE){
+                LOG_EXTENDED_DEBUG("FSM_CURSOR_END: Nav done for move safe target");
+                if (enableCursor(false)){
+                    LOG_EXTENDED_DEBUG("FSM_CURSOR_END: Cursor action done");
+                    CursorState = FSM_CURSOR_NAV;
+                    startTime = 0;
+                    return FSM_RETURN_DONE;
             }
+            }    
+            else if (nav_ret == NAV_ERROR)return FSM_RETURN_ERROR;
+
             break;
 
     }
