@@ -56,7 +56,7 @@ bool ActionFSM::RunFSM(){
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("SAFE_START: failed, forcing normal FSM start");
-            SetBestAction(drive.position);
+            if (enableCursor(false)) SetBestAction(drive.position);
             runState = FSM_ACTION_GATHER;
 
         }
