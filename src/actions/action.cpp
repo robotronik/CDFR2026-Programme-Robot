@@ -56,7 +56,7 @@ bool ActionFSM::RunFSM(){
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("SAFE_START: failed, forcing normal FSM start");
-            if (enableCursor(false)) SetBestAction(drive.position);
+            SetBestAction(drive.position);
             runState = FSM_ACTION_GATHER;
 
         }
@@ -86,7 +86,8 @@ bool ActionFSM::RunFSM(){
             tableStatus.setDropzoneState(dropzone_num,TableState::DROPZONE_EMPTY);
             stealStockState = FSM_GATHER_NAV;
             dropzone_num = -1;
-            SetBestAction(drive.position);
+            if (raiseClaws()) SetBestAction(drive.position);
+
         }
         break;
   
@@ -103,7 +104,8 @@ bool ActionFSM::RunFSM(){
             }
             tableStatus.setDropzoneState(dropzone_num,TableState::DROPZONE_ERROR);
             dropStockState = FSM_DROP_NONE;
-            SetBestAction(drive.position); // Going for next action
+            if (raiseClaws()) SetBestAction(drive.position);
+
 
         }
         break;
@@ -124,6 +126,7 @@ bool ActionFSM::RunFSM(){
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("ACTION_CURSOR: Couldn't do cursor action");
             tableStatus.setCursorIsDone(true); // Place le curseur comme virtuellement fait
+            enableCursor(false);
             SetBestAction(drive.position); // Choisit une nouvelle action, le curseur étant indisponible
         }
         break;
@@ -568,7 +571,6 @@ ReturnFSM_t ActionFSM::Cursor(){
             }
             else if (nav_ret == NAV_ERROR){
                 LOG_WARNING("FSM_CURSOR_MOVE: Navigation error while going to cursor position for lowerClaws");
-                enableCursor(false);
                 return FSM_RETURN_ERROR;
             }
             break;
