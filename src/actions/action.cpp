@@ -72,6 +72,7 @@ bool ActionFSM::RunFSM(){
             tableStatus.setStockAsRemoved(stock_num);
             gatherStockState = FSM_GATHER_NAV;
             stock_num = -1;
+            navigationGoTo(drive.position);
             if (raiseClaws()) SetBestAction(drive.position);
         }
         break;
@@ -86,6 +87,7 @@ bool ActionFSM::RunFSM(){
             tableStatus.setDropzoneState(dropzone_num,TableState::DROPZONE_EMPTY);
             stealStockState = FSM_GATHER_NAV;
             dropzone_num = -1;
+            navigationGoTo(drive.position);
             if (raiseClaws()) SetBestAction(drive.position);
 
         }
@@ -104,12 +106,14 @@ bool ActionFSM::RunFSM(){
             }
             tableStatus.setDropzoneState(dropzone_num,TableState::DROPZONE_ERROR);
             dropStockState = FSM_DROP_NONE;
+            navigationGoTo(drive.position);
             if (raiseClaws()) SetBestAction(drive.position);
 
 
         }
         break;
     case FSM_ACTION_WAIT:
+        navigationGoTo(drive.position);
         SetBestAction(drive.position);
         break;
     /*
