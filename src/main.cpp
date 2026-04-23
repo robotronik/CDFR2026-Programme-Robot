@@ -298,7 +298,7 @@ void GetLidar()
     {
         double time_s = double(_millis() - prev_time_ms) / 1000.0; 
         //convertAngularToAxial(lidar.data, lidar.count, position, 200);
-        convertAngularToAxialCompensated(lidar.data, lidar.count, prev_pos, prev_vel, time_s, 200);
+        convertAngularToAxialCompensated(lidar.data, lidar.count, prev_pos, prev_vel, time_s, 150);
         pathfind_fill_lidar();
         
         position_t pos_opponent;
