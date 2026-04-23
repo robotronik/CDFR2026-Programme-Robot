@@ -262,3 +262,8 @@ bool opponent_collide_lidar(lidarAnalize_t* data, int count, int width, int dept
     }
     return false;
 }
+
+bool opponent_is_close(position_t opponent_pos, position_t robot_pos, int distance_threshold){
+    double dist = position_distance(robot_pos, opponent_pos);
+    return dist < distance_threshold;
+}
