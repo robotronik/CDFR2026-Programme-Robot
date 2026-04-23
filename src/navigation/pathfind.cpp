@@ -93,11 +93,22 @@ void pathfind_setup() {
     place_obstacle_with_margin(    0, 1500,   50, 2000, RayonRobot, false);
     place_obstacle_with_margin(-1000,    0, 3000,   50, RayonRobot, false);
     place_obstacle_with_margin( 1000,    0, 3000,   50, RayonRobot, false);
-    place_obstacle_with_margin( -775,    0, 1800,  440, RayonRobot, false);
+    place_obstacle_with_margin( -775,    0, 1800,  550, RayonRobot, false);
+}
+
+void pathfind_place_border(){
+    int RayonRobot=195;
+
+    // ===== TABLE BORDER ===== 
+    place_obstacle_with_margin(    0,-1500,   50, 2000, RayonRobot, false);
+    place_obstacle_with_margin(    0, 1500,   50, 2000, RayonRobot, false);
+    place_obstacle_with_margin(-1000,    0, 3000,   50, RayonRobot, false);
+    place_obstacle_with_margin( 1000,    0, 3000,   50, RayonRobot, false);
+    place_obstacle_with_margin( -775,    0, 1800,  550, RayonRobot, false);
 }
 
 void pathfind_fill_lidar(){
-    pathfind_setup();
+    astar_initialize_costmap();
     //place stock zone if available
     for (int i = 0; i < STOCK_COUNT; i++){
         if (!tableStatus.avail_stocks[i]) continue;
@@ -116,4 +127,5 @@ void pathfind_fill_lidar(){
         // TODO Dont add all of the lidar points to improve performance
         place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y, 400, 400, 220, false);
     }
+    pathfind_place_border();
 }
