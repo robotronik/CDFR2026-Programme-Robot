@@ -2,7 +2,7 @@
 
 #include "defs/structs.hpp"
 
-#define SCALE 50
+#define SCALE 25
 #define AS_HEIGHT ((2000 / SCALE) + 1)
 #define AS_WIDTH  ((3000 / SCALE) + 1)
 
