@@ -344,10 +344,10 @@ bool NearestValidZone(position_t* pos){
 
     if (modified){
         //Corriger l'angle pour regarder le mur
-        if (hitLeft)        pos->a = 90.0 + 10;     // regarde vers +Y
-        else if (hitRight)  pos->a = -90.0 + 10;   // regarde vers -Y
-        else if (hitBottom) pos->a = 180.0 + 10;    // regarde vers +X
-        else if (hitTop)    pos->a = 0.0 + 10;   // regarde vers -X
+        if (hitLeft)        pos->a = 90.0;     // regarde vers +Y
+        else if (hitRight)  pos->a = -90.0;   // regarde vers -Y
+        else if (hitBottom) pos->a = 180.0;    // regarde vers +X
+        else if (hitTop)    pos->a = 0.0;   // regarde vers -X
         LOG_WARNING("Position clamped + angle corrected: (", pos->x, ", ", pos->y, ", ", pos->a, ")");
     }
 

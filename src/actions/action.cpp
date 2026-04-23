@@ -414,9 +414,9 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos){
             cosinus = cos(DEG_TO_RAD * targetPos1.a);
             sinus   = sin(DEG_TO_RAD * targetPos1.a);
             
-            // Se décaler 200mm à gauche du stock et avancer de 40mm
-            targetPos2.y = targetPos1.y + distanceBalayage * cosinus + 40.0 * sinus;
-            targetPos2.x = targetPos1.x - distanceBalayage * sinus + 40.0 * cosinus;
+            // Se décaler distanceBalayage mm à gauche du stock (va reculer un peu si trop proche du mur avec NearestValidZone())
+            targetPos2.y = targetPos1.y + distanceBalayage * cosinus;
+            targetPos2.x = targetPos1.x - distanceBalayage * sinus;
             targetPos2.a = targetPos1.a;
 
             startTime = 0;
@@ -424,15 +424,15 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos){
             if (NearestValidZone(&targetPos1) || tp2){
                 needToGoToWall = true;
             }
-            // S'avancer pour prendre le stock de 50 et se décaler de 20mm à gauche
-            targetPos3.y = targetPos2.y + 50.0 * sinus + 75.0 * cosinus;
-            targetPos3.x = targetPos2.x + 50.0 * cosinus - 75.0 * sinus;
-            targetPos3.a = targetPos2.a - 10.0; //Se remet face au mur
+            // Se reculer pour prendre le stock de 20 et se décaler de 50mm à gauche
+            targetPos3.y = targetPos2.y - 20.0 * sinus + 50.0 * cosinus;
+            targetPos3.x = targetPos2.x - 20.0 * cosinus - 50.0 * sinus;
+            targetPos3.a = targetPos2.a + 10.0;
 
-            //Se décaler sur la gauche pour collect
-            targetPos4.y = targetPos3.y + 50.0 * cosinus;
-            targetPos4.x = targetPos3.x - 50.0 * sinus; 
-            targetPos4.a = targetPos3.a;
+            //S'avance de 20 mm pour collect
+            targetPos4.y = targetPos3.y + 20.0 * sinus;
+            targetPos4.x = targetPos3.x + 20.0 * cosinus; 
+            targetPos4.a = targetPos3.a - 10.0;
 
             sweepState = FSM_SWEEP_NAV_RIGHT;
             break;
