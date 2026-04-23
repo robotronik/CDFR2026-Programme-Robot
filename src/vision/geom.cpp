@@ -303,7 +303,7 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
                 float px = target->x + d * ux + h * vx;
                 float py = target->y + d * uy + h * vy;
                 float pa = line_angle + da;
-
+                LOG_EXTENDED_DEBUG("Testing candidate: d=%.1f h=%.1f da=%.1f -> pos=(%.1f, %.1f) angle=%.1f", d, h, da, px, py, pa);
                 // 1. Génération de l'encombrement du poussoir (X=2, Y=15)
                 float pusher_corners[4][2];
                 getOBBCorners(px, py, 2.0f, 15.0f, pa, pusher_corners);
@@ -319,7 +319,7 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
 
                     // Encombrement d'un bloc classique (X=5, Y=15)
                     float block_corners[4][2];
-                    getOBBCorners(pt.x, pt.y, 5.0f, 15.0f, pt.a, block_corners);
+                    getOBBCorners(pt.x, pt.y, 5.0f, 15.0f, pt.a - 90.0f, block_corners);
 
                     if (checkOBBCollision(pusher_corners, block_corners)) {
                         collision = true;
