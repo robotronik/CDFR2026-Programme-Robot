@@ -616,6 +616,8 @@ ReturnFSM_t ActionFSM::Cursor(){
 */
 void ActionFSM::SetBestAction(position_t position){
 
+    if (_millis() > tableStatus.startTime + 50000)
+            tableStatus.startTime = _millis();
     /*********************** RESET DES DISTANCES POUR BEST ACTIONS *********************/
     closestStock = INFINITY;
     closestSteal = INFINITY;
@@ -658,7 +660,7 @@ void ActionFSM::SetBestAction(position_t position){
     }
 
     /************** CALCUL BEST STEAL *****************/
-    if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV && tableStatus.dropToStealExist()){
+    if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV){
         //LOG_DEBUG("Getting next stock to take");
         closestSteal = getBestStealZonePosition(dropzone_num, dropzonePos);
         if (dropzone_num == -1){
@@ -685,8 +687,6 @@ void ActionFSM::SetBestAction(position_t position){
             LOG_GREEN_INFO("ACTION_STEAL: Next dropZone to steal: ", dropzone_num);
             runState = FSM_ACTION_STEAL;
             stock_num = -1;
-            /*********************TESTING OPTION **********************************/
-            tableStatus.startTime = _millis();
             return;
         }else{
             runState = FSM_ACTION_GATHER;
