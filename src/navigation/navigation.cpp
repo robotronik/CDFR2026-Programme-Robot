@@ -160,6 +160,7 @@ void navigationOpponentDetection(){
         LOG_WARNING("Opponent is no longer close to us, deactivating slow mode");
         forced_slow_mode = false;
     }
+    /*
     if (isEndangered && !is_robot_stalled && !current_use_astar){
         LOG_GREEN_INFO("Opponent is in the way, stopping the robot");
         is_robot_stalled = true;
@@ -171,4 +172,5 @@ void navigationOpponentDetection(){
         is_robot_stalled = false;
         drive.setBrakeState(false);
     }
+    */
 }
