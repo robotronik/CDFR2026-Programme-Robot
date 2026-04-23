@@ -353,6 +353,10 @@ bool returnToHome(){
     homePos.a = 180;
     raiseClaws();
     nav_return_t res = navigationGoTo(homePos, true);
+    if (res == NAV_ERROR){
+        LOG_ERROR("RETURN_TO_HOME: Navigation error while returning to home");
+        return true;
+    }
     return res == NAV_DONE && isRobotInArrivalZone(drive.position);
 }
 
@@ -378,7 +382,6 @@ void opponentInAction(position_t position){
         {
             LOG_INFO("Opponent at dropzone ", i ," at position ", position.x, position.y);
             tableStatus.dropzone_states[i] = (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE;
-            //TODO to remove, search dropzone for steal with other way
             return;
         }
     }
