@@ -44,6 +44,8 @@ void ActionFSM::Reset(){
 
 bool ActionFSM::RunFSM(){
     ReturnFSM_t ret;
+    static long unsigned startTime = 0;
+
     switch (runState)
     {
     case FSM_ACTION_SAFESTART:
@@ -113,8 +115,12 @@ bool ActionFSM::RunFSM(){
         }
         break;
     case FSM_ACTION_WAIT:
-        navigationGoTo(drive.position);
-        SetBestAction(drive.position);
+        if (startTime == 0) startTime = _millis();
+        if (_millis() - startTime > 2000){
+            navigationGoTo(drive.position);
+            SetBestAction(drive.position);
+            startTime = 0;
+        }
         break;
     /*
         Action Curseur
