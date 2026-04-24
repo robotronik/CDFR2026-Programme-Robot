@@ -142,8 +142,11 @@ bool ActionFSM::RunFSM(){
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("ACTION_CURSOR: Couldn't do cursor action");
             tableStatus.setCursorIsDone(true); // Place le curseur comme virtuellement fait
-            enableCursor(false);
-            SetBestAction(drive.position); // Choisit une nouvelle action, le curseur étant indisponible
+            drive.setBrakeState(true);
+            if (enableCursor(false)) {
+                SetBestAction(drive.position);
+                drive.setBrakeState(false);
+            }
         }
         break;
 
