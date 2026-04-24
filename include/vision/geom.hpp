@@ -11,7 +11,7 @@ const float ROBOT_RADIUS = 50.0f;
 const float BLOCK_RADIUS = 80.0f; 
 const float CORRIDOR_THRESHOLD = ROBOT_RADIUS + BLOCK_RADIUS; 
 const float TARGET_MARGIN = 30.0f; 
-
+const float MAX_DISTANCE = 80.0f;
 typedef struct {
     double x = 0;
     double y = 0;

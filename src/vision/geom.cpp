@@ -65,7 +65,7 @@ bool checkSegment(float px, float py, float tx, float ty) {
 
 namespace {
     // Calcule les 4 coins d'un rectangle orienté (OBB)
-    void getOBBCorners(float cx, float cy, float w, float h, float angle_deg, float corners[4][2]) {
+    void getOBBCorners(float cx, float cy, float w, float h, float angle_deg, block_t corners[4]) {
         float a_rad = angle_deg * M_PI / 180.0f;
         float cos_a = std::cos(a_rad);
         float sin_a = std::sin(a_rad);
@@ -77,8 +77,10 @@ namespace {
         float dy[4] = {-hh, -hh, hh, hh};
         
         for (int i = 0; i < 4; i++) {
-            corners[i][0] = cx + dx[i] * cos_a - dy[i] * sin_a;
-            corners[i][1] = cy + dx[i] * sin_a + dy[i] * cos_a;
+            corners[i].x = cx + dx[i] * cos_a - dy[i] * sin_a;
+            corners[i].y = cy + dx[i] * sin_a + dy[i] * cos_a;
+            corners[i].a = angle_deg;
+            corners[i].color = false;
         }
     }
 
@@ -251,13 +253,15 @@ block_t interfacePlacePoussoir(const std::vector<std::pair<float, const block_t*
 }
 
 block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vector<block_t>& points) {
-    block_t best_pusher = block_t{0,0,0, false};
+    // Par défaut on initialise le bloc. S'il n'y a pas la place, ses coordonnées vaudront 0 et la couleur sera différente
+    block_t best_pusher;
+    best_pusher.color = false;
     if (choosen.empty()) return best_pusher;
 
     // Le bloc le plus à "droite" (fin de la sélection)
     const block_t* target = choosen.back();
     
-    // Détermination de l'axe de la droite
+    // 1. Détermination de l'axe de la droite
     float ux, uy;
     if (choosen.size() >= 2) {
         ux = target->x - choosen.front()->x;
@@ -278,79 +282,90 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
         ux /= len; 
         uy /= len;
     }
-    
-    // Vecteur normal (pour s'écarter de la droite si besoin)
-    float vx = -uy; 
-    float vy = ux;
 
-    // Angle de la ligne
     float line_angle = std::atan2(uy, ux) * 180.0f / M_PI;
+    // On centre la droite sur le bloc cible (target) pour que la projection de référence soit à ~0
+    Line solution_line = Line{static_cast<float>(target->x), static_cast<float>(target->y), ux, uy};
 
-    float min_cost = 1e12f;
+    // 2. Détermine le maximum des projections des coins du block le plus à droite
+    block_t right_block_corners[4];
+    getOBBCorners(target->x, target->y, 50.0f, 150.0f, target->a, right_block_corners);
 
-    // ---------------------------------------------------------
-    // EXPLORATION DE L'ESPACE DES SOLUTIONS
-    // ---------------------------------------------------------
-    // d : distance le long de la ligne [1cm à 8cm]
-    // h : décalage orthogonal par rapport à la ligne [-15cm à 15cm]
-    // da : angle du poussoir par rapport à la ligne (centré sur 90°)
-    
-    for (float h = -15.0f; h <= 15.0f; h += 0.5f) {
-        for (float da = 45.0f; da <= 135.0f; da += 5.0f) { // de 45° à 135° (idéalement 90)
-            for (float d = 1.0f; d <= 8.0f; d += 0.5f) {
-                
-                // Position candidate du centre du poussoir
-                float px = target->x + d * ux + h * vx;
-                float py = target->y + d * uy + h * vy;
-                float pa = line_angle + da;
-                LOG_EXTENDED_DEBUG("Testing candidate: d=%.1f h=%.1f da=%.1f -> pos=(%.1f, %.1f) angle=%.1f", d, h, da, px, py, pa);
-                // 1. Génération de l'encombrement du poussoir (X=2, Y=15)
-                float pusher_corners[4][2];
-                getOBBCorners(px, py, 2.0f, 15.0f, pa, pusher_corners);
+    float max_proj = -1e12f; // Initialisé en négatif au cas où la projection tombe derrière
+    for (const auto& corner : right_block_corners) {
+        float proj = project(corner, solution_line);
+        if (proj > max_proj) {
+            max_proj = proj;
+        }
+    }
 
-                // 2. Vérification des collisions avec tous les blocs non sélectionnés
-                bool collision = false;
-                for (const auto& pt : points) {
-                    bool is_chosen = false;
-                    for (const auto& c : choosen) {
-                        if (&pt == c) { is_chosen = true; break; }
-                    }
-                    if (is_chosen) continue; // On ignore les blocs ciblés
+    // 3. Détermination de l'écart minimum entre le block le plus à droite et les obstacles DEVANT
+    float min_gap = 1e12f;
 
-                    // Encombrement d'un bloc classique (X=5, Y=15)
-                    float block_corners[4][2];
-                    getOBBCorners(pt.x, pt.y, 5.0f, 15.0f, pt.a - 90.0f, block_corners);
+    for (const auto& pt : points) {
+        bool is_chosen = false;
+        for (const auto& c : choosen) {
+            if (&pt == c) { is_chosen = true; break; }
+        }
+        if (is_chosen) continue; // On ignore les blocs ciblés
 
-                    if (checkOBBCollision(pusher_corners, block_corners)) {
-                        collision = true;
-                        break;
-                    }
-                }
+        block_t obs_corners[4];
+        // Encombrement de l'obstacle
+        getOBBCorners(pt.x, pt.y, 50.0f, 150.0f, pt.a, obs_corners);
 
-                // 3. Évaluation du candidat s'il n'y a pas de collision
-                if (!collision) {
-                    // Calcul du coût. Ordre d'importance :
-                    // - Être le plus proche de la droite possible (fort poids sur h)
-                    // - Être le plus perpendiculaire possible (poids sur da)
-                    // - Rapprocher ou ajuster la distance d si nécessaire (faible poids)
-                    float cost = std::abs(h) * 1000.0f + std::abs(da - 90.0f) * 10.0f + std::abs(d - 4.5f);
-                    
-                    if (cost < min_cost) {
-                        min_cost = cost;
-                        best_pusher.x = px;
-                        best_pusher.y = py;
-                        
-                        // Normalisation de l'angle [-180, 180]
-                        float norm_a = std::fmod(pa, 360.0f);
-                        if (norm_a > 180.0f) norm_a -= 360.0f;
-                        if (norm_a < -180.0f) norm_a += 360.0f;
-                        
-                        best_pusher.a = norm_a;
-                        best_pusher.color = target->color;
-                    }
+        for (int i = 0; i < 4; i++) {
+            // Si le coin de l'obstacle est trop loin latéralement de la ligne d'approche, il n'est pas gênant
+            if (pointLineDistance(obs_corners[i], solution_line) > MAX_DISTANCE) continue;
+            
+            float proj = project(obs_corners[i], solution_line);
+            
+            // On s'intéresse uniquement aux coins d'obstacles qui sont STRICTEMENT DEVANT le bloc max
+            if (proj > max_proj) {
+                float gap = proj - max_proj;
+                if (gap < min_gap) {
+                    min_gap = gap;
                 }
             }
         }
+    }
+
+    // 4. Validation et Placement final
+    // Si l'espace est d'au moins 50mm, ou qu'il n'y a aucun obstacle (min_gap resté à 1e12)
+    if (min_gap > 50.0f) {
+        // Le centre du poussoir doit être à +25mm du coin le plus avancé du bloc
+        float placement_proj = max_proj + 25.0f;
+        
+        // Reconversion de l'avancée scalaire vers les coordonnées (X,Y) sur la carte
+        best_pusher.x = solution_line.x + placement_proj * solution_line.dx;
+        best_pusher.y = solution_line.y + placement_proj * solution_line.dy;
+        
+        // Angle perpendiculaire (+90°)
+        float pa = line_angle + 90.0f;
+        
+        // Normalisation de l'angle entre [-180, 180]
+        pa = std::fmod(pa + 180.0f, 360.0f);
+        if (pa < 0) pa += 360.0f;
+        best_pusher.a = pa - 180.0f;
+        
+        best_pusher.color = true; // Valide la couleur
+    } else {
+        // Pas assez de place devant : on place le poussoir sur la ligne, 
+        // à 5 cm du centre du bloc cible, en le gardant parallèle.
+        
+        // Avancée de 50mm le long du vecteur directeur depuis le centre cible
+        best_pusher.x = solution_line.x + 50.0f * solution_line.dx;
+        best_pusher.y = solution_line.y + 50.0f * solution_line.dy;
+        
+        // Angle parallèle au bloc le plus à droite
+        float pa = target->a + 90.0f;
+
+        // Normalisation de l'angle entre [-180, 180]
+        pa = std::fmod(pa + 180.0f, 360.0f);
+        if (pa < 0) pa += 360.0f;
+        best_pusher.a = pa - 180.0f;
+
+        // Conservation de la couleur pour la validité du bloc
+        best_pusher.color = true; 
     }
 
     return best_pusher;
