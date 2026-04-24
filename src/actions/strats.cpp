@@ -39,6 +39,7 @@ double chooseNextStock(int& closest_stock, int& closest_offset){
                     continue;
 
                 double dist2 = toAStarDistStock(i, offNum);
+                if(dist2 == -1) dist2 = INFINITY;
 
                 if (dist2 < min){
                     min = dist2;
@@ -69,8 +70,8 @@ double toAStarDistStock(int stockNum, int stockOffset){
 double toAStarDist(position_t a){
     double lenght;
     position_t path[1024];
-    pathfind(drive.position, a, path, lenght);
-    return lenght;
+    if(pathfind(drive.position, a, path, lenght)>0) return lenght;
+    return -1;
 }
 
 double chooseStockStrategy(int& stockNum, int& stockOffset){
@@ -200,7 +201,7 @@ double getBestStockPositionOff(int& stockNum, int& bestDist){
             continue;
 
         double dist2 = toAStarDistStock(stockNum, offNum);
-
+        if(dist2 == -1) dist2 = INFINITY;
         if (dist2 < bestDist2){
             bestDist2 = dist2;
             bestOff = offNum;
@@ -231,8 +232,9 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
             if (k == 7 || k == 4 || k == 2 ){
                 temp_pos = DROPZONE_POSITIONS_TABLE[k];
                 d1 = toAStarDist(position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2}));
-
+                if(d1 == -1 ) d1 = INFINITY;
                 double d2 = toAStarDist(position_sum(temp_pos, position_t{.x = -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2}));
+                if(d2 == -1) d2 = INFINITY;
                 if(d1 < d2 ){
                         temp_pos = position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2});
                         temp_pos.a = 180;
@@ -256,7 +258,7 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
                     temp_pos.a = (signeY < 0? 90 : -90);
                 }
                 d1 = toAStarDist(temp_pos);
-                
+                if(d1 == -1) d1 = INFINITY;
             }
             if(min > d1){
                 bestPoss = temp_pos;
