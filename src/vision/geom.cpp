@@ -284,6 +284,8 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
     }
 
     float line_angle = std::atan2(uy, ux) * 180.0f / M_PI;
+    LOG_DEBUG("Placing pusher for block at (", target->x, ", ", target->y, ") with angle ", target->a);
+    LOG_DEBUG("Approach line angle is ", line_angle);
     // On centre la droite sur le bloc cible (target) pour que la projection de référence soit à ~0
     Line solution_line = Line{static_cast<float>(target->x), static_cast<float>(target->y), ux, uy};
 
@@ -332,6 +334,7 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
     // 4. Validation et Placement final
     // Si l'espace est d'au moins 50mm, ou qu'il n'y a aucun obstacle (min_gap resté à 1e12)
     if (min_gap > 50.0f) {
+        LOG_DEBUG("Sufficient gap of ", min_gap, "mm found in front of the target block. Placing pusher in front.");
         // Le centre du poussoir doit être à +25mm du coin le plus avancé du bloc
         float placement_proj = max_proj + 25.0f;
         
@@ -346,9 +349,10 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
         pa = std::fmod(pa + 180.0f, 360.0f);
         if (pa < 0) pa += 360.0f;
         best_pusher.a = pa - 180.0f;
-        
+        LOG_DEBUG("Placing pusher at (", best_pusher.x, ", ", best_pusher.y, ") with angle ", best_pusher.a);
         best_pusher.color = true; // Valide la couleur
     } else {
+        LOG_DEBUG("Not enough gap (", min_gap, "mm) in front of the target block. Placing pusher on the side.");
         // Pas assez de place devant : on place le poussoir sur la ligne, 
         // à 5 cm du centre du bloc cible, en le gardant parallèle.
         
@@ -363,7 +367,7 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
         pa = std::fmod(pa + 180.0f, 360.0f);
         if (pa < 0) pa += 360.0f;
         best_pusher.a = pa - 180.0f;
-
+        LOG_DEBUG("Placing pusher at (", best_pusher.x, ", ", best_pusher.y, ") with angle ", best_pusher.a);
         // Conservation de la couleur pour la validité du bloc
         best_pusher.color = true; 
     }

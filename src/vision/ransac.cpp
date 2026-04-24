@@ -93,9 +93,13 @@ bool findGroupRANSAC2D(
                 if (status) {
                     block_t pouss = interfacePlacePoussoir(std::vector<std::pair<float, const block_t*>>(inliers.begin() + k, inliers.begin() + k + max_blocks), points);
                     bestGroup.clear();
-                    if(pouss.x != 0 && pouss.y != 0){
+                    if(pouss.color){
                         bestGroup.push_back(pouss);
+                        LOG_DEBUG("Poussoir placé devant le bloc à la position (", pouss.x, ", ", pouss.y, ") angle ", pouss.a);
                         return true;
+                    }else{
+                        LOG_DEBUG("pas de poussoir");
+                        return false;
                     }
                     for (size_t idx = 0; idx < max_blocks; ++idx) {
                         bestGroup.push_back(*inliers[k + idx].second);
@@ -105,6 +109,27 @@ bool findGroupRANSAC2D(
                     [](const block_t& a, const block_t& b) {
                         return a.y > b.y;
                     });
+
+                    float ux, uy;
+                    if (bestGroup.size() >= 2) {
+                        ux = bestGroup.back().x - bestGroup.front().x;
+                        uy = bestGroup.back().y - bestGroup.front().y;
+                    }
+                    float len = std::sqrt(ux*ux + uy*uy);
+                    if (len > 1e-6f) {
+                        ux /= len;
+                        uy /= len;
+                    } else {
+                        float a_rad = bestGroup.front().a * M_PI / 180.0f;
+                        ux = std::cos(a_rad);
+                        uy = std::sin(a_rad);
+                    }
+                    float lineAngle = std::atan2(uy, ux) * 180.0f / M_PI;
+                    for (size_t i = 0; i < bestGroup.size(); i++)
+                    {
+                        bestGroup[i].a = lineAngle;
+                    }
+                    
                     return true; // early exit if solution found
                 }
             }
