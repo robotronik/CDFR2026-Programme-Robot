@@ -153,7 +153,7 @@ void navigationOpponentDetection(){
         else LOG_EXTENDED_DEBUG("No opponent in the way");
     }
     //si la distance avec un adversaire est inférieur à une certaine valeur, on le forcedslowmode
-    if (isCloseToEnnemy){
+    if (isCloseToEnnemy && !forced_slow_mode){
         LOG_WARNING("Opponent is close to us, activating slow mode");
         forced_slow_mode = true;
     }else if (!isCloseToEnnemy && forced_slow_mode){
