@@ -252,6 +252,17 @@ block_t interfacePlacePoussoir(const std::vector<std::pair<float, const block_t*
     return placePoussoir(block_temps, points);
 }
 
+block_t interfacePlacePoussoir(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points){
+    std::vector<const block_t*> block_temps;
+
+    block_temps.reserve(choosen.size()); 
+    
+    for (const auto& c : choosen) {
+        block_temps.push_back(std::get<1>(c));
+    }
+    return placePoussoir(block_temps, points);
+}
+
 block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vector<block_t>& points) {
     // Par défaut on initialise le bloc. S'il n'y a pas la place, ses coordonnées vaudront 0 et la couleur sera différente
     block_t best_pusher;
@@ -317,7 +328,7 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
 
         for (int i = 0; i < 4; i++) {
             // Si le coin de l'obstacle est trop loin latéralement de la ligne d'approche, il n'est pas gênant
-            if (pointLineDistance(obs_corners[i], solution_line) > MAX_DISTANCE) continue;
+            if (pointLineDistance(obs_corners[i], solution_line) > MAX_DISTANCE_FROM_BLOCK) continue;
             
             float proj = project(obs_corners[i], solution_line);
             

@@ -11,7 +11,7 @@ const float ROBOT_RADIUS = 50.0f;
 const float BLOCK_RADIUS = 80.0f; 
 const float CORRIDOR_THRESHOLD = ROBOT_RADIUS + BLOCK_RADIUS; 
 const float TARGET_MARGIN = 30.0f; 
-const float MAX_DISTANCE = 80.0f;
+const float MAX_DISTANCE_FROM_BLOCK = 80.0f;
 typedef struct {
     double x = 0;
     double y = 0;
@@ -45,6 +45,7 @@ bool checkSegment(float px, float py, float tx, float ty);
 //Détermine la position optimale du centre du poussoir 
 block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vector<block_t>& points);
 block_t interfacePlacePoussoir(const std::vector<std::pair<float, const block_t*>>& choosen, const std::vector<block_t>& points);
+block_t interfacePlacePoussoir(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points);
 
 bool blockInFrontInterface(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points);
 bool blockInFrontInterface(const std::vector<std::pair<float, const block_t*>>& choosen, const std::vector<block_t>& points);

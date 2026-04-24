@@ -91,6 +91,7 @@ bool findGroupRANSAC2D(
                     status = false;
                 }
                 if (status) {
+                    /*
                     block_t pouss = interfacePlacePoussoir(std::vector<std::pair<float, const block_t*>>(inliers.begin() + k, inliers.begin() + k + max_blocks), points);
                     bestGroup.clear();
                     if(pouss.color){
@@ -105,6 +106,7 @@ bool findGroupRANSAC2D(
                         bestGroup.push_back(*inliers[k + idx].second);
                         //LOG_EXTENDED_DEBUG("Ransac: Adding point (", inliers[k + idx].second->x, ", ", inliers[k + idx].second->y, ") with angle ", inliers[k + idx].second->a, " to best group");
                     }
+                    */
                     std::sort(bestGroup.begin(), bestGroup.end(),
                     [](const block_t& a, const block_t& b) {
                         return a.y > b.y;
@@ -125,9 +127,15 @@ bool findGroupRANSAC2D(
                         uy = std::sin(a_rad);
                     }
                     float lineAngle = std::atan2(uy, ux) * 180.0f / M_PI;
+                    float pa = lineAngle + 90.0f;
+        
+                    // Normalisation de l'angle entre [-90, 90]
+                    pa = std::fmod(pa + 180.0f, 360.0f);
+                    if (pa < 0) pa += 360.0f;
                     for (size_t i = 0; i < bestGroup.size(); i++)
                     {
-                        bestGroup[i].a = lineAngle;
+                        bestGroup[i].a = pa;
+                        LOG_EXTENDED_DEBUG("Ransac: Setting angle of point (", bestGroup[i].x, ", ", bestGroup[i].y, ") to line angle ", lineAngle);
                     }
                     
                     return true; // early exit if solution found
@@ -253,9 +261,18 @@ bool findGroupStealRANSAC2D(
             if(blockInFrontInterface(sol_temp, points)){
                 continue;
                 //TODO gérer et trouver une solution en passant par l'autre coté?
-            }else if(false){//block behind
-                //TODO
             }
+            block_t pouss = interfacePlacePoussoir(sol_temp, points);
+            bestGroup.clear();
+            if(pouss.color){
+                bestGroup.push_back(pouss);
+                LOG_DEBUG("Poussoir placé devant le bloc à la position (", pouss.x, ", ", pouss.y, ") angle ", pouss.a);
+                return true;
+            }else{
+                LOG_DEBUG("pas de poussoir");
+                return false;
+            }
+            
         }
     }
 
