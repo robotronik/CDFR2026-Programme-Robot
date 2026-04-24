@@ -140,6 +140,7 @@ int main(int argc, char *argv[])
             }
             if(nav_ret == NAV_ERROR){
                 LOG_ERROR("Error while calibrating in WAITSTART");
+                nav_ret = navigationGo();
             }
 
             if (readLatchSensor() && tableStatus.colorTeam != NONE)
