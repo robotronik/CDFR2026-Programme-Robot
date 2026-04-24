@@ -669,7 +669,7 @@ void ActionFSM::SetBestAction(position_t position){
     }
 
     /************** CALCUL BEST STEAL *****************/
-    if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV){
+    if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV && tableStatus.dropToStealExist()){
         //LOG_DEBUG("Getting next stock to take");
         closestSteal = getBestStealZonePosition(dropzone_num, dropzonePos);
         if (dropzone_num == -1){
@@ -680,7 +680,7 @@ void ActionFSM::SetBestAction(position_t position){
         }
     }
 
-    if(closestSteal > 1e5 && closestStock > 1e5){
+    if(closestSteal == INFINITY && closestStock == INFINITY){
         /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
         if(!tableStatus.cursorIsDone()){ 
             LOG_GREEN_INFO("Going for cursor action");
@@ -689,6 +689,7 @@ void ActionFSM::SetBestAction(position_t position){
         }
         LOG_ERROR("Nothing else to do waiting");
         runState = FSM_ACTION_WAIT;
+        return;
     }else{
         /*********************** CONDITION POUR VOLER UN STOCK OU TAKE STOCK ****************************/
         if(closestSteal < closestStock){
