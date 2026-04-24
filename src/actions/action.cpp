@@ -680,7 +680,7 @@ void ActionFSM::SetBestAction(position_t position){
         }
     }
 
-    if(closestSteal == INFINITY && closestStock == INFINITY){
+    if(closestSteal > 1e5 && closestStock > 1e5){
         /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
         if(!tableStatus.cursorIsDone()){ 
             LOG_GREEN_INFO("Going for cursor action");
