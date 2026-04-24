@@ -122,16 +122,16 @@ bool ActionFSM::RunFSM(){
         }
         break;
     case FSM_ACTION_WAIT:
+    {//Pour eviter de forcer dans un mur ou object 
+    nav_ret = navigationGoTo(drive.position, true);
         if (startTime == 0) startTime = _millis();
-        if (_millis() - startTime > 2000){
+        if (nav_ret == NAV_DONE || _millis() - startTime > 2000){
             SetBestAction(drive.position);
             startTime = 0;
         }
         break;
-    /*
-        Action Curseur
-        En cas d'erreur on lance une nouvelle action
-    */
+    }
+
     case FSM_ACTION_CURSOR:
         ret = Cursor();
         if (ret == FSM_RETURN_DONE){
