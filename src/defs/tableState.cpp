@@ -4,7 +4,7 @@
 #include "main.hpp"
 
 TableState::TableState(){
-    pos_opponent.x = 0; pos_opponent.y = 0;
+    pos_opponent.x = 3000; pos_opponent.y = 0; //si on detect pas l'adversaire, on se mettrait en slow mode proche de 0,0
     colorTeam = NONE;
     strategy = 1;
     startTime = 0;
