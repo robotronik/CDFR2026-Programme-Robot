@@ -44,6 +44,40 @@ void convertAngularToAxialCompensated(
     }
 }
 
+void convertAngularToAxialDeskew_NoVelocity(
+    lidarAnalize_t* data,
+    int count,
+    position_t prev,   // pose au scan précédent
+    position_t now,    // pose actuelle
+    double scan_period,
+    int narrow
+) {
+    double dx = now.x - prev.x;
+    double dy = now.y - prev.y;
+    double da = now.a - prev.a;
+
+    for(int i = 0; i < count; i++){
+        // progression dans le scan
+        double alpha = (double)i / (double)count;
+
+        // interpolation de la pose
+        double xi = prev.x + dx * alpha;
+        double yi = prev.y + dy * alpha;
+        double ai = prev.a + da * alpha;
+
+        double beam_angle = ai - data[i].angle;
+
+        data[i].x = data[i].dist * cos(beam_angle * DEG_TO_RAD) + xi;
+        data[i].y = data[i].dist * sin(beam_angle * DEG_TO_RAD) + yi;
+
+        data[i].onTable = (
+            data[i].x <  1000 - narrow &&
+            data[i].x > -1000 + narrow &&
+            data[i].y <  1500 - narrow &&
+            data[i].y > -1500 + narrow
+        );
+    }
+}
 
 double average_angles(double angles[], int count) {
     double x_sum = 0.0, y_sum = 0.0;
