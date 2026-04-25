@@ -24,7 +24,8 @@ class ActionFSM{
 
         ReturnFSM_t TakeStock();
         ReturnFSM_t StealStock();
-        ReturnFSM_t BalayageSteal(position_t targetPos1);
+        ReturnFSM_t BalayageSteal(position_t targetPos);
+        ReturnFSM_t VidangeDropZone(int dropzone);
         ReturnFSM_t DropStock();
         ReturnFSM_t Cursor();
         ReturnFSM_t Calibrate();
@@ -93,6 +94,17 @@ class ActionFSM{
 
         } StateSweepSteal_t;
         StateSweepSteal_t sweepState = FSM_SWEEP_INIT;
+
+        /************  FSM VIDANGE DROP ZONE ************/
+        typedef enum
+        {
+            FSM_VIDANGE_INIT,
+            FSM_VIDANGE_NAV,
+            FSM_VIDANGE_NAV_CLEAR,
+            FSM_VIDANGE_NAV_BACK
+
+        } StateVidange_t;
+        StateVidange_t vidangeState = FSM_VIDANGE_INIT;
 
         /************  FSM DROP ************/
         typedef enum
