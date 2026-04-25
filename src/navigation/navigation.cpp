@@ -136,23 +136,10 @@ void navigation_path_json(json& j){
 }
 
 void navigationOpponentDetection(){
-    bool isEndangered = false;
     bool isCloseToEnnemy = false;
-    position_t t = drive.target;
-    position_t s = drive.position;
-    position_t g = current_pos_target;
-    if (position_distance(s, g) > 50){
-        // Using the braking distance to calculate a point in front of the robot and checking if the opponent is in the way
-        double brakingDistance = 200;
-        // Angle at which we are going relative to the robot front
-        double angle = position_angle(s, t) * RAD_TO_DEG - s.a;
-        // Check if the opponent is in the way
-        isEndangered = opponent_collide_lidar(lidar.data, lidar.count, 300, brakingDistance, OPPONENT_ROBOT_RADIUS, angle);
-        isCloseToEnnemy = opponent_is_close(tableStatus.pos_opponent, drive.position, 800); // If opponent is closer than 800mm, we consider it close and activate slow mode
-        if (isEndangered) LOG_WARNING("Opponent is in the way");
-        else LOG_EXTENDED_DEBUG("No opponent in the way");
-    }
-    //si la distance avec un adversaire est inférieur à une certaine valeur, on le forcedslowmode
+    // Check if the opponent is in the way
+    isCloseToEnnemy = opponent_is_close(tableStatus.pos_opponent, drive.position, 800); // If opponent is closer than 800mm, we consider it close and activate slow mode
+
     if (isCloseToEnnemy && !forced_slow_mode){
         LOG_WARNING("Opponent is close to us, activating slow mode");
         forced_slow_mode = true;
@@ -160,17 +147,4 @@ void navigationOpponentDetection(){
         LOG_WARNING("Opponent is no longer close to us, deactivating slow mode");
         forced_slow_mode = false;
     }
-    /*
-    if (isEndangered && !is_robot_stalled && !current_use_astar){
-        LOG_GREEN_INFO("Opponent is in the way, stopping the robot");
-        is_robot_stalled = true;
-        robot_stall_start_time = _millis();
-        drive.setBrakeState(true);
-    }
-    else if (!isEndangered && is_robot_stalled){
-        LOG_GREEN_INFO("Opponent is no longer in the way, resuming the robot");
-        is_robot_stalled = false;
-        drive.setBrakeState(false);
-    }
-    */
 }
