@@ -4,6 +4,7 @@
 #include <string.h>
 #include <thread>
 #include <unistd.h>  // for usleep
+#include <math.h>
 
 #include "main.hpp"
 #include "actions/action.hpp"
@@ -354,12 +355,155 @@ void EndSequence()
 
 void tests()
 {
+    // Aruco tags are at pos (+/-400, +/-900)
+    position_t pos_otos, pos_cam;
+    int current_test = 0;
+    nav_return_t ret;
+    
     static bool state = false;
-    position_t pos1 = {-100.0, 0.0, 0.0};
-    pos1.y = state ? 900 : -900.0;
-    nav_return_t ret = navigationGoTo(pos1, false, true);
-    if (ret == NAV_DONE)
-        state = !state;
 
-    //New Scalar = Current Scalar * (Actual Distance / Reported Distance)
+    switch (current_test){
+    case 0:{
+        // Camera calibration test
+        // Spin the robot on the spot and calculate the dx dy da of the camera,
+        static bool has_prev_measure = false;
+        static position_t prev_pos_cam = {0.0, 0.0, 0.0};
+        static position_t prev_pos_otos = {0.0, 0.0, 0.0};
+
+        position_t pos1 = {0.0, 900.0, 0.0};
+        if (state)
+            pos1.a = 180.0;
+        ret = navigationGoTo(pos1, false, true, true, &pos_cam, &pos_otos);
+        if (ret == NAV_DONE){
+            //LOG_GREEN_INFO("", pos_otos.x, ", ", pos_otos.y, ", ", pos_otos.a);
+            //LOG_GREEN_INFO("", pos_cam.x, ", ", pos_cam.y, ", ", pos_cam.a);
+            constexpr double PI = 3.14159265358979323846;
+
+            if (!has_prev_measure){
+                prev_pos_cam = pos_cam;
+                prev_pos_otos = pos_otos;
+                has_prev_measure = true;
+                LOG_GREEN_INFO("Cam calibration: first pose recorded");
+            } else {
+                position_t delta = {0.0, 0.0, 0.0};
+
+                // Solve for camera offset d in robot frame from:
+                // (c2 - c1) - (o2 - o1) = (R(a2) - R(a1)) * d
+                const double a1 = prev_pos_otos.a * PI / 180.0;
+                const double a2 = pos_otos.a * PI / 180.0;
+
+                const double c1 = cos(a1);
+                const double s1 = sin(a1);
+                const double c2 = cos(a2);
+                const double s2 = sin(a2);
+
+                const double ax = c2 - c1;
+                const double bx = s1 - s2;
+                const double det = ax * ax + bx * bx;
+
+                if (det > 1e-9){
+                    const double d_cam_x = pos_cam.x - prev_pos_cam.x;
+                    const double d_cam_y = pos_cam.y - prev_pos_cam.y;
+                    const double d_robot_x = pos_otos.x - prev_pos_otos.x;
+                    const double d_robot_y = pos_otos.y - prev_pos_otos.y;
+
+                    const double dcx = d_cam_x - d_robot_x;
+                    const double dcy = d_cam_y - d_robot_y;
+
+                    delta.x = (ax * dcx - bx * dcy) / det;
+                    delta.y = (bx * dcx + ax * dcy) / det;
+
+                    const double da1 = normalize_angle(prev_pos_cam.a - prev_pos_otos.a);
+                    const double da2 = normalize_angle(pos_cam.a - pos_otos.a);
+                    delta.a = normalize_angle((da1 + da2) * 0.5);
+
+                    LOG_GREEN_INFO("Cam offset (rotation calib) dx=", delta.x, " dy=", delta.y, " da=", delta.a);
+                } else {
+                    LOG_WARNING("Cam calibration skipped: rotation too small between samples");
+                }
+
+                prev_pos_cam = pos_cam;
+                prev_pos_otos = pos_otos;
+            }
+
+            state = !state;
+        }
+    } break;
+    case 1:{
+        // Angle compensation test
+        // New Scalar = Current Scalar * (Actual Angle / Reported Angle)
+        static bool has_prev_measure = false;
+        static position_t prev_pos = {0.0, 0.0, 0.0};
+
+        position_t pos1 = {0.0, 900.0, 0.0};
+        if (state)
+            pos1.a = 180.0;
+        ret = navigationGoTo(pos1, false, true, false, &pos_cam, &pos_otos);
+
+        if (ret == NAV_DONE){
+            if (!has_prev_measure){
+                prev_pos = pos_cam;
+                has_prev_measure = true;
+                LOG_GREEN_INFO("OTOS angle calibration: first pose recorded");
+            } else {
+                const double da_cam = normalize_angle(pos_cam.a - prev_pos.a);
+                const double da_otos = normalize_angle(pos_otos.a - prev_pos.a);
+
+                if (fabs(da_otos) > 1e-3){
+                    const double scalar_angle = da_cam / da_otos;
+                    LOG_GREEN_INFO("OTOS scalar angle=", scalar_angle,
+                                   " (actual=", da_cam, " reported=", da_otos, ")");
+                } else {
+                    LOG_WARNING("OTOS angle calibration skipped: reported angle too small");
+                }
+
+                prev_pos = pos_cam;
+            }
+
+            state = !state;
+        }
+    } break;
+    case 2:{
+        // Position compensation test, also compensate for otos angle
+        // New Scalar = Current Scalar * (Actual Distance / Reported Distance)
+        static bool has_prev_measure = false;
+        static position_t prev_pos_cam = {0.0, 0.0, 0.0};
+        static position_t prev_pos_otos = {0.0, 0.0, 0.0};
+
+        position_t pos1 = {0.0, 900.0, 0.0};
+        if (state)
+            pos1.y *= -1.0;
+        ret = navigationGoTo(pos1, false, true, false, &pos_cam, &pos_otos);
+
+        if (ret == NAV_DONE){
+            if (!has_prev_measure){
+                prev_pos_cam = pos_cam;
+                prev_pos_otos = pos_otos;
+                has_prev_measure = true;
+                LOG_GREEN_INFO("OTOS scalar calibration: first pose recorded");
+            } else {
+                const double d_cam_x = pos_cam.x - prev_pos_cam.x;
+                const double d_cam_y = pos_cam.y - prev_pos_cam.y;
+                const double d_otos_x = pos_otos.x - prev_pos_otos.x;
+                const double d_otos_y = pos_otos.y - prev_pos_otos.y;
+
+                const double dist_cam = sqrt(d_cam_x * d_cam_x + d_cam_y * d_cam_y);
+                const double dist_otos = sqrt(d_otos_x * d_otos_x + d_otos_y * d_otos_y);
+
+                if (dist_otos > 1e-6){
+                    const double scalar_dist = dist_cam / dist_otos;
+                    LOG_GREEN_INFO("OTOS scalar distance=", scalar_dist,
+                                   " (actual=", dist_cam, " reported=", dist_otos, ")");
+                } else {
+                    LOG_WARNING("OTOS scalar calibration skipped: reported displacement too small");
+                }
+
+                prev_pos_cam = pos_cam;
+                prev_pos_otos = pos_otos;
+            }
+
+            state = !state;
+        }
+    } break;
+    }
 }

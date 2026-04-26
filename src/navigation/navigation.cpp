@@ -12,7 +12,7 @@ static unsigned long robot_stall_start_time;
 static position_t current_pos_target;
 static bool current_use_astar;
 static bool current_slow_mode;
-static bool current_complete_stop = true;
+static bool return_actual_cam_pos = true;
 
 static position_t currentPath[1024];
 static int currentPathLength = 0;
@@ -39,46 +39,67 @@ nav_return_t navigationDrive(){
         currentPathLength = 1;
         currentPath[0] = current_pos_target;
     }
-    bool done = drive.drive(currentPath, currentPathLength, current_slow_mode, current_complete_stop);
+    bool done = drive.drive(currentPath, currentPathLength, current_slow_mode, true);
     if (done) return NAV_DONE;
     return NAV_IN_PROCESS;
 }
 
-nav_return_t navigationGo(){
+nav_return_t navigationGo(position_t* out_final_pos_cam, position_t* out_final_pos_otos){
     // FSM which does drive and calibration
     static bool driving = true;
     if (driving){
         nav_return_t result = navigationDrive();
         if (result == NAV_DONE){
             LOG_EXTENDED_DEBUG("Navigation drive completed");
-            if (current_complete_stop) // If came to a complete stop, calibrate using camera, else nav is done
-                driving = false;
-            else
-                return NAV_DONE;
+            driving = false;
         }
     } else {
         // Calibrate using camera
         bool cam_success;
-        position_t robot_pos;
-        if (arucoCam1.getRobotPos(robot_pos.x, robot_pos.y, robot_pos.a, cam_success)){
-            if (cam_success){               
-                LOG_GREEN_INFO("", drive.position.x, ", ", drive.position.y, ", ", drive.position.a);
-                drive.setCoordinates(robot_pos);
-                tableStatus.resetCalibrationAge();
-                LOG_GREEN_INFO("", robot_pos.x, ", ", robot_pos.y, ", ", robot_pos.a);
-
+        if (return_actual_cam_pos){
+            position_t cam_pos;
+             if (arucoCam1.getPos(cam_pos.x, cam_pos.y, cam_pos.a, cam_success)){
+                if (cam_success){
+                    if (out_final_pos_cam) {
+                        *out_final_pos_cam = cam_pos;
+                    }
+                    if (out_final_pos_otos) {
+                        *out_final_pos_otos = drive.position;
+                    }
+                    drive.setCoordinates(cam_pos);
+                    tableStatus.resetCalibrationAge();
+                }
+                else{
+                    LOG_EXTENDED_DEBUG("Camera did not have a good position estimate, skipping calibration");
+                }
+                driving = true;
+                return NAV_DONE;
             }
-            else{
-                LOG_EXTENDED_DEBUG("Camera did not have a good position estimate, skipping calibration");
+        }else{
+            position_t robot_pos;
+            if (arucoCam1.getRobotPos(robot_pos.x, robot_pos.y, robot_pos.a, cam_success)){
+                if (cam_success){               
+                    if (out_final_pos_cam) {
+                        *out_final_pos_cam = robot_pos;
+                    }
+                    if (out_final_pos_otos) {
+                        *out_final_pos_otos = drive.position;
+                    }
+                    drive.setCoordinates(robot_pos);
+                    tableStatus.resetCalibrationAge();
+                }
+                else{
+                    LOG_EXTENDED_DEBUG("Camera did not have a good position estimate, skipping calibration");
+                }
+                driving = true;
+                return NAV_DONE;
             }
-            driving = true;
-            return NAV_DONE;
         }
     }
     return NAV_IN_PROCESS;
 }
 
-nav_return_t navigationGoTo(position_t pos, bool useAStar, bool slow_mode, bool complete_stop){
+nav_return_t navigationGoTo(position_t pos, bool useAStar, bool slow_mode, bool return_cam_pos, position_t* out_final_pos_cam, position_t* out_final_pos_otos){
     if (current_pos_target.x != pos.x || 
         current_pos_target.y != pos.y || 
         current_pos_target.a != pos.a || 
@@ -88,9 +109,9 @@ nav_return_t navigationGoTo(position_t pos, bool useAStar, bool slow_mode, bool 
         current_use_astar = useAStar;
     }
     current_slow_mode = slow_mode;
-    current_complete_stop = complete_stop;
+    return_actual_cam_pos = return_cam_pos;
 
-    return navigationGo();
+    return navigationGo(out_final_pos_cam, out_final_pos_otos);
 }
 
 void navigation_path_json(json& j){
