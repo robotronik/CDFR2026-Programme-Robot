@@ -127,6 +127,7 @@ double chooseStockStrategy(int& stockNum, int& stockOffset){
         return dist;
     }
     //LOG_WARNING("No stock available");
+    //TODO return 0 ?
     return 0;
 }
 
