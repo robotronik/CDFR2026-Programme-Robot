@@ -20,3 +20,5 @@ double getBestStockPositionOff(int& stockNum, int& bestOffset);
 position_t calculateClosestArucoPosition(position_t currentPos);
 position_t getBestIsolatedPosition(position_t centerPos, position_t fromPos);
 position_t toFirstStockPos(position_t targetPos);
+
+bool NearestValidZone(position_t* pos);

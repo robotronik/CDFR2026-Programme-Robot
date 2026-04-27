@@ -17,6 +17,8 @@ void ActionFSM::Reset(){
     /****** RESET OF FSM STATES *******/
     gatherStockState = FSM_GATHER_NAV;
     stealStockState = FSM_GATHER_NAV;
+    sweepState = FSM_SWEEP_INIT;
+    vidangeState = FSM_VIDANGE_INIT;
     dropStockState = FSM_DROP_NONE;
     CursorState = CURSOR_RAISE_CLAW;
     calibrationCameraState = FSM_ARUCO_1;
