@@ -128,10 +128,11 @@ bool findGroupRANSAC2D(
                     }
                     float lineAngle = std::atan2(uy, ux) * 180.0f / M_PI;
                     float pa = lineAngle + 90.0f;
-        
-                    // Normalisation de l'angle entre [-90, 90]
+                    // Normalisation de l'angle entre [-180, 180]
                     pa = std::fmod(pa + 180.0f, 360.0f);
                     if (pa < 0) pa += 360.0f;
+                    lineAngle = pa - 180.0f;
+                    
                     for (size_t i = 0; i < bestGroup.size(); i++)
                     {
                         bestGroup[i].a = pa;
