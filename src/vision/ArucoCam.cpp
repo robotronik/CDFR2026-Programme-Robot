@@ -270,7 +270,9 @@ bool ArucoCam::ToObjectPos(json& data, block_t & start, double & angle, double &
             alignBlocks.clear();
             tmp_x = visibleBlocks[0].x;
             tmp_y = visibleBlocks[0].y;
-            tmp_a = visibleBlocks[0].a;
+            tmp_a = visibleBlocks[0].a + 90;
+            if(tmp_a > 90) tmp_a -= 180;
+            else tmp_a += 180;
             alignBlocks.push_back(visibleBlocks[0]);
             //TODO utiliser best isolated block
             success = 1;

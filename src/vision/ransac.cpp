@@ -246,7 +246,7 @@ bool findGroupStealRANSAC2D(
             if(!status) continue;
 
             if(blockInFrontInterface(sol_temp, points)){
-                return false;
+                continue;
                 //TODO gérer et trouver une solution en passant par l'autre coté?
             }
 
@@ -282,7 +282,7 @@ bool findGroupStealRANSAC2D(
             
         }
     }
-
+    LOG_WARNING("Ransac steal: No valid group of ", max_blocks, " inliers found");
     return false;
 
 }

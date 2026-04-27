@@ -329,31 +329,42 @@ ReturnFSM_t ActionFSM::StealStock(){
         }
         case FSM_GATHER_CLAWS:
             {
-            // Nothing to do here
-            LOG_ERROR("FSM_GATHER_CLAWS: Unexpected state");
+            if (lowerClaws()){
+                LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for stock ", stock_num);
+                stealStockState = FSM_GATHER_PREMOVE;
+            }
             }
             break;
         case FSM_GATHER_PREMOVE:
             {
-            // Nothing to do here
-            LOG_ERROR("FSM_GATHER_PREMOVE: Unexpected state");
+            nav_ret = navigationGoTo(targetStockFirstPos, false, false, false); // Slow mode for more precision
+            if (nav_ret == NAV_DONE){
+                stealStockState = FSM_GATHER_MOVE;
+                LOG_EXTENDED_DEBUG("FSM_GATHER_PREMOVE: Pre-Moving to stock ", stock_num, " at position (", targetStockFirstPos.x, ",", targetStockFirstPos.y, ") with angle ", targetStockFirstPos.a);
+            }
             }
             break;
         case FSM_GATHER_MOVE:
-        {
             {
-            // Nothing to do here
-            LOG_ERROR("FSM_GATHER_MOVE: Unexpected state");
+            nav_ret = navigationGoTo(targetStockPos, false, true); // Slow mode for more precision
+            if (nav_ret == NAV_DONE){
+                stealStockState = FSM_GATHER_COLLECT;
+                LOG_EXTENDED_DEBUG("FSM_GATHER_MOVE: Moving to drop ", dropzone_num, " at position (", targetPos_.x, ",", targetPos_.y, ") with angle ", targetPos_.a);
             }
-            break;
-        }
+            }
             break;
         case FSM_GATHER_COLLECT:
         {
-            if (this->BalayageSteal(targetPos_, angle, lenght) == FSM_RETURN_DONE){
-                //drive.is_slow_mode = false;
+            if (lenght != -1 && this->BalayageSteal(targetPos_, angle, lenght) == FSM_RETURN_DONE){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: dropZone", dropzone_num, " collected");
                 stealStockState = FSM_GATHER_COLLECTED;
+            }else{
+                if (closeClaws()){
+                    LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: Stock", stock_num, " collected");
+                    tableStatus.setStockAsRemoved(stock_num);
+                    gatherStockState = FSM_GATHER_COLLECTED;
+                    return FSM_RETURN_DONE;
+                }
             }
         }
             break;
