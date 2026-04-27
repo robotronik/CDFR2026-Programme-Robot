@@ -280,7 +280,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
     }else{
         //Traitement pour passer dans les coordonnées de la table
         // Décalage pour le centre du robot
-        tmp_a = (tmp_a > 0) ? tmp_a - 90 : tmp_a + 90; 
+        //tmp_a = (tmp_a > 0) ? tmp_a - 90 : tmp_a + 90; 
         double rad_tmp_a = tmp_a * M_PI / 180.0;
         //LOG_EXTENDED_DEBUG("Position avant correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
         //LOG_EXTENDED_DEBUG("Décalage appliqué : { sin = ", OFFSET_STOCK * mult_param * sin(rad_tmp_a), ", cos = ", OFFSET_STOCK * mult_param * cos(rad_tmp_a), " }");
