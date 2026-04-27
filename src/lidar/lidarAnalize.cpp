@@ -14,70 +14,7 @@ void convertAngularToAxial(lidarAnalize_t* data, int count, position_t position,
                            data[i].y > -1500 + narrow);
     }
 }
-void convertAngularToAxialCompensated(
-    lidarAnalize_t* data,
-    int           count,
-    position_t    start,       // robot pose at beginning of scan
-    position_t    velocity,    // robot linear & angular speeds (mm/s, deg/s)
-    double        scan_period, // lidar rotation period [s]
-    int           narrow
-) {
-    for(int i = 0; i < count; i++){
-        // Time offset for this beam
-        double dt = (360.0 - data[i].angle) / 360.0 * scan_period;
-        dt = scan_period/2.0; // TEMPORARY FIX FOR TESTING PURPOSES
 
-        // Pose at capture time
-        double global_angle = -data[i].angle + start.a - velocity.a * dt;
-
-        double xi = start.x - velocity.x * dt;
-        double yi = start.y - velocity.y * dt;
-
-        data[i].x = data[i].dist * cos(global_angle * DEG_TO_RAD) + xi;
-        data[i].y = data[i].dist * sin(global_angle * DEG_TO_RAD) + yi;
-        data[i].onTable = (
-            data[i].x <  1000 - narrow &&
-            data[i].x > -1000 + narrow &&
-            data[i].y <  1500 - narrow &&
-            data[i].y > -1500 + narrow
-        );
-    }
-}
-
-void convertAngularToAxialDeskew_NoVelocity(
-    lidarAnalize_t* data,
-    int count,
-    position_t prev,   // pose au scan précédent
-    position_t now,    // pose actuelle
-    double scan_period,
-    int narrow
-) {
-    double dx = now.x - prev.x;
-    double dy = now.y - prev.y;
-    double da = now.a - prev.a;
-
-    for(int i = 0; i < count; i++){
-        // progression dans le scan
-        double alpha = (double)i / (double)count;
-
-        // interpolation de la pose
-        double xi = prev.x + dx * alpha;
-        double yi = prev.y + dy * alpha;
-        double ai = prev.a + da * alpha;
-
-        double beam_angle = ai - data[i].angle;
-
-        data[i].x = data[i].dist * cos(beam_angle * DEG_TO_RAD) + xi;
-        data[i].y = data[i].dist * sin(beam_angle * DEG_TO_RAD) + yi;
-
-        data[i].onTable = (
-            data[i].x <  1000 - narrow &&
-            data[i].x > -1000 + narrow &&
-            data[i].y <  1500 - narrow &&
-            data[i].y > -1500 + narrow
-        );
-    }
-}
 
 double average_angles(double angles[], int count) {
     double x_sum = 0.0, y_sum = 0.0;
