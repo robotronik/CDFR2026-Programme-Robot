@@ -435,9 +435,12 @@ void tests()
         static bool has_prev_measure = false;
         static position_t prev_pos = {0.0, 0.0, 0.0};
 
-        position_t pos1 = {0.0, 900.0, 0.0};
+        position_t pos1 = {0.0, 800.0, 90.0};
         if (state)
-            pos1.a = 180.0;
+            pos1.a += 80.0;
+        else
+            pos1.a -= 80.0;
+
         ret = navigationGoTo(pos1, false, true, false, &pos_cam, &pos_otos);
 
         if (ret == NAV_DONE){
