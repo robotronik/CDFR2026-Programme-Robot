@@ -184,7 +184,7 @@ bool ArucoCam::ToObjectColor(bool* order, int& success){
 
 // Returns the position of the average position of the aruco tags detected on the table
 // Returns true when done
-bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& success) {
+bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& success, bool steal) {
 
     if (!data.contains("objects") || data["objects"].is_null() || !data["objects"].is_object()) {
         LOG_ERROR("ArucoCam::ToObjectPos() - invalid or missing 'objects'");
@@ -253,8 +253,14 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
                 }
                 success = max_block;
                 break;
+            }else if(steal && findGroupStealRANSAC2D(visibleBlocks, alignBlocks, max_block)){
+                tmp_x = alignBlocks[0].x;
+                tmp_y = alignBlocks[0].y;
+                tmp_a = alignBlocks[0].a;
+                success = max_block;
+                break;
             }else{
-                //LOG_WARNING("Ransac: Pas de solution à ", max_block);
+                LOG_WARNING("Ransac: Pas de solution à ", max_block);
             }
         }
         if(success < 0){
@@ -278,8 +284,8 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
         LOG_EXTENDED_DEBUG("Position avant correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
         //LOG_EXTENDED_DEBUG("Décalage appliqué : { sin = ", OFFSET_STOCK * mult_param * sin(rad_tmp_a), ", cos = ", OFFSET_STOCK * mult_param * cos(rad_tmp_a), " }");
         const double off_s = 85; // Augmenter pour se rapprocher
-        tmp_x += OFFSET_CAM_X - (OFFSET_STOCK - off_s) * cos(rad_tmp_a);
-        tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y - (OFFSET_STOCK - off_s) * sin(rad_tmp_a);
+        tmp_x += OFFSET_CAM_X - (OFFSET_STOCK - off_s) * cos(rad_tmp_a) + (steal ? -50 : 0);
+        tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y - (OFFSET_STOCK - off_s) * sin(rad_tmp_a) + (steal ? 125 : 0);
         LOG_EXTENDED_DEBUG("Position après correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
 
 
@@ -372,7 +378,7 @@ json ArucoCam::getBestIsolatedObject_json(){
         {"a", a}};
 }
 
-bool ArucoCam::getObjectPos(double & x, double & y, double & a, int& success){
+bool ArucoCam::getObjectPos(double & x, double & y, double & a, int& success, bool steal){
     json data;
     int data_success;
     if(getObjectData(data, data_success)){
@@ -383,7 +389,7 @@ bool ArucoCam::getObjectPos(double & x, double & y, double & a, int& success){
     }else{
         return false;
     }
-    ToObjectPos(data, x, y, a, success);    
+    ToObjectPos(data, x, y, a, success, steal);    
     return true;
 }
 
@@ -416,7 +422,7 @@ json ArucoCam::getRobotPosition_json(){
         {"a", a}};
 }
 
-bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double & a, int& success){
+bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double & a, int& success, bool steal){
     json data;
     int data_success;
     if(getObjectData(data, data_success)){
@@ -428,7 +434,7 @@ bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double &
         return false;
     }
 
-    if(ToObjectPos(data, x, y, a, success)){// Can not return False so first If is useless
+    if(ToObjectPos(data, x, y, a, success, steal)){// Can not return False so first If is useless
         if(success > 0){
             if(ToObjectColor(order, success)){ // Can not return false either
                 return true; // exec finished 

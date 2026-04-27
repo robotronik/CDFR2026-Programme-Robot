@@ -29,12 +29,12 @@ public:
     bool getRobotPos(double & x, double & y, double & a, bool& success);
     bool getObjectData(json& objects, int& sucess);
 
-    bool ToObjectPos(json& data, double & x, double & y, double & a, int& success);
+    bool ToObjectPos(json& data, double & x, double & y, double & a, int& success, bool steal);
     bool ToObjectColor(bool* order, int& success);
     bool ToIsolatedObject(json& data, double & x, double & y, double & a, bool& success);
 
-    bool getObjectPos(double & x, double & y, double & a, int& success);
-    bool getObjectInfoColors(bool* order, double & x, double & y, double & a, int& success);
+    bool getObjectPos(double & x, double & y, double & a, int& success, bool steal = false);
+    bool getObjectInfoColors(bool* order, double & x, double & y, double & a, int& success, bool steal = false);
     bool getBestIsolatedObject(double & x, double & y, double & a, bool& success);
 
     json getBestIsolatedObject_json();

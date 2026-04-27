@@ -374,11 +374,7 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
         
         // Angle parallèle au bloc le plus à droite
         float pa = target->a + 90.0f;
-
-        // Normalisation de l'angle entre [-180, 180]
-        pa = std::fmod(pa + 180.0f, 360.0f);
-        if (pa < 0) pa += 360.0f;
-        best_pusher.a = pa - 180.0f;
+        best_pusher.a = pa;
         LOG_DEBUG("Placing pusher at (", best_pusher.x, ", ", best_pusher.y, ") with angle ", best_pusher.a);
         // Conservation de la couleur pour la validité du bloc
         best_pusher.color = true; 
