@@ -291,20 +291,23 @@ int StartSequence()
 
 void GetLidar()
 {
-    static position_t prev_pos;
-    static position_t prev_vel;
     static long prev_time_ms = 0;
+    static position_t pos_opponent;
+    double IsDataValid = (fabs(drive.velocity.a) <= 45.0) || (position_distance(drive.position, pos_opponent) < 1000);
 
-    if (lidar.getData())
+    if (lidar.getData() && IsDataValid)
     {
         double time_s = double(_millis() - prev_time_ms) / 1000.0; 
-        //convertAngularToAxial(lidar.data, lidar.count, position, 200);
-        convertAngularToAxialCompensated(lidar.data, lidar.count, prev_pos, prev_vel, time_s, 200);
+        convertAngularToAxial(lidar.data, lidar.count, drive.position, 150);
         pathfind_fill_lidar();
         
-        position_t pos_opponent;
         // Only update opponent position if the robot is not moving too fast to avoid noise
-        if ((fabs(drive.velocity.a) <= 20.0) && position_opponentV2(lidar.data, lidar.count, drive.position, pos_opponent)){
+        if ((fabs(drive.velocity.a) <= 45.0) && position_opponentV2(lidar.data, lidar.count, drive.position, pos_opponent)){
+            // If it's the first reading, initialize the filtered position
+            // Apply the low-pass filter
+            tableStatus.pos_opponent.x = pos_opponent.x;
+            tableStatus.pos_opponent.y = pos_opponent.y;
+
             if ((currentState == RUN || currentState == MANUAL) && (_millis() - tableStatus.startTime > 1000)){ // Only update opponent position after 1 second from the start to avoid false readings at the beginning
                 tableStatus.pos_opponent.x = pos_opponent.x;
                 tableStatus.pos_opponent.y = pos_opponent.y;
@@ -312,8 +315,6 @@ void GetLidar()
             }
         }
 
-        prev_pos = drive.position;
-        prev_vel = drive.velocity;
         prev_time_ms = _millis();
     }
 }

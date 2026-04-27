@@ -348,7 +348,7 @@ void disableActuators(){
 bool returnToHome(){
     unsigned long time = _millis() - tableStatus.startTime;
     position_t homePos;
-    homePos.x = (time < 98000) ? -200 : -600;
+    homePos.x = (time < 97000) ? -200 : -750;
     homePos.y = (tableStatus.colorTeam == BLUE) ? 1200 : -1200;
     homePos.a = 180;
     raiseClaws();

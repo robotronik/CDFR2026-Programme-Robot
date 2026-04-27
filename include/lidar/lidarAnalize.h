@@ -5,9 +5,6 @@
 using json = nlohmann::json;
 
 void convertAngularToAxial(lidarAnalize_t* data, int count, position_t position, int narrow);
-void convertAngularToAxialCompensated(lidarAnalize_t* data, int count,
-    position_t start, position_t velocity,
-    double scan_period, int narrow);
 bool position_opponentV2(lidarAnalize_t* data, int count, position_t robot_pos, position_t &opponent_pos);
 bool opponent_collide_lidar(lidarAnalize_t* data, int count, int width, int depth, int margin, double angle);
 bool opponent_is_close(position_t opponent_pos, position_t robot_pos, int distance_threshold);
