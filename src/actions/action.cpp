@@ -471,6 +471,217 @@ ReturnFSM_t ActionFSM::DropStock(){
     return FSM_RETURN_WORKING;
 }
 
+ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double distanceBalayage){
+    //targetPos1 = position premier block à voler
+    double margeBalayage = 50.0;
+    distanceBalayage += margeBalayage;
+    
+    static double cosinus, sinus;
+    static position_t targetPos1,targetPos2, targetPos3, targetPos4;
+    static double startTime = 0;
+    static bool needToGoToWall = false, claws_done = false;
+
+    switch(sweepState){
+
+        case FSM_SWEEP_INIT: //
+        {
+            LOG_INFO("SWEEP: init");
+            startTime = 0;
+            needToGoToWall = false, claws_done = false;
+            sweepState = FSM_SWEEP_DETECT;
+            break;
+        }
+
+        case FSM_SWEEP_DETECT:
+        {
+            LOG_DEBUG("FSM_SWEEP_DETECT: Detection sucess calibration on blocks");
+            targetPos1 = targetPos;
+            cosinus = cos(DEG_TO_RAD * angle);
+            sinus   = sin(DEG_TO_RAD * angle);
+            
+            // Se décaler distanceBalayage mm à gauche du stock (va reculer un peu si trop proche du mur avec NearestValidZone())
+            targetPos2.y = targetPos1.y + distanceBalayage * cosinus;
+            targetPos2.x = targetPos1.x - distanceBalayage * sinus;
+            targetPos2.a = angle;
+
+            startTime = 0;
+            bool tp2 = NearestValidZone(&targetPos2);
+            if (NearestValidZone(&targetPos1) || tp2){
+                needToGoToWall = true;
+            }
+            // Se reculer pour prendre le stock de 20 et se décaler de 50mm à gauche
+            targetPos3.y = targetPos2.y - 20.0 * sinus + 50.0 * cosinus;
+            targetPos3.x = targetPos2.x - 20.0 * cosinus - 50.0 * sinus;
+            targetPos3.a = targetPos2.a + 10.0;
+
+            //S'avance de 20 mm pour collect
+            targetPos4.y = targetPos3.y + 20.0 * sinus;
+            targetPos4.x = targetPos3.x + 20.0 * cosinus; 
+            targetPos4.a = targetPos3.a - 10.0;
+
+            sweepState = FSM_SWEEP_NAV_RIGHT;
+            break;
+        }
+        case FSM_SWEEP_NAV_RIGHT:
+        {
+            nav_ret = navigationGoTo(targetPos1, false, false, false); //First Move
+            snapClaws(false,false);
+            moveServoAndWait(SERVO_NUM_6, 170, 200);
+            if (!claws_done) claws_done = lowerClaws();
+    
+            if (nav_ret == NAV_DONE && claws_done){
+                LOG_DEBUG("FSM_SWEEP_NAV_RIGHT: Moving to right of the stock at position (", targetPos1.x, ",", targetPos1.y, ") with angle ", angle);
+
+                if (needToGoToWall){
+                    targetPos1.y += 50.0 * sinus;
+                    targetPos1.x += 50.0 * cosinus;
+                    startTime = _millis();
+                    needToGoToWall = false;
+                    sweepState = FSM_SWEEP_WALL;
+                    break;
+                }
+                sweepState = FSM_SWEEP_NAV_LEFT;
+            }
+            break;
+        }
+        case FSM_SWEEP_WALL:
+        {
+            nav_ret = navigationGoTo(targetPos1, false, true, false); // Go slowly to the wall
+            if (nav_ret == NAV_DONE || ((_millis() - startTime > 1000) && startTime != 0)){ // If stuck > 1 second, we are against the wall
+                LOG_INFO("SWEEP: arrived at wall");
+                sweepState = FSM_SWEEP_NAV_LEFT;
+            }
+            break;
+        }
+        case FSM_SWEEP_NAV_LEFT:
+        {
+            nav_ret = navigationGoTo(targetPos2, false, true, false); // Second Move, Slow mode
+            if (nav_ret == NAV_DONE){
+                startTime = _millis();
+                sweepState = FSM_SWEEP_PRE_COLLECT;
+                LOG_DEBUG("FSM_SWEEP_NAV_LEFT: Moving to left of the stock " " at position (", targetPos2.x, ",", targetPos2.y, ") with angle ", targetPos2.a);
+            }
+            break;
+        }
+        case FSM_SWEEP_PRE_COLLECT:
+        {
+            nav_ret = navigationGoTo(targetPos3, false, true, false);
+            if ((nav_ret == NAV_DONE) || ((_millis() - startTime > 2000) && startTime != 0)) {
+                if (openClaws()){
+                    snapClaws(false,false);
+                    LOG_EXTENDED_DEBUG("FSM_SWEEP_PRE_COLLECT: Opened and closed claws to prepare for collection");
+                    startTime = 0;
+                    sweepState = FSM_SWEEP_COLLECT;
+                }
+                
+            }
+            break;
+        }
+        case FSM_SWEEP_COLLECT:
+        {
+            nav_ret = navigationGoTo(targetPos4, false, true, false);
+            if ((nav_ret == NAV_DONE)) {
+                moveServoAndWait(SERVO_NUM_6, 90, 200);
+                if (rotateTwoBlocks(stockOrder)){
+                    LOG_EXTENDED_DEBUG("FSM_SWEEP_COLLECT: Claws rotated for collection");
+                    LOG_DEBUG("FSM_SWEEP_COLLECT: Stock collected");
+                    startTime = 0;
+                    sweepState = FSM_SWEEP_INIT; // reset
+                    return FSM_RETURN_DONE;
+                }
+            }
+            break;
+        } 
+    }
+    return FSM_RETURN_WORKING;
+}
+
+
+//Si FSM_RETURN_ERROR faire openClaws(), moveServoAndWait(SERVO_NUM_6, 90, 200) et raiseClaws() pour lacher les blocs (seront proche ou dans dropzone)
+ReturnFSM_t ActionFSM::VidangeDropZone(int dropzone){
+    static position_t vidangeTarget;
+    static position_t targetPos1,targetPos2, targetPos3, targetPos4;
+    static double cosinus, sinus;
+    static bool claws_done;
+
+    switch(vidangeState){
+
+        case FSM_VIDANGE_INIT:
+        {
+            LOG_INFO("VIDANGE : init");
+            if (dropzone == -1){
+                LOG_ERROR("VIDANGE: invalid dropzone");
+                return FSM_RETURN_ERROR;
+            }
+            claws_done = false;
+            getBestDropZonePosition(dropzone,vidangeTarget); // ou équivalent
+
+            cosinus = cos(DEG_TO_RAD * vidangeTarget.a);
+            sinus   = sin(DEG_TO_RAD * vidangeTarget.a);
+
+            //va à 150mm à gauche de la dropZone
+            targetPos1.x = vidangeTarget.x + 150.0 * cosinus;
+            targetPos1.y = vidangeTarget.y - 150.0 * sinus;
+            targetPos1.a = vidangeTarget.a;
+
+            //va à 20mm à droite de la dropZone pour être sur d'avoir enlever tout les blocks de l'adversaire
+            targetPos2.x = vidangeTarget.x - 20.0*cosinus;
+            targetPos2.y = vidangeTarget.y + 20.0*sinus;
+            targetPos2.a = vidangeTarget.a;
+
+            //Se reculer de 100mm pour pas taper le stock
+            targetPos3.x = vidangeTarget.x - 100.0*sinus;
+            targetPos3.y = vidangeTarget.y - 100.0*cosinus;
+            targetPos3.a = vidangeTarget.a;
+
+            vidangeState = FSM_VIDANGE_NAV;
+            break;
+        }
+        case FSM_VIDANGE_NAV:
+        {
+            nav_ret = navigationGoTo(targetPos1, true, false, false);
+            moveServoAndWait(SERVO_NUM_6, 170, 200); // lower the little arm
+            if (!claws_done) claws_done = lowerClaws();
+    
+            if (nav_ret == NAV_DONE && claws_done){
+                LOG_DEBUG("FSM_VIDANGE_NAV done: lowered claws at dropzone ", dropzone, " (", targetPos1.x, ",", targetPos1.y, ",", targetPos1.a);
+                claws_done = false;
+                vidangeState = FSM_VIDANGE_NAV_CLEAR;
+            }
+            if (nav_ret == NAV_ERROR) return FSM_RETURN_ERROR;
+            break;
+        }
+        case FSM_VIDANGE_NAV_CLEAR:
+        {
+            nav_ret = navigationGoTo(targetPos2, true, false, false);
+            if (nav_ret == NAV_DONE){
+                moveServoAndWait(SERVO_NUM_6, 90, 200); //raise the little arm
+                if (openClaws()){//Drop our bloc 
+                    LOG_DEBUG("FSM_VIDANGE_NAV_CLEAR done");
+                    vidangeState = FSM_VIDANGE_NAV_BACK;
+                }
+            }
+            if (nav_ret == NAV_ERROR) return FSM_RETURN_ERROR;
+            break;
+        }
+        case FSM_VIDANGE_NAV_BACK:
+        {
+            nav_ret = navigationGoTo(targetPos3, true, false, false);
+            if (!claws_done) claws_done = lowerClaws();
+
+            if (nav_ret == NAV_DONE && claws_done){
+                LOG_DEBUG("FSM_VIDANGE_NAV_BACK done");
+                claws_done = false;
+                vidangeState = FSM_VIDANGE_INIT;
+                return FSM_RETURN_DONE;
+            }
+            if (nav_ret == NAV_ERROR) return FSM_RETURN_ERROR;
+            break;
+        }
+    }
+    return FSM_RETURN_WORKING;
+}
+
 ReturnFSM_t ActionFSM::Cursor(){
     position_t navTarget = {800.0, 1300.0, -180.0};
     position_t navTargetRot = navTarget;
