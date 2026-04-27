@@ -311,7 +311,12 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
             max_proj = proj;
         }
     }
-
+    LOG_DEBUG("Max projection of target block corners on approach line is ", max_proj);
+    LOG_DEBUG("Target block corners projections: ", 
+        project(right_block_corners[0], solution_line), ", ",
+        project(right_block_corners[1], solution_line), ", ",
+        project(right_block_corners[2], solution_line), ", ",
+        project(right_block_corners[3], solution_line));
     // 3. Détermination de l'écart minimum entre le block le plus à droite et les obstacles DEVANT
     float min_gap = 1e12f;
 
@@ -355,11 +360,7 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
         
         // Angle perpendiculaire (+90°)
         float pa = line_angle + 90.0f;
-        
-        // Normalisation de l'angle entre [-180, 180]
-        pa = std::fmod(pa + 180.0f, 360.0f);
-        if (pa < 0) pa += 360.0f;
-        best_pusher.a = pa - 180.0f;
+        best_pusher.a = pa;
         LOG_DEBUG("Placing pusher at (", best_pusher.x, ", ", best_pusher.y, ") with angle ", best_pusher.a);
         best_pusher.color = true; // Valide la couleur
     } else {
