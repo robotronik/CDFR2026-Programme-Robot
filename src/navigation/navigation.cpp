@@ -66,8 +66,6 @@ nav_return_t navigationGo(position_t* out_final_pos_cam, position_t* out_final_p
                     if (out_final_pos_otos) {
                         *out_final_pos_otos = drive.position;
                     }
-                    drive.setCoordinates(cam_pos);
-                    tableStatus.resetCalibrationAge();
                 }
                 else{
                     LOG_EXTENDED_DEBUG("Camera did not have a good position estimate, skipping calibration");
