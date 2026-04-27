@@ -81,7 +81,6 @@ double chooseStockStrategy(int& stockNum, int& stockOffset){
 
     int todo_stocks[9];
     int num = 0;
-    bool endlessMode = false; // If true, the robot will take all the stocks in order, ignoring the strategy (for testing)
     LOG_EXTENDED_DEBUG("Strategy", strategy);
     switch (strategy)
     {   
@@ -89,7 +88,8 @@ double chooseStockStrategy(int& stockNum, int& stockOffset){
             break;
         case 2:
             todo_stocks[0] = 5;
-            num = 1;
+            todo_stocks[1] = 7;
+            num = 2;
             break;
         case 3:
             todo_stocks[0] = 3;
@@ -98,7 +98,6 @@ double chooseStockStrategy(int& stockNum, int& stockOffset){
         case 4:
             todo_stocks[0] = 0;
             num = 1;
-            endlessMode = true;
             break;
     }
 
@@ -112,24 +111,14 @@ double chooseStockStrategy(int& stockNum, int& stockOffset){
         if (tableStatus.avail_stocks[todo_stocks[i]]){
             stockNum = todo_stocks[i];
             double dist = getBestStockPositionOff(stockNum, stockOffset);
-            if(!dist){
-                return INFINITY;
+            if (dist == INFINITY){
+                i++;
+                continue; // pas break sinon tu casses toute la stratégie
             }
             LOG_INFO("Best stock to take: ", stockNum);
             return dist;
         }
         i++;
-    }
-
-    if (endlessMode){
-        stockNum = (stockNum + 1) % STOCK_COUNT; // In endless mode, we take the stocks in order
-        double dist = getBestStockPositionOff(stockNum, stockOffset);
-        
-        if(!dist){
-            return INFINITY;
-        }
-        LOG_INFO("Best stock to take: ", stockNum);
-        return dist;
     }
 
     double dist = chooseNextStock(stockNum, stockOffset); // Choose the closest stock if the strategy stocks are not available
@@ -187,13 +176,9 @@ position_t calculateClosestArucoPosition(position_t currentPos){
     return outPos;
 }
 
-double getBestStockPositionOff(int& stockNum, int& bestDist){
-    int bestOff = -1;
-    double bestDist2 = INFINITY;
-
-    if(STOCK_OFFSET_MAPPING[stockNum][1] == -1){
-        return 0;
-    }
+double getBestStockPositionOff(int stockNum, int& bestOff){
+    bestOff = -1;
+    double bestDist = INFINITY;
 
     for (int i = 0; i < 2; i++){
         int offNum = STOCK_OFFSET_MAPPING[stockNum][i];
@@ -201,14 +186,15 @@ double getBestStockPositionOff(int& stockNum, int& bestDist){
             continue;
 
         double dist2 = toAStarDistStock(stockNum, offNum);
-        if(dist2 == -1) dist2 = INFINITY;
-        if (dist2 < bestDist2){
-            bestDist2 = dist2;
+        if (dist2 < 0) dist2 = INFINITY;
+
+        if (dist2 < bestDist){
+            bestDist = dist2;
             bestOff = offNum;
         }
     }
-    bestDist = bestDist2;
-    return bestOff;
+
+    return bestDist; // INFINITY si échec
 }
 
 double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool steal){

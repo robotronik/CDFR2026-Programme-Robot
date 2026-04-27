@@ -15,7 +15,7 @@ double chooseStockStrategy(int& stockNum, int& stockOffset);
 
 double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool steal = false);
 double getBestStealZonePosition(int& bestDropZone, position_t& bestPos);
-double getBestStockPositionOff(int& stockNum, int& bestOffset);
+double getBestStockPositionOff(int stockNum, int& bestOffset);
 
 position_t calculateClosestArucoPosition(position_t currentPos);
 position_t getBestIsolatedPosition(position_t centerPos, position_t fromPos);
