@@ -114,10 +114,10 @@ const position_t ARUCO_POSITIONS_TABLE[] = {
 // Valeurs uniquement pour le cote bleu
 const position_t ARUCO_CALIB_POSITIONS[] = {
     position_t{.x = -125, .y = 350, .a = 0}, \
-    position_t{.x = -125, .y = 775, .a = 0}, \
-    position_t{.x = -125, .y = 1050, .a = 0}, \
-    position_t{.x = 150, .y = 1050, .a = 0}, \
-    position_t{.x = 550, .y = 650, .a = 0}, \
+    position_t{.x = -125, .y = 675, .a = 0}, \
+    position_t{.x = -100, .y = 1050, .a = 0}, \
+    position_t{.x = 100, .y = 1050, .a = 0}, \
+    position_t{.x = 550, .y = 600, .a = 0}, \
     position_t{.x = 550, .y = 300, .a = 0}};
     
 const int ARUCO_CALIB_POSITIONS_COUNT = sizeof(ARUCO_CALIB_POSITIONS) / sizeof(position_t);

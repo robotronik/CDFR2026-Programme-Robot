@@ -144,8 +144,8 @@ position_t calculateClosestArucoPosition(position_t currentPos){
         }
     }
     LOG_ERROR("Distance to closest aruco marker: ", minDistance);
-    const double target_distance_min = 300.0; // mm
-    const double target_distance_max = 650.0; // mm
+    const double target_distance_min = 350.0; // mm
+    const double target_distance_max = 550.0; // mm
 
     if (minDistance < target_distance_min || minDistance > target_distance_max){
         LOG_WARNING("Not in valid range, moving to preset position");
