@@ -249,6 +249,7 @@ bool findGroupStealRANSAC2D(
                 return false;
                 //TODO gérer et trouver une solution en passant par l'autre coté?
             }
+
             block_t pouss = interfacePlacePoussoir(sol_temp, points);
             bestGroup.clear();
             if(pouss.color){
@@ -259,6 +260,7 @@ bool findGroupStealRANSAC2D(
                 LOG_DEBUG("pas de poussoir");
                 return false;
             }
+            
             
         }
     }
