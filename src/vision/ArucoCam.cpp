@@ -184,7 +184,7 @@ bool ArucoCam::ToObjectColor(bool* order, int& success){
 
 // Returns the position of the average position of the aruco tags detected on the table
 // Returns true when done
-bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& success, bool steal) {
+bool ArucoCam::ToObjectPos(json& data, block_t & start, double & angle, double & lenght, int& success, bool steal) {
 
     if (!data.contains("objects") || data["objects"].is_null() || !data["objects"].is_object()) {
         LOG_ERROR("ArucoCam::ToObjectPos() - invalid or missing 'objects'");
@@ -238,7 +238,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
     }
     else{
         success = -2;
-        alignBlocks.push_back(block_t{.x = x, .y = y, .a = a, .color = false});
+        alignBlocks.push_back(block_t{.x = start.x, .y = start.y, .a = start.a, .color = false});
         for(size_t max_block = MIN(4,count); max_block > 1; max_block -- ){
             if(findGroupRANSAC2D(visibleBlocks,alignBlocks, max_block)){
                 
@@ -251,12 +251,15 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
                     tmp_y = alignBlocks[0].y;
                     tmp_a = alignBlocks[0].a;
                 }
+                lenght = -1;
                 success = max_block;
                 break;
             }else if(steal && findGroupStealRANSAC2D(visibleBlocks, alignBlocks, max_block)){
                 tmp_x = alignBlocks[0].x;
                 tmp_y = alignBlocks[0].y;
                 tmp_a = alignBlocks[0].a;
+                lenght = alignBlocks[1].x;
+                angle = alignBlocks[1].a;
                 success = max_block;
                 break;
             }else{
@@ -290,13 +293,13 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
 
 
         //projection dans le repère de la table:
-        double a_rad = (a) * M_PI / 180.0;
+        double a_rad = (start.a) * M_PI / 180.0;
         double cos_a = cos(a_rad);
         double sin_a = sin(a_rad);
-        x += tmp_x * cos_a - tmp_y * sin_a;
-        y += tmp_x * sin_a + tmp_y * cos_a;
-        a += tmp_a;
-        LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " }");
+        start.x += tmp_x * cos_a - tmp_y * sin_a;
+        start.y += tmp_x * sin_a + tmp_y * cos_a;
+        start.a += tmp_a;
+        LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", start.x, ", y = ", start.y, ", a = ", start.a, " }");
     }
     return true;
 }
@@ -389,7 +392,10 @@ bool ArucoCam::getObjectPos(double & x, double & y, double & a, int& success, bo
     }else{
         return false;
     }
-    ToObjectPos(data, x, y, a, success, steal);    
+    block_t start = block_t{.x = x, .y = y, .a = a};
+    double angle = 0;
+    double lenght = 0;
+    ToObjectPos(data, start, angle, lenght, success, steal);    
     return true;
 }
 
@@ -422,7 +428,7 @@ json ArucoCam::getRobotPosition_json(){
         {"a", a}};
 }
 
-bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double & a, int& success, bool steal){
+bool ArucoCam::getObjectInfoColors(bool* order, block_t & start, double & angle, double & lenght, int& success, bool steal){
     json data;
     int data_success;
     if(getObjectData(data, data_success)){
@@ -434,7 +440,7 @@ bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double &
         return false;
     }
 
-    if(ToObjectPos(data, x, y, a, success, steal)){// Can not return False so first If is useless
+    if(ToObjectPos(data, start, angle, lenght, success, steal)){// Can not return False so first If is useless
         if(success > 0){
             if(ToObjectColor(order, success)){ // Can not return false either
                 return true; // exec finished 

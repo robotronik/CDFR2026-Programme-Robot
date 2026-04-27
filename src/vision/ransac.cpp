@@ -254,6 +254,24 @@ bool findGroupStealRANSAC2D(
             bestGroup.clear();
             if(pouss.color){
                 bestGroup.push_back(pouss);
+                double distance = std::hypot(pouss.x - std::get<1>(sol_temp[0])->x, pouss.y - std::get<1>(sol_temp[0])->y);
+                float ux, uy;
+                if (sol_temp.size() >= 2) {
+                    ux = std::get<1>(sol_temp.back())->x - std::get<1>(sol_temp.front())->x;
+                    uy = std::get<1>(sol_temp.back())->y - std::get<1>(sol_temp.front())->y;
+                }
+                float len = std::sqrt(ux*ux + uy*uy);
+                if (len > 1e-6f) {
+                    ux /= len;
+                    uy /= len;
+                } else {
+                    float a_rad = std::get<1>(sol_temp.front())->a * M_PI / 180.0f;
+                    ux = std::cos(a_rad);
+                    uy = std::sin(a_rad);
+                }
+
+                block_t info = { .x = distance, .y = 0, .a = std::atan2(uy, ux) * 180.0f / M_PI + 90.0f, .color = pouss.color };
+                bestGroup.push_back(info);
                 LOG_DEBUG("Poussoir placé devant le bloc à la position (", pouss.x, ", ", pouss.y, ") angle ", pouss.a);
                 return true;
             }else{

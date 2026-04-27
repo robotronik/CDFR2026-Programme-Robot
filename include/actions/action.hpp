@@ -94,7 +94,6 @@ class ActionFSM{
         typedef enum
         {
             FSM_SWEEP_INIT,
-            FSM_SWEEP_NAV,
             FSM_SWEEP_DETECT,
             FSM_SWEEP_NAV_RIGHT,
             FSM_SWEEP_WALL,

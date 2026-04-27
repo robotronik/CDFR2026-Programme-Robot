@@ -195,16 +195,16 @@ ReturnFSM_t ActionFSM::TakeStock(){
             break;
         case FSM_GATHER_DETECT:
             {
-            double x = drive.position.x;
-            double y = drive.position.y;
-            double a = drive.position.a;
+            block_t start = block_t{.x = drive.position.x, .y = drive.position.y, .a = drive.position.a};
+            double angle = 0;
+            double lenght = 0;
             int sucess = -1;
 
-            if(arucoCam1.getObjectInfoColors(stockOrder,x,y,a,sucess)){
+            if(arucoCam1.getObjectInfoColors(stockOrder, start, angle, lenght, sucess)){
                 if(sucess >=0){
                     //LOG_GREEN_INFO("pos aruco = ", x ," / ", y," / ",  a);
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Detection sucess calibration on ", sucess, " blocks");
-                    targetStockPos = position_t{x, y, a};
+                    targetStockPos = position_t{start.x, start.y, start.a};
                     targetStockFirstPos = toFirstStockPos(targetStockPos);
                 }else if(sucess == -2){
                     LOG_WARNING("FSM_GATHER_DETECT: Stock is empty");
@@ -270,7 +270,10 @@ ReturnFSM_t ActionFSM::TakeStock(){
 }
 
 ReturnFSM_t ActionFSM::StealStock(){
-    static position_t targetPos_; 
+    static position_t targetPos_;
+    static double angle = 0;
+    static double lenght = 0;
+
     if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV){
         //LOG_DEBUG("Getting next stock to take");
         LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
@@ -300,13 +303,14 @@ ReturnFSM_t ActionFSM::StealStock(){
 
         case FSM_GATHER_DETECT:
         {
-            double x = drive.position.x;
-            double y = drive.position.y;
-            double a = drive.position.a;
-            if(arucoCam1.getObjectInfoColors(stockOrder, x, y, a, steal_count)){
-                if(steal_count>=0){
-                    targetPos_ = position_t{x,y,a};
-                    stealStockState = FSM_GATHER_CLAWS;
+            block_t start = block_t{.x = drive.position.x, .y = drive.position.y, .a = drive.position.a};
+            angle = 0;
+            lenght = 0;
+            steal_count = 0;
+            if(arucoCam1.getObjectInfoColors(stockOrder, start, angle, lenght, steal_count, true)){
+                if(steal_count>0){
+                    targetPos_ = position_t{start.x,start.y,start.a};
+                    stealStockState = FSM_GATHER_COLLECT;
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found ", steal_count, " objects to steal");
                 }else if (steal_count == -2){
                     LOG_WARNING("FSM_GATHER_DETECT: DropZone was empty");
@@ -325,39 +329,28 @@ ReturnFSM_t ActionFSM::StealStock(){
         }
         case FSM_GATHER_CLAWS:
             {
-            if (lowerClaws()){
-                LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for dropZone ", dropzone_num);
-                stealStockState = FSM_GATHER_MOVE;
-                //drive.is_slow_mode = true;
-            }
+            // Nothing to do here
+            LOG_ERROR("FSM_GATHER_CLAWS: Unexpected state");
             }
             break;
         case FSM_GATHER_PREMOVE:
             {
-            
-            nav_ret = navigationGoTo(targetStockFirstPos, false, false, false); // Slow mode for more precision
-            //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
-            if (nav_ret == NAV_DONE){
-                gatherStockState = FSM_GATHER_MOVE;
-                LOG_EXTENDED_DEBUG("FSM_GATHER_PREMOVE: Pre-Moving to stock ", stock_num, " at position (", targetStockFirstPos.x, ",", targetStockFirstPos.y, ") with angle ", targetStockFirstPos.a);
-            }
+            // Nothing to do here
+            LOG_ERROR("FSM_GATHER_PREMOVE: Unexpected state");
             }
             break;
         case FSM_GATHER_MOVE:
         {
-            nav_ret = navigationGoTo(targetPos_, true);
-            if (nav_ret == NAV_DONE){
-                LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to dropZone at postition (",targetPos_.x,", ",targetPos_.y, ")");
-                stealStockState = FSM_GATHER_COLLECT;
-                break;
+            {
+            // Nothing to do here
+            LOG_ERROR("FSM_GATHER_MOVE: Unexpected state");
             }
+            break;
         }
             break;
         case FSM_GATHER_COLLECT:
-            //TODO add utilisation de la ventouse ou pince
-            // Collect the steal
         {
-            if (closeClaws()){
+            if (this->BalayageSteal(targetPos_, angle, lenght) == FSM_RETURN_DONE){
                 //drive.is_slow_mode = false;
                 LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: dropZone", dropzone_num, " collected");
                 stealStockState = FSM_GATHER_COLLECTED;
