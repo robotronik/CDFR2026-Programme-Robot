@@ -97,47 +97,45 @@ namespace {
             corners[i].color = false;
         }
     }
+}
 
-    // Théorème des Axes Séparateurs (SAT) pour détecter une collision entre 2 rectangles
-    bool checkOBBCollision(const float c1[4][2], const float c2[4][2]) {
-        // Les 4 axes potentiels de séparation (2 pour chaque rectangle)
-        float axes[4][2] = {
-            {c1[1][0] - c1[0][0], c1[1][1] - c1[0][1]},
-            {c1[2][0] - c1[1][0], c1[2][1] - c1[1][1]},
-            {c2[1][0] - c2[0][0], c2[1][1] - c2[0][1]},
-            {c2[2][0] - c2[1][0], c2[2][1] - c2[1][1]}
-        };
-        
-        for (int i = 0; i < 4; i++) {
-            float ax = axes[i][0];
-            float ay = axes[i][1];
-            float len = std::sqrt(ax*ax + ay*ay);
-            if (len < 1e-6f) continue;
-            ax /= len; ay /= len; // Normalisation de l'axe
-            
-            // Projection du rectangle 1 sur l'axe
-            float min1 = 1e9f, max1 = -1e9f;
-            for (int j = 0; j < 4; j++) {
-                float proj = c1[j][0] * ax + c1[j][1] * ay;
-                min1 = std::min(min1, proj);
-                max1 = std::max(max1, proj);
-            }
-            
-            // Projection du rectangle 2 sur l'axe
-            float min2 = 1e9f, max2 = -1e9f;
-            for (int j = 0; j < 4; j++) {
-                float proj = c2[j][0] * ax + c2[j][1] * ay;
-                min2 = std::min(min2, proj);
-                max2 = std::max(max2, proj);
-            }
-            
-            // S'il y a un espace entre les projections, les rectangles ne se touchent pas
-            if (max1 < min2 || max2 < min1) {
-                return false;
-            }
-        }
-        return true; // Aucun axe séparateur trouvé = collision
-    }
+bool pointDansMur(block_t p){
+    return (p.x < MIN_X_TABLE || p.x > MAX_X_TABLE || p.y < MIN_Y_TABLE || p.y > MAX_Y_TABLE);
+}
+
+// rotation + translation
+block_t transformPointFromLocalToWorld(block_t localPoint, block_t robotPos){
+    block_t worldPoint;
+    double angleRad = robotPos.a * M_PI / 180.0;
+
+    worldPoint.x = robotPos.x + localPoint.x * cos(angleRad) - localPoint.y * sin(angleRad);
+    worldPoint.y = robotPos.y + localPoint.x * sin(angleRad) + localPoint.y * cos(angleRad);
+    return worldPoint;
+}
+
+void getRobotEdge(block_t *points, block_t robotPos){
+    block_t local[5];
+
+    local[0] = (block_t){-ROBOT_RADIUS, 0}; // arrière
+    local[1] = (block_t){ROBOT_RADIUS / 2,  ROBOT_RADIUS * sqrt(3) / 2};  // pointe gauche
+    local[2] = (block_t){ROBOT_RADIUS / 2, -ROBOT_RADIUS * sqrt(3) / 2};  // point droite
+    local[3] = (block_t){ROBOT_RADIUS / 2 + CLAWS_LENGHT,  CLAWS_LENGHT/2};  // pointe claw gauche
+    local[4] = (block_t){ROBOT_RADIUS / 2 + CLAWS_LENGHT, -CLAWS_LENGHT/2};  // pointe claw droite
+
+    for (int i = 0; i < 5; i++)
+        points[i] = transformPointFromLocalToWorld(local[i], robotPos);
+}
+
+bool isRobotInWall(block_t robotPos, bool steal){
+    double rad_tmp_a = robotPos.a * M_PI / 180.0;
+    //LOG_EXTENDED_DEBUG("Décalage appliqué : { sin = ", OFFSET_STOCK * mult_param * sin(rad_tmp_a), ", cos = ", OFFSET_STOCK * mult_param * cos(rad_tmp_a), " }");
+    const double off_s = 85; // Augmenter pour se rapprocher
+    robotPos.x += OFFSET_CAM_X - (OFFSET_STOCK - off_s) * cos(rad_tmp_a) + (steal ? STEAL_OFFSET_X : 0);
+    robotPos.y += OFFSET_CAM_Y + OFFSET_CLAW_Y - (OFFSET_STOCK - off_s) * sin(rad_tmp_a) + (steal ? STEAL_OFFSET_Y : 0);
+    block_t robot[5];
+    getRobotEdge(robot,robotPos);
+    for(int i = 0; i < 5; i++) if(pointDansMur(robot[i])) return true;
+    return false;
 }
 
 bool blockInFrontInterface(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points) {

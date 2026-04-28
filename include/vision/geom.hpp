@@ -12,6 +12,22 @@ const float BLOCK_RADIUS = 80.0f;
 const float CORRIDOR_THRESHOLD = ROBOT_RADIUS + BLOCK_RADIUS; 
 const float TARGET_MARGIN = 30.0f; 
 const float MAX_DISTANCE_FROM_BLOCK = 80.0f;
+
+#define MIN_X_TABLE -550
+#define MAX_X_TABLE 1000
+#define MIN_Y_TABLE -1500
+#define MAX_Y_TABLE 1500
+#define ROBOT_RADIUS 280
+#define CLAWS_LENGHT 200
+
+#define OFFSET_CAM_X 129 // Offset of the camera in mm on the x axis
+#define OFFSET_CAM_Y 4.5 // Offset of the camera in mm on the y axis
+#define OFFSET_CAM_A 0 // Offset angle of the camera in degrees
+#define OFFSET_CLAW_Y -29 // Offset to align claw with block, diminuer = plus à droite
+#define OFFSET_STOCK 300
+#define STEAL_OFFSET_X -50
+#define STEAL_OFFSET_Y 125
+
 typedef struct {
     double x = 0;
     double y = 0;
@@ -41,6 +57,8 @@ bool acceptableAngle(const block_t* b1, const block_t* b2, float angleTol);
 
 // Vérifie si un point est trop proche du segment [O, T] (O étant le robot)
 bool checkSegment(float px, float py, float tx, float ty);
+
+bool isRobotInWall(block_t robotPos, bool steal);
 
 //Détermine la position optimale du centre du poussoir 
 block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vector<block_t>& points);

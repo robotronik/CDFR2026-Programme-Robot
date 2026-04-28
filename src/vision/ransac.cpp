@@ -86,47 +86,60 @@ bool findGroupRANSAC2D(
                         break;
                     }
                 }
+
                 if(blockInFrontInterface(std::vector<std::pair<float, const block_t*>>(inliers.begin() + k, inliers.begin() + k + max_blocks), points)){
                     LOG_EXTENDED_DEBUG("Ransac: Group of inliers at positions ", inliers[k].second->x, ", ", inliers[k].second->y, " to ", inliers[k + max_blocks - 1].second->x, ", ", inliers[k + max_blocks - 1].second->y, " is in front of the robot, rejecting this group");
-                    status = false;
+                    continue;
                 }
-                if (status) {
-                    
-                    for (size_t idx = 0; idx < max_blocks; ++idx) {
-                        bestGroup.push_back(*inliers[k + idx].second);
-                        LOG_EXTENDED_DEBUG("Ransac: Adding point (", inliers[k + idx].second->x, ", ", inliers[k + idx].second->y, ") with angle ", inliers[k + idx].second->a, " to best group");
-                    }
-                    
-                    std::sort(bestGroup.begin(), bestGroup.end(),
-                    [](const block_t& a, const block_t& b) {
-                        return a.y > b.y;
-                    });
 
-                    float ux, uy;
-                    if (bestGroup.size() >= 2) {
-                        ux = bestGroup.back().x - bestGroup.front().x;
-                        uy = bestGroup.back().y - bestGroup.front().y;
-                    }
-                    float len = std::sqrt(ux*ux + uy*uy);
-                    if (len > 1e-6f) {
-                        ux /= len;
-                        uy /= len;
-                    } else {
-                        float a_rad = bestGroup.front().a * M_PI / 180.0f;
-                        ux = std::cos(a_rad);
-                        uy = std::sin(a_rad);
-                    }
-                    float lineAngle = std::atan2(uy, ux) * 180.0f / M_PI;
-                    float pa = lineAngle + 90.0f;
-                    
-                    for (size_t i = 0; i < bestGroup.size(); i++)
-                    {
-                        bestGroup[i].a = pa;
-                        LOG_EXTENDED_DEBUG("Ransac: Setting angle of point (", bestGroup[i].x, ", ", bestGroup[i].y, ") to line angle ", lineAngle);
-                    }
-                    
-                    return true; // early exit if solution found
+                for (size_t idx = 0; idx < max_blocks; ++idx) {
+                    bestGroup.push_back(*inliers[k + idx].second);
+                    LOG_EXTENDED_DEBUG("Ransac: Adding point (", inliers[k + idx].second->x, ", ", inliers[k + idx].second->y, ") with angle ", inliers[k + idx].second->a, " to best group");
                 }
+                
+                std::sort(bestGroup.begin(), bestGroup.end(),
+                [](const block_t& a, const block_t& b) {
+                    return a.y > b.y;
+                });
+
+                block_t robotPos;
+                if(bestGroup.size() !=2){
+                    robotPos.x = bestGroup[1].x;
+                    robotPos.y = bestGroup[1].y;
+                    robotPos.a = bestGroup[1].a;
+                }else{
+                    robotPos.x = bestGroup[0].x;
+                    robotPos.y = bestGroup[0].y;
+                    robotPos.a = bestGroup[0].a;
+                }
+                if(isRobotInWall(robotPos, false)){
+                    continue;
+                }
+                
+                float ux, uy;
+                if (bestGroup.size() >= 2) {
+                    ux = bestGroup.back().x - bestGroup.front().x;
+                    uy = bestGroup.back().y - bestGroup.front().y;
+                }
+                float len = std::sqrt(ux*ux + uy*uy);
+                if (len > 1e-6f) {
+                    ux /= len;
+                    uy /= len;
+                } else {
+                    float a_rad = bestGroup.front().a * M_PI / 180.0f;
+                    ux = std::cos(a_rad);
+                    uy = std::sin(a_rad);
+                }
+                float lineAngle = std::atan2(uy, ux) * 180.0f / M_PI;
+                float pa = lineAngle + 90.0f;
+                
+                for (size_t i = 0; i < bestGroup.size(); i++)
+                {
+                    bestGroup[i].a = pa;
+                    LOG_EXTENDED_DEBUG("Ransac: Setting angle of point (", bestGroup[i].x, ", ", bestGroup[i].y, ") to line angle ", lineAngle);
+                }
+                
+                return true;
             }
         }
         
