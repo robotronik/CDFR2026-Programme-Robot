@@ -1,9 +1,41 @@
 #include "vision/geom.hpp"
 
-// normalisation angle [-180, 180]
+// Normalisation de l'angle pour des objets symétriques (modulo 180°)
+// Renvoie l'écart absolu le plus court, toujours compris entre [0, 90]
 float angleDiff(float a, float b) {
-    float d = fmodf(a - b + 180.0f, 360.0f) - 180.0f;
-    return std::abs(d);
+    // Calcul de la différence brute modulo 180
+    float d = std::fmod(a - b, 180.0f);
+    
+    // std::fmod peut renvoyer une valeur négative en C++,
+    // on la ramène donc systématiquement dans l'intervalle [0, 180)
+    if (d < 0.0f) {
+        d += 180.0f;
+    }
+    
+    // Comme le bloc est symétrique, l'écart maximal est de 90°
+    // (ex: un écart de 170° équivaut à un écart réel de 10°)
+    if (d > 90.0f) {
+        d = 180.0f - d;
+    }
+    
+    return d;
+}
+
+bool acceptableAngle(const block_t* b1, const block_t* b2, float angleTol){
+    float dx = b2->x - b1->x;
+    float dy = b2->y - b1->y;
+
+    // Pas besoin de normaliser dx et dy juste pour atan2
+    // std::atan2 gère très bien les vecteurs non normalisés
+    if (std::abs(dx) < 1e-6f && std::abs(dy) < 1e-6f) {
+        return false; 
+    }
+
+    // Calcul de l'angle de la ligne (en degrés)
+    float lineAngle = std::atan2(dy, dx) * 180.0f / M_PI;
+    
+    // Vérification de l'angle de b2 par rapport à la ligne (et non b1)
+    return angleDiff(b2->a, lineAngle) < angleTol;
 }
 
 // distance point-droite 2D
@@ -19,24 +51,6 @@ float pointLineDistance(const block_t& p, const Line& l) {
 float project(const block_t& p, const Line& l) {
     return (p.x - l.x) * l.dx +
            (p.y - l.y) * l.dy;
-}
-
-bool acceptableAngle(const block_t* b1, const block_t* b2, float angleTol){
-    float dx = b2->x - b1->x;
-    float dy = b2->y - b1->y;
-
-    float norm = std::sqrt(dx*dx + dy*dy);
-    if (norm < 1e-6f) return false;
-
-    Line line;
-    line.x = b1->x;
-    line.y = b1->y;
-    line.dx = dx / norm;
-    line.dy = dy / norm;
-
-    // angle de la ligne (en degrés)
-    float lineAngle = std::atan2(line.dy, line.dx) * 180.0f / M_PI;
-    return angleDiff(b1->a, lineAngle) < angleTol;
 }
 
 float cross2d(float x1, float y1, float x2, float y2) {
