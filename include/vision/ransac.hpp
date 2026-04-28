@@ -10,7 +10,7 @@ bool findGroupRANSAC2D(
     size_t max_blocks = 4,
     float lineTol = 10.0f,
     float spacing = 50.0f,
-    float spacingTol = 10.0f,
+    float spacingTol = 15.0f,
     float angleTol = 15.0f  // tolérance orientation
 );
 
