@@ -310,7 +310,11 @@ ReturnFSM_t ActionFSM::StealStock(){
             if(arucoCam1.getObjectInfoColors(stockOrder, start, angle, lenght, steal_count, true)){
                 if(steal_count>0){
                     targetPos_ = position_t{start.x,start.y,start.a};
-                    stealStockState = FSM_GATHER_COLLECT;
+                    if (lenght != -1){
+                        stealStockState = FSM_GATHER_COLLECT;
+                    }else{
+                        stealStockState = FSM_GATHER_CLAWS;
+                    }
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found ", steal_count, " objects to steal");
                 }else if (steal_count == -2){
                     LOG_WARNING("FSM_GATHER_DETECT: DropZone was empty");
@@ -355,9 +359,13 @@ ReturnFSM_t ActionFSM::StealStock(){
             break;
         case FSM_GATHER_COLLECT:
         {
-            if (lenght != -1 && this->BalayageSteal(targetPos_, angle, lenght) == FSM_RETURN_DONE){
-                LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: dropZone", dropzone_num, " collected");
-                stealStockState = FSM_GATHER_COLLECTED;
+            if (lenght != -1) 
+            {
+                ReturnFSM_t ret = BalayageSteal(targetPos_, angle, lenght);
+                if(ret == FSM_RETURN_DONE){
+                    LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: dropZone", dropzone_num, " collected");
+                    stealStockState = FSM_GATHER_COLLECTED;
+                }
             }else{
                 if (closeClaws()){
                     LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: Stock", stock_num, " collected");

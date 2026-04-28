@@ -364,7 +364,7 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
     if (min_gap > 50.0f) {
         LOG_DEBUG("Sufficient gap of ", min_gap, "mm found in front of the target block. Placing pusher in front.");
         // Le centre du poussoir doit être à +25mm du coin le plus avancé du bloc
-        float placement_proj = max_proj + 25.0f;
+        float placement_proj = max_proj + 50.0f;
         
         // Reconversion de l'avancée scalaire vers les coordonnées (X,Y) sur la carte
         best_pusher.x = solution_line.x + placement_proj * solution_line.dx;

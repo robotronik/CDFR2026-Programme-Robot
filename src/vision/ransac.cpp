@@ -293,7 +293,6 @@ bool findGroupStealRANSAC2D(
 
                 block_t info = { .x = distance, .y = 0, .a = std::atan2(uy, ux) * 180.0f / M_PI + 90.0f, .color = pouss.color };
                 bestGroup.push_back(info);
-                LOG_DEBUG("Poussoir placé devant le bloc à la position (", pouss.x, ", ", pouss.y, ") angle ", pouss.a);
                 return true;
             }else{
                 LOG_DEBUG("pas de poussoir");
