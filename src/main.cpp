@@ -292,7 +292,7 @@ int StartSequence()
 void GetLidar()
 {
     static long prev_time_ms = 0;
-    static position_t pos_opponent;
+    static position_t pos_opponent = {3000,0,0};
     double IsDataValid = (fabs(drive.velocity.a) <= 45.0) || (position_distance(drive.position, pos_opponent) < 1000);
 
     if (lidar.getData() && IsDataValid)
