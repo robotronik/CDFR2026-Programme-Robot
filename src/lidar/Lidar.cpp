@@ -111,7 +111,7 @@ void Lidar::Delete(){
 
 
 void Lidar::startSpin(){
-    arduino.SetLidarPWM(200);
+    arduino.SetLidarPWM(150);
     isSpinning = true;
 }
 void Lidar::stopSpin(){
