@@ -19,7 +19,7 @@ position_t StratStartingPos(){
     colorTeam_t color = tableStatus.colorTeam;
     int strategy = tableStatus.strategy;
     check(color, strategy);
-    position_t pos = {-750, 1125, 0};
+    position_t pos = {-675, 1125, 120};
 
     if (color == YELLOW)
         position_robot_flip(pos);

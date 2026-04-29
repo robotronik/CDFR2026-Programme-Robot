@@ -37,7 +37,7 @@ void ActionFSM::Reset(){
     for(size_t _ = 0; _<4 ; _++){
         stockOrder[_] = (tableStatus.colorTeam == YELLOW) ? false : true;
     }
-    runState = FSM_ACTION_SAFESTART;
+    runState = FSM_ACTION_GATHER;
     //SetBestAction(drive.position);
     // TODO reset other states (num,offset, etc.)
 }
