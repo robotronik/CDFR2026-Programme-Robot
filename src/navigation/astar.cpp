@@ -130,26 +130,56 @@ void fill_costmap_square(position_int_t s, position_int_t e, unsigned char cost)
         memset(&costmap[x][s.y], cost, (size_t)width);
     }
 }
+
+void fill_costmap_sphere(position_int_t center, int radius, unsigned char cost){
+    int x0 = center.x;
+    int y0 = center.y;
+
+    int r2 = radius * radius;
+
+    int x_min = (x0 - radius < 0) ? 0 : x0 - radius;
+    int x_max = (x0 + radius >= AS_HEIGHT) ? AS_HEIGHT - 1 : x0 + radius;
+
+    for (int x = x_min; x <= x_max; x++){
+        int dx = x - x0;
+        int dy_max = (int)sqrt(r2 - dx*dx);
+
+        int y_start = y0 - dy_max;
+        int y_end   = y0 + dy_max;
+
+        if (y_start < 0) y_start = 0;
+        if (y_end >= AS_WIDTH) y_end = AS_WIDTH - 1;
+
+        int width = y_end - y_start + 1;
+        if (width > 0){
+            memset(&costmap[x][y_start], cost, (size_t)width);
+        }
+    }
+}
 // c : position centrale en cells
 // w, h : largeur/hauteur de l'obstacle en cells
 // margin : marge autour de l'obstacle
 // traversable : true = A* peut traverser si nécessaire (MARGIN_COST)
 //               false = infranchissable (OBSTACLE_COST)
-void astar_place_obstacle_with_margin(position_int_t c, int w, int h, int margin, bool traversable) {
+void astar_place_obstacle_with_margin(position_int_t c, int w, int h, int margin, bool traversable, bool square) {
     position_int_t s, e;
     s.x = c.x - h/2;
     e.x = s.x + h;
     s.y = c.y - w/2;
     e.y = s.y + w;
 
-    // Only fill the margins
-    //fill_costmap_square(s, e, traversable ? MARGIN_COST : OBSTACLE_COST);
-
     // Définir la marge autour de l'obstacle
     s.x -= margin; e.x += margin;
     s.y -= margin; e.y += margin;
-    
-    fill_costmap_square(s, e, traversable ? MARGIN_COST : OBSTACLE_COST);
+    unsigned char cost = traversable ? MARGIN_COST : OBSTACLE_COST;
+    if (square){
+        fill_costmap_square(s, e, cost);
+    } else {
+        // rayon = moitié du plus grand côté
+        int radius = std::max(w, h)/2 + margin;
+
+        fill_costmap_sphere(c, radius, cost);
+    }
 }
 
 bool is_line_clear(position_int_t a, position_int_t b){

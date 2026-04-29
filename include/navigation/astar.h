@@ -19,7 +19,7 @@ typedef struct {
 } position_int_t;
 
 void astar_initialize_costmap();
-void astar_place_obstacle_with_margin(position_int_t c, int w, int h, int margin, bool traversable = true);
+void astar_place_obstacle_with_margin(position_int_t c, int w, int h, int margin, bool traversable = true, bool square = true);
 int astar_pathfind(position_int_t start, position_int_t goal, position_int_t path[]);
 int smooth_path(position_int_t in[], int in_len, position_int_t out[]);
 int coarse_smooth_path(position_int_t in[], int in_len, position_int_t out[]);

@@ -26,13 +26,13 @@ position_t convert_from_astar(position_int_t k){
 position_int_t astar_path[MAX_PATH_LEN];
 position_int_t smooth_path_arr[MAX_PATH_LEN];
 
-void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int RayonRobot, bool traversable = true)
+void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int RayonRobot, bool traversable = true, bool square = true)
 {
     position_int_t c = convert_to_astar(position_t{cx, cy, 0.0});
     int w = w_mm / SCALE;
     int h = h_mm / SCALE;
     int margin = RayonRobot / SCALE;
-    return astar_place_obstacle_with_margin(c, w, h, margin, traversable);
+    return astar_place_obstacle_with_margin(c, w, h, margin, traversable, square);
 }
 
 int pathfind(position_t start, position_t goal, position_t path[], double& path_length_mm){
@@ -124,8 +124,7 @@ void pathfind_fill_lidar(){
 
     for (int i = 0; i < lidar.count; i++){
         if (!lidar.data[i].onTable) continue;
-        // TODO Dont add all of the lidar points to improve performance
-        place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y, 400, 400, 220, false);
+        place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y, 400, 400, 220, false, false);
     }
     pathfind_place_border();
 }
