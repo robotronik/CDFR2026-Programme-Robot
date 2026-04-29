@@ -74,11 +74,8 @@ bool ActionFSM::RunFSM(){
             tableStatus.setStockAsRemoved(stock_num);
             gatherStockState = FSM_GATHER_NAV;
             stock_num = -1;
-            drive.setBrakeState(true);
-            if (raiseClaws()) {
-                SetBestAction(drive.position);
-                drive.setBrakeState(false);
-            }
+            drive.stopMotion();
+            if (raiseClaws()) SetBestAction(drive.position);
         }
         break;
     case FSM_ACTION_STEAL:
@@ -92,11 +89,8 @@ bool ActionFSM::RunFSM(){
             tableStatus.setDropzoneState(dropzone_num,TableState::DROPZONE_EMPTY);
             stealStockState = FSM_GATHER_NAV;
             dropzone_num = -1;
-            drive.setBrakeState(true);
-            if (raiseClaws()) {
-                SetBestAction(drive.position);
-                drive.setBrakeState(false);
-            }
+            drive.stopMotion();
+            if (raiseClaws()) SetBestAction(drive.position);
         }
         break;
   
@@ -113,19 +107,15 @@ bool ActionFSM::RunFSM(){
             }
             tableStatus.setDropzoneState(dropzone_num,TableState::DROPZONE_ERROR);
             dropStockState = FSM_DROP_NONE;
-            drive.setBrakeState(true);
-            if (raiseClaws()) {
-                SetBestAction(drive.position);
-                drive.setBrakeState(false);
-            }
+            drive.stopMotion();
+            if (raiseClaws()) SetBestAction(drive.position);
 
         }
         break;
     case FSM_ACTION_WAIT:
-    {//Pour eviter de forcer dans un mur ou object 
-    nav_ret = navigationGoTo(drive.position, true);
+    {
         if (startTime == 0) startTime = _millis();
-        if (nav_ret == NAV_DONE || _millis() - startTime > 2000){
+        if (_millis() - startTime > 2000){
             SetBestAction(drive.position);
             startTime = 0;
         }
@@ -142,11 +132,8 @@ bool ActionFSM::RunFSM(){
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("ACTION_CURSOR: Couldn't do cursor action");
             tableStatus.setCursorIsDone(true); // Place le curseur comme virtuellement fait
-            drive.setBrakeState(true);
-            if (enableCursor(false)) {
-                SetBestAction(drive.position);
-                drive.setBrakeState(false);
-            }
+            drive.stopMotion();
+            if (enableCursor(false)) SetBestAction(drive.position);
         }
         break;
 
