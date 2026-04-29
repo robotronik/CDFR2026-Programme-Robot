@@ -292,6 +292,127 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
     return true;
 }
 
+bool ArucoCam::ToObjectSweep(bool* order, json& data, double & x, double & y, double & a, double & dist_balayage, int& success){
+    if (!data.contains("objects") || data["objects"].is_null() || !data["objects"].is_object()) {
+        LOG_ERROR("ToObjectSweep() - invalid objects");
+        success = -1;
+        return true;
+    }else{
+        success = -2; // l'erreur n'est plus une erreur de caméra
+    }
+
+    std::vector<block_t> blocks;
+    auto& objects = data["objects"];
+
+    // 🔹 1. Conversion caméra → robot
+    for (auto& [key, list] : objects.items()) {
+        for (auto& obj : list) {
+
+            // On convertit vers le repère robot 
+            double a_tag_rad = -1 * obj.value("a",0.0) * M_PI / 180.0;
+            double sin_tag = sin(a_tag_rad);
+            double cos_tag = cos(a_tag_rad);
+            double x_tmp = obj.value("x", 0.0);
+            double y_tmp = obj.value("y", 0.0);
+
+            blocks.push_back(block_t{
+                .x = -1*(x_tmp* cos_tag - y_tmp * sin_tag),
+                .y = -1*(x_tmp* sin_tag + y_tmp*cos_tag),
+                .a = -1 * obj.value("a",0.0),
+                .color = (obj.value("label", "") == "Blue")
+            });
+        }
+    }
+
+    int count = blocks.size();
+    LOG_DEBUG("Sweep: Found ", count, " blocks");
+
+    if(count == 0){
+        success = -2;
+        return true;
+    }
+
+    success = count;
+
+    // 🔹 2. Moyenne
+    double mean_x = 0, mean_y = 0;
+    for(const auto& b : blocks){
+        mean_x += b.x;
+        mean_y += b.y;
+    }
+    mean_x /= count;
+    mean_y /= count;
+
+    // 🔹 3. Trouver les extrêmes
+    double max_dist = 0;
+    block_t b1, b2;
+
+    for(int i=0; i<count; i++){
+        for(int j=i+1; j<count; j++){
+            double dx = blocks[i].x - blocks[j].x;
+            double dy = blocks[i].y - blocks[j].y;
+            double d = sqrt(dx*dx + dy*dy);
+
+            if(d > max_dist){
+                max_dist = d;
+                b1 = blocks[i];
+                b2 = blocks[j];
+            }
+        }
+    }
+
+    // 🔹 4. Angle (perpendiculaire)
+    double theta = atan2(b2.y - b1.y, b2.x - b1.x);
+
+    // 🔹 projection + tri + sélection des 4 blocs
+    std::vector<std::pair<block_t,double>> projected;
+
+    for(const auto& b : blocks){
+        double p = b.x * cos(theta) + b.y * sin(theta);
+        projected.push_back({b, p});
+    }
+
+    std::sort(projected.begin(), projected.end(),
+        [](const auto& a, const auto& b){
+            return a.second < b.second;
+        }
+    );
+
+    // 🔹 prendre les 4 plus à droite
+    int n = projected.size();
+    int start = std::max(0, n - 4);
+
+    for(int i = 0; i < n - start; i++){
+        order[i] = projected[start + i].first.color;
+    }
+
+    // 🔹 5. angle perpendiculaire
+    double tmp_a = theta * 180.0 / M_PI + 90.0;
+
+    // 🔹 5. Distance de balayage
+    dist_balayage = max_dist - (50.0 * count);
+    if(dist_balayage < 0) dist_balayage = 0;
+
+    // 🔹 6. Correction mécanique
+    tmp_a = (tmp_a > 0) ? tmp_a - 90 : tmp_a + 90;
+    double rad_tmp_a = tmp_a * M_PI / 180.0;
+
+    const double off_s = 85;
+    mean_x += OFFSET_CAM_X - (OFFSET_STOCK - off_s) * cos(rad_tmp_a);
+    mean_y += OFFSET_CAM_Y + OFFSET_CLAW_Y - (OFFSET_STOCK - off_s) * sin(rad_tmp_a);
+
+    // 🔹 7. Projection table
+    double a_rad = (a) * M_PI / 180.0;
+    double cos_a = cos(a_rad);
+    double sin_a = sin(a_rad);
+
+    x += mean_x * cos_a - mean_y * sin_a;
+    y += mean_x * sin_a + mean_y * cos_a;
+    a += tmp_a;
+
+    return true;
+}
+
 /*
     Get the most isolated object to take
 */
@@ -433,6 +554,22 @@ bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double &
         }else return true; // exec finished on fail
     }else return false; // exec unfinished
 
+}
+
+bool ArucoCam::getObjectForSweep(bool* order, double & x, double & y, double & a, int& success, double dist_balayage){
+    json data;
+    int data_success;
+
+    if(getObjectData(data, data_success)){
+        if(data_success){
+            success = -1;
+            return true;
+        }
+    }else{
+        return false;
+    }
+
+    return ToObjectSweep(order, data, x, y, a, dist_balayage, success);
 }
 
 void ArucoCam::start() {

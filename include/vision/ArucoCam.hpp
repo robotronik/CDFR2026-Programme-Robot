@@ -30,11 +30,15 @@ public:
     bool getObjectData(json& objects, int& sucess);
 
     bool ToObjectPos(json& data, double & x, double & y, double & a, int& success);
+    bool ToObjectSweep(bool* order, json& data, double & x, double & y, double & a, double & dist_balayage, int& success);
+
     bool ToObjectColor(bool* order, int& success);
     bool ToIsolatedObject(json& data, double & x, double & y, double & a, bool& success);
 
     bool getObjectPos(double & x, double & y, double & a, int& success);
     bool getObjectInfoColors(bool* order, double & x, double & y, double & a, int& success);
+    bool getObjectForSweep(bool* order, double & x, double & y, double & a, int& success, double dist_balayage);
+
     bool getBestIsolatedObject(double & x, double & y, double & a, bool& success);
 
     json getBestIsolatedObject_json();
