@@ -259,7 +259,7 @@ bool ArucoCam::ToObjectPos(json& data, block_t & start, double & angle, double &
                 tmp_y = alignBlocks[0].y;
                 tmp_a = alignBlocks[0].a;
                 lenght = alignBlocks[1].x;
-                angle = alignBlocks[1].a;
+                angle = alignBlocks[1].a + start.a;
                 success = max_block;
                 break;
             }else{

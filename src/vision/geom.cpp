@@ -273,7 +273,7 @@ bool blockInFrontInterface(const std::vector<std::pair<float, const block_t*>>& 
 }
 
 /*************GESTION PLACE POUSSOIR********************/
-block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vector<block_t>& points) {
+block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vector<block_t>& points, block_t robotPos) {
     // Par défaut on initialise le bloc. S'il n'y a pas la place, ses coordonnées vaudront 0 et la couleur sera différente
     block_t best_pusher;
     best_pusher.color = false;
@@ -357,11 +357,11 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
         }
     }
 
-    // 4. Validation et Placement final
+    // 4. Premier placement en angle final
     // Si l'espace est d'au moins 50mm, ou qu'il n'y a aucun obstacle (min_gap resté à 1e12)
     if (min_gap > 50.0f) {
         LOG_DEBUG("Sufficient gap of ", min_gap, "mm found in front of the target block. Placing pusher in front.");
-        // Le centre du poussoir doit être à +25mm du coin le plus avancé du bloc
+        // Le centre du poussoir doit être à +50mm du coin le plus avancé du bloc
         float placement_proj = max_proj + 50.0f;
         
         // Reconversion de l'avancée scalaire vers les coordonnées (X,Y) sur la carte
@@ -377,10 +377,10 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
         LOG_DEBUG("Not enough gap (", min_gap, "mm) in front of the target block. Placing pusher on the side.");
         // Pas assez de place devant : on place le poussoir sur la ligne, 
         // à 5 cm du centre du bloc cible, en le gardant parallèle.
-        
-        // Avancée de 50mm le long du vecteur directeur depuis le centre cible
-        best_pusher.x = solution_line.x + 50.0f * solution_line.dx;
-        best_pusher.y = solution_line.y + 50.0f * solution_line.dy;
+        float placement = 50.0f;
+        // Avancée de 50mm du centre du block  donc 25mm le long du vecteur directeur depuis le centre cible
+        best_pusher.x = solution_line.x + placement * solution_line.dx;
+        best_pusher.y = solution_line.y + placement * solution_line.dy;
         
         // Angle parallèle au bloc le plus à droite
         float pa = target->a + 90.0f;
@@ -390,10 +390,22 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
         best_pusher.color = true; 
     }
 
+    // 5. Vérification que le placement n'est pas dans un mur (cas extrême) ou dans un bloc
+    while (pointLineDistance(best_pusher, solution_line) < MAX_DISTANCE_FROM_BLOCK && 
+        isRobotInWall(transformRobotCoordToTableCoord(best_pusher, robotPos, true)))
+    {
+        // Conversion de l'angle du poussoir en radians
+        float angle_rad = best_pusher.a * M_PI / 180.0f;
+
+        // On recule de 5mm sur l'axe du poussoir (opposé à son orientation)
+        best_pusher.x -= 5.0f * std::cos(angle_rad); 
+        best_pusher.y -= 5.0f * std::sin(angle_rad); 
+    }
+    
     return best_pusher;
 }
 
-block_t interfacePlacePoussoir(const std::vector<std::pair<float, const block_t*>>& choosen, const std::vector<block_t>& points){
+block_t interfacePlacePoussoir(const std::vector<std::pair<float, const block_t*>>& choosen, const std::vector<block_t>& points, block_t robotPos){
     std::vector<const block_t*> block_temps;
 
     block_temps.reserve(choosen.size()); 
@@ -401,10 +413,10 @@ block_t interfacePlacePoussoir(const std::vector<std::pair<float, const block_t*
     for (const auto& c : choosen) {
         block_temps.push_back(c.second);
     }
-    return placePoussoir(block_temps, points);
+    return placePoussoir(block_temps, points, robotPos);
 }
 
-block_t interfacePlacePoussoir(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points){
+block_t interfacePlacePoussoir(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points, block_t robotPos){
     std::vector<const block_t*> block_temps;
 
     block_temps.reserve(choosen.size()); 
@@ -412,5 +424,5 @@ block_t interfacePlacePoussoir(const std::vector<std::tuple<float, const block_t
     for (const auto& c : choosen) {
         block_temps.push_back(std::get<1>(c));
     }
-    return placePoussoir(block_temps, points);
+    return placePoussoir(block_temps, points, robotPos);
 }

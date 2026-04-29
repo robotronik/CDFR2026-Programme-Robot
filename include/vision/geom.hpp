@@ -63,8 +63,8 @@ block_t transformRobotCoordToTableCoord(block_t startPos, block_t objectivePos, 
 bool isRobotInWall(block_t robotPos);
 
 //Détermine la position optimale du centre du poussoir 
-block_t interfacePlacePoussoir(const std::vector<std::pair<float, const block_t*>>& choosen, const std::vector<block_t>& points);
-block_t interfacePlacePoussoir(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points);
+block_t interfacePlacePoussoir(const std::vector<std::pair<float, const block_t*>>& choosen, const std::vector<block_t>& points, block_t robotPos);
+block_t interfacePlacePoussoir(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points, block_t robotPos);
 
 /*
 * return true s'il y a des blocks entre le robot et les blocks qu'il souhaite prendre false sinon

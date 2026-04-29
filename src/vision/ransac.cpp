@@ -270,7 +270,7 @@ bool findGroupStealRANSAC2D(
                 //TODO gérer et trouver une solution en passant par l'autre coté?
             }
 
-            block_t pouss = interfacePlacePoussoir(sol_temp, points);
+            block_t pouss = interfacePlacePoussoir(sol_temp, points, robotPos);
             bestGroup.clear();
             if(pouss.color){
                 bestGroup.push_back(pouss);
