@@ -76,6 +76,7 @@ double toAStarDist(position_t a){
 double chooseStockStrategy(int& stockNum, int& stockOffset){
     colorTeam_t color = tableStatus.colorTeam;
     int strategy = tableStatus.strategy;
+    static int i;
     check(color, strategy);
 
     int todo_stocks[9];
@@ -105,7 +106,8 @@ double chooseStockStrategy(int& stockNum, int& stockOffset){
             todo_stocks[i] = (todo_stocks[i] + STOCK_COUNT/2) % STOCK_COUNT;
         }
     }
-    int i = 0;
+    if (_millis() < tableStatus.startTime + 500)
+        i = 0;
     while (i < num){
         if (tableStatus.avail_stocks[todo_stocks[i]]){
             stockNum = todo_stocks[i];
@@ -126,8 +128,7 @@ double chooseStockStrategy(int& stockNum, int& stockOffset){
         return dist;
     }
     //LOG_WARNING("No stock available");
-    //TODO return 0 ?
-    return 0;
+    return INFINITY;
 }
 
 // Return the closest position to look at an aruco marker
