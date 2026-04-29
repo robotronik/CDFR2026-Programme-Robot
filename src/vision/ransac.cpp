@@ -20,7 +20,7 @@ bool findGroupRANSAC2D(
     
     for (size_t i = 0; i < points.size(); i++) {
         for(size_t j = i + 1; j < points.size(); j++){
-            LOG_EXTENDED_DEBUG("Ransac: Testing line through points (", points[i].x, ", ", points[i].y, ") and (", points[j].x, ", ", points[j].y, ")");
+            //LOG_EXTENDED_DEBUG("Ransac: Testing line through points (", points[i].x, ", ", points[i].y, ") and (", points[j].x, ", ", points[j].y, ")");
             float dx = points[j].x - points[i].x;
             float dy = points[j].y - points[i].y;
 
@@ -112,6 +112,8 @@ bool findGroupRANSAC2D(
                     robotPos = transformRobotCoordToTableCoord(bestGroup[0], robotPos, false);
                 }
                 if(isRobotInWall(robotPos)){
+                    LOG_ERROR("Ransac: Group of inliers at positions ", inliers[k].second->x, ", ", inliers[k].second->y, " to ", inliers[k + max_blocks - 1].second->x, ", ", inliers[k + max_blocks - 1].second->y, " would place robot in wall, rejecting this group");
+                    bestGroup.clear();
                     continue;
                 }
                 
@@ -176,7 +178,7 @@ bool findGroupStealRANSAC2D(
             // angle de la ligne (en degrés)
             float lineAngle = std::atan2(line.dy, line.dx) * 180.0f / M_PI;
 
-            // 2. collecter inliers (géométrie + orientation)
+            // 1. collecter inliers (géométrie + orientation)
             std::vector<std::tuple<float, const block_t*, bool>> inliers;
             std::vector<std::tuple<float, const block_t*, bool>> sol_temp;
 
@@ -276,6 +278,7 @@ bool findGroupStealRANSAC2D(
                 bestGroup.push_back(pouss);
                 double distance = std::hypot(std::get<1>(sol_temp.back())->x - std::get<1>(sol_temp.front())->x, 
                                     std::get<1>(sol_temp.back())->y - std::get<1>(sol_temp.front())->y);
+                LOG_DEBUG("distance: ", distance);
                 float ux, uy;
                 if (sol_temp.size() >= 2) {
                     ux = std::get<1>(sol_temp.back())->x - std::get<1>(sol_temp.front())->x;
@@ -295,7 +298,7 @@ bool findGroupStealRANSAC2D(
                 bestGroup.push_back(info);
                 return true;
             }else{
-                //LOG_EXTENDED_DEBUG("pas de poussoir possible");
+                LOG_ERROR("pas de poussoir possible");
                 continue;
             }
             

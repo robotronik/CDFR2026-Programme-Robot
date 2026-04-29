@@ -238,6 +238,7 @@ bool ArucoCam::ToObjectPos(json& data, block_t & start, double & angle, double &
     }
     else{
         success = -2;
+        alignBlocks.clear();
         alignBlocks.push_back(block_t{.x = start.x, .y = start.y, .a = start.a, .color = false});
         for(size_t max_block = MIN(4,count); max_block > 1; max_block -- ){
             if(findGroupRANSAC2D(visibleBlocks,alignBlocks, max_block)){

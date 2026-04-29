@@ -25,8 +25,6 @@ bool acceptableAngle(const block_t* b1, const block_t* b2, float angleTol){
     float dx = b2->x - b1->x;
     float dy = b2->y - b1->y;
 
-    // Pas besoin de normaliser dx et dy juste pour atan2
-    // std::atan2 gère très bien les vecteurs non normalisés
     if (std::abs(dx) < 1e-6f && std::abs(dy) < 1e-6f) {
         return false; 
     }
@@ -34,8 +32,8 @@ bool acceptableAngle(const block_t* b1, const block_t* b2, float angleTol){
     // Calcul de l'angle de la ligne (en degrés)
     float lineAngle = std::atan2(dy, dx) * 180.0f / M_PI;
     
-    // Vérification de l'angle de b2 par rapport à la ligne (et non b1)
-    return angleDiff(b2->a, lineAngle) < angleTol;
+    // Vérification de l'angle de b1 par rapport à la ligne
+    return angleDiff(b1->a, lineAngle) < angleTol;
 }
 
 // distance point-droite 2D
@@ -111,9 +109,6 @@ namespace {
         for (int i = 0; i < 4; i++) {
             float ax = axes[i][0];
             float ay = axes[i][1];
-            float len = std::sqrt(ax*ax + ay*ay);
-            if (len < 1e-6f) continue;
-            ax /= len; ay /= len; // Normalisation de l'axe
             
             // Projection du rectangle 1 sur l'axe
             float min1 = 1e9f, max1 = -1e9f;
@@ -402,60 +397,58 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
 
     // 4. Premier placement en angle final
     // Si l'espace est d'au moins 50mm, ou qu'il n'y a aucun obstacle (min_gap resté à 1e12)
+    float placement;
     if (min_gap > 50.0f) {
         //LOG_DEBUG("Sufficient gap of ", min_gap, "mm found in front of the target block. Placing pusher in front.");
         // Le centre du poussoir doit être à +50mm du coin le plus avancé du bloc
-        float placement_proj = max_proj + 50.0f;
-        
-        // Reconversion de l'avancée scalaire vers les coordonnées (X,Y) sur la carte
-        best_pusher.x = solution_line.x + placement_proj * solution_line.dx;
-        best_pusher.y = solution_line.y + placement_proj * solution_line.dy;
-        
-        // Angle perpendiculaire (+90°)
-        float pa = line_angle + 90.0f;
-        best_pusher.a = pa;
-        //LOG_DEBUG("Placing pusher at (", best_pusher.x, ", ", best_pusher.y, ") with angle ", best_pusher.a);
-        best_pusher.color = true; // Valide la couleur
+        placement = max_proj + 50.0f;
     } else {
         //LOG_DEBUG("Not enough gap (", min_gap, "mm) in front of the target block. Placing pusher on the side.");
         // Pas assez de place devant : on place le poussoir sur la ligne, 
         // à 5 cm du centre du bloc cible, en le gardant parallèle.
-        float placement = 50.0f;
-        // Avancée de 50mm du centre du block  donc 25mm le long du vecteur directeur depuis le centre cible
-        best_pusher.x = solution_line.x + placement * solution_line.dx;
-        best_pusher.y = solution_line.y + placement * solution_line.dy;
-        
-        // Angle parallèle au bloc le plus à droite
-        float pa = target->a + 90.0f;
-        best_pusher.a = pa;
-        LOG_DEBUG("Placing pusher at (", best_pusher.x, ", ", best_pusher.y, ") with angle ", best_pusher.a);
-        // Conservation de la couleur pour la validité du bloc
-        best_pusher.color = true; 
+        placement = 50.0f;
     }
 
+    // Reconversion de l'avancée scalaire vers les coordonnées (X,Y) sur la carte
+    best_pusher.x = solution_line.x + placement * solution_line.dx;
+    best_pusher.y = solution_line.y + placement * solution_line.dy;
+
+    // Angle perpendiculaire (+90°)
+    float pa = line_angle + 90.0f;
+    best_pusher.a = pa;
+    //LOG_DEBUG("Placing pusher at (", best_pusher.x, ", ", best_pusher.y, ") with angle ", best_pusher.a);
+
     // 5. Vérification que le placement n'est pas dans un mur (cas extrême) ou dans un bloc
+    bool placement_valid = false;
     while (pointLineDistance(best_pusher, solution_line) < MAX_DISTANCE_FROM_BLOCK)
     {
         if(!isRobotInWall(transformRobotCoordToTableCoord(best_pusher, robotPos, true))){
+            placement_valid = true; // Placement valide tant que le poussoir n'est pas dans un block
             block_t pusher_corners[4];
             getOBBCorners(best_pusher.x, best_pusher.y, 30.0f, 150.0f, best_pusher.a, pusher_corners);
             for(const auto& pt : points){
                 block_t obs_corners[4];
                 getOBBCorners(pt.x, pt.y, 50.0f, 150.0f, pt.a, obs_corners);
                 if(checkOBBCollision(pusher_corners, obs_corners)){
-                   goto adjust_position; 
+                    LOG_DEBUG("Pusher placement at (", best_pusher.x, ", ", best_pusher.y, ") with angle ", best_pusher.a, " is in block.");
+                    placement_valid = false;
+                    break;
                 }
             }
-            best_pusher.color = true; // Placement valide
-            return best_pusher; // Placement valide, on sort de la boucle
+            if(placement_valid){
+                best_pusher.color = true; // Placement valide
+                return best_pusher; // Placement valide, on sort de la boucle
+            }
+        }else{
+            LOG_DEBUG("Pusher placement at (", best_pusher.x, ", ", best_pusher.y, ") with angle ", best_pusher.a, " is in wall.");
         }
-        adjust_position:
         // Conversion de l'angle du poussoir en radians
         float angle_rad = best_pusher.a * M_PI / 180.0f;
 
         // On recule de 5mm sur l'axe du poussoir (opposé à son orientation)
         best_pusher.x -= 5.0f * std::cos(angle_rad); 
-        best_pusher.y -= 5.0f * std::sin(angle_rad); 
+        best_pusher.y -= 5.0f * std::sin(angle_rad);
+        LOG_DEBUG("Line distance ", pointLineDistance(best_pusher, solution_line));
     }
     best_pusher.color = false; // Si on sort de la boucle, c'est que le placement est invalide
     return best_pusher;
