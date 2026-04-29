@@ -522,15 +522,16 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
             bool tp2 = NearestValidZone(&targetPos2);
             if (NearestValidZone(&targetPos1) || tp2){
                 needToGoToWall = true;
+                LOG_DEBUG("NeedToGoToWall");
             }
-            // Se reculer pour prendre le stock de 20 et se décaler de 50mm à gauche
-            targetPos3.y = targetPos2.y - 20.0 * sinus + 50.0 * cosinus;
-            targetPos3.x = targetPos2.x - 20.0 * cosinus - 50.0 * sinus;
+            // Se reculer pour prendre le stock de 0 et se décaler de 50mm à gauche
+            targetPos3.y = targetPos2.y - 0.0 * sinus + 50.0 * cosinus;
+            targetPos3.x = targetPos2.x - 0.0 * cosinus - 50.0 * sinus;
             targetPos3.a = targetPos2.a + 10.0;
 
-            //S'avance de 20 mm pour collect
-            targetPos4.y = targetPos3.y + 20.0 * sinus;
-            targetPos4.x = targetPos3.x + 20.0 * cosinus; 
+            //S'avance de 50 mm pour collect
+            targetPos4.y = targetPos3.y + 50.0 * sinus;
+            targetPos4.x = targetPos3.x + 50.0 * cosinus; 
             targetPos4.a = targetPos3.a - 10.0;
 
             sweepState = FSM_SWEEP_NAV_RIGHT;
@@ -572,7 +573,10 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
             nav_ret = navigationGoTo(targetPos2, false, true, false); // Second Move, Slow mode
             if (nav_ret == NAV_DONE){
                 startTime = _millis();
-                sweepState = FSM_SWEEP_PRE_COLLECT;
+                if (needToGoToWall)
+                    sweepState = FSM_SWEEP_PRE_COLLECT;
+                else 
+                    sweepState = FSM_SWEEP_COLLECT;
                 LOG_DEBUG("FSM_SWEEP_NAV_LEFT: Moving to left of the stock " " at position (", targetPos2.x, ",", targetPos2.y, ") with angle ", targetPos2.a);
             }
             break;
