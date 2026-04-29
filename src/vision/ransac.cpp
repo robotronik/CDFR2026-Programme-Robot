@@ -86,7 +86,11 @@ bool findGroupRANSAC2D(
                         break;
                     }
                 }
-
+                if (!status)
+                {
+                    continue;
+                }
+                
                 if(blockInFrontInterface(std::vector<std::pair<float, const block_t*>>(inliers.begin() + k, inliers.begin() + k + max_blocks), points)){
                     LOG_EXTENDED_DEBUG("Ransac: Group of inliers at positions ", inliers[k].second->x, ", ", inliers[k].second->y, " to ", inliers[k + max_blocks - 1].second->x, ", ", inliers[k + max_blocks - 1].second->y, " is in front of the robot, rejecting this group");
                     continue;
