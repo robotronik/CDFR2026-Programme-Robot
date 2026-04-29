@@ -106,17 +106,12 @@ bool findGroupRANSAC2D(
                     return a.y > b.y;
                 });
 
-                block_t robotPos;
                 if(bestGroup.size() !=2){
-                    robotPos.x = bestGroup[1].x;
-                    robotPos.y = bestGroup[1].y;
-                    robotPos.a = bestGroup[1].a;
+                    robotPos = transformRobotCoordToTableCoord(bestGroup[1], robotPos, false);
                 }else{
-                    robotPos.x = bestGroup[0].x;
-                    robotPos.y = bestGroup[0].y;
-                    robotPos.a = bestGroup[0].a;
+                    robotPos = transformRobotCoordToTableCoord(bestGroup[0], robotPos, false);
                 }
-                if(isRobotInWall(robotPos, false)){
+                if(isRobotInWall(robotPos)){
                     continue;
                 }
                 

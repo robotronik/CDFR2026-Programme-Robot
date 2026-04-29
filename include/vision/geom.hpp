@@ -58,16 +58,16 @@ bool acceptableAngle(const block_t* b1, const block_t* b2, float angleTol);
 // Vérifie si un point est trop proche du segment [O, T] (O étant le robot)
 bool checkSegment(float px, float py, float tx, float ty);
 
-bool isRobotInWall(block_t robotPos, bool steal);
+block_t transformRobotCoordToTableCoord(block_t startPos, block_t objectivePos, bool steal);
+
+bool isRobotInWall(block_t robotPos);
 
 //Détermine la position optimale du centre du poussoir 
-block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vector<block_t>& points);
 block_t interfacePlacePoussoir(const std::vector<std::pair<float, const block_t*>>& choosen, const std::vector<block_t>& points);
 block_t interfacePlacePoussoir(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points);
 
-bool blockInFrontInterface(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points);
-bool blockInFrontInterface(const std::vector<std::pair<float, const block_t*>>& choosen, const std::vector<block_t>& points);
 /*
 * return true s'il y a des blocks entre le robot et les blocks qu'il souhaite prendre false sinon
 */
-bool blockInFront(const std::vector<const block_t*>& choosen, const std::vector<block_t>& points);
+bool blockInFrontInterface(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points);
+bool blockInFrontInterface(const std::vector<std::pair<float, const block_t*>>& choosen, const std::vector<block_t>& points);

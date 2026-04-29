@@ -99,10 +99,32 @@ namespace {
     }
 }
 
+block_t transformRobotCoordToTableCoord(block_t startPos, block_t objectivePos, bool steal){
+    //Traitement pour passer dans les coordonnées de la table
+    // Décalage pour le centre du robot
+    double rad_objective_a = objectivePos.a * M_PI / 180.0;
+    //LOG_EXTENDED_DEBUG("Position avant correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
+    //LOG_EXTENDED_DEBUG("Décalage appliqué : { sin = ", OFFSET_STOCK * mult_param * sin(rad_tmp_a), ", cos = ", OFFSET_STOCK * mult_param * cos(rad_tmp_a), " }");
+    const double off_s = 85; // Augmenter pour se rapprocher
+    objectivePos.x += OFFSET_CAM_X - (OFFSET_STOCK - off_s) * cos(rad_objective_a) + (steal ? STEAL_OFFSET_X : 0);
+    objectivePos.y += OFFSET_CAM_Y + OFFSET_CLAW_Y - (OFFSET_STOCK - off_s) * sin(rad_objective_a) + (steal ? STEAL_OFFSET_Y : 0);
+    //LOG_EXTENDED_DEBUG("Position après correction du décalage : { x = ", objectivePos.x, ", y = ", objectivePos.y, ", a = ", objectivePos.a, " }");
+
+
+    //projection dans le repère de la table:
+    double a_rad = (startPos.a) * M_PI / 180.0;
+    double cos_a = cos(a_rad);
+    double sin_a = sin(a_rad);
+    startPos.x += objectivePos.x * cos_a - objectivePos.y * sin_a;
+    startPos.y += objectivePos.x * sin_a + objectivePos.y * cos_a;
+    startPos.a += objectivePos.a;
+    return startPos;
+}
+
+/*************GESTION DETECTION ROBOT DANS MUR********************/
 bool pointDansMur(block_t p){
     return (p.x < MIN_X_TABLE || p.x > MAX_X_TABLE || p.y < MIN_Y_TABLE || p.y > MAX_Y_TABLE);
 }
-
 // rotation + translation
 block_t transformPointFromLocalToWorld(block_t localPoint, block_t robotPos){
     block_t worldPoint;
@@ -126,40 +148,15 @@ void getRobotEdge(block_t *points, block_t robotPos){
         points[i] = transformPointFromLocalToWorld(local[i], robotPos);
 }
 
-bool isRobotInWall(block_t robotPos, bool steal){
-    double rad_tmp_a = robotPos.a * M_PI / 180.0;
-    //LOG_EXTENDED_DEBUG("Décalage appliqué : { sin = ", OFFSET_STOCK * mult_param * sin(rad_tmp_a), ", cos = ", OFFSET_STOCK * mult_param * cos(rad_tmp_a), " }");
-    const double off_s = 85; // Augmenter pour se rapprocher
-    robotPos.x += OFFSET_CAM_X - (OFFSET_STOCK - off_s) * cos(rad_tmp_a) + (steal ? STEAL_OFFSET_X : 0);
-    robotPos.y += OFFSET_CAM_Y + OFFSET_CLAW_Y - (OFFSET_STOCK - off_s) * sin(rad_tmp_a) + (steal ? STEAL_OFFSET_Y : 0);
+bool isRobotInWall(block_t robotPos){
     block_t robot[5];
     getRobotEdge(robot,robotPos);
     for(int i = 0; i < 5; i++) if(pointDansMur(robot[i])) return true;
     return false;
 }
 
-bool blockInFrontInterface(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points) {
-    std::vector<const block_t*> block_temps;
 
-    block_temps.reserve(choosen.size()); 
-    
-    for (const auto& c : choosen) {
-        block_temps.push_back(std::get<1>(c));
-    }
-    return blockInFront(block_temps, points);
-}
-
-bool blockInFrontInterface(const std::vector<std::pair<float, const block_t*>>& choosen, const std::vector<block_t>& points) {
-    std::vector<const block_t*> block_temps;
-
-    block_temps.reserve(choosen.size()); 
-    
-    for (const auto& c : choosen) {
-        block_temps.push_back(c.second);
-    }
-    return blockInFront(block_temps, points);
-}
-
+/************GESTION BLOCK IN FRONT**************/
 bool blockInFront(const std::vector<const block_t*>& choosen, const std::vector<block_t>& points) {
     if (choosen.empty()) return false;
     if (choosen.size() == points.size()) return false;
@@ -253,18 +250,7 @@ bool blockInFront(const std::vector<const block_t*>& choosen, const std::vector<
     return false;
 }
 
-block_t interfacePlacePoussoir(const std::vector<std::pair<float, const block_t*>>& choosen, const std::vector<block_t>& points){
-    std::vector<const block_t*> block_temps;
-
-    block_temps.reserve(choosen.size()); 
-    
-    for (const auto& c : choosen) {
-        block_temps.push_back(c.second);
-    }
-    return placePoussoir(block_temps, points);
-}
-
-block_t interfacePlacePoussoir(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points){
+bool blockInFrontInterface(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points) {
     std::vector<const block_t*> block_temps;
 
     block_temps.reserve(choosen.size()); 
@@ -272,9 +258,21 @@ block_t interfacePlacePoussoir(const std::vector<std::tuple<float, const block_t
     for (const auto& c : choosen) {
         block_temps.push_back(std::get<1>(c));
     }
-    return placePoussoir(block_temps, points);
+    return blockInFront(block_temps, points);
 }
 
+bool blockInFrontInterface(const std::vector<std::pair<float, const block_t*>>& choosen, const std::vector<block_t>& points) {
+    std::vector<const block_t*> block_temps;
+
+    block_temps.reserve(choosen.size()); 
+    
+    for (const auto& c : choosen) {
+        block_temps.push_back(c.second);
+    }
+    return blockInFront(block_temps, points);
+}
+
+/*************GESTION PLACE POUSSOIR********************/
 block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vector<block_t>& points) {
     // Par défaut on initialise le bloc. S'il n'y a pas la place, ses coordonnées vaudront 0 et la couleur sera différente
     block_t best_pusher;
@@ -393,4 +391,26 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
     }
 
     return best_pusher;
+}
+
+block_t interfacePlacePoussoir(const std::vector<std::pair<float, const block_t*>>& choosen, const std::vector<block_t>& points){
+    std::vector<const block_t*> block_temps;
+
+    block_temps.reserve(choosen.size()); 
+    
+    for (const auto& c : choosen) {
+        block_temps.push_back(c.second);
+    }
+    return placePoussoir(block_temps, points);
+}
+
+block_t interfacePlacePoussoir(const std::vector<std::tuple<float, const block_t*, bool>>& choosen, const std::vector<block_t>& points){
+    std::vector<const block_t*> block_temps;
+
+    block_temps.reserve(choosen.size()); 
+    
+    for (const auto& c : choosen) {
+        block_temps.push_back(std::get<1>(c));
+    }
+    return placePoussoir(block_temps, points);
 }
