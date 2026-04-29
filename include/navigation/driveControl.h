@@ -32,5 +32,7 @@ class DriveControl : private drive_interface {
 
         void logStatus();
 
+        void stopMotion();
+
         void reset();
 };
