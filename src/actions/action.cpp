@@ -492,7 +492,7 @@ ReturnFSM_t ActionFSM::DropStock(){
 
 ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double distanceBalayage){
     //targetPos1 = position premier block à voler
-    double margeBalayage = 50.0;
+    double margeBalayage = - 50.0; // à changer à +100 quand balayage plus court
     distanceBalayage += margeBalayage;
     
     static double cosinus, sinus;
@@ -528,16 +528,17 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
             if (NearestValidZone(&targetPos1) || tp2){
                 needToGoToWall = true;
                 LOG_DEBUG("NeedToGoToWall");
-                targetPos2.a += 10; 
+                targetPos2.a += 15; 
             }
-            // Se reculer pour prendre le stock de 0 et se décaler de 50mm à gauche
-            targetPos3.y = targetPos2.y - 0.0 * sinus + 50.0 * cosinus;
-            targetPos3.x = targetPos2.x - 0.0 * cosinus - 50.0 * sinus;
-            targetPos3.a = targetPos2.a - 10.0;
+            // S'avancer de 40 mm pour prendre le stock de  et se décaler de 80mm à gauche
+            targetPos3.y = targetPos2.y + 40.0 * sinus + 80.0 * cosinus;
+            targetPos3.x = targetPos2.x + 40.0 * cosinus - 80.0 * sinus;
+            targetPos3.a = targetPos2.a - 15.0;
 
             //S'avance de 50 mm pour collect
             targetPos4.y = targetPos3.y + 50.0 * sinus;
             targetPos4.x = targetPos3.x + 50.0 * cosinus; 
+            targetPos4.a = targetPos3.a;
 
             sweepState = FSM_SWEEP_NAV_RIGHT;
             break;
@@ -587,21 +588,23 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
         }
         case FSM_SWEEP_PRE_COLLECT:
         {
-            nav_ret = navigationGoTo(targetPos3, false, true, false);
-            if ((nav_ret == NAV_DONE) || ((_millis() - startTime > 2000) && startTime != 0)) {
-                if (openClaws()){
-                    snapClaws(false,false);
-                    LOG_EXTENDED_DEBUG("FSM_SWEEP_PRE_COLLECT: Opened and closed claws to prepare for collection");
-                    startTime = _millis();
-                    sweepState = FSM_SWEEP_COLLECT;
+            nav_ret = navigationGoTo(targetPos3, false, true, true);
+            if (nav_ret == NAV_DONE || ((_millis() - startTime > 2000) && startTime != 0)) {
+                moveServoAndWait(SERVO_NUM_6, 90, 200);
+                if (rotateTwoBlocks(stockOrder)){
+                    LOG_EXTENDED_DEBUG("FSM_SWEEP_COLLECT: Claws rotated for collection");
+                    LOG_DEBUG("FSM_SWEEP_COLLECT: Stock collected");
+                    startTime = 0;
+                    needToGoToWall = false;
+                    sweepState = FSM_SWEEP_INIT; // reset
+                    return FSM_RETURN_DONE;
                 }
-                
             }
             break;
-        }
+        } 
         case FSM_SWEEP_COLLECT:
         {
-            nav_ret = navigationGoTo(targetPos4, false, true, false);
+            nav_ret = navigationGoTo(targetPos4, false, true, true);
             if (nav_ret == NAV_DONE || ((_millis() - startTime > 2000) && startTime != 0)) {
                 moveServoAndWait(SERVO_NUM_6, 90, 200);
                 if (rotateTwoBlocks(stockOrder)){
