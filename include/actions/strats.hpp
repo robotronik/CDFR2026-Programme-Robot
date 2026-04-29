@@ -9,8 +9,13 @@ position_t StratStartingPos();
 
 double chooseNextStock(int& closest_stock, int& closest_offset);
 
+//Renvoie la longueur du chemin A* vers un stock stockNum à son offset stockOffset
+// INFINITY si le point n'est pas accessible
 double toAStarDistStock(int stockNum, int stockOffset);
+
+//Renvoie la longueur du chemin A* vers une position a (INFINITY si le point n'est pas accessible)
 double toAStarDist(position_t a);
+
 double chooseStockStrategy(int& stockNum, int& stockOffset);
 
 double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool steal = false);

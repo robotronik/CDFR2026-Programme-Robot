@@ -39,7 +39,6 @@ double chooseNextStock(int& closest_stock, int& closest_offset){
                     continue;
 
                 double dist2 = toAStarDistStock(i, offNum);
-                if(dist2 == -1) dist2 = INFINITY;
 
                 if (dist2 < min){
                     min = dist2;
@@ -71,7 +70,7 @@ double toAStarDist(position_t a){
     double lenght;
     position_t path[1024];
     if(pathfind(drive.position, a, path, lenght)>0) return lenght;
-    return -1;
+    return INFINITY;
 }
 
 double chooseStockStrategy(int& stockNum, int& stockOffset){
@@ -183,11 +182,11 @@ double getBestStockPositionOff(int stockNum, int& bestOff){
 
     for (int i = 0; i < 2; i++){
         int offNum = STOCK_OFFSET_MAPPING[stockNum][i];
-        if (offNum == -1)
+        if (offNum == -1){
             continue;
+        }
 
         double dist2 = toAStarDistStock(stockNum, offNum);
-        if (dist2 < 0) dist2 = INFINITY;
 
         if (dist2 < bestDist){
             bestDist = dist2;
@@ -199,6 +198,9 @@ double getBestStockPositionOff(int stockNum, int& bestOff){
 }
 
 double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool steal){
+    //Changer le 0 pour décaler le robot sur les zones de dépose
+    const int DROPZONE_OFFSET = 0;
+
     double dropZoneOffset = OFFSET_DROPZONE;
     TableState::dropzone_state_t zone_of_interest = TableState::DROPZONE_EMPTY;
     if(steal){
@@ -216,37 +218,37 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
         if(tableStatus.dropzone_states[k] != zone_of_interest){
             continue;
         }else{
-            if (k == 7 || k == 4 || k == 2 ){
+            if (k == 7 || k == 4 || k == 2 ){// DropZone centrales
                 temp_pos = DROPZONE_POSITIONS_TABLE[k];
-                d1 = toAStarDist(position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2}));
-                if(d1 == -1 ) d1 = INFINITY;
-                double d2 = toAStarDist(position_sum(temp_pos, position_t{.x = -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2}));
-                if(d2 == -1) d2 = INFINITY;
+
+                d1 = toAStarDist(position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= - DROPZONE_OFFSET})); 
+                double d2 = toAStarDist(position_sum(temp_pos, position_t{.x = -1 * dropZoneOffset, .y= DROPZONE_OFFSET}));
+
                 if(d1 < d2 ){
-                        temp_pos = position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= -OFFSET_CLAW_Y/2});
-                        temp_pos.a = 180;
+                    temp_pos = position_sum(temp_pos, position_t{.x = dropZoneOffset, .y= - DROPZONE_OFFSET});
+                    temp_pos.a = 180;
                 }else{
-                    temp_pos = position_sum(temp_pos, position_t{.x =  -1 * dropZoneOffset, .y= OFFSET_CLAW_Y/2});
+                    temp_pos = position_sum(temp_pos, position_t{.x =  -1 * dropZoneOffset, .y= DROPZONE_OFFSET});
                     temp_pos.a = 0;
                     d1 = d2;
                 }
 
-            }else{
+            }else{// DropZone latérale
                 temp_pos = DROPZONE_POSITIONS_TABLE[k];
                 if(MAX_WIDTH_TABLE - abs(temp_pos.x) < MAX_LENGTH_TABLE - abs(temp_pos.y)){
                     double signeX = (temp_pos.x > 0? 1 : -1 );
                     temp_pos.x += -1 * signeX * dropZoneOffset;
-                    temp_pos.y += signeX * OFFSET_CLAW_Y/2;
+                    temp_pos.y += signeX * DROPZONE_OFFSET;
                     temp_pos.a = (signeX > 0? 0 : 180);
                 }else{
                     double signeY = (temp_pos.y > 0? -1 : 1 );
                     temp_pos.y += signeY * dropZoneOffset;
-                    temp_pos.x += signeY * OFFSET_CLAW_Y/2;
+                    temp_pos.x += signeY * DROPZONE_OFFSET;
                     temp_pos.a = (signeY < 0? 90 : -90);
                 }
                 d1 = toAStarDist(temp_pos);
-                if(d1 == -1) d1 = INFINITY;
             }
+
             if(min > d1){
                 bestPoss = temp_pos;
                 dropzoneNum = k;
