@@ -437,6 +437,19 @@ bool isRobotInArrivalZone(position_t position){
     return m_isPointInsideRectangle(position.x, position.y, c_x, c_y, w + 2*robotSmallRadius, h + 2*robotSmallRadius);
 }
 
+int countMyColorBlocks(const bool *order){
+    int count = 0;
+    bool myColor = (tableStatus.colorTeam == YELLOW) ? false : true;
+
+    for (int i = 0; i < 4; i++){
+        if (order[i] == myColor){
+            count++;
+        }
+    }
+
+    return count;
+}
+
 // ------------------------------------------------------
 //                    INPUT SENSOR
 // ------------------------------------------------------

@@ -11,6 +11,8 @@ bool isRobotInArrivalZone(position_t position);
 void opponentInAction(position_t position);
 void switchTeamSide(colorTeam_t color);
 void switchStrategy(int strategy);
+int countMyColorBlocks(const bool *order);
+
 
 // Basic functions (FSM)
 bool lowerClaws();

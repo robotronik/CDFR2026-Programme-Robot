@@ -353,7 +353,13 @@ ReturnFSM_t ActionFSM::StealStock(){
             double y = drive.position.y;
             double a = drive.position.a;
             if(arucoCam1.getObjectInfoColors(stockOrder, x, y, a, steal_count)){
-                if(steal_count>=0){
+                if (countMyColorBlocks(stockOrder) >= steal_count && steal_count > 0){
+                    stealStockState = FSM_GATHER_NAV;
+                    tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
+                    dropzone_num = -1;
+                    return FSM_RETURN_DONE;
+                }
+                else if(steal_count>=0){
                     targetPos_ = position_t{x,y,a};
                     stealStockState = FSM_GATHER_CLAWS;
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found ", steal_count, " objects to steal");
