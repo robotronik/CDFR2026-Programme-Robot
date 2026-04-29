@@ -283,15 +283,17 @@ bool ArucoCam::ToObjectPos(json& data, block_t & start, double & angle, double &
     if(success < 0){
         LOG_ERROR("ArucoCam::getObjectPos() - No object position found");
     }else{
+        LOG_GREEN_INFO("Bilan Start:");
+        LOG_DEBUG("Robot position: { x = ", start.x, ", y = ", start.y, ", a = ", start.a, " }");
         //Traitement pour passer dans les coordonnées de la table
         // Décalage pour le centre du robot
         double rad_tmp_a = tmp_a * M_PI / 180.0;
-        LOG_EXTENDED_DEBUG("Position avant correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
+        //LOG_EXTENDED_DEBUG("Position avant correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
         //LOG_EXTENDED_DEBUG("Décalage appliqué : { sin = ", OFFSET_STOCK * mult_param * sin(rad_tmp_a), ", cos = ", OFFSET_STOCK * mult_param * cos(rad_tmp_a), " }");
         const double off_s = 85; // Augmenter pour se rapprocher
         tmp_x += OFFSET_CAM_X - (OFFSET_STOCK - off_s) * cos(rad_tmp_a) + (steal ? STEAL_OFFSET_X : 0);
         tmp_y += OFFSET_CAM_Y + OFFSET_CLAW_Y - (OFFSET_STOCK - off_s) * sin(rad_tmp_a) + (steal ? STEAL_OFFSET_Y : 0);
-        LOG_EXTENDED_DEBUG("Position après correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
+        //LOG_EXTENDED_DEBUG("Position après correction du décalage : { x = ", tmp_x, ", y = ", tmp_y, ", a = ", tmp_a, " }");
 
 
         //projection dans le repère de la table:
@@ -301,7 +303,12 @@ bool ArucoCam::ToObjectPos(json& data, block_t & start, double & angle, double &
         start.x += tmp_x * cos_a - tmp_y * sin_a;
         start.y += tmp_x * sin_a + tmp_y * cos_a;
         start.a += tmp_a;
-        LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", start.x, ", y = ", start.y, ", a = ", start.a, " }");
+        //LOG_GREEN_INFO("Tag detection ", id, " position: { x = ", start.x, ", y = ", start.y, ", a = ", start.a, " }");
+
+        LOG_GREEN_INFO("Bilan Start:");
+        LOG_DEBUG("Start position: { x = ", start.x, ", y = ", start.y, ", a = ", start.a, " }");
+        LOG_DEBUG("Angle: ", angle);
+        LOG_DEBUG("Length: ", lenght);
     }
     return true;
 }

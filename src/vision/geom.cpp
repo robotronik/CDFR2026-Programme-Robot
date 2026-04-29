@@ -97,6 +97,47 @@ namespace {
             corners[i].color = false;
         }
     }
+
+    // Théorème des Axes Séparateurs (SAT) pour détecter une collision entre 2 rectangles
+    bool checkOBBCollision(const block_t c1[4], const block_t c2[4]) {
+        // Les 4 axes potentiels de séparation (2 pour chaque rectangle)
+        float axes[4][2] = {
+            {c1[1].x - c1[0].x, c1[1].y - c1[0].y},
+            {c1[2].x - c1[1].x, c1[2].y - c1[1].y},
+            {c2[1].x - c2[0].x, c2[1].y - c2[0].y},
+            {c2[2].x - c2[1].x, c2[2].y - c2[1].y}
+        };
+        
+        for (int i = 0; i < 4; i++) {
+            float ax = axes[i][0];
+            float ay = axes[i][1];
+            float len = std::sqrt(ax*ax + ay*ay);
+            if (len < 1e-6f) continue;
+            ax /= len; ay /= len; // Normalisation de l'axe
+            
+            // Projection du rectangle 1 sur l'axe
+            float min1 = 1e9f, max1 = -1e9f;
+            for (int j = 0; j < 4; j++) {
+                float proj = c1[j].x * ax + c1[j].y * ay;
+                min1 = std::min(min1, proj);
+                max1 = std::max(max1, proj);
+            }
+            
+            // Projection du rectangle 2 sur l'axe
+            float min2 = 1e9f, max2 = -1e9f;
+            for (int j = 0; j < 4; j++) {
+                float proj = c2[j].x * ax + c2[j].y * ay;
+                min2 = std::min(min2, proj);
+                max2 = std::max(max2, proj);
+            }
+            
+            // S'il y a un espace entre les projections, les rectangles ne se touchent pas
+            if (max1 < min2 || max2 < min1) {
+                return false;
+            }
+        }
+        return true; // Aucun axe séparateur trouvé = collision
+    }
 }
 
 block_t transformRobotCoordToTableCoord(block_t startPos, block_t objectivePos, bool steal){
@@ -305,8 +346,8 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
     }
 
     float line_angle = std::atan2(uy, ux) * 180.0f / M_PI;
-    LOG_DEBUG("Placing pusher for block at (", target->x, ", ", target->y, ") with angle ", target->a);
-    LOG_DEBUG("Approach line angle is ", line_angle);
+    //LOG_DEBUG("Placing pusher for block at (", target->x, ", ", target->y, ") with angle ", target->a);
+    //LOG_DEBUG("Approach line angle is ", line_angle);
     // On centre la droite sur le bloc cible (target) pour que la projection de référence soit à ~0
     Line solution_line = Line{static_cast<float>(target->x), static_cast<float>(target->y), ux, uy};
 
@@ -321,12 +362,14 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
             max_proj = proj;
         }
     }
+    /*
     LOG_DEBUG("Max projection of target block corners on approach line is ", max_proj);
     LOG_DEBUG("Target block corners projections: ", 
         project(right_block_corners[0], solution_line), ", ",
         project(right_block_corners[1], solution_line), ", ",
         project(right_block_corners[2], solution_line), ", ",
         project(right_block_corners[3], solution_line));
+    */
     // 3. Détermination de l'écart minimum entre le block le plus à droite et les obstacles DEVANT
     float min_gap = 1e12f;
 
@@ -360,7 +403,7 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
     // 4. Premier placement en angle final
     // Si l'espace est d'au moins 50mm, ou qu'il n'y a aucun obstacle (min_gap resté à 1e12)
     if (min_gap > 50.0f) {
-        LOG_DEBUG("Sufficient gap of ", min_gap, "mm found in front of the target block. Placing pusher in front.");
+        //LOG_DEBUG("Sufficient gap of ", min_gap, "mm found in front of the target block. Placing pusher in front.");
         // Le centre du poussoir doit être à +50mm du coin le plus avancé du bloc
         float placement_proj = max_proj + 50.0f;
         
@@ -371,10 +414,10 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
         // Angle perpendiculaire (+90°)
         float pa = line_angle + 90.0f;
         best_pusher.a = pa;
-        LOG_DEBUG("Placing pusher at (", best_pusher.x, ", ", best_pusher.y, ") with angle ", best_pusher.a);
+        //LOG_DEBUG("Placing pusher at (", best_pusher.x, ", ", best_pusher.y, ") with angle ", best_pusher.a);
         best_pusher.color = true; // Valide la couleur
     } else {
-        LOG_DEBUG("Not enough gap (", min_gap, "mm) in front of the target block. Placing pusher on the side.");
+        //LOG_DEBUG("Not enough gap (", min_gap, "mm) in front of the target block. Placing pusher on the side.");
         // Pas assez de place devant : on place le poussoir sur la ligne, 
         // à 5 cm du centre du bloc cible, en le gardant parallèle.
         float placement = 50.0f;
@@ -391,9 +434,22 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
     }
 
     // 5. Vérification que le placement n'est pas dans un mur (cas extrême) ou dans un bloc
-    while (pointLineDistance(best_pusher, solution_line) < MAX_DISTANCE_FROM_BLOCK && 
-        isRobotInWall(transformRobotCoordToTableCoord(best_pusher, robotPos, true)))
+    while (pointLineDistance(best_pusher, solution_line) < MAX_DISTANCE_FROM_BLOCK)
     {
+        if(!isRobotInWall(transformRobotCoordToTableCoord(best_pusher, robotPos, true))){
+            block_t pusher_corners[4];
+            getOBBCorners(best_pusher.x, best_pusher.y, 30.0f, 150.0f, best_pusher.a, pusher_corners);
+            for(const auto& pt : points){
+                block_t obs_corners[4];
+                getOBBCorners(pt.x, pt.y, 50.0f, 150.0f, pt.a, obs_corners);
+                if(checkOBBCollision(pusher_corners, obs_corners)){
+                   goto adjust_position; 
+                }
+            }
+            best_pusher.color = true; // Placement valide
+            return best_pusher; // Placement valide, on sort de la boucle
+        }
+        adjust_position:
         // Conversion de l'angle du poussoir en radians
         float angle_rad = best_pusher.a * M_PI / 180.0f;
 
@@ -401,7 +457,7 @@ block_t placePoussoir(const std::vector<const block_t*>& choosen, const std::vec
         best_pusher.x -= 5.0f * std::cos(angle_rad); 
         best_pusher.y -= 5.0f * std::sin(angle_rad); 
     }
-    
+    best_pusher.color = false; // Si on sort de la boucle, c'est que le placement est invalide
     return best_pusher;
 }
 

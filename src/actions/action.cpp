@@ -307,6 +307,8 @@ ReturnFSM_t ActionFSM::StealStock(){
             angle = 0;
             lenght = 0;
             steal_count = 0;
+            arucoCam1.getObjectInfoColors(stockOrder, start, angle, lenght, steal_count, true);
+            /*
             if(arucoCam1.getObjectInfoColors(stockOrder, start, angle, lenght, steal_count, true)){
                 if(steal_count>0){
                     targetPos_ = position_t{start.x,start.y,start.a};
@@ -329,6 +331,7 @@ ReturnFSM_t ActionFSM::StealStock(){
                     return FSM_RETURN_ERROR;
                 }
             }
+            */
             break;
         }
         case FSM_GATHER_CLAWS:

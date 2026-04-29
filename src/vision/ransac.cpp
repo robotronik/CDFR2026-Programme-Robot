@@ -218,7 +218,7 @@ bool findGroupStealRANSAC2D(
 
             // Si trop de blocs entre les 2 blocs choisis, solution invalide
             if (idx_seed_max - idx_seed_min > 3) {
-                LOG_EXTENDED_DEBUG("Ransac steal: Too many blocks between seed blocks at indices ", idx_seed_min, " and ", idx_seed_max, ", rejecting this group");
+                //LOG_EXTENDED_DEBUG("Ransac steal: Too many blocks between seed blocks at indices ", idx_seed_min, " and ", idx_seed_max, ", rejecting this group");
                 continue;
             }
             sol_temp.emplace_back(inliers[idx_seed_min]);
@@ -228,8 +228,8 @@ bool findGroupStealRANSAC2D(
                     sol_temp.emplace_back(inliers[m]);
                 }else{
                     status = false;
-                    LOG_EXTENDED_DEBUG("Ransac steal: Inlier at index ", m, " is not acceptable, rejecting this group");
-                    LOG_EXTENDED_DEBUG("Ransac steal: Inlier at index ", m, " has angle ", std::get<1>(inliers[m])->a, " which is not within the tolerance of the previous inlier with angle ", std::get<1>(sol_temp.back())->a);
+                    //LOG_EXTENDED_DEBUG("Ransac steal: Inlier at index ", m, " is not acceptable, rejecting this group");
+                    //LOG_EXTENDED_DEBUG("Ransac steal: Inlier at index ", m, " has angle ", std::get<1>(inliers[m])->a, " which is not within the tolerance of the previous inlier with angle ", std::get<1>(sol_temp.back())->a);
                     break;
                 }
 
@@ -243,8 +243,8 @@ bool findGroupStealRANSAC2D(
                     current_right++;
                 }else{
                     status = false;
-                    LOG_EXTENDED_DEBUG("Ransac steal: Inlier at index ", current_right, " is not acceptable, rejecting this group");
-                    LOG_EXTENDED_DEBUG("Ransac steal: Inlier at index ", current_right, " has angle ", std::get<1>(inliers[current_right])->a, " which is not within the tolerance of the previous inlier with angle ", std::get<1>(sol_temp.back())->a);
+                    //LOG_EXTENDED_DEBUG("Ransac steal: Inlier at index ", current_right, " is not acceptable, rejecting this group");
+                    //LOG_EXTENDED_DEBUG("Ransac steal: Inlier at index ", current_right, " has angle ", std::get<1>(inliers[current_right])->a, " which is not within the tolerance of the previous inlier with angle ", std::get<1>(sol_temp.back())->a);
                     break;
                 }
             }
@@ -257,15 +257,15 @@ bool findGroupStealRANSAC2D(
                     current_left--;
                 }else{
                     status = false;
-                    LOG_EXTENDED_DEBUG("Ransac steal: Inlier at index ", current_left, " is not acceptable, rejecting this group");
-                    LOG_EXTENDED_DEBUG("Ransac steal: Inlier at index ", current_left, " has angle ", std::get<1>(inliers[current_left])->a, " which is not within the tolerance of the previous inlier with angle ", std::get<1>(sol_temp.front())->a);
+                    //LOG_EXTENDED_DEBUG("Ransac steal: Inlier at index ", current_left, " is not acceptable, rejecting this group");
+                    //LOG_EXTENDED_DEBUG("Ransac steal: Inlier at index ", current_left, " has angle ", std::get<1>(inliers[current_left])->a, " which is not within the tolerance of the previous inlier with angle ", std::get<1>(sol_temp.front())->a);
                     break;
                 }
             }
             if(!status) continue;
 
             if(blockInFrontInterface(sol_temp, points)){
-                LOG_EXTENDED_DEBUG("Ransac steal: Group of inliers at positions ", std::get<1>(sol_temp.front())->x, ", ", std::get<1>(sol_temp.front())->y, " to ", std::get<1>(sol_temp.back())->x, ", ", std::get<1>(sol_temp.back())->y, " is in front of the robot, rejecting this group");
+                //LOG_EXTENDED_DEBUG("Ransac steal: Group of inliers at positions ", std::get<1>(sol_temp.front())->x, ", ", std::get<1>(sol_temp.front())->y, " to ", std::get<1>(sol_temp.back())->x, ", ", std::get<1>(sol_temp.back())->y, " is in front of the robot, rejecting this group");
                 continue;
                 //TODO gérer et trouver une solution en passant par l'autre coté?
             }
@@ -274,7 +274,8 @@ bool findGroupStealRANSAC2D(
             bestGroup.clear();
             if(pouss.color){
                 bestGroup.push_back(pouss);
-                double distance = std::hypot(pouss.x - std::get<1>(sol_temp[0])->x, pouss.y - std::get<1>(sol_temp[0])->y);
+                double distance = std::hypot(std::get<1>(sol_temp.back())->x - std::get<1>(sol_temp.front())->x, 
+                                    std::get<1>(sol_temp.back())->y - std::get<1>(sol_temp.front())->y);
                 float ux, uy;
                 if (sol_temp.size() >= 2) {
                     ux = std::get<1>(sol_temp.back())->x - std::get<1>(sol_temp.front())->x;
@@ -294,8 +295,8 @@ bool findGroupStealRANSAC2D(
                 bestGroup.push_back(info);
                 return true;
             }else{
-                LOG_DEBUG("pas de poussoir");
-                return false;
+                //LOG_EXTENDED_DEBUG("pas de poussoir possible");
+                continue;
             }
             
             
