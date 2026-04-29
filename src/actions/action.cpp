@@ -385,8 +385,10 @@ ReturnFSM_t ActionFSM::StealStock(){
                 LOG_ERROR("FSM_GATHER_COLLECTED: Tej des blocks pas encore implémenté");
             }
             // Force le drop dans la même zone
+            dropzonePos.y += 150.0 * sin(DEG_TO_RAD * dropzonePos.a);
+            dropzonePos.x += 150.0 * cos(DEG_TO_RAD * dropzonePos.a); 
             dropStockState = FSM_DROP_NAV;
-            dropzonePos = targetPos_; // à changer en cas de virage de blocks
+            dropzonePos = dropzonePos;
             rotate_done = false;
             stock_num = steal_count; // marking random value to pass Best Action condition on drop action
             steal_count = -1;
@@ -523,16 +525,16 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
             if (NearestValidZone(&targetPos1) || tp2){
                 needToGoToWall = true;
                 LOG_DEBUG("NeedToGoToWall");
+                targetPos2.a += 10; 
             }
             // Se reculer pour prendre le stock de 0 et se décaler de 50mm à gauche
             targetPos3.y = targetPos2.y - 0.0 * sinus + 50.0 * cosinus;
             targetPos3.x = targetPos2.x - 0.0 * cosinus - 50.0 * sinus;
-            targetPos3.a = targetPos2.a + 10.0;
+            targetPos3.a = targetPos2.a - 10.0;
 
             //S'avance de 50 mm pour collect
             targetPos4.y = targetPos3.y + 50.0 * sinus;
             targetPos4.x = targetPos3.x + 50.0 * cosinus; 
-            targetPos4.a = targetPos3.a - 10.0;
 
             sweepState = FSM_SWEEP_NAV_RIGHT;
             break;
@@ -551,7 +553,6 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
                     targetPos1.y += 50.0 * sinus;
                     targetPos1.x += 50.0 * cosinus;
                     startTime = _millis();
-                    needToGoToWall = false;
                     sweepState = FSM_SWEEP_WALL;
                     break;
                 }
@@ -588,7 +589,7 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
                 if (openClaws()){
                     snapClaws(false,false);
                     LOG_EXTENDED_DEBUG("FSM_SWEEP_PRE_COLLECT: Opened and closed claws to prepare for collection");
-                    startTime = 0;
+                    startTime = _millis();
                     sweepState = FSM_SWEEP_COLLECT;
                 }
                 
@@ -598,12 +599,13 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
         case FSM_SWEEP_COLLECT:
         {
             nav_ret = navigationGoTo(targetPos4, false, true, false);
-            if ((nav_ret == NAV_DONE)) {
+            if (nav_ret == NAV_DONE || ((_millis() - startTime > 2000) && startTime != 0)) {
                 moveServoAndWait(SERVO_NUM_6, 90, 200);
                 if (rotateTwoBlocks(stockOrder)){
                     LOG_EXTENDED_DEBUG("FSM_SWEEP_COLLECT: Claws rotated for collection");
                     LOG_DEBUG("FSM_SWEEP_COLLECT: Stock collected");
                     startTime = 0;
+                    needToGoToWall = false;
                     sweepState = FSM_SWEEP_INIT; // reset
                     return FSM_RETURN_DONE;
                 }
