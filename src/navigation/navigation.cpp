@@ -122,8 +122,7 @@ void navigationOpponentDetection(){
         isEndangered = opponent_collide_lidar(lidar.data, lidar.count, 300, brakingDistance, OPPONENT_ROBOT_RADIUS, angle);
         if (isEndangered)
             LOG_WARNING("Opponent is in the way");
-        else
-            LOG_EXTENDED_DEBUG("No opponent in the way");
+        //else LOG_EXTENDED_DEBUG("No opponent in the way");
     }
     // stop the robot if it is endangered
     if (isEndangered && !is_robot_stalled){
