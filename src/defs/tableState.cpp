@@ -26,7 +26,7 @@ void TableState::reset(){
 
     resetCalibrationAge();
     for (int i = 0; i < STOCK_COUNT; i++)
-        avail_stocks[i] = false;
+        avail_stocks[i] = true;
 
     // Initialize all drop zones to the empty state
     for (int i = 0; i < DROPZONE_COUNT; i++)

@@ -432,8 +432,8 @@ ReturnFSM_t ActionFSM::StealStock(){
             break;
         case FSM_GATHER_COLLECTED:
         {
-            dropzonePos.x += 200 * cos(DEG_TO_RAD * targetPos_.a);
-            dropzonePos.y += 200 * sin(DEG_TO_RAD * targetPos_.a);
+            dropzonePos.x += 150 * cos(DEG_TO_RAD * targetPos_.a);
+            dropzonePos.y += 150 * sin(DEG_TO_RAD * targetPos_.a);
             // Force le drop dans la même zone
             dropStockState = FSM_DROP_NAV;
             dropzonePos = dropzonePos; // à changer en cas de virage de blocks
@@ -820,6 +820,7 @@ void ActionFSM::SetBestAction(position_t position){
         }
         LOG_ERROR("Nothing else to do waiting");
         runState = FSM_ACTION_WAIT;
+        tableStatus.colorTeam = (tableStatus.colorTeam == BLUE ? YELLOW : BLUE); //TODO TO REMOVE
         return;
     }else{
         /*********************** CONDITION POUR VOLER UN STOCK OU TAKE STOCK ****************************/
