@@ -319,7 +319,8 @@ ReturnFSM_t ActionFSM::TakeStock(){
 }
 
 ReturnFSM_t ActionFSM::StealStock(){
-    static position_t targetPos_; 
+    static position_t targetPos_, targetPos_2;
+    static double cosinus, sinus;
     if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV){
         //LOG_DEBUG("Getting next stock to take");
         LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
@@ -364,6 +365,14 @@ ReturnFSM_t ActionFSM::StealStock(){
                 }
                 else if(sucess>=0){
                     targetPos_ = position_t{x,y,a};
+                    cosinus = cos(DEG_TO_RAD * targetPos_.a);
+                    sinus   = sin(DEG_TO_RAD * targetPos_.a);
+                    dist += 50.0; //marge de 50mm
+                    //va à 150mm à gauche de la dropZone
+                    targetPos_.x = targetPos_.x - dist/2 * cosinus;
+                    targetPos_.y = targetPos_.y + dist/2 * sinus;
+                    targetPos_.a = targetPos_.a;
+
                     stealStockState = FSM_GATHER_COLLECT;
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found ", sucess, " objects to steal");
                 }else if (sucess == -2){
