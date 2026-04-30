@@ -366,9 +366,10 @@ ReturnFSM_t ActionFSM::StealStock(){
                 }
                 else if(sucess>=0){
                     targetPos_ = position_t{x,y,a};
-                    bool marge = 100.0; //marge de 100mm
-                    targetPos_.x = targetPos_.x - (dist/2 + marge) * cos(DEG_TO_RAD * targetPos_.a);
-                    targetPos_.y = targetPos_.y + (dist/2 + marge) * sin(DEG_TO_RAD * targetPos_.a);
+                    double marge = 100.0; //marge de 100mm
+                    LOG_ERROR("angle = ", targetPos_.a);
+                    targetPos_.x = targetPos_.x + (dist/2 + marge) * sin(DEG_TO_RAD * targetPos_.a);
+                    targetPos_.y = targetPos_.y - (dist/2 + marge) * cos(DEG_TO_RAD * targetPos_.a);
                     targetPos_.a = targetPos_.a;
 
                     stealStockState = FSM_GATHER_COLLECT;
@@ -431,8 +432,8 @@ ReturnFSM_t ActionFSM::StealStock(){
             break;
         case FSM_GATHER_COLLECTED:
         {
-            dropzonePos.x += 100 * cos(DEG_TO_RAD * targetPos_.a);
-            dropzonePos.y += 100 * sin(DEG_TO_RAD * targetPos_.a);
+            dropzonePos.x += 150 * cos(DEG_TO_RAD * targetPos_.a);
+            dropzonePos.y += 150 * sin(DEG_TO_RAD * targetPos_.a);
             // Force le drop dans la même zone
             dropStockState = FSM_DROP_NAV;
             dropzonePos = dropzonePos; // à changer en cas de virage de blocks
@@ -493,7 +494,7 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
             targetPos3.a = targetPos2.a;
             
             if (needToGoToWall) targetPos3.a -= 15.0;
-            
+    
             //S'avance de 50 mm pour collect
             targetPos4.y = targetPos3.y + 50.0 * sinus;
             targetPos4.x = targetPos3.x + 50.0 * cosinus; 

@@ -447,12 +447,12 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
     y += mean_x * sa + mean_y * ca;
 
     // =========================
-    // 9. RECUL 300mm SUR AXE CHOSEN
+    // 9. RECUL 270mm SUR AXE CHOSEN
     // =========================
     double r = chosen * M_PI / 180.0;
 
-    x -= 300.0 * cos(r);
-    y -= 300.0 * sin(r);
+    x -= 270.0 * cos(r);
+    y -= 270.0 * sin(r);
 
     // =========================
     // 10. UPDATE ANGLE
