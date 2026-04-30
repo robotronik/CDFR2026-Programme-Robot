@@ -352,24 +352,27 @@ ReturnFSM_t ActionFSM::StealStock(){
             double x = drive.position.x;
             double y = drive.position.y;
             double a = drive.position.a;
-            if(arucoCam1.getObjectInfoColors(stockOrder, x, y, a, steal_count)){
-                if (countMyColorBlocks(stockOrder) >= steal_count && steal_count > 0){
+            int sucess;
+            double dist;
+            if(arucoCam1.getObjectForSweep(stockOrder,x,y,a,sucess, dist)){
+
+                if (countMyColorBlocks(stockOrder) >= sucess && sucess > 0){
                     stealStockState = FSM_GATHER_NAV;
                     tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
                     dropzone_num = -1;
                     return FSM_RETURN_DONE;
                 }
-                else if(steal_count>=0){
+                else if(sucess>=0){
                     targetPos_ = position_t{x,y,a};
                     stealStockState = FSM_GATHER_CLAWS;
-                    LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found ", steal_count, " objects to steal");
-                }else if (steal_count == -2){
+                    LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found ", sucess, " objects to steal");
+                }else if (sucess == -2){
                     LOG_WARNING("FSM_GATHER_DETECT: DropZone was empty");
                     stealStockState = FSM_GATHER_NAV;
                     tableStatus.setDropzoneState(dropzone_num,TableState::DROPZONE_EMPTY);
                     dropzone_num = -1;
                     return FSM_RETURN_DONE;
-                }else if(steal_count == -1){
+                }else if(sucess == -1){
                     LOG_ERROR("FSM_GATHER_DETECT: Camera Error don't know what to do");
                     stealStockState = FSM_GATHER_NAV;
                     dropzone_num = -1;

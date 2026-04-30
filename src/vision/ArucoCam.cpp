@@ -293,41 +293,61 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
 }
 
 bool ArucoCam::ToObjectSweep(bool* order, json& data, double & x, double & y, double & a, double & dist_balayage, int& success){
+    LOG_DEBUG("=== ENTER ToObjectSweep ===");
+    LOG_DEBUG("Initial x:", x, " y:", y, " a:", a);
+
     if (!data.contains("objects") || data["objects"].is_null() || !data["objects"].is_object()) {
         LOG_ERROR("ToObjectSweep() - invalid objects");
         success = -1;
         return true;
     }else{
-        success = -2; // l'erreur n'est plus une erreur de caméra
+        success = -2;
+        LOG_DEBUG("Objects JSON valid");
     }
 
     std::vector<block_t> blocks;
     auto& objects = data["objects"];
 
+    LOG_DEBUG("Number of object categories:", objects.size());
+
     // 🔹 1. Conversion caméra → robot
     for (auto& [key, list] : objects.items()) {
+        LOG_DEBUG("Processing category:", key, " size:", list.size());
+
         for (auto& obj : list) {
 
-            // On convertit vers le repère robot 
-            double a_tag_rad = -1 * obj.value("a",0.0) * M_PI / 180.0;
+            double raw_x = obj.value("x", 0.0);
+            double raw_y = obj.value("y", 0.0);
+            double raw_a = obj.value("a", 0.0);
+            std::string label = obj.value("label", "");
+
+            LOG_DEBUG("Raw obj -> x:", raw_x, " y:", raw_y, " a:", raw_a, " label:", label);
+
+            double a_tag_rad = -1 * raw_a * M_PI / 180.0;
             double sin_tag = sin(a_tag_rad);
             double cos_tag = cos(a_tag_rad);
-            double x_tmp = obj.value("x", 0.0);
-            double y_tmp = obj.value("y", 0.0);
+
+            double x_conv = -1*(raw_x * cos_tag - raw_y * sin_tag);
+            double y_conv = -1*(raw_x * sin_tag + raw_y * cos_tag);
+            double a_conv = -1 * raw_a;
+            bool color = (label == "Blue");
+
+            LOG_DEBUG("Converted -> x:", x_conv, " y:", y_conv, " a:", a_conv, " color:", color);
 
             blocks.push_back(block_t{
-                .x = -1*(x_tmp* cos_tag - y_tmp * sin_tag),
-                .y = -1*(x_tmp* sin_tag + y_tmp*cos_tag),
-                .a = -1 * obj.value("a",0.0),
-                .color = (obj.value("label", "") == "Blue")
+                .x = x_conv,
+                .y = y_conv,
+                .a = a_conv,
+                .color = color
             });
         }
     }
 
     int count = blocks.size();
-    LOG_DEBUG("Sweep: Found ", count, " blocks");
+    LOG_DEBUG("Sweep: Found", count, "blocks");
 
     if(count == 0){
+        LOG_WARNING("No blocks detected");
         success = -2;
         return true;
     }
@@ -342,6 +362,8 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double & x, double & y, do
     }
     mean_x /= count;
     mean_y /= count;
+
+    LOG_DEBUG("Mean position -> x:", mean_x, " y:", mean_y);
 
     // 🔹 3. Trouver les extrêmes
     double max_dist = 0;
@@ -360,15 +382,29 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double & x, double & y, do
             }
         }
     }
+    
+    LOG_DEBUG("Max distance:", max_dist);
+    LOG_DEBUG("b1 -> x:", b1.x, " y:", b1.y);
+    LOG_DEBUG("b2 -> x:", b2.x, " y:", b2.y);
 
-    // 🔹 4. Angle (perpendiculaire)
+    // 🔹 4. Angle -90°au lieux de 90°
     double theta = atan2(b2.y - b1.y, b2.x - b1.x);
+    double tmp_a = theta * 180.0 / M_PI;
+    LOG_DEBUG(" tmp_a:", tmp_a);
 
-    // 🔹 projection + tri + sélection des 4 blocs
+    auto norm = [](double a){ while(a>180)a-=360; while(a<-180)a+=360; return a; };
+
+    // choisir orientation la plus proche de l'angle robot
+    double alt = tmp_a + 180.0;
+    tmp_a = (fabs(norm(tmp_a - a)) < fabs(norm(alt - a))) ? norm(tmp_a) : norm(alt);
+
+    LOG_DEBUG("Final tmp_a:", tmp_a);
+    // 🔹 projection + tri
     std::vector<std::pair<block_t,double>> projected;
 
     for(const auto& b : blocks){
         double p = b.x * cos(theta) + b.y * sin(theta);
+        LOG_DEBUG("Projection for block -> x:", b.x, " y:", b.y, " p:", p);
         projected.push_back({b, p});
     }
 
@@ -378,37 +414,56 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double & x, double & y, do
         }
     );
 
+    LOG_DEBUG("After sorting projections:");
+    for(size_t i = 0; i < projected.size(); i++){
+        LOG_DEBUG("Idx", i, "p:", projected[i].second, "color:", projected[i].first.color);
+    }
+
     // 🔹 prendre les 4 plus à droite
     int n = projected.size();
     int start = std::max(0, n - 4);
 
+    LOG_DEBUG("Selecting last 4 blocks from index:", start);
+
     for(int i = 0; i < n - start; i++){
         order[i] = projected[start + i].first.color;
+        LOG_DEBUG("Order[", i, "] =", order[i]);
     }
 
-    // 🔹 5. angle perpendiculaire
-    double tmp_a = theta * 180.0 / M_PI + 90.0;
-
     // 🔹 5. Distance de balayage
-    dist_balayage = max_dist - (50.0 * count);
+    dist_balayage = max_dist - (50.0 * (count-1));
     if(dist_balayage < 0) dist_balayage = 0;
 
-    // 🔹 6. Correction mécanique
-    tmp_a = (tmp_a > 0) ? tmp_a - 90 : tmp_a + 90;
-    double rad_tmp_a = tmp_a * M_PI / 180.0;
+    LOG_DEBUG("dist_balayage:", dist_balayage);
+
+
+    double rad_tmp_a = theta * M_PI / 180.0;
 
     const double off_s = 85;
     mean_x += OFFSET_CAM_X - (OFFSET_STOCK - off_s) * cos(rad_tmp_a);
     mean_y += OFFSET_CAM_Y + OFFSET_CLAW_Y - (OFFSET_STOCK - off_s) * sin(rad_tmp_a);
+
+    LOG_DEBUG("Corrected mean -> x:", mean_x, " y:", mean_y);
 
     // 🔹 7. Projection table
     double a_rad = (a) * M_PI / 180.0;
     double cos_a = cos(a_rad);
     double sin_a = sin(a_rad);
 
+    double old_x = x;
+    double old_y = y;
+    double old_a = a;
+
     x += mean_x * cos_a - mean_y * sin_a;
     y += mean_x * sin_a + mean_y * cos_a;
-    a += tmp_a;
+    a = tmp_a;
+
+    LOG_DEBUG("Final transform:");
+    LOG_DEBUG("Old x:", old_x, " -> New x:", x);
+    LOG_DEBUG("Old y:", old_y, " -> New y:", y);
+    LOG_DEBUG("Old a:", old_a, " -> New a:", a);
+
+    LOG_DEBUG("=== EXIT ToObjectSweep ===");
 
     return true;
 }
