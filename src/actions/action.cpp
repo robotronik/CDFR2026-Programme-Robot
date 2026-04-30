@@ -322,6 +322,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
 ReturnFSM_t ActionFSM::StealStock(){
     static position_t targetPos_, targetPos_2;
     static double cosinus, sinus;
+    static double dist;
     if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV){
         //LOG_DEBUG("Getting next stock to take");
         LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
@@ -355,7 +356,7 @@ ReturnFSM_t ActionFSM::StealStock(){
             double y = drive.position.y;
             double a = drive.position.a;
             int sucess;
-            double dist;
+            dist = 0;
             if(arucoCam1.getObjectForSweep(stockOrder,x,y,a,sucess, dist)){
 
                 if (countMyColorBlocks(stockOrder) >= sucess && sucess > 0){
@@ -426,7 +427,7 @@ ReturnFSM_t ActionFSM::StealStock(){
         case FSM_GATHER_COLLECT:
             // Collect the steal
         {
-            if (closeClaws()){
+            if (BalayageSteal(targetPos_, targetPos_.a, dist)){
                 LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: dropZone", dropzone_num, " collected");
                 stealStockState = FSM_GATHER_COLLECTED;
             }
