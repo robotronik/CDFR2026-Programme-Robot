@@ -320,8 +320,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
 }
 
 ReturnFSM_t ActionFSM::StealStock(){
-    static position_t targetPos_, targetPos_2;
-    static double cosinus, sinus;
+    static position_t targetPos_;
     static double dist;
     if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV){
         //LOG_DEBUG("Getting next stock to take");
@@ -367,12 +366,9 @@ ReturnFSM_t ActionFSM::StealStock(){
                 }
                 else if(sucess>=0){
                     targetPos_ = position_t{x,y,a};
-                    cosinus = cos(DEG_TO_RAD * targetPos_.a);
-                    sinus   = sin(DEG_TO_RAD * targetPos_.a);
-                    dist += 50.0; //marge de 50mm
-                    //va à 150mm à gauche de la dropZone
-                    targetPos_.x = targetPos_.x - dist/2 * cosinus;
-                    targetPos_.y = targetPos_.y + dist/2 * sinus;
+                    bool marge = 100.0; //marge de 100mm
+                    targetPos_.x = targetPos_.x - (dist/2 + marge) * cos(DEG_TO_RAD * targetPos_.a);
+                    targetPos_.y = targetPos_.y + (dist/2 + marge) * sin(DEG_TO_RAD * targetPos_.a);
                     targetPos_.a = targetPos_.a;
 
                     stealStockState = FSM_GATHER_COLLECT;
@@ -435,11 +431,14 @@ ReturnFSM_t ActionFSM::StealStock(){
             break;
         case FSM_GATHER_COLLECTED:
         {
+            dropzonePos.x += 100 * cos(DEG_TO_RAD * targetPos_.a);
+            dropzonePos.y += 100 * sin(DEG_TO_RAD * targetPos_.a);
             // Force le drop dans la même zone
             dropStockState = FSM_DROP_NAV;
-            dropzonePos = targetPos_; // à changer en cas de virage de blocks
+            dropzonePos = dropzonePos; // à changer en cas de virage de blocks
+
             rotate_done = false;
-            stock_num = steal_count; // marking random value to pass Best Action condition on drop action
+            stock_num = 1; // marking random value to pass Best Action condition on drop action
             steal_count = -1;
             tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY);
             return FSM_RETURN_DONE;
@@ -450,7 +449,7 @@ ReturnFSM_t ActionFSM::StealStock(){
 
 ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double distanceBalayage){
     //targetPos1 = position premier block à voler
-    double margeBalayage = - 50.0; // à changer à +100 quand balayage plus court
+    double margeBalayage = 100;
     distanceBalayage += margeBalayage;
     
     static double cosinus, sinus;
@@ -491,8 +490,10 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
             // S'avancer de 40 mm pour prendre le stock de  et se décaler de 80mm à gauche
             targetPos3.y = targetPos2.y + 40.0 * sinus + 80.0 * cosinus;
             targetPos3.x = targetPos2.x + 40.0 * cosinus - 80.0 * sinus;
-            targetPos3.a = targetPos2.a - 15.0;
-
+            targetPos3.a = targetPos2.a;
+            
+            if (needToGoToWall) targetPos3.a -= 15.0;
+            
             //S'avance de 50 mm pour collect
             targetPos4.y = targetPos3.y + 50.0 * sinus;
             targetPos4.x = targetPos3.x + 50.0 * cosinus; 
@@ -779,6 +780,7 @@ void ActionFSM::SetBestAction(position_t position){
     }
 
     /**************************** CONDITIONS POUR DROP UN STOCK ***************************************/
+    LOG_ERROR("stock_num ; ", stock_num);
     if(tableStatus.remainingDropExist() && stock_num != -1){ // On peut DROP à partir du moment où on a un stock et qu'il reste des drop zones
         runState = FSM_ACTION_DROP;
         tableStatus.calibrationAge += 1;
