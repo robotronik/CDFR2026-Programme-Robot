@@ -364,7 +364,7 @@ ReturnFSM_t ActionFSM::StealStock(){
                 }
                 else if(sucess>=0){
                     targetPos_ = position_t{x,y,a};
-                    stealStockState = FSM_GATHER_CLAWS;
+                    stealStockState = FSM_GATHER_COLLECT;
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found ", sucess, " objects to steal");
                 }else if (sucess == -2){
                     LOG_WARNING("FSM_GATHER_DETECT: DropZone was empty");
@@ -424,12 +424,6 @@ ReturnFSM_t ActionFSM::StealStock(){
             break;
         case FSM_GATHER_COLLECTED:
         {
-            if(steal_count == 4){
-                LOG_DEBUG("FSM_GATHER_COLLECTED: pas de déplacement de blocks tous les blocks ont été pris");// Si plus que 4 blocks?
-            }else{
-                //TODO tej les blocks restant.
-                LOG_ERROR("FSM_GATHER_COLLECTED: Tej des blocks pas encore implémenté");
-            }
             // Force le drop dans la même zone
             dropStockState = FSM_DROP_NAV;
             dropzonePos = targetPos_; // à changer en cas de virage de blocks
