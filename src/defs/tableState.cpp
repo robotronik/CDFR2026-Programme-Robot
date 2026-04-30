@@ -20,13 +20,13 @@ TableState::~TableState(){}
 void TableState::reset(){
     /* data Winter is comming */
 
-    setCursorIsDone(false);
+    setCursorIsDone(true);
     CursorPos = {625, 1220, 45};
     if (tableStatus.colorTeam == YELLOW) position_robot_flip(CursorPos);
 
     resetCalibrationAge();
     for (int i = 0; i < STOCK_COUNT; i++)
-        avail_stocks[i] = true;
+        avail_stocks[i] = false;
 
     // Initialize all drop zones to the empty state
     for (int i = 0; i < DROPZONE_COUNT; i++)
