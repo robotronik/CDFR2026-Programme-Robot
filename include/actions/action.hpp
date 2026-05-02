@@ -22,7 +22,6 @@ class ActionFSM{
         /***** FUNCTIONS  *******/
         void SetBestAction(position_t position);
 
-        ReturnFSM_t SafeStart();
         ReturnFSM_t TakeStock();
         ReturnFSM_t StealStock();
         ReturnFSM_t DropStock();
@@ -51,7 +50,6 @@ class ActionFSM{
         /************  FSM GLOBAL ************/
         typedef enum
         {
-            FSM_ACTION_SAFESTART,
             FSM_ACTION_GATHER,
             FSM_ACTION_STEAL,
             FSM_ACTION_DROP,
@@ -62,13 +60,6 @@ class ActionFSM{
             FSM_ACTION_WAIT
         } StateRun_t;
         StateRun_t runState = FSM_ACTION_GATHER;
-
-        /************  FSM SAFE START ************/
-        typedef enum
-        {
-            FSM_SAFESTART_NAV
-        } StateSafeStart_t;
-        StateSafeStart_t safeStartState = FSM_SAFESTART_NAV;
 
         /************  FSM GATHER ************/
         typedef enum
