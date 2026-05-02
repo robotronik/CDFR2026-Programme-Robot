@@ -531,45 +531,34 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
         {
             nav_ret = navigationGoTo(targetPos2, false, true, false); // Second Move, Slow mode
             if (nav_ret == NAV_DONE){
-                if (needToGoToWall)
-                    sweepState = FSM_SWEEP_PRE_COLLECT;
-                else 
-                    sweepState = FSM_SWEEP_COLLECT;
                 LOG_DEBUG("FSM_SWEEP_NAV_LEFT: Moving to left of the stock " " at position (", targetPos2.x, ",", targetPos2.y, ") with angle ", targetPos2.a);
+                sweepState = FSM_SWEEP_PRE_COLLECT;
             }
             break;
         }
         case FSM_SWEEP_PRE_COLLECT:
         {
-            nav_ret = navigationGoTo(targetPos3, false, true, true);
+            if (needToGoToWall)
+                nav_ret = navigationGoTo(targetPos3, false, true, true);
+            else 
+                nav_ret = navigationGoTo(targetPos4, false, true, true);
+
             if (nav_ret == NAV_DONE || nav_ret == NAV_ERROR) {
                 drive.setBrakeState(true);
                 moveServoAndWait(SERVO_NUM_6, 90, 200);
-                if (rotateTwoBlocks(stockOrder)){
-                    drive.setBrakeState(false);
-                    LOG_EXTENDED_DEBUG("FSM_SWEEP_COLLECT: Claws rotated for collection");
-                    LOG_DEBUG("FSM_SWEEP_COLLECT: Stock collected");
-                    needToGoToWall = false;
-                    sweepState = FSM_SWEEP_INIT; // reset
-                    return FSM_RETURN_DONE;
-                }
+                sweepState = FSM_SWEEP_COLLECT;
             }
             break;
         } 
         case FSM_SWEEP_COLLECT:
         {
-            nav_ret = navigationGoTo(targetPos4, false, true, true);
-            if (nav_ret == NAV_DONE || nav_ret == NAV_ERROR) {
-                drive.setBrakeState(true);
-                moveServoAndWait(SERVO_NUM_6, 90, 200);
-                if (rotateTwoBlocks(stockOrder)){
-                    drive.setBrakeState(false);
-                    LOG_EXTENDED_DEBUG("FSM_SWEEP_COLLECT: Claws rotated for collection");
-                    LOG_DEBUG("FSM_SWEEP_COLLECT: Stock collected");
-                    needToGoToWall = false;
-                    sweepState = FSM_SWEEP_INIT; // reset
-                    return FSM_RETURN_DONE;
-                }
+            if (rotateTwoBlocks(stockOrder)){
+                drive.setBrakeState(false);
+                LOG_EXTENDED_DEBUG("FSM_SWEEP_COLLECT: Claws rotated for collection");
+                LOG_DEBUG("FSM_SWEEP_COLLECT: Stock collected");
+                needToGoToWall = false;
+                sweepState = FSM_SWEEP_INIT; // reset
+                return FSM_RETURN_DONE;
             }
             break;
         } 
