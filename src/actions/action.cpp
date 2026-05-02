@@ -477,19 +477,19 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
             // Se décaler distanceBalayage mm à gauche du stock (va reculer un peu si trop proche du mur avec NearestValidZone())
             targetPos2.y = targetPos1.y + distanceBalayage * cosinus;
             targetPos2.x = targetPos1.x - distanceBalayage * sinus;
-            targetPos2.a = angle;
+            targetPos2.a = angle + 5.0;
 
             bool tp2 = NearestValidZone(&targetPos2);
             if (NearestValidZone(&targetPos1) || tp2){
                 needToGoToWall = true;
                 LOG_DEBUG("NeedToGoToWall");
-                targetPos2.a += 10; 
+                targetPos2.a = angle + 10.0; 
             }
             // S'avancer de 50 mm pour prendre le stock de  et se décaler de 80mm à gauche
             targetPos3.y = targetPos2.y + 60.0 * sinus + 80.0 * cosinus;
             targetPos3.x = targetPos2.x + 60.0 * cosinus - 80.0 * sinus;
-            targetPos3.a = targetPos2.a - 10.0;
-    
+            targetPos3.a = angle;
+            
             //S'avance de 50 mm pour collect
             targetPos4.y = targetPos3.y + 50.0 * sinus;
             targetPos4.x = targetPos3.x + 50.0 * cosinus; 
