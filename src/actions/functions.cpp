@@ -28,7 +28,7 @@ bool lowerClaws(){
             state = 2;
             break;
         case 2:
-            if (readLimitSwitchBottom() || _millis() - startTime >= 1000){
+            if (readLimitSwitchBottom() || _millis() - startTime >= 750){
                 arduino.stopMotorDC();
                 state = 1;
                 return true;
