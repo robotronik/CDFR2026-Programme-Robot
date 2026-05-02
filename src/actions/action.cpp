@@ -252,7 +252,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
             {
             nav_ret = navigationGoTo(targetStockPos, false, true); // Slow mode for more precision
             //LOG_INFO("Moving to stock ", stock_num, " at position (", stockPos.x + int(stockOff.x * 0.7), ",", stockPos.y + int(stockOff.y * 0.7), ") with angle ", angle);
-            if (nav_ret == NAV_DONE){
+            if (openClaws() && nav_ret == NAV_DONE){//commence à fermer les claws pour gagner du temps
                 gatherStockState = FSM_GATHER_COLLECT;
                 LOG_EXTENDED_DEBUG("FSM_GATHER_MOVE: Moving to stock ", stock_num, " at position (", targetStockPos.x, ",", targetStockPos.y, ") with angle ", targetStockPos.a);
             }
