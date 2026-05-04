@@ -535,9 +535,9 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
         case FSM_SWEEP_PRE_COLLECT:
         {
             if (needToGoToWall)
-                nav_ret = navigationGoTo(targetPos3, true, true, true);
+                nav_ret = navigationGoTo(targetPos3, false, true, true);
             else 
-                nav_ret = navigationGoTo(targetPos4, true, true, true);
+                nav_ret = navigationGoTo(targetPos4, false, true, true);
 
             if (nav_ret == NAV_DONE || nav_ret == NAV_ERROR) {
                 drive.setBrakeState(true);
@@ -669,7 +669,9 @@ ReturnFSM_t ActionFSM::VidangeDropZone(int dropzone){
                 return FSM_RETURN_ERROR;
             }
             claws_done = false;
-            getBestDropZonePosition(dropzone,vidangeTarget); // ou équivalent
+
+            getBestDropZonePosition(dropzone, vidangeTarget, false);
+            LOG_DEBUG("vidangeTarget : ", vidangeTarget.x, " / ", vidangeTarget.y, " / ", vidangeTarget.a, "dropzone_num = ", dropzone_num);
 
             cosinus = cos(DEG_TO_RAD * vidangeTarget.a);
             sinus   = sin(DEG_TO_RAD * vidangeTarget.a);
