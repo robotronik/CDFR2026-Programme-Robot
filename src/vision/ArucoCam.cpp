@@ -376,6 +376,28 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
 
     double theta = atan2(b2.y - b1.y, b2.x - b1.x);
 
+    // fait pas balayage si distance entre block > 100mm
+    double ct = cos(theta);
+    double st = sin(theta);
+
+    std::sort(blocks.begin(), blocks.end(),
+        [&](const block_t& a, const block_t& b){
+            double pa = a.x * ct + a.y * st;
+            double pb = b.x * ct + b.y * st;
+            return pa < pb;
+        });
+
+    for(int i = 0; i < count - 1; i++){
+    double dx = blocks[i+1].x - blocks[i].x;
+    double dy = blocks[i+1].y - blocks[i].y;
+    double d = sqrt(dx*dx + dy*dy);
+
+    if(d > 100.0){
+        LOG_WARNING("dist = ", d);
+        success = -2; // TODO success = -3 et prendre qu'un bloc
+        return true;
+    }
+}
     LOG_DEBUG("theta(rad):", theta*180/M_PI);
 
     // =========================
@@ -383,8 +405,6 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
     // =========================
     std::vector<std::pair<block_t,double>> projected;
 
-    double ct = cos(theta);
-    double st = sin(theta);
 
     for (const auto& b : blocks) {
         double p = b.x * ct + b.y * st;
