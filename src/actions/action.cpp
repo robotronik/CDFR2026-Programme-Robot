@@ -539,9 +539,9 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
         case FSM_SWEEP_PRE_COLLECT:
         {
             if (needToGoToWall)
-                nav_ret = navigationGoTo(targetPos3, false, true, true);
+                nav_ret = navigationGoTo(targetPos3, true, true, true);
             else 
-                nav_ret = navigationGoTo(targetPos4, false, true, true);
+                nav_ret = navigationGoTo(targetPos4, true, true, true);
 
             if (nav_ret == NAV_DONE || nav_ret == NAV_ERROR) {
                 drive.setBrakeState(true);
