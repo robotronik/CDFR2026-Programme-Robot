@@ -670,25 +670,29 @@ ReturnFSM_t ActionFSM::VidangeDropZone(int dropzone){
             }
             claws_done = false;
 
-            getBestDropZonePosition(dropzone, vidangeTarget, false);
+            getBestDropZonePosition(dropzone, vidangeTarget, true);
             LOG_DEBUG("vidangeTarget : ", vidangeTarget.x, " / ", vidangeTarget.y, " / ", vidangeTarget.a, "dropzone_num = ", dropzone_num);
 
             cosinus = cos(DEG_TO_RAD * vidangeTarget.a);
             sinus   = sin(DEG_TO_RAD * vidangeTarget.a);
 
-            //va à 150mm à gauche de la dropZone
-            targetPos1.x = vidangeTarget.x + 150.0 * cosinus;
-            targetPos1.y = vidangeTarget.y - 150.0 * sinus;
+            // Avance de 120mm 
+            vidangeTarget.x += 120*cosinus;
+            vidangeTarget.y += 120*sinus;
+
+            //va à 400mm à gauche de la dropZone et 
+            targetPos1.x = vidangeTarget.x - 400.0 * sinus;
+            targetPos1.y = vidangeTarget.y + 400.0 * cosinus;
             targetPos1.a = vidangeTarget.a;
 
             //va à 20mm à droite de la dropZone pour être sur d'avoir enlever tout les blocks de l'adversaire
-            targetPos2.x = vidangeTarget.x - 20.0*cosinus;
-            targetPos2.y = vidangeTarget.y + 20.0*sinus;
+            targetPos2.x = vidangeTarget.x + 20.0*sinus;
+            targetPos2.y = vidangeTarget.y - 20.0*cosinus;
             targetPos2.a = vidangeTarget.a;
 
             //Se reculer de 100mm pour pas taper le stock
-            targetPos3.x = vidangeTarget.x - 100.0*sinus;
-            targetPos3.y = vidangeTarget.y - 100.0*cosinus;
+            targetPos3.x = vidangeTarget.x - 100.0*cosinus;
+            targetPos3.y = vidangeTarget.y - 100.0*sinus;
             targetPos3.a = vidangeTarget.a;
 
             vidangeState = FSM_VIDANGE_NAV;
@@ -697,10 +701,10 @@ ReturnFSM_t ActionFSM::VidangeDropZone(int dropzone){
         case FSM_VIDANGE_NAV:
         {
             nav_ret = navigationGoTo(targetPos1, true, false, false);
-            moveServoAndWait(SERVO_NUM_6, 170, 200); // lower the little arm
-            if (!claws_done) claws_done = lowerClaws();
+            if (!claws_done) claws_done = lowerClaws() && closeClaws();
     
             if (nav_ret == NAV_DONE && claws_done){
+                moveServoAndWait(SERVO_NUM_6, 170, 200); // lower the little arm
                 LOG_DEBUG("FSM_VIDANGE_NAV done: lowered claws at dropzone ", dropzone, " (", targetPos1.x, ",", targetPos1.y, ",", targetPos1.a);
                 claws_done = false;
                 vidangeState = FSM_VIDANGE_NAV_CLEAR;
@@ -710,8 +714,9 @@ ReturnFSM_t ActionFSM::VidangeDropZone(int dropzone){
         }
         case FSM_VIDANGE_NAV_CLEAR:
         {
-            nav_ret = navigationGoTo(targetPos2, true, false, false);
+            nav_ret = navigationGoTo(targetPos2, true, true, false);
             if (nav_ret == NAV_DONE){
+                tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY);
                 moveServoAndWait(SERVO_NUM_6, 90, 200); //raise the little arm
                 if (openClaws()){//Drop our bloc 
                     LOG_DEBUG("FSM_VIDANGE_NAV_CLEAR done");
@@ -724,7 +729,7 @@ ReturnFSM_t ActionFSM::VidangeDropZone(int dropzone){
         case FSM_VIDANGE_NAV_BACK:
         {
             nav_ret = navigationGoTo(targetPos3, true, false, false);
-            if (!claws_done) claws_done = lowerClaws();
+            if (!claws_done) claws_done = raiseClaws();
 
             if (nav_ret == NAV_DONE && claws_done){
                 LOG_DEBUG("FSM_VIDANGE_NAV_BACK done");
