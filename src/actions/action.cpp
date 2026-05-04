@@ -26,7 +26,6 @@ void ActionFSM::Reset(){
     /*RESET OF ACTION ID*/
     dropzone_num = -1;
     stock_num = -1;
-    steal_count = 0;
     offset = 0;
     targetStockPos = position_t{0,0,0};
     dropzonePos = position_t{0,0,0};
@@ -364,7 +363,7 @@ ReturnFSM_t ActionFSM::StealStock(){
                     dropzone_num = -1;
                     return FSM_RETURN_DONE;
                 }
-                else if(sucess>=0){
+                else if(sucess>=0){ // balayage
                     targetPos_ = position_t{x,y,a};
                     double marge = 100.0; //marge de 100mm
                     LOG_ERROR("angle = ", targetPos_.a);
@@ -374,6 +373,9 @@ ReturnFSM_t ActionFSM::StealStock(){
 
                     stealStockState = FSM_GATHER_COLLECT;
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found ", sucess, " objects to steal");
+                }else if (sucess == -3){ // Degagage
+                    LOG_WARNING("FSM_GATHER_DETECT: Blocks too wide, going for degagage()");
+                    stealStockState = FSM_GATHER_CLAWS;
                 }else if (sucess == -2){
                     LOG_WARNING("FSM_GATHER_DETECT: DropZone was empty");
                     stealStockState = FSM_GATHER_NAV;
@@ -389,24 +391,19 @@ ReturnFSM_t ActionFSM::StealStock(){
             }
             break;
         }
-        case FSM_GATHER_CLAWS:
+        case FSM_GATHER_CLAWS: // Balayage
             {
-            if (lowerClaws()){
-                LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for dropZone ", dropzone_num);
-                stealStockState = FSM_GATHER_MOVE;
+            if (BalayageSteal(targetPos_, targetPos_.a, dist)){
+            LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: dropZone", dropzone_num, " collected");
+            tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY);
+            stealStockState = FSM_GATHER_NAV;
+            return FSM_RETURN_DONE;
             }
             }
             break;
         case FSM_GATHER_PREMOVE:
             {
-            
-            nav_ret = navigationGoTo(targetStockFirstPos, false, false, false); // Slow mode for more precision
-            if (nav_ret == NAV_DONE){
-                gatherStockState = FSM_GATHER_MOVE;
-                LOG_EXTENDED_DEBUG("FSM_GATHER_PREMOVE: Pre-Moving to stock ", stock_num, " at position (", targetStockFirstPos.x, ",", targetStockFirstPos.y, ") with angle ", targetStockFirstPos.a);
-            }
-            else if (nav_ret == NAV_ERROR) return FSM_RETURN_ERROR;
-
+            LOG_ERROR("SHOULD NOT BE HERE FSM_GATHER_PREMOVE In StealStock");
             }
             break;
         case FSM_GATHER_MOVE:
@@ -439,8 +436,7 @@ ReturnFSM_t ActionFSM::StealStock(){
             dropzonePos = dropzonePos; // à changer en cas de virage de blocks
 
             rotate_done = false;
-            stock_num = 1; // marking random value to pass Best Action condition on drop action
-            steal_count = -1;
+            stock_num = 1;
             tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY);
             return FSM_RETURN_DONE;
         }

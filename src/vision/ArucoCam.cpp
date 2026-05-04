@@ -394,7 +394,7 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
 
     if(d > 100.0){
         LOG_WARNING("dist = ", d);
-        success = -2; // TODO success = -3 et prendre qu'un bloc
+        success = -3; // TODO success = -3 et prendre qu'un bloc
         return true;
     }
 }
