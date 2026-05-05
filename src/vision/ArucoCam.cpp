@@ -296,191 +296,90 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
     LOG_DEBUG("=== ENTER ToObjectSweep ===");
 
     if (!data.contains("objects") || data["objects"].is_null() || !data["objects"].is_object()) {
-        LOG_ERROR("ToObjectSweep() - invalid objects");
-        success = -1;
-        return true;
+        success = -1; return true;
     }
-
-    success = -2;
 
     std::vector<block_t> blocks;
     auto& objects = data["objects"];
 
-    // =========================
-    // 1. CAMERA → ROBOT
-    // =========================
+    // 1. Conversion Caméra -> Robot
     for (auto& [key, list] : objects.items()) {
         for (auto& obj : list) {
-
-            double raw_x = obj.value("x", 0.0);
-            double raw_y = obj.value("y", 0.0);
-            double raw_a = obj.value("a", 0.0);
-            std::string label = obj.value("label", "");
-
+            double raw_x = obj.value("x", 0.0), raw_y = obj.value("y", 0.0), raw_a = obj.value("a", 0.0);
             double a_rad = -raw_a * M_PI / 180.0;
-            double c = cos(a_rad);
-            double s = sin(a_rad);
-
             blocks.push_back(block_t{
-                .x = -(raw_x * c - raw_y * s),
-                .y = -(raw_x * s + raw_y * c),
+                .x = -(raw_x * cos(a_rad) - raw_y * sin(a_rad)),
+                .y = -(raw_x * sin(a_rad) + raw_y * cos(a_rad)),
                 .a = -raw_a,
-                .color = (label == "Blue")
+                .color = (obj.value("label", "") == "Blue")
             });
         }
     }
 
     int count = blocks.size();
-    LOG_DEBUG("Sweep: Found", count, "blocks");
+    if (count == 0) { success = -2; return true; }
+    success = count; // ON RENVOIE LE NOMBRE REEL DE BLOCS
 
-    if (count == 0) {
-        LOG_WARNING("No blocks detected");
-        success = -2;
-        return true;
-    }
-
-    success = count;
-
-    // =========================
-    // 2. CENTRE DES BLOCS
-    // =========================
-    double mean_x = 0, mean_y = 0;
-    for (const auto& b : blocks) {
-        mean_x += b.x;
-        mean_y += b.y;
-    }
-    mean_x /= count;
-    mean_y /= count;
-
-    LOG_DEBUG("Mean -> x:", mean_x, " y:", mean_y);
-
-    // =========================
-    // 3. AXE PRINCIPAL (theta)
-    // =========================
+    // 2. Trouver les deux blocs les plus éloignés pour définir l'axe
     double max_dist = 0;
-    block_t b1, b2;
-
+    int idx1 = 0, idx2 = 0;
     for (int i = 0; i < count; i++) {
         for (int j = i + 1; j < count; j++) {
-            double dx = blocks[i].x - blocks[j].x;
-            double dy = blocks[i].y - blocks[j].y;
-            double d = sqrt(dx*dx + dy*dy);
-
-            if (d > max_dist) {
-                max_dist = d;
-                b1 = blocks[i];
-                b2 = blocks[j];
-            }
+            double d = sqrt(pow(blocks[i].x - blocks[j].x, 2) + pow(blocks[i].y - blocks[j].y, 2));
+            if (d > max_dist) { max_dist = d; idx1 = i; idx2 = j; }
         }
     }
+    
+    // Calcul de l'angle de la droite passant par ces deux blocs
+    double theta = atan2(blocks[idx2].y - blocks[idx1].y, blocks[idx2].x - blocks[idx1].x);
+    
+    // On s'assure que l'axe pointe vers la DROITE du robot (Y négatif en repère robot)
+    if (sin(theta) > 0) theta += M_PI; 
+    double ct = cos(theta), st = sin(theta);
 
-    double theta = atan2(b2.y - b1.y, b2.x - b1.x);
+    // 3. TRI : On projette chaque bloc sur cet axe et on trie du plus à GAUCHE au plus à DROITE
+    std::sort(blocks.begin(), blocks.end(), [&](const block_t& A, const block_t& B){
+        double projA = A.x * ct + A.y * st;
+        double projB = B.x * ct + B.y * st;
+        return projA < projB; // Plus petite projection (gauche) en premier
+    });
 
-    // fait pas balayage si distance entre block > 100mm
-    double ct = cos(theta);
-    double st = sin(theta);
-
-    std::sort(blocks.begin(), blocks.end(),
-        [&](const block_t& a, const block_t& b){
-            double pa = a.x * ct + a.y * st;
-            double pb = b.x * ct + b.y * st;
-            return pa < pb;
-        });
-
-    for(int i = 0; i < count - 1; i++){
-    double dx = blocks[i+1].x - blocks[i].x;
-    double dy = blocks[i+1].y - blocks[i].y;
-    double d = sqrt(dx*dx + dy*dy);
-
-    if(d > 100.0){
-        LOG_WARNING("dist = ", d);
-        success = -2; // TODO success = -3 et prendre qu'un bloc
-        return true;
-    }
-}
-    LOG_DEBUG("theta(rad):", theta*180/M_PI);
-
-    // =========================
-    // 4. TRI PROJECTION (axe theta)
-    // =========================
-    std::vector<std::pair<block_t,double>> projected;
-
-
-    for (const auto& b : blocks) {
-        double p = b.x * ct + b.y * st;
-        projected.push_back({b, p});
+    for (int i = 0; i < blocks.size(); i++) {
+        LOG_DEBUG("Pince", i,
+          " -> x:", blocks[i].x,
+          " y:", blocks[i].y,
+          " color:", blocks[i].color);
     }
 
-    std::sort(projected.begin(), projected.end(),
-        [](const auto& a, const auto& b) {
-            return a.second < b.second;
-        });
+    // 4. MAPPING : On remplit les pinces dans l'ordre de détection
+    // On reset tout à true par sécurité
+    for(int i = 0; i < 4; i++) order[i] = true; 
 
-    // couleur ordre
-    int n = projected.size();
-    int start = std::max(0, n - 4);
-
-    LOG_DEBUG("Selecting blocks from", start);
-
-    for (int i = 0; i < n - start; i++) {
-        order[i] = projected[start + i].first.color;
+    for (int i = 0; i < std::min(4, count); i++) {
+        order[4 - blocks.size() + i] = blocks[i].color;
     }
 
-    // =========================
-    // 5. DISTANCE BALAYAGE
-    // =========================
+    for (int i = 0; i < 4; i++) {
+        LOG_DEBUG("Pince", i, "assignée au bloc rang", i, (order[i] ? "[BLEU]" : "[JAUNE]"));
+    }
+
+    // 5. Calcul distance balayage et positions (inchangé)
     dist_balayage = std::max(0.0, max_dist - 50.0 * (count - 1));
-    LOG_DEBUG("dist_balayage:", dist_balayage);
+    double mean_x = 0, mean_y = 0;
+    for (const auto& b : blocks) { mean_x += b.x; mean_y += b.y; }
+    mean_x = (mean_x / count) + OFFSET_CAM_X;
+    mean_y = (mean_y / count) + OFFSET_CAM_Y;
 
-    // =========================
-    // 6. CENTRE + OFFSET CAM
-    // =========================
-    mean_x += OFFSET_CAM_X;
-    mean_y += OFFSET_CAM_Y;
-
-    LOG_DEBUG("Corrected mean x = ", mean_x," / y = ", mean_y);
-
-    // =========================
-    // 7. ORIENTATION ROBOT (choix stable)
-    // =========================
-    auto norm = [](double a){
-        while (a > 180) a -= 360;
-        while (a < -180) a += 360;
-        return a;
-    };
-
-    double a1 = norm(a + 90 + theta*180/M_PI);
-    double a2 = norm(a + 270.0 + theta*180/M_PI);
-
+    auto norm = [](double ang){ while(ang > 180) ang-=360; while(ang < -180) ang+=360; return ang; };
+    double a1 = norm(a + 90 + theta*180/M_PI), a2 = norm(a + 270 + theta*180/M_PI);
     double chosen = (fabs(norm(a1 - a)) < fabs(norm(a2 - a))) ? a1 : a2;
 
-    LOG_DEBUG("chosen angle:", chosen);
-
-    // =========================
-    // 8. PROJECTION TABLE (PROPRE)
-    // =========================
     double ar = a * M_PI / 180.0;
-    double ca = cos(ar);
-    double sa = sin(ar);
-
-    x += mean_x * ca - mean_y * sa;
-    y += mean_x * sa + mean_y * ca;
-
-    // =========================
-    // 9. RECUL 270mm SUR AXE CHOSEN
-    // =========================
-    double r = chosen * M_PI / 180.0;
-
-    x -= 270.0 * cos(r);
-    y -= 270.0 * sin(r);
-
-    // =========================
-    // 10. UPDATE ANGLE
-    // =========================
+    x += mean_x * cos(ar) - mean_y * sin(ar);
+    y += mean_x * sin(ar) + mean_y * cos(ar);
+    x -= 270.0 * cos(chosen * M_PI / 180.0);
+    y -= 270.0 * sin(chosen * M_PI / 180.0);
     a = chosen;
-
-    LOG_DEBUG("FINAL -> x:", x, " y:", y, " a:", a);
-    LOG_DEBUG("=== EXIT ToObjectSweep ===");
 
     return true;
 }
