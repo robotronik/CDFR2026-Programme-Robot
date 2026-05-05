@@ -564,7 +564,7 @@ void ActionFSM::SetBestAction(position_t position){
     closestSteal = INFINITY;
 
     /********************* CONDITIONS POUR LE RETURN HOME ***********************/
-    if(_millis() > tableStatus.startTime + 95000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
+    if(_millis() > tableStatus.startTime + 90000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
         LOG_GREEN_INFO("95 seconds passed, switching to NAV_HOME");
         runState = FSM_ACTION_NAV_HOME;
         return;
