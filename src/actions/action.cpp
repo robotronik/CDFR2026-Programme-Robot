@@ -624,7 +624,7 @@ void ActionFSM::SetBestAction(position_t position){
         return;
     }else{
         /*********************** CONDITION POUR VOLER UN STOCK OU TAKE STOCK ****************************/
-        if(closestSteal * 1.5 < closestStock){
+        if(closestSteal * 2 < closestStock){
             LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to steal a drop, going to FSM_ACTION_STEAL");
             LOG_GREEN_INFO("ACTION_STEAL: Next dropZone to steal: ", dropzone_num);
             runState = FSM_ACTION_STEAL;
