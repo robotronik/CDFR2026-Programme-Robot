@@ -8,7 +8,7 @@ using json = nlohmann::json;
 #define OFFSET_CAM_X 129 // Offset of the camera in mm on the x axis
 #define OFFSET_CAM_Y 4.5 // Offset of the camera in mm on the y axis
 #define OFFSET_CAM_A 0 // Offset angle of the camera in degrees
-#define OFFSET_CLAW_Y -29 // Offset to align claw with block, diminuer = plus à droite
+#define OFFSET_CLAW_Y -26 // Offset to align claw with block, diminuer = plus à droite
 #define OFFSET_STOCK 300
 #define MULT_PARAM 0.68
 

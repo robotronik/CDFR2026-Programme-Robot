@@ -15,7 +15,6 @@
 bool lowerClaws(){
     static int state = 1;
     static unsigned long startTime = 0;
-    static unsigned long startTime2 = 0;
 
     switch (state){
         case 1:
@@ -26,15 +25,10 @@ bool lowerClaws(){
             }
             arduino.moveMotorDC(100, true);
             startTime = _millis();
-            startTime2 = 0;
             state = 2;
             break;
         case 2:
-            if (readLimitSwitchBottom() && startTime2 == 0) 
-                startTime2 = _millis();  // démarre une seule fois
-    
-            if (_millis() - startTime >= 1000 ||
-                (startTime2 != 0 && _millis() - startTime2 >= 150)) {
+            if (readLimitSwitchBottom() || _millis() - startTime >= 750){
                 arduino.stopMotorDC();
                 state = 1;
                 return true;
@@ -209,7 +203,7 @@ bool snapClaws(bool closed, bool small){
     static int prevTarget = -1;
     int target = closed ? 5 : (small ? 30 : 110);
     if (prevTarget != target){
-        arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 150);
+        arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 300);
         prevTarget = target;
     }
     int current = 0;

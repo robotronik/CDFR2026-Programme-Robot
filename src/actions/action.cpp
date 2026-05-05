@@ -49,21 +49,6 @@ bool ActionFSM::RunFSM(){
 
     switch (runState)
     {
-    case FSM_ACTION_SAFESTART:
-        ret = SafeStart();
-
-        if (ret == FSM_RETURN_DONE){
-            LOG_INFO("SAFE_START: completed, switching to normal FSM");
-            SetBestAction(drive.position);
-            runState = FSM_ACTION_GATHER;
-        }
-        else if (ret == FSM_RETURN_ERROR){
-            LOG_ERROR("SAFE_START: failed, forcing normal FSM start");
-            SetBestAction(drive.position);
-            runState = FSM_ACTION_GATHER;
-
-        }
-        break;
     case FSM_ACTION_GATHER:
         ret = TakeStock();
         if (ret == FSM_RETURN_DONE){
@@ -186,31 +171,6 @@ bool ActionFSM::RunFSM(){
     return false;
 }
 
-ReturnFSM_t ActionFSM::SafeStart(){
-    static bool init = false;
-    static position_t safePos;
-
-    if (!init){
-        safePos = position_t{-400, 1075, 45};
-
-        if (tableStatus.colorTeam == YELLOW)
-            position_robot_flip(safePos);
-        init = true;
-    }
-
-    nav_ret = navigationGoTo(safePos, false, false, false);
-
-    if (nav_ret == NAV_DONE){
-        LOG_INFO("SAFE_START: Arrived at safe position");
-        init = false;
-        runState = FSM_ACTION_GATHER;
-        return FSM_RETURN_DONE;
-    }
-    else if (nav_ret == NAV_ERROR) return FSM_RETURN_ERROR;
-    
-
-    return FSM_RETURN_WORKING;
-}
 ReturnFSM_t ActionFSM::TakeStock(){
     //LOG_INFO("TakeStock state: ", gatherStockState, " stock_num: ", stock_num);
     if (stock_num == -1 && gatherStockState == FSM_GATHER_NAV){
@@ -658,17 +618,14 @@ ReturnFSM_t ActionFSM::DropStock(){
 
 ReturnFSM_t ActionFSM::Cursor(){
     static long unsigned startTime = 0;
-    position_t navTarget = {780.0, 1280.0, -135.0};
-    position_t navTargetRot = navTarget;
-    navTargetRot.a = -180.0;
-    position_t moveTarget = navTargetRot;
-    moveTarget.y -= 350.0;
+    position_t navTarget = {780.0, 190.0, -180.0};
+    position_t moveTarget = navTarget;
+    moveTarget.y += 490.0;
     position_t moveSafeTarget = moveTarget;
-    moveSafeTarget.x -= 250.0;
+    moveSafeTarget.x -= 100.0;
     
     if (tableStatus.colorTeam == YELLOW){
         position_robot_flip(navTarget);
-        position_robot_flip(navTargetRot);
         position_robot_flip(moveTarget);
         position_robot_flip(moveSafeTarget);
     }
@@ -678,11 +635,7 @@ ReturnFSM_t ActionFSM::Cursor(){
             nav_ret = navigationGoTo(navTarget, true);
             if ((nav_ret == NAV_DONE)){ 
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Nav done, going to FSM_CURSOR");
-                if (enableCursor(true)){
-                    LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Cursor enabled, going to FSM_CURSOR_LOW_CLAW");
-                    startTime = _millis();
-                    CursorState = FSM_CURSOR_ROT_NAV;
-                }
+                CursorState = FSM_CURSOR_ROT_NAV;
             }
             else if (nav_ret == NAV_ERROR){
                 LOG_WARNING("FSM_CURSOR_NAV: Navigation error while going to cursor position for lowerClaws");
@@ -690,15 +643,10 @@ ReturnFSM_t ActionFSM::Cursor(){
             }
             break;
         case FSM_CURSOR_ROT_NAV:
-            if (_millis() - startTime > 250){
-                nav_ret = navigationGoTo(navTargetRot, true, true, false);
-                if (nav_ret == NAV_DONE){
-                    LOG_EXTENDED_DEBUG("FSM_CURSOR_LOW_CLAW: Nav done for lowerClaws, going to FSM_CURSOR_MOVE");
-                            CursorState = FSM_CURSOR_MOVE;
-                }    
-                else if (nav_ret == NAV_ERROR) return FSM_RETURN_ERROR;
-
-            }
+            if (enableCursor(true)){
+                    LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Cursor enabled, going to FSM_CURSOR_LOW_CLAW");
+                    CursorState = FSM_CURSOR_MOVE;
+                }
             break;
 
         case FSM_CURSOR_MOVE:
@@ -715,14 +663,12 @@ ReturnFSM_t ActionFSM::Cursor(){
 
         case FSM_CURSOR_END:
             nav_ret = navigationGoTo(moveSafeTarget, false, true);
-            if (nav_ret == NAV_DONE){
+            enableCursor(false);
+            if (nav_ret == NAV_DONE ){
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_END: Nav done for move safe target");
-                if (enableCursor(false)){
-                    LOG_EXTENDED_DEBUG("FSM_CURSOR_END: Cursor action done");
-                    CursorState = FSM_CURSOR_NAV;
-                    startTime = 0;
-                    return FSM_RETURN_DONE;
-            }
+                LOG_EXTENDED_DEBUG("FSM_CURSOR_END: Cursor action done");
+                CursorState = FSM_CURSOR_NAV;
+                return FSM_RETURN_DONE;
             }    
             else if (nav_ret == NAV_ERROR)return FSM_RETURN_ERROR;
 
@@ -743,15 +689,14 @@ ReturnFSM_t ActionFSM::Cursor(){
         - Take
 */
 void ActionFSM::SetBestAction(position_t position){
-
-    if (_millis() > tableStatus.startTime + 50000)
-            tableStatus.startTime = _millis();
+    //ENDLESSMODE
+    //if (_millis() > tableStatus.startTime + 50000) tableStatus.startTime = _millis();
     /*********************** RESET DES DISTANCES POUR BEST ACTIONS *********************/
     closestStock = INFINITY;
     closestSteal = INFINITY;
 
     /********************* CONDITIONS POUR LE RETURN HOME ***********************/
-    if(_millis() > tableStatus.startTime + 95000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
+    if(_millis() > tableStatus.startTime + 90000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
         LOG_GREEN_INFO("95 seconds passed, switching to NAV_HOME");
         runState = FSM_ACTION_NAV_HOME;
         return;
@@ -813,7 +758,7 @@ void ActionFSM::SetBestAction(position_t position){
         return;
     }else{
         /*********************** CONDITION POUR VOLER UN STOCK OU TAKE STOCK ****************************/
-        if(closestSteal * 1.5 < closestStock){
+        if(closestSteal * 2 < closestStock){
             LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to steal a drop, going to FSM_ACTION_STEAL");
             LOG_GREEN_INFO("ACTION_STEAL: Next dropZone to steal: ", dropzone_num);
             runState = FSM_ACTION_STEAL;
