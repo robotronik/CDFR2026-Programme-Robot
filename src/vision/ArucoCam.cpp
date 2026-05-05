@@ -344,13 +344,6 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
         return projA < projB; // Plus petite projection (gauche) en premier
     });
 
-    for (int i = 0; i < blocks.size(); i++) {
-        LOG_DEBUG("Pince", i,
-          " -> x:", blocks[i].x,
-          " y:", blocks[i].y,
-          " color:", blocks[i].color);
-    }
-
     // 4. MAPPING : On remplit les pinces dans l'ordre de détection
     // On reset tout à true par sécurité
     for(int i = 0; i < 4; i++) order[i] = true; 
@@ -359,9 +352,7 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
         order[4 - blocks.size() + i] = blocks[i].color;
     }
 
-    for (int i = 0; i < 4; i++) {
-        LOG_DEBUG("Pince", i, "assignée au bloc rang", i, (order[i] ? "[BLEU]" : "[JAUNE]"));
-    }
+    for (int i = 0; i < 4; i++) LOG_DEBUG("Pince", i, "assignée au bloc rang", i, (order[i] ? "[BLEU]" : "[JAUNE]"));
 
     // 5. Calcul distance balayage et positions (inchangé)
     dist_balayage = std::max(0.0, max_dist - 50.0 * (count - 1));
