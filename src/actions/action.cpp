@@ -754,7 +754,6 @@ void ActionFSM::SetBestAction(position_t position){
         }
         LOG_ERROR("Nothing else to do waiting");
         runState = FSM_ACTION_WAIT;
-        tableStatus.colorTeam = (tableStatus.colorTeam == BLUE ? YELLOW : BLUE); //TODO TO REMOVE
         return;
     }else{
         /*********************** CONDITION POUR VOLER UN STOCK OU TAKE STOCK ****************************/
