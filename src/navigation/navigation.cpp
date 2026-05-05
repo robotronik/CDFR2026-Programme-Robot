@@ -119,7 +119,7 @@ nav_return_t navigationGoTo(position_t pos, bool useAStar, bool slow_mode, bool 
         current_use_astar = useAStar;
     }
     current_slow_mode = slow_mode;
-    if (forced_slow_mode)
+    if (forced_slow_mode || (_millis() - tableStatus.startTime > 87000))
         current_slow_mode = true;
     
     current_complete_stop = complete_stop;
