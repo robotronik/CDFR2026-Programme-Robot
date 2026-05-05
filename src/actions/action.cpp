@@ -415,14 +415,14 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
     
     static double cosinus, sinus;
     static position_t targetPos1,targetPos2, targetPos3, targetPos4;
-    static bool needToGoToWall = false, claws_done = false;
+    static bool needToGoToWall = false;
 
     switch(sweepState){
 
         case FSM_SWEEP_INIT: //
         {
             LOG_INFO("SWEEP: init");
-            needToGoToWall = false, claws_done = false;
+            needToGoToWall = false;
             sweepState = FSM_SWEEP_DETECT;
             break;
         }
@@ -455,7 +455,10 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
             targetPos4.x = targetPos3.x + 50.0 * cosinus; 
             targetPos4.a = targetPos3.a;
 
-            sweepState = FSM_SWEEP_NAV_RIGHT;
+            if (lowerClaws()){
+                sweepState = FSM_SWEEP_NAV_RIGHT;
+            }
+            
             break;
         }
         case FSM_SWEEP_NAV_RIGHT:
@@ -463,9 +466,8 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
             nav_ret = navigationGoTo(targetPos1, false, false, false); //First Move
             snapClaws(false,false);
             moveServoAndWait(SERVO_NUM_6, 170, 200);
-            if (!claws_done) claws_done = lowerClaws();
-    
-            if (nav_ret == NAV_DONE && claws_done){
+   
+            if (nav_ret == NAV_DONE){
                 LOG_DEBUG("FSM_SWEEP_NAV_RIGHT: Moving to right of the stock at position (", targetPos1.x, ",", targetPos1.y, ") with angle ", angle);
 
                 if (needToGoToWall){
