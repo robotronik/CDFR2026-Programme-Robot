@@ -105,6 +105,14 @@ bool ActionFSM::RunFSM(){
         if (_millis() - startTime > 2000){
             SetBestAction(drive.position);
             startTime = 0;
+            /*
+            getGrenierPosition(dropzonePos);
+            dropzone_num = 100; // ID spécial
+            stealStockState = FSM_GATHER_NAV;
+            runState = FSM_ACTION_STEAL;
+            stock_num = -1;
+            */
+   
         }
         break;
     }
@@ -767,12 +775,8 @@ void ActionFSM::SetBestAction(position_t position){
             runState = FSM_ACTION_CURSOR;
             return;
         }
-        LOG_ERROR("Nothing else to do waiting in front of Grenier");
-        getGrenierPosition(dropzonePos);
-        dropzone_num = 100; // ID spécial
-        stealStockState = FSM_GATHER_NAV;
-        runState = FSM_ACTION_STEAL;
-        stock_num = -1;
+        LOG_ERROR("Nothing else to do waiting");
+        runState = FSM_ACTION_WAIT;
         return;
     }else{
         /*********************** CONDITION POUR VOLER UN STOCK OU TAKE STOCK ****************************/
