@@ -261,7 +261,7 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
 }
 
 bool getGrenierPosition(position_t& pos){
-    pos = {0, -1000, 150};
+    pos = {-50, -700, 180};
     if (tableStatus.colorTeam == YELLOW) position_robot_flip(pos);
     return true;
 }
