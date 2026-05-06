@@ -18,7 +18,6 @@ bool rotateTwoBlocks(bool *order);
 bool rotateTwoBlocksDefault();
 bool dropBlock();
 bool enableCursor(bool enable);
-bool flipOneBlock();
 
 
 // Servo Control
