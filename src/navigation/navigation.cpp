@@ -1,14 +1,10 @@
 #include "navigation/navigation.h"
 #include "main.hpp"
-#include "defs/constante.h" // DISTANCESTOP and DISTANCESTART
+
 #include "utils/logger.hpp"
 #include "lidar/lidarAnalize.h"
 #include "navigation/pathfind.h"
 
-static bool is_robot_stalled = false;  // Because of opponent in direction of movement
-static bool is_robot_stuck = false;  // Because of no path found
-static unsigned long robot_stall_start_time;
-static unsigned long robot_stuck_start_time;
 bool forced_slow_mode = false;
 
 static position_t current_pos_target;
@@ -83,12 +79,6 @@ nav_return_t navigationGo(){
             LOG_ERROR("Navigation drive error");
             return NAV_ERROR;
         }
-        if (is_robot_stalled && (_millis() - robot_stall_start_time > 1000)){
-            LOG_WARNING("Robot has been stalled for more than 1 second, returning NAV_ERROR");
-            return NAV_ERROR; // We are stuck for too long
-        }
-        else if (is_robot_stalled)
-            return NAV_PAUSED;
     } else {
         // Calibrate using camera
         bool cam_success;

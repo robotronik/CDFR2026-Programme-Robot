@@ -384,7 +384,6 @@ ReturnFSM_t ActionFSM::StealStock(){
             // Force le drop dans la même zone
             dropStockState = FSM_DROP_NAV;
             dropzonePos = targetPos_; // à changer en cas de virage de blocks
-            rotate_done = false;
             stock_num = steal_count; // marking random value to pass Best Action condition on drop action
             steal_count = -1;
             tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY);
@@ -485,7 +484,6 @@ ReturnFSM_t ActionFSM::DropStock(){
 }
 
 ReturnFSM_t ActionFSM::Cursor(){
-    static long unsigned startTime = 0;
     position_t navTarget = {780.0, 190.0, -180.0};
     position_t moveTarget = navTarget;
     moveTarget.y += 490.0;
