@@ -24,7 +24,6 @@ bool flipOneBlock();
 // Servo Control
 bool closeClaws();
 bool openClaws();
-bool snapClaws(bool closed);
 bool snapClaws(bool closed, bool small);
 bool resetSpinClaws();
 bool spinAllClaws();

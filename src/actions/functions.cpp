@@ -190,13 +190,10 @@ bool flipOneBlock(){
 
 
 bool closeClaws(){
-    return snapClaws(true);
+    return snapClaws(true, true);
 }
 bool openClaws(){
-    return snapClaws(false);
-}
-bool snapClaws(bool closed){
-    return snapClaws(closed, true);
+    return snapClaws(false, true);
 }
 
 bool snapClaws(bool closed, bool small){
