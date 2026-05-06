@@ -131,13 +131,7 @@ bool dropBlock(){
 
 bool enableCursor(bool enable){
     int target = enable ? 18 : 150;
-    arduino.moveServo(SERVO_NUM_7, target);
-
-    int current = 0;
-    if (!arduino.getServo(SERVO_NUM_7, current)) 
-        return false;
-
-    return current == target;
+    return moveServoAndWait(SENSOR_NUM_7, target, 300);;
 }
 
 bool flipOneBlock(){
