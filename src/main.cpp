@@ -202,6 +202,7 @@ int main(int argc, char *argv[])
             if (initState){
                 LOG_GREEN_INFO("FIN");
                 arduino.RGB_Solid(0, 255, 0);
+                openClaws();
                 disableActuators();
                 // Clear command buffer
                 drive.disable();

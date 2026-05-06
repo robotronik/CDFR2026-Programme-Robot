@@ -338,7 +338,7 @@ bool returnToHome(){
     position_t homePos;
     homePos.x = (time < 97000) ? -200 : -800;
     homePos.y = (tableStatus.colorTeam == BLUE) ? 1200 : -1200;
-    homePos.a = 180;
+    homePos.a = (tableStatus.colorTeam == BLUE) ? 135 : -135;
     raiseClaws();
     nav_return_t res = navigationGoTo(homePos, true);
     if (res == NAV_ERROR){
