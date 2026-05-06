@@ -4,13 +4,20 @@
 
 #define LOOP_TIME_MS 20
 
-#define DISTANCESTOP   500
-
 #define RAD_TO_DEG 57.29577951
 #define DEG_TO_RAD 0.01745329252
+#define STOCK_COUNT  8
+#define DROPZONE_COUNT 10
 
+// Size Objects
 #define ROBOT_WIDTH 400
 #define OPPONENT_ROBOT_RADIUS 250
+#define MAX_WIDTH_TABLE 1000
+#define MAX_LENGTH_TABLE 1500
+#define STOCKS_WIDTH 200
+#define STOCKS_LENGTH 150
+#define DROPZONE_WIDTH 200
+#define DROPZONE_LENGTH 200
 
 // Define the nums of the arduino for the STEPPERS
 #define STEPPER_NUM_1        1
@@ -37,18 +44,12 @@
 #define SENSOR_NUM_7         7
 #define SENSOR_NUM_8         8
 
-
-#define MAX_WIDTH_TABLE 1000
-#define MAX_LENGTH_TABLE 1500
+//Changing constante for the robot
 #define OFFSET_STOCK 300 // Offset to be in the middle of the stock, could be changed if we want to take the stock from the top or the bottom*
 #define MULT_PARAM 0.68
-#define STOCK_COUNT  8
-#define DROPZONE_COUNT 10
 #define OFFSET_DROPZONE 250 // Offset to be in the middle of the dropzone, could be tweaked
 #define CALIBRATION_DEPLETION_TIME 3 // Max time between to calibration
-// Define the dimensions of the stocks
-#define STOCKS_WIDTH 200
-#define STOCKS_LENGTH 150
+
 
 // Define the positions of the stocks 
 const position_t STOCK_POSITIONS_TABLE[] = {
@@ -84,10 +85,6 @@ const int STOCK_OFFSET_MAPPING[STOCK_COUNT][2] = {
     {2,3}, // Stock 7 utilise les offsets 2,3
 };
 
-// Define the dimensions of the Dropzone
-#define DROPZONE_WIDTH 200
-#define DROPZONE_LENGTH 200
-
 //Define the positions of the Dropzone
 const position_t DROPZONE_POSITIONS_TABLE[] = {
     position_t{.x = 200, .y = 1400}, \
@@ -110,8 +107,7 @@ const position_t ARUCO_POSITIONS_TABLE[] = {
     position_t{.x = 400, .y = -900, .a = 0}, \
     position_t{.x = 400, .y = 900, .a = 0}};
 
-// Tableau de positions pour la calibration, orientation vers le code le plus proche
-// Valeurs uniquement pour le cote bleu
+// Tableau de positions pour la calibration, orientation vers le code le plus proche, Valeurs uniquement pour le cote bleu
 const position_t ARUCO_CALIB_POSITIONS[] = {
     position_t{.x = -125, .y = 350, .a = 0}, \
     position_t{.x = -125, .y = 675, .a = 0}, \
