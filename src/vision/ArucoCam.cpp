@@ -344,6 +344,17 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
         return projA < projB; // Plus petite projection (gauche) en premier
     });
 
+    for(int i = 0; i < count - 1; i++){
+        double dx = blocks[i+1].x - blocks[i].x;
+        double dy = blocks[i+1].y - blocks[i].y;
+        double d = sqrt(dx*dx + dy*dy);
+
+        if(d > 100.0){
+            LOG_WARNING("dist = ", d);
+            success = -2; // TODO success = -3 et prendre qu'un bloc
+            return true;
+        }
+    }
     // 4. MAPPING : On remplit les pinces dans l'ordre de détection
     // On reset tout à true par sécurité
     for(int i = 0; i < 4; i++) order[i] = true; 
