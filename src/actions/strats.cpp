@@ -260,6 +260,12 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
     return (dropzoneNum != -1 ? min : INFINITY);
 }
 
+bool getGrenierPosition(position_t& pos){
+    pos = {-50, -800, 180};
+    if (tableStatus.colorTeam == YELLOW) position_robot_flip(pos);
+    return true;
+}
+
 /*
     Determine the best drop zone from wich to steal
     For now very simple 
