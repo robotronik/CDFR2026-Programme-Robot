@@ -76,6 +76,7 @@ bool ActionFSM::RunFSM(){
             LOG_ERROR("FSM_ACTION_STEAL: Couldn't steal zone : ", dropzone_num);
             tableStatus.setDropzoneState(dropzone_num,TableState::DROPZONE_EMPTY);
             stealStockState = FSM_GATHER_NAV;
+            tableStatus.calibrationAge += CALIBRATION_DEPLETION_TIME;
             dropzone_num = -1;
             drive.stopMotion();
             if (raiseClaws()) SetBestAction(drive.position);
@@ -95,6 +96,7 @@ bool ActionFSM::RunFSM(){
             }
             tableStatus.setDropzoneState(dropzone_num,TableState::DROPZONE_ERROR);
             dropStockState = FSM_DROP_NONE;
+            tableStatus.calibrationAge += CALIBRATION_DEPLETION_TIME;
             drive.stopMotion();
             if (raiseClaws()) SetBestAction(drive.position);
 
