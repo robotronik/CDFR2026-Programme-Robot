@@ -195,7 +195,7 @@ bool snapClaws(bool closed){
 
 bool snapClaws(bool closed, bool small){
     static int prevTarget = -1;
-    int target = closed ? 5 : (small ? 30 : 110);
+    int target = closed ? 5 : (small ? 30 : 100);
     if (prevTarget != target){
         arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 300);
         prevTarget = target;
@@ -336,7 +336,7 @@ void disableActuators(){
 bool returnToHome(){
     unsigned long time = _millis() - tableStatus.startTime;
     position_t homePos;
-    homePos.x = (time < 97000) ? -200 : -750;
+    homePos.x = (time < 97000) ? -200 : -800;
     homePos.y = (tableStatus.colorTeam == BLUE) ? 1200 : -1200;
     homePos.a = 180;
     raiseClaws();
