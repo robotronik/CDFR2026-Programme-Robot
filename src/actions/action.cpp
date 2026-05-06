@@ -403,8 +403,10 @@ ReturnFSM_t ActionFSM::StealStock(){
             dropzonePos.x += 150 * cos(DEG_TO_RAD * targetPos_.a);
             dropzonePos.y += 150 * sin(DEG_TO_RAD * targetPos_.a);
             // Force le drop dans la même zone
+
             dropStockState = FSM_DROP_NAV;
-            dropzonePos = dropzonePos; // à changer en cas de virage de blocks
+            if (dropzone_num > 8) dropStockState = FSM_DROP_NONE;
+
 
             rotate_done = false;
             stock_num = 1; // marking random value to pass Best Action condition on drop action
@@ -473,11 +475,10 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
         {
             nav_ret = navigationGoTo(targetPos1, false, false, false); //First Move
             snapClaws(false,false);
-            moveServoAndWait(SERVO_NUM_6, 170, 200);
    
             if (nav_ret == NAV_DONE){
                 LOG_DEBUG("FSM_SWEEP_NAV_RIGHT: Moving to right of the stock at position (", targetPos1.x, ",", targetPos1.y, ") with angle ", angle);
-
+                moveServoAndWait(SERVO_NUM_6, 170, 200);
                 if (needToGoToWall){
                     targetPos1.y += 100.0 * sinus;
                     targetPos1.x += 100.0 * cosinus;
