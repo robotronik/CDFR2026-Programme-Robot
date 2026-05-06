@@ -19,39 +19,22 @@ TableState::~TableState(){}
 
 void TableState::reset(){
     /* data Winter is comming */
-
     setCursorIsDone(false);
+    resetCalibrationAge();
     CursorPos = {625, 1220, 45};
     if (tableStatus.colorTeam == YELLOW) position_robot_flip(CursorPos);
-
-    resetCalibrationAge();
-    for (int i = 0; i < STOCK_COUNT; i++)
-        avail_stocks[i] = true;
-
-    // Initialize all drop zones to the empty state
-    for (int i = 0; i < DROPZONE_COUNT; i++)
-        dropzone_states[i] = DROPZONE_EMPTY;
+    for (int i = 0; i < STOCK_COUNT; i++) avail_stocks[i] = true;
+    for (int i = 0; i < DROPZONE_COUNT; i++) dropzone_states[i] = DROPZONE_EMPTY;
 }
 
-int TableState::getScore()
-{
+int TableState::getScore(){
     int totalScore = 0;
-    // TODO, should be "completely inside" and not just "in"
-    if (isRobotInArrivalZone((position_t)drive.position))
-        totalScore += 5;
-    if (isRobotInArrivalZone((position_t)drive.position))
-        totalScore += 5;
     return totalScore;
 }
 
 // Serialize tableState
 void to_json(json& j, const TableState& ts) {
-    j = json{
-        {"pos_opponent", ts.pos_opponent},
-        {"startTime", ts.startTime},
-        {"colorTeam", ts.colorTeam},
-        {"strategy", ts.strategy}
-    };
+    j = json{{"pos_opponent", ts.pos_opponent},{"startTime", ts.startTime},{"colorTeam", ts.colorTeam},{"strategy", ts.strategy}};
 }
 
 void TableState::setStockAsRemoved(int num){
