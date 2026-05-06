@@ -204,8 +204,8 @@ bool position_opponentV2(lidarAnalize_t* data, int count, position_t robot_pos, 
     opponent_pos.y = pos_sum_y / opponent_blob.count;
 
     double angle_robot_opponent = position_angle(robot_pos, opponent_pos);
-    opponent_pos.x += 15*cos(angle_robot_opponent); //Offset the position my 15mm
-    opponent_pos.y += 15*sin(angle_robot_opponent);
+    opponent_pos.x += 40*cos(angle_robot_opponent); //Offset the position my 40mm
+    opponent_pos.y += 40*sin(angle_robot_opponent);
 
     return true;
 }
