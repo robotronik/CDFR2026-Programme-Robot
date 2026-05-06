@@ -321,20 +321,28 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
     success = count; // ON RENVOIE LE NOMBRE REEL DE BLOCS
 
     // 2. Trouver les deux blocs les plus éloignés pour définir l'axe
+    double theta = 0;
     double max_dist = 0;
-    int idx1 = 0, idx2 = 0;
-    for (int i = 0; i < count; i++) {
-        for (int j = i + 1; j < count; j++) {
-            double d = sqrt(pow(blocks[i].x - blocks[j].x, 2) + pow(blocks[i].y - blocks[j].y, 2));
-            if (d > max_dist) { max_dist = d; idx1 = i; idx2 = j; }
+
+    if (count >= 2) {
+        int idx1 = 0, idx2 = 0;
+        for (int i = 0; i < count; i++) {
+            for (int j = i + 1; j < count; j++) {
+                double d = sqrt(pow(blocks[i].x - blocks[j].x, 2) + pow(blocks[i].y - blocks[j].y, 2));
+                if (d > max_dist) { max_dist = d; idx1 = i; idx2 = j; }
+            }
         }
+        theta = atan2(blocks[idx2].y - blocks[idx1].y, blocks[idx2].x - blocks[idx1].x);
+    } else {
+        // Cas 1 seul bloc : on prend son orientation propre convertie en radians
+        // Attention : vérifie si blocks[0].a est en degrés ou radians dans ton système
+        LOG_ERROR("angle block = ", blocks[0].a);
+        theta = blocks[0].a * M_PI / 180.0; 
+        max_dist = 0; 
     }
-    
-    // Calcul de l'angle de la droite passant par ces deux blocs
-    double theta = atan2(blocks[idx2].y - blocks[idx1].y, blocks[idx2].x - blocks[idx1].x);
-    
-    // On s'assure que l'axe pointe vers la DROITE du robot (Y négatif en repère robot)
-    if (sin(theta) > 0) theta += M_PI; 
+
+    // On s'assure que l'axe pointe vers la DROITE du robot
+    if (sin(theta) > 0) theta += M_PI;
     double ct = cos(theta), st = sin(theta);
 
     // 3. TRI : On projette chaque bloc sur cet axe et on trie du plus à GAUCHE au plus à DROITE
