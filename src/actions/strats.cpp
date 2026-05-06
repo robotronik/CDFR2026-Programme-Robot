@@ -78,7 +78,15 @@ double toAStarDist(position_t a){
     while (delta > 180) delta -= 360;
     while (delta < -180) delta += 360;
 
-    return length + 50.0 * fabs(DEG_TO_RAD * delta);
+    double cost = length + 50.0 * fabs(DEG_TO_RAD * delta);
+
+    // pénalité si on va côté adverse
+    if ((tableStatus.colorTeam == BLUE && a.y < drive.position.y) ||
+        (tableStatus.colorTeam != BLUE && a.y > drive.position.y)) {
+        cost += 20.0;
+    }
+
+    return cost;
 }
 
 double chooseStockStrategy(int& stockNum, int& stockOffset){
