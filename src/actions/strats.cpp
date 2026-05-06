@@ -37,8 +37,12 @@ double chooseNextStock(int& closest_stock, int& closest_offset){
                 int offNum = STOCK_OFFSET_MAPPING[i][j];
                 if (offNum == -1)
                     continue;
-
-                double dist2 = toAStarDistStock(i, offNum);
+                /*
+                * la distance vers le stock est multipliée par un facteur variant entre 1 et TIME_TO_TAKE
+                * le facteur TIME_TO_TAKE étant le temps de prise de l'adversaire x10 est peut-être un peu grand 
+                * Réduire avec un facteur 2 pour limiter à 15 le facteur?
+                */
+                double dist2 = TIME_TO_TAKE / (double)tableStatus.avail_stocks[i] * toAStarDistStock(i, offNum);
 
                 if (dist2 < min){
                     min = dist2;
@@ -111,7 +115,12 @@ double chooseStockStrategy(int& stockNum, int& stockOffset){
     while (i < num){
         if (tableStatus.avail_stocks[todo_stocks[i]]){
             stockNum = todo_stocks[i];
-            double dist = getBestStockPositionOff(stockNum, stockOffset);
+            /*
+            * la distance vers le stock est multipliée par un facteur variant entre 1 et TIME_TO_TAKE
+            * le facteur TIME_TO_TAKE étant le temps de prise de l'adversaire x10 est peut-être un peu grand 
+            * Réduire avec un facteur 2 pour limiter à 15 le facteur?
+            */
+            double dist = TIME_TO_TAKE / (double)tableStatus.avail_stocks[todo_stocks[i]] * getBestStockPositionOff(stockNum, stockOffset);
             if (dist == INFINITY){
                 i++;
                 continue; // pas break sinon tu casses toute la stratégie
@@ -250,6 +259,12 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
                 d1 = toAStarDist(temp_pos);
             }
 
+            /*
+            * la distance vers le stock est multipliée par un facteur variant entre 1 et TIME_TO_DROP
+            * le facteur TIME_TO_DROP étant le temps de prise de l'adversaire x10 est peut-être un peu grand 
+            * Réduire avec un facteur 2 pour limiter à 15 le facteur?
+            */
+            d1 *= (double)TIME_TO_DROP / tableStatus.dropzone_proba[k];
             if(min > d1){
                 bestPoss = temp_pos;
                 dropzoneNum = k;
