@@ -20,7 +20,7 @@ TableState::~TableState(){}
 void TableState::reset(){
     /* data Winter is comming */
 
-    setCursorIsDone(true);
+    setCursorIsDone(false);
     CursorPos = {625, 1220, 45};
     if (tableStatus.colorTeam == YELLOW) position_robot_flip(CursorPos);
 
