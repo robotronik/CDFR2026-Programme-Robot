@@ -28,6 +28,7 @@ void ActionFSM::Reset(){
     stock_num = -1;
     steal_count = 0;
     offset = 0;
+    distToAction = 0;
     targetStockPos = position_t{0,0,0};
     dropzonePos = position_t{0,0,0};
     targetStockFirstPos = position_t{0,0,0};
@@ -185,6 +186,9 @@ ReturnFSM_t ActionFSM::TakeStock(){
             {
             //LOG_DEBUG("entering FSM_GATHER_NAV");
             position_t targetPos = position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, angle};
+            distToAction = position_distance(drive.position, targetPos);
+            if (distToAction > D_THRESHOLD_LATERAL) targetPos.a = 0;
+
             nav_ret = navigationGoTo(targetPos, true); // Enabeling A*
             snapClaws(false,false);
             if (nav_ret == NAV_DONE){
@@ -293,9 +297,13 @@ ReturnFSM_t ActionFSM::StealStock(){
 
         case FSM_GATHER_NAV:
             {
-            nav_ret = navigationGoTo(dropzonePos, true); // Enabeling A*
+            position_t PretargetPos = dropzonePos;
+            distToAction = position_distance(drive.position, dropzonePos);
+            if (distToAction > D_THRESHOLD_LATERAL) PretargetPos.a = 0;
+
+            nav_ret = navigationGoTo(PretargetPos, true); // Enabeling A*
             if (nav_ret == NAV_DONE){
-                LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to dropZone at postition (",dropzonePos.x,", ",dropzonePos.y, ") now searching for blocks");
+                LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to dropZone at postition (",PretargetPos.x,", ",PretargetPos.y, ") now searching for blocks");
                 stealStockState = FSM_GATHER_DETECT;
             }else if(nav_ret == NAV_IN_PROCESS){
                 snapClaws(false,false);
@@ -546,8 +554,12 @@ ReturnFSM_t ActionFSM::DropStock(){
         }
             break;
         case FSM_DROP_NAV:
-        {               
-            nav_ret = navigationGoTo(dropzonePos, true);
+        {   
+            position_t PretargetPos = dropzonePos;
+            distToAction = position_distance(drive.position, dropzonePos);
+            if (distToAction > D_THRESHOLD_LATERAL) PretargetPos.a = 0;
+
+            nav_ret = navigationGoTo(PretargetPos, true);
     
             if (!rotate_done) rotate_done = rotateTwoBlocks(stockOrder);
         
