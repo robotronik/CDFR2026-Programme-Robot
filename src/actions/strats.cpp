@@ -67,10 +67,18 @@ double toAStarDistStock(int stockNum, int stockOffset){
 }
 
 double toAStarDist(position_t a){
-    double lenght;
+    double length;
     position_t path[1024];
-    if(pathfind(drive.position, a, path, lenght)>0) return lenght;
-    return INFINITY;
+
+    if (pathfind(drive.position, a, path, length) <= 0)
+        return INFINITY;
+
+    double delta = a.a - drive.position.a;
+
+    while (delta > 180) delta -= 360;
+    while (delta < -180) delta += 360;
+
+    return length + 50.0 * fabs(DEG_TO_RAD * delta);
 }
 
 double chooseStockStrategy(int& stockNum, int& stockOffset){

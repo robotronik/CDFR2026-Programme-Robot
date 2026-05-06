@@ -60,6 +60,7 @@ bool ActionFSM::RunFSM(){
             LOG_ERROR("ACTION_GATHER: Couldn't gather stock : ", stock_num);
             tableStatus.setStockAsRemoved(stock_num);
             gatherStockState = FSM_GATHER_NAV;
+            tableStatus.calibrationAge += CALIBRATION_DEPLETION_TIME;
             stock_num = -1;
             drive.stopMotion();
             if (raiseClaws()) SetBestAction(drive.position);
@@ -128,6 +129,7 @@ bool ActionFSM::RunFSM(){
             LOG_ERROR("ACTION_CURSOR: Couldn't do cursor action");
             tableStatus.setCursorIsDone(true); // Place le curseur comme virtuellement fait
             drive.stopMotion();
+            tableStatus.calibrationAge += CALIBRATION_DEPLETION_TIME;
             if (enableCursor(false)) SetBestAction(drive.position);
         }
         break;
