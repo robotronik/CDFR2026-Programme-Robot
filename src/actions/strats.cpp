@@ -42,8 +42,10 @@ double chooseNextStock(int& closest_stock, int& closest_offset){
                 * le facteur TIME_TO_TAKE étant le temps de prise de l'adversaire x10 est peut-être un peu grand 
                 * Réduire avec un facteur 2 pour limiter à 15 le facteur?
                 */
-                double dist2 = TIME_TO_TAKE / (double)tableStatus.avail_stocks[i] * toAStarDistStock(i, offNum);
-
+                double dist2 =  toAStarDistStock(i, offNum);
+                if(dist2 != INFINITY){
+                    dist2 *= TIME_TO_TAKE / (double)tableStatus.avail_stocks[i];
+                }
                 if (dist2 < min){
                     min = dist2;
                     closest_stock = i;
@@ -120,8 +122,10 @@ double chooseStockStrategy(int& stockNum, int& stockOffset){
             * le facteur TIME_TO_TAKE étant le temps de prise de l'adversaire x10 est peut-être un peu grand 
             * Réduire avec un facteur 2 pour limiter à 15 le facteur?
             */
-            double dist = TIME_TO_TAKE / (double)tableStatus.avail_stocks[todo_stocks[i]] * getBestStockPositionOff(stockNum, stockOffset);
-            if (dist == INFINITY){
+            double dist =  getBestStockPositionOff(stockNum, stockOffset);
+            if(dist != INFINITY){
+                dist *= TIME_TO_TAKE / (double)tableStatus.avail_stocks[todo_stocks[i]];
+            }else{
                 i++;
                 continue; // pas break sinon tu casses toute la stratégie
             }
@@ -264,7 +268,9 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
             * le facteur TIME_TO_DROP étant le temps de prise de l'adversaire x10 est peut-être un peu grand 
             * Réduire avec un facteur 2 pour limiter à 15 le facteur?
             */
-            d1 *= (double)TIME_TO_DROP / tableStatus.dropzone_proba[k];
+            if(steal && d1 != INFINITY){
+                d1 *= (double)TIME_TO_DROP /  (double)tableStatus.dropzone_proba[k];
+            }
             if(min > d1){
                 bestPoss = temp_pos;
                 dropzoneNum = k;
