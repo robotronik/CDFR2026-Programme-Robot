@@ -58,7 +58,7 @@ nav_return_t navigationGo(){
         //LOG_DEBUG("NAV: Distance to target: ", dist, "mm, movement since last check: ", move, "mm");
         if (dist > 10 && move < 4){
             if (stuck_start == 0) stuck_start = _millis();
-            if (_millis() - stuck_start > 200.0)
+            if (_millis() - stuck_start > 500.0)
                 LOG_WARNING("NAV: Robot might be stuck, distance to target: ", dist, "mm, movement since last check: ", move, "mm, time stuck: ", _millis() - stuck_start, "ms");
             
 
