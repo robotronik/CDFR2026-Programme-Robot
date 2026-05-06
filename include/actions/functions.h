@@ -7,7 +7,6 @@ bool returnToHome();
 bool homeActuators();
 void enableActuators();
 void disableActuators();
-bool isRobotInArrivalZone(position_t position);
 void opponentInAction(position_t position);
 void switchTeamSide(colorTeam_t color);
 void switchStrategy(int strategy);

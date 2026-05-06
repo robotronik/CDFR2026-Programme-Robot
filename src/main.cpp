@@ -125,7 +125,6 @@ int main(int argc, char *argv[])
                 nav_ret = NAV_IN_PROCESS;
                 tableStatus.calibrationAge = -1;
             }
-
             // colorTeam_t color = readColorSensorSwitch();
             // switchTeamSide(color);
 

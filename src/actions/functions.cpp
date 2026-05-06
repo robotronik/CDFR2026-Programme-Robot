@@ -351,7 +351,7 @@ bool returnToHome(){
         LOG_ERROR("RETURN_TO_HOME: Navigation error while returning to home");
         return true;
     }
-    return res == NAV_DONE && isRobotInArrivalZone(drive.position);
+    return res == NAV_DONE;
 }
 
 // Function to check if a point (px, py) lies inside the rectangle
@@ -419,16 +419,6 @@ void switchStrategy(int strategy){
         position_t pos = StratStartingPos();
         drive.setCoordinates(pos);
     }
-}
-
-bool isRobotInArrivalZone(position_t position){
-    // Returns true if the robot is in the arrival zone
-    int robotSmallRadius = 100;
-    int w = 450;
-    int h = 600;
-    int c_x = -550 - w/2;
-    int c_y = tableStatus.colorTeam == BLUE ? (900 + h/2) : (-900 - h/2);
-    return m_isPointInsideRectangle(position.x, position.y, c_x, c_y, w + 2*robotSmallRadius, h + 2*robotSmallRadius);
 }
 
 // ------------------------------------------------------
