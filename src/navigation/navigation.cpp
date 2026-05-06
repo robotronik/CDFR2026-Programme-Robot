@@ -64,6 +64,7 @@ nav_return_t navigationGo(){
 
             if (_millis() - stuck_start > 1000){
                 LOG_ERROR("NAV: Robot stuck");
+                drive.stopMotion();
                 stuck_start = 0;
                 return NAV_ERROR;
             }

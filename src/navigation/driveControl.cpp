@@ -20,9 +20,9 @@ DriveControl::DriveControl() {
 DriveControl::~DriveControl() {}
 
 void DriveControl::stopMotion() {
-    // garder l’asservissement actif
-    target = position;     // figer la cible
-    velocity = {0,0,0};    // éviter intégration parasite
+    target = position;
+    velocity = {0,0,0};
+    drive_interface::set_target(convertPositionToPacked(position));
 }
 
 void DriveControl::reset() {
