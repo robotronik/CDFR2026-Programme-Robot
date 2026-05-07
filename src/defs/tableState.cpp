@@ -78,7 +78,7 @@ void TableState::setDropzoneState(int dropzoneNum, TableState::dropzone_state_t 
     if(!teamCheck){
         dropzone_states[dropzoneNum] = state;
         LOG_EXTENDED_DEBUG("Set dropzone ", dropzoneNum, " state to ", state);
-    }else if(tableStatus.dropzone_proba[dropzoneNum] >= TIME_TO_DROP * 0.3){
+    }else if(tableStatus.dropzone_proba[dropzoneNum] >= MIN_DROPZONE_TIME){
         dropzone_states[dropzoneNum] = state;
         LOG_EXTENDED_DEBUG("Set dropzone ", dropzoneNum, " state to ", state);
     }else{
