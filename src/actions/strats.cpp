@@ -84,7 +84,7 @@ double toAStarDist(position_t a){
     while (delta > 180) delta -= 360;
     while (delta < -180) delta += 360;
 
-    double cost = length + 50.0 * fabs(DEG_TO_RAD * delta);
+    double cost = length + 100.0 * fabs(DEG_TO_RAD * delta);
 
     // pénalité si on va côté adverse
     if ((tableStatus.colorTeam == BLUE && a.y < drive.position.y) ||
@@ -361,7 +361,7 @@ position_t toFirstStockPos(position_t targetPos){
 
 
 bool NearestValidZone(position_t* pos){
-    const float MARGIN = 380.0;
+    const float MARGIN = 400.0;
     const float X_MIN = -550.0 + MARGIN, X_MAX = 1000.0 - MARGIN;
     const float Y_MIN = -1500.0 + MARGIN, Y_MAX = 1500.0 - MARGIN;
     bool modified = false;

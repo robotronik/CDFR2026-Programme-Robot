@@ -106,7 +106,9 @@ bool ActionFSM::RunFSM(){
     case FSM_ACTION_WAIT:
     {
         if (startTime == 0) startTime = _millis();
-
+        for (int i = 0; i < 4; i++){
+            LOG_DEBUG("granary : ", tableStatus.granary_stocks[i]);
+        }
         int bestI = getGrenierPosition(dropzonePos);
         if (bestI >= 0){
             dropzone_num = 100 + bestI; // ID spécial
