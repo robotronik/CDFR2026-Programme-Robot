@@ -667,7 +667,7 @@ ReturnFSM_t ActionFSM::Cursor(){
     static long unsigned startTime = 0;
     position_t navTarget = {780.0, 190.0, -180.0};
     position_t moveTarget = navTarget;
-    moveTarget.y += 490.0;
+    moveTarget.y += 480.0;
     position_t moveSafeTarget = moveTarget;
     moveSafeTarget.x -= 100.0;
     
@@ -679,10 +679,11 @@ ReturnFSM_t ActionFSM::Cursor(){
 
     switch (CursorState){
         case FSM_CURSOR_NAV:
+            enableCursor(true);
             nav_ret = navigationGoTo(navTarget, true);
-            if ((nav_ret == NAV_DONE)){ 
+            if (rotateTwoBlocks(stockOrder) && nav_ret == NAV_DONE){ 
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Nav done, going to FSM_CURSOR");
-                CursorState = FSM_CURSOR_ROT_NAV;
+                CursorState = FSM_CURSOR_MOVE;
             }
             else if (nav_ret == NAV_ERROR){
                 LOG_WARNING("FSM_CURSOR_NAV: Navigation error while going to cursor position for lowerClaws");
@@ -690,7 +691,8 @@ ReturnFSM_t ActionFSM::Cursor(){
             }
             break;
         case FSM_CURSOR_ROT_NAV:
-            if (enableCursor(true)){
+            enableCursor(true);
+            if (rotateTwoBlocks(stockOrder)){
                     LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Cursor enabled, going to FSM_CURSOR_LOW_CLAW");
                     CursorState = FSM_CURSOR_MOVE;
                 }
@@ -758,7 +760,12 @@ void ActionFSM::SetBestAction(position_t position){
         LOG_GREEN_INFO("Calibration aged is greater than 2 going for forced calibration");
         return;
     }
-
+    /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
+        if(!tableStatus.cursorIsDone() && (position_distance(drive.position, tableStatus.CursorPos) < 300)){ 
+            LOG_GREEN_INFO("Going for cursor action");
+            runState = FSM_ACTION_CURSOR;
+            return;
+        }
     /**************************** CONDITIONS POUR DROP UN STOCK ***************************************/
     LOG_ERROR("stock_num ; ", stock_num);
     if(tableStatus.remainingDropExist() && stock_num != -1){ // On peut DROP à partir du moment où on a un stock et qu'il reste des drop zones
@@ -796,12 +803,6 @@ void ActionFSM::SetBestAction(position_t position){
     }
 
     if(closestSteal == INFINITY && closestStock == INFINITY){
-        /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
-        if(!tableStatus.cursorIsDone()){ 
-            LOG_GREEN_INFO("Going for cursor action");
-            runState = FSM_ACTION_CURSOR;
-            return;
-        }
         LOG_ERROR("Nothing else to do waiting");
         runState = FSM_ACTION_WAIT;
         return;

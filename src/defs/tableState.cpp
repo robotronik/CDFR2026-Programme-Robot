@@ -21,7 +21,7 @@ void TableState::reset(){
     /* data Winter is comming */
 
     setCursorIsDone(false);
-    CursorPos = {625, 1220, 45};
+    CursorPos = {780.0, 190.0, -180.0};
     if (tableStatus.colorTeam == YELLOW) position_robot_flip(CursorPos);
 
     resetCalibrationAge();
