@@ -27,7 +27,7 @@ class TableState
         position_t CursorPos = {625, 1220, 45};
 
         /* data Winter is comming */
-        bool avail_stocks[STOCK_COUNT];     // Is stock available
+        int avail_stocks[STOCK_COUNT];     // Is stock available
         inline bool remainingStocksExist(){for(size_t _ = 0; _ < STOCK_COUNT; _++ ){if(avail_stocks[_]) return true;}; return false;}
         
         typedef enum
@@ -39,6 +39,7 @@ class TableState
         } dropzone_state_t;
 
         dropzone_state_t dropzone_states[DROPZONE_COUNT];
+        int dropzone_proba[DROPZONE_COUNT];
         inline bool remainingDropExist(){for(size_t _ = 0; _ < DROPZONE_COUNT; _++ ){if(dropzone_states[_] == DROPZONE_EMPTY) return true;}; return false;}
         inline bool dropToStealExist(){for(size_t _ = 0; _ < DROPZONE_COUNT; _++ ){if(dropzone_states[_] == (colorTeam == BLUE ? DROPZONE_YELLOW : DROPZONE_BLUE)) return true;}; return false;}
 

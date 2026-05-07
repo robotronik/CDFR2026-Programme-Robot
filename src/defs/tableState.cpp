@@ -26,11 +26,13 @@ void TableState::reset(){
 
     resetCalibrationAge();
     for (int i = 0; i < STOCK_COUNT; i++)
-        avail_stocks[i] = true;
+        avail_stocks[i] = TIME_TO_TAKE;
 
     // Initialize all drop zones to the empty state
-    for (int i = 0; i < DROPZONE_COUNT; i++)
+    for (int i = 0; i < DROPZONE_COUNT; i++){
         dropzone_states[i] = DROPZONE_EMPTY;
+        dropzone_proba[i] = 0;
+    }
 }
 
 int TableState::getScore()
@@ -55,7 +57,7 @@ void to_json(json& j, const TableState& ts) {
 }
 
 void TableState::setStockAsRemoved(int num){
-    tableStatus.avail_stocks[num] = false;
+    tableStatus.avail_stocks[num] = 0;
     LOG_EXTENDED_DEBUG("Removed stock ", num);
 }
 
@@ -63,6 +65,11 @@ void TableState::setDropzoneState(int dropzoneNum, TableState::dropzone_state_t 
     if (dropzoneNum < 0 || dropzoneNum >= DROPZONE_COUNT) {
         LOG_EXTENDED_DEBUG("Attempted to set dropzone state with invalid index ", dropzoneNum);
         return;
+    }
+    if((tableStatus.colorTeam == BLUE && state == TableState::DROPZONE_BLUE) || (tableStatus.colorTeam == YELLOW && state == TableState::DROPZONE_YELLOW)){
+        tableStatus.dropzone_proba[dropzoneNum] = 0;
+    }else{
+        tableStatus.dropzone_proba[dropzoneNum] += (tableStatus.dropzone_proba[dropzoneNum] < TIME_TO_DROP) ? 1 : 0;
     }
     dropzone_states[dropzoneNum] = state;
     LOG_EXTENDED_DEBUG("Set dropzone ", dropzoneNum, " state to ", state);
