@@ -44,6 +44,7 @@
 #define MULT_PARAM 0.68
 #define STOCK_COUNT  8
 #define DROPZONE_COUNT 10
+#define GRANARY_COUNT 4
 #define OFFSET_DROPZONE 250 // Offset to be in the middle of the dropzone, could be tweaked
 #define CALIBRATION_DEPLETION_TIME 3 // Max time between to calibration
 #define D_THRESHOLD_LATERAL 500
@@ -109,6 +110,11 @@ const position_t DROPZONE_POSITIONS_TABLE[] = {
     position_t{.x = 900, .y = 0}}; \
     // The dropzone table is ordered following symetry of the table, could be ordered by proximity
 
+const position_t GRANARY_STOCK_POSITION_TABLE[] = {
+    position_t{.x = -450, .y = 700}, \
+    position_t{.x = -450, .y = 250}, \
+    position_t{.x = -450, .y = -250}, \
+    position_t{.x = -450, .y = -700}};
 
 const position_t ARUCO_POSITIONS_TABLE[] = {
     position_t{.x = -400, .y = -900, .a = 0}, \

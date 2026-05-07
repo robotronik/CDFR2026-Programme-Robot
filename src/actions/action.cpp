@@ -106,18 +106,24 @@ bool ActionFSM::RunFSM(){
     case FSM_ACTION_WAIT:
     {
         if (startTime == 0) startTime = _millis();
-        if (_millis() - startTime > 2000){
-            SetBestAction(drive.position);
-            startTime = 0;
-            /*
-            getGrenierPosition(dropzonePos);
-            dropzone_num = 100; // ID spécial
+
+        int bestI = getGrenierPosition(dropzonePos);
+        if (bestI >= 0){
+            dropzone_num = 100 + bestI; // ID spécial
             stealStockState = FSM_GATHER_NAV;
             runState = FSM_ACTION_STEAL;
             stock_num = -1;
-            */
-   
+            break;
+        }     
+        if (_millis() - startTime > 10000 && tableStatus.remainingGranaryStocksExist()){
+            startTime = 0;
+            LOG_ERROR("RESET GRANARY STOCK");
+            for (int i = 0; i < 4; i++){
+                if (tableStatus.granary_stocks[i] != -1)
+                    tableStatus.granary_stocks[i] = 1;
+            }
         }
+        SetBestAction(drive.position);
         break;
     }
 
@@ -355,7 +361,7 @@ ReturnFSM_t ActionFSM::StealStock(){
                     stealStockState = FSM_GATHER_COLLECT;
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found ", sucess, " objects to steal");
                 }else if (sucess == -2 || sucess == 0){
-                    LOG_WARNING("FSM_GATHER_DETECT: DropZone was empty");
+                    LOG_WARNING("FSM_GATHER_DETECT: DropZone ", dropzone_num,  " was empty");
                     stealStockState = FSM_GATHER_NAV;
                     tableStatus.setDropzoneState(dropzone_num,TableState::DROPZONE_EMPTY);
                     dropzone_num = -1;
@@ -417,7 +423,10 @@ ReturnFSM_t ActionFSM::StealStock(){
             // Force le drop dans la même zone
 
             dropStockState = FSM_DROP_NAV;
-            if (dropzone_num > 8) dropStockState = FSM_DROP_NONE;
+            if (dropzone_num > 8) { //Granary steal case
+                dropStockState = FSM_DROP_NONE;
+                tableStatus.granary_stocks[dropzone_num - 100] = -1;
+            }
 
 
             rotate_done = false;

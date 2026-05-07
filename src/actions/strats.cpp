@@ -297,13 +297,30 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
     return (dropzoneNum != -1 ? min : INFINITY);
 }
 
-bool getGrenierPosition(position_t& pos){
-    bool isBlue = (tableStatus.colorTeam == BLUE);
-    double y = isBlue ? -700 : 700;
-    bool goodZone = isBlue ? (tableStatus.dropzone_states[7] == tableStatus.DROPZONE_BLUE): (tableStatus.dropzone_states[2] == tableStatus.DROPZONE_YELLOW);
-    double x = goodZone ? -100 : 50;
-    pos = {x, y, 180};
-    return true;
+int getGrenierPosition(position_t& pos){
+    double bestDist = INFINITY;
+    int bestI = -1;
+
+    for(int i = 0; i < GRANARY_COUNT; i++){
+        if(tableStatus.granary_stocks[i] != 1) continue;
+
+        position_t target = GRANARY_STOCK_POSITION_TABLE[i];
+        target.x += OFFSET_STOCK * 1.18;
+        target.a = 180;
+
+        double dist = toAStarDist(target);
+
+        if(dist < bestDist){
+            bestDist = dist;
+            pos = target;
+            bestI = i;
+        }
+    }
+
+    if(bestI >= 0) tableStatus.setGranaryStockAsRemoved(bestI);
+
+    LOG_DEBUG("Best i : ", bestI);
+    return bestI;
 }
 
 /*
