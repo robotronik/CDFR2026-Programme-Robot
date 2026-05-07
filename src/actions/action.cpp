@@ -338,14 +338,13 @@ ReturnFSM_t ActionFSM::StealStock(){
             int sucess;
             dist = 0;
             if(arucoCam1.getObjectForSweep(stockOrder,x,y,a,sucess, dist)){
-
-                if (countMyColorBlocks(stockOrder) == 4){
+                if (countMyColorBlocks(stockOrder) == 4 && sucess > 0){
                     stealStockState = FSM_GATHER_NAV;
                     tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
                     dropzone_num = -1;
                     return FSM_RETURN_DONE;
                 }
-                else if(sucess>=0){
+                else if(sucess>0){
                     targetPos_ = position_t{x,y,a};
                     double marge = 100.0; //marge de 100mm
                     LOG_ERROR("angle = ", targetPos_.a);
@@ -355,7 +354,7 @@ ReturnFSM_t ActionFSM::StealStock(){
 
                     stealStockState = FSM_GATHER_COLLECT;
                     LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found ", sucess, " objects to steal");
-                }else if (sucess == -2){
+                }else if (sucess == -2 || sucess == 0){
                     LOG_WARNING("FSM_GATHER_DETECT: DropZone was empty");
                     stealStockState = FSM_GATHER_NAV;
                     tableStatus.setDropzoneState(dropzone_num,TableState::DROPZONE_EMPTY);
