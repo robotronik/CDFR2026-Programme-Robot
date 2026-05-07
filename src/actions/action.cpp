@@ -462,7 +462,16 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
                 targetPos2.y = targetPos1.y + distanceBalayage * cosinus;
                 targetPos2.x = targetPos1.x - distanceBalayage * sinus;
                 targetPos2.a = angle + 5.0;
+
+                // S'avancer de 50 mm pour prendre le stock de  et se décaler de 80mm à gauche
+                targetPos3.y = targetPos2.y + 60.0 * sinus + 80.0 * cosinus;
+                targetPos3.x = targetPos2.x + 60.0 * cosinus - 80.0 * sinus;
                 targetPos3.a = angle;
+                
+                //S'avance de 50 mm pour collect
+                targetPos4.y = targetPos3.y + 50.0 * sinus;
+                targetPos4.x = targetPos3.x + 50.0 * cosinus; 
+                targetPos4.a = targetPos3.a;
 
                 if (NearestValidZone(&targetPos1)){
                     needToGoToWall = true;
@@ -474,16 +483,6 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
                     targetPos3.a = targetPos2.a;
                     targetPos2.a += 10.0; 
                 }
-
-                // S'avancer de 50 mm pour prendre le stock de  et se décaler de 80mm à gauche
-                targetPos3.y = targetPos2.y + 60.0 * sinus + 80.0 * cosinus;
-                targetPos3.x = targetPos2.x + 60.0 * cosinus - 80.0 * sinus;
-                
-                
-                //S'avance de 50 mm pour collect
-                targetPos4.y = targetPos3.y + 50.0 * sinus;
-                targetPos4.x = targetPos3.x + 50.0 * cosinus; 
-                targetPos4.a = targetPos3.a;
                 sweepState = FSM_SWEEP_NAV_RIGHT;
             }
             
