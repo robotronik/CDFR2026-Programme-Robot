@@ -679,11 +679,10 @@ ReturnFSM_t ActionFSM::Cursor(){
 
     switch (CursorState){
         case FSM_CURSOR_NAV:
-            enableCursor(true);
             nav_ret = navigationGoTo(navTarget, true);
             if (rotateTwoBlocks(stockOrder) && nav_ret == NAV_DONE){ 
                 LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Nav done, going to FSM_CURSOR");
-                CursorState = FSM_CURSOR_MOVE;
+                CursorState = FSM_CURSOR_ROT_NAV;
             }
             else if (nav_ret == NAV_ERROR){
                 LOG_WARNING("FSM_CURSOR_NAV: Navigation error while going to cursor position for lowerClaws");
@@ -691,11 +690,10 @@ ReturnFSM_t ActionFSM::Cursor(){
             }
             break;
         case FSM_CURSOR_ROT_NAV:
-            enableCursor(true);
-            if (rotateTwoBlocks(stockOrder)){
-                    LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Cursor enabled, going to FSM_CURSOR_LOW_CLAW");
-                    CursorState = FSM_CURSOR_MOVE;
-                }
+            
+            if (enableCursor(true)){
+                CursorState = FSM_CURSOR_MOVE;
+            }
             break;
 
         case FSM_CURSOR_MOVE:
