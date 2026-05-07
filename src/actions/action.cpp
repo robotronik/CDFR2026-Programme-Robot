@@ -735,7 +735,9 @@ ReturnFSM_t ActionFSM::Cursor(){
 */
 void ActionFSM::SetBestAction(position_t position){
     //ENDLESSMODE
-    //if (_millis() > tableStatus.startTime + 50000) tableStatus.startTime = _millis();
+    if (tableStatus.strategy == 4){
+        if (_millis() > tableStatus.startTime + 50000) tableStatus.startTime = _millis();
+    }
     /*********************** RESET DES DISTANCES POUR BEST ACTIONS *********************/
     closestStock = INFINITY;
     closestSteal = INFINITY;

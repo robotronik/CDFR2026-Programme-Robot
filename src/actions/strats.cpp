@@ -118,8 +118,6 @@ double chooseStockStrategy(int& stockNum, int& stockOffset){
             num = 1;
             break;
         case 4:
-            todo_stocks[0] = 0;
-            num = 1;
             break;
     }
 
