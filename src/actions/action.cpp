@@ -29,6 +29,7 @@ void ActionFSM::Reset(){
     steal_count = 0;
     offset = 0;
     distToAction = 0;
+    noStockCalibrationDone = false;
     targetStockPos = position_t{0,0,0};
     dropzonePos = position_t{0,0,0};
     targetStockFirstPos = position_t{0,0,0};
@@ -188,7 +189,7 @@ ReturnFSM_t ActionFSM::TakeStock(){
     //LOG_INFO("TakeStock state: ", gatherStockState, " stock_num: ", stock_num);
     if (stock_num == -1 && gatherStockState == FSM_GATHER_NAV){
         LOG_ERROR("No stock to take");
-        return FSM_RETURN_ERROR;
+        return FSM_RETURN_DONE;
     }
 
     double angle = RAD_TO_DEG*  position_angle(position_t {stockPos.x + stockOff.x, stockPos.y + stockOff.y, stockOff.a} , stockPos);
@@ -739,7 +740,8 @@ void ActionFSM::SetBestAction(position_t position){
     }
 
     /************************** CONDITIONS SUR LA CALIBRATION *************************/
-    if(tableStatus.calibrationAge >= CALIBRATION_DEPLETION_TIME){
+    if(tableStatus.calibrationAge >= CALIBRATION_DEPLETION_TIME || ( !noStockCalibrationDone && !tableStatus.remainingStocksExist() && stock_num == -1)){
+        if ( !noStockCalibrationDone && !tableStatus.remainingStocksExist()) noStockCalibrationDone = true;
         runState = FSM_ACTION_CALIBRATION;
         LOG_GREEN_INFO("Calibration aged is greater than 2 going for forced calibration");
         return;

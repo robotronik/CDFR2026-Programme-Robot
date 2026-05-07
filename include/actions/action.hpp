@@ -37,6 +37,7 @@ class ActionFSM{
         bool rotate_done = false;
         double distToAction;
         position_t backPos;
+        bool noStockCalibrationDone = false;
 
         nav_return_t nav_ret;
         position_t dropzonePos;
