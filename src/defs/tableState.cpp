@@ -28,9 +28,6 @@ void TableState::reset(){
     for (int i = 0; i < STOCK_COUNT; i++)
         avail_stocks[i] = TIME_TO_TAKE;
 
-    for (int i = 0; i < GRANARY_COUNT; i++)
-        granary_stocks[i] = 1;
-
     // Initialize all drop zones to the empty state
     for (int i = 0; i < DROPZONE_COUNT; i++){
         dropzone_states[i] = DROPZONE_EMPTY;
@@ -61,11 +58,6 @@ void to_json(json& j, const TableState& ts) {
 
 void TableState::setStockAsRemoved(int num){
     tableStatus.avail_stocks[num] = 0;
-    LOG_EXTENDED_DEBUG("Removed stock ", num);
-}
-
-void TableState::setGranaryStockAsRemoved(int num){
-    tableStatus.granary_stocks[num] = 0;
     LOG_EXTENDED_DEBUG("Removed stock ", num);
 }
 

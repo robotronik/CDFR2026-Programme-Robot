@@ -29,8 +29,6 @@ class TableState
         /* data Winter is comming */
         int avail_stocks[STOCK_COUNT];     // Is stock available
         inline bool remainingStocksExist(){for(size_t _ = 0; _ < STOCK_COUNT; _++ ){if(avail_stocks[_]) return true;}; return false;}
-        int granary_stocks[GRANARY_COUNT];
-        inline bool remainingGranaryStocksExist(){for(size_t _ = 0; _ < GRANARY_COUNT; _++ ){if(granary_stocks[_] != -1) return true;}; return false;}
         
         typedef enum
         {
@@ -48,7 +46,6 @@ class TableState
         
         void resetCalibrationAge(){ calibrationAge = 0;}
         void setStockAsRemoved(int num);
-        void setGranaryStockAsRemoved(int num);
         void setDropzoneState(int dropzoneNum, TableState::dropzone_state_t state);
         void setDropzoneAsError(int dropzoneNum);
 
