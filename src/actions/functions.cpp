@@ -364,7 +364,7 @@ void opponentInAction(position_t position){
             return;
         }
     }
-    for(int i = 0; i < DROPZONE_COUNT; i++){
+    for(int i = 0; i < DROPZONE_COUNT -2; i++){//Don't detect in the 2 last Zone because they are Granary Stock pushed by the Ninja
         position_t dropzone_pos = DROPZONE_POSITIONS_TABLE[i];
         if (m_isPointInsideRectangle(position.x, position.y, dropzone_pos.x, dropzone_pos.y, OPPONENT_ROBOT_RADIUS*2 + DROPZONE_WIDTH, OPPONENT_ROBOT_RADIUS*2 + DROPZONE_LENGTH))
         {

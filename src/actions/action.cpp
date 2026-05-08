@@ -48,6 +48,7 @@ void ActionFSM::Reset(){
 bool ActionFSM::RunFSM(){
     ReturnFSM_t ret;
     static long unsigned startTime = 0;
+    updateGranaryStock();
 
     switch (runState)
     {
@@ -109,14 +110,6 @@ bool ActionFSM::RunFSM(){
         if (_millis() - startTime > 2000){
             SetBestAction(drive.position);
             startTime = 0;
-            /*
-            getGrenierPosition(dropzonePos);
-            dropzone_num = 100; // ID spécial
-            stealStockState = FSM_GATHER_NAV;
-            runState = FSM_ACTION_STEAL;
-            stock_num = -1;
-            */
-   
         }
         break;
     }
@@ -417,7 +410,11 @@ ReturnFSM_t ActionFSM::StealStock(){
             // Force le drop dans la même zone
 
             dropStockState = FSM_DROP_NAV;
-            if (dropzone_num > 8) dropStockState = FSM_DROP_NONE;
+            if (dropzone_num > 9) dropStockState = FSM_DROP_NONE;
+            if (dropzone_num == 3)  tableStatus.granaryAlreadyTaken[0] = true;
+            if (dropzone_num == 8)  tableStatus.granaryAlreadyTaken[1] = true;
+            if (dropzone_num == 10) tableStatus.granaryAlreadyTaken[2] = true;
+            if (dropzone_num == 11) tableStatus.granaryAlreadyTaken[3] = true;
 
 
             rotate_done = false;

@@ -43,7 +43,7 @@
 #define OFFSET_STOCK 330 // Offset to be in the middle of the stock, could be changed if we want to take the stock from the top or the bottom*
 #define MULT_PARAM 0.68
 #define STOCK_COUNT  8
-#define DROPZONE_COUNT 10
+#define DROPZONE_COUNT 12
 #define OFFSET_DROPZONE 250 // Offset to be in the middle of the dropzone, could be tweaked
 #define CALIBRATION_DEPLETION_TIME 3 // Max time between to calibration
 #define D_THRESHOLD_LATERAL 500
@@ -106,7 +106,11 @@ const position_t DROPZONE_POSITIONS_TABLE[] = {
     position_t{.x = 900, .y = -800}, \
     position_t{.x = 200, .y = -700}, \
     position_t{.x = -450, .y = -250}, \
-    position_t{.x = 900, .y = 0}}; \
+    position_t{.x = 900, .y = 0},
+
+    //Granary Stock : can Steal but not drop
+    position_t{.x = -450, .y = 700}, \
+    position_t{.x = -450, .y = -700}};
     // The dropzone table is ordered following symetry of the table, could be ordered by proximity
 
 

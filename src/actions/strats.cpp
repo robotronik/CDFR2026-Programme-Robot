@@ -243,7 +243,7 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
     position_t temp_pos;
 
     for(int k = 0; k< DROPZONE_COUNT; k++){
-        if(tableStatus.dropzone_states[k] != zone_of_interest){
+        if(tableStatus.dropzone_states[k] != zone_of_interest || ( !steal && (k == 3 || k == 8 || k == 10 || k == 11))){ // Don't drop on zone == 3 or 8 or 10 or 11
             continue;
         }else{
             if (k == 7 || k == 4 || k == 2 ){// DropZone centrales
@@ -295,15 +295,26 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
     return (dropzoneNum != -1 ? min : INFINITY);
 }
 
-bool getGrenierPosition(position_t& pos){
-    bool isBlue = (tableStatus.colorTeam == BLUE);
-    double y = isBlue ? -700 : 700;
-    bool goodZone = isBlue ? (tableStatus.dropzone_states[7] == tableStatus.DROPZONE_BLUE): (tableStatus.dropzone_states[2] == tableStatus.DROPZONE_YELLOW);
-    double x = goodZone ? -100 : 50;
-    pos = {x, y, 180};
-    return true;
+void respawnGranaryZone(int zone, int flagIndex, TableState::dropzone_state_t etat){
+    if(!tableStatus.granaryAlreadyTaken[flagIndex]){
+        tableStatus.dropzone_states[zone] = etat;
+        tableStatus.dropzone_proba[zone] = TIME_TO_DROP;
+    }
 }
 
+void updateGranaryStock(){
+    static int wave = 0;
+    double time = _millis() - tableStatus.startTime;
+
+    if ((wave == 0 && time > 50000) || (wave == 1 && time > 70000) || (wave == 2 && time > 90000)){
+        TableState::dropzone_state_t etat = (tableStatus.colorTeam == YELLOW) ? tableStatus.DROPZONE_BLUE : tableStatus.DROPZONE_YELLOW;
+        respawnGranaryZone(3 ,0, etat);
+        respawnGranaryZone(8 ,1, etat);
+        respawnGranaryZone(10,2, etat);
+        respawnGranaryZone(11,3, etat);
+        wave++;
+    }
+}
 /*
     Determine the best drop zone from wich to steal
     For now very simple 
