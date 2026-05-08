@@ -536,7 +536,7 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
                 nav_ret = navigationGoTo(targetPos4, false, true, true);
 
             if (nav_ret == NAV_DONE || nav_ret == NAV_ERROR || (_millis() - startTime > 1000)) {
-                drive.setBrakeState(true);
+                drive.stopMotion();
                 moveServoAndWait(SERVO_NUM_6, 90, 200);
                 sweepState = FSM_SWEEP_COLLECT;
             }
@@ -545,7 +545,6 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
         case FSM_SWEEP_COLLECT:
         {
             if (rotateTwoBlocks(stockOrder)){
-                drive.setBrakeState(false);
                 LOG_EXTENDED_DEBUG("FSM_SWEEP_COLLECT: Claws rotated for collection");
                 LOG_DEBUG("FSM_SWEEP_COLLECT: Stock collected");
                 needToGoToWall = false;
