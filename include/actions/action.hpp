@@ -90,7 +90,9 @@ class ActionFSM{
             FSM_SWEEP_WALL,
             FSM_SWEEP_NAV_LEFT,
             FSM_SWEEP_PRE_COLLECT,
-            FSM_SWEEP_COLLECT
+            FSM_SWEEP_COLLECT,
+            FSM_SWEEP_END
+
 
         } StateSweepSteal_t;
         StateSweepSteal_t sweepState = FSM_SWEEP_INIT;
