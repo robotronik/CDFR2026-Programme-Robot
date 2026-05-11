@@ -306,7 +306,7 @@ void updateGranaryStock(){
     static int wave = 0;
     double time = _millis() - tableStatus.startTime;
 
-    if ((wave == 0 && time > 50000) || (wave == 1 && time > 70000) || (wave == 2 && time > 90000)){
+    if ((wave == 0 && time > 50000) || (wave == 1 && time > 80000)){
         TableState::dropzone_state_t etat = (tableStatus.colorTeam == YELLOW) ? tableStatus.DROPZONE_BLUE : tableStatus.DROPZONE_YELLOW;
         respawnGranaryZone(3 ,0, etat);
         respawnGranaryZone(8 ,1, etat);
