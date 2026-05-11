@@ -469,8 +469,8 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
                 targetPos3.a = angle;
                 
                 //S'avance de 50 mm pour collect
-                targetPos4.y = targetPos3.y + 50.0 * sinus;
-                targetPos4.x = targetPos3.x + 50.0 * cosinus; 
+                targetPos4.y = targetPos3.y + 50.0 * sinus + 50.0 * cosinus;
+                targetPos4.x = targetPos3.x + 50.0 * cosinus - 50.0 * sinus; 
                 targetPos4.a = targetPos3.a;
 
                 if (NearestValidZone(&targetPos1)){
@@ -481,6 +481,7 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
                 if (NearestValidZone(&targetPos2)){
                     LOG_DEBUG("NeedToGoToWall 2");
                     targetPos3.a = targetPos2.a;
+                    targetPos4.a = targetPos3.a;
                     targetPos2.a += 10.0; 
                 }
                 sweepState = FSM_SWEEP_NAV_RIGHT;
@@ -493,9 +494,8 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
             nav_ret = navigationGoTo(targetPos1, false, false, false); //First Move
             snapClaws(false,false);
    
-            if (nav_ret == NAV_DONE){
+            if (nav_ret == NAV_DONE && moveServoAndWait(SERVO_NUM_6, 170, 200)){
                 LOG_DEBUG("FSM_SWEEP_NAV_RIGHT: Moving to right of the stock at position (", targetPos1.x, ",", targetPos1.y, ") with angle ", angle);
-                moveServoAndWait(SERVO_NUM_6, 170, 200);
                 if (needToGoToWall){
                     targetPos1.y += 100.0 * sinus;
                     targetPos1.x += 100.0 * cosinus;
@@ -511,7 +511,7 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
         case FSM_SWEEP_WALL:
         {
             nav_ret = navigationGoTo(targetPos1, false, true, false); // Go slowly to the wall
-            if (nav_ret == NAV_DONE || nav_ret == NAV_ERROR || (_millis() - startTime > 1000)){ // If stuck > 1 second, we are against the wall
+            if (nav_ret == NAV_DONE || (_millis() - startTime > 1000)){ // If stuck > 1 second, we are against the wall
                 LOG_INFO("SWEEP: arrived at wall");
                 startTime = _millis();
                 sweepState = FSM_SWEEP_NAV_LEFT;
@@ -521,7 +521,7 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
         case FSM_SWEEP_NAV_LEFT:
         {
             nav_ret = navigationGoTo(targetPos2, false, true, false); // Second Move, Slow mode
-            if (nav_ret == NAV_DONE || nav_ret == NAV_ERROR || (_millis() - startTime > 1000)){
+            if (nav_ret == NAV_DONE || (_millis() - startTime > 2000)){
                 LOG_DEBUG("FSM_SWEEP_NAV_LEFT: Moving to left of the stock " " at position (", targetPos2.x, ",", targetPos2.y, ") with angle ", targetPos2.a);
                 startTime = _millis();
                 sweepState = FSM_SWEEP_PRE_COLLECT;
@@ -533,9 +533,9 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
             if (needToGoToWall)
                 nav_ret = navigationGoTo(targetPos3, false, true, true);
             else 
-                nav_ret = navigationGoTo(targetPos4, false, true, true);
+                sweepState = FSM_SWEEP_COLLECT;
 
-            if (nav_ret == NAV_DONE || nav_ret == NAV_ERROR || (_millis() - startTime > 1000)) {
+            if (nav_ret == NAV_DONE || (_millis() - startTime > 1000)) {
                 drive.stopMotion();
                 moveServoAndWait(SERVO_NUM_6, 90, 200);
                 sweepState = FSM_SWEEP_COLLECT;
@@ -543,6 +543,17 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
             break;
         } 
         case FSM_SWEEP_COLLECT:
+        {
+            nav_ret = navigationGoTo(targetPos4, false, true, true);
+
+            if (nav_ret == NAV_DONE || (_millis() - startTime > 1000)) {
+                drive.stopMotion();
+                moveServoAndWait(SERVO_NUM_6, 90, 200);
+                sweepState = FSM_SWEEP_END;
+            }
+        } 
+        break;
+        case FSM_SWEEP_END:
         {
             if (rotateTwoBlocks(stockOrder)){
                 LOG_EXTENDED_DEBUG("FSM_SWEEP_COLLECT: Claws rotated for collection");
