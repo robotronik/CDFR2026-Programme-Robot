@@ -755,7 +755,8 @@ void ActionFSM::SetBestAction(position_t position){
         return;
     }
     /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
-        if(!tableStatus.cursorIsDone() && (position_distance(drive.position, tableStatus.CursorPos) < 300)){ 
+    int numStockCurseur = (tableStatus.colorTeam == BLUE) ? 2 : 6;
+        if(!tableStatus.cursorIsDone() && (position_distance(drive.position, tableStatus.CursorPos) < 300) && !tableStatus.avail_stocks[numStockCurseur]){ 
             LOG_GREEN_INFO("Going for cursor action");
             runState = FSM_ACTION_CURSOR;
             return;
