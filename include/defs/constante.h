@@ -45,7 +45,7 @@
 #define STOCK_COUNT  8
 #define DROPZONE_COUNT 12
 #define OFFSET_DROPZONE 250 // Offset to be in the middle of the dropzone, could be tweaked
-#define CALIBRATION_DEPLETION_TIME 3 // Max time between to calibration
+#define CALIBRATION_DEPLETION_TIME 2 // Max time between to calibration
 #define D_THRESHOLD_LATERAL 500
 // Define the dimensions of the stocks
 #define STOCKS_WIDTH 200
