@@ -338,7 +338,7 @@ ReturnFSM_t ActionFSM::StealStock(){
             int sucess;
             dist = 0;
             if(arucoCam1.getObjectForSweep(stockOrder,x,y,a,sucess, dist)){
-                if (countMyColorBlocks(stockOrder) == 4 && sucess > 0){
+                if (countMyColorBlocks(stockOrder) == sucess && sucess > 0){
                     stealStockState = FSM_GATHER_NAV;
                     tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
                     dropzone_num = -1;
@@ -740,6 +740,9 @@ void ActionFSM::SetBestAction(position_t position){
     /*********************** RESET DES DISTANCES POUR BEST ACTIONS *********************/
     closestStock = INFINITY;
     closestSteal = INFINITY;
+    for(size_t _ = 0; _<4 ; _++){
+        stockOrder[_] = (tableStatus.colorTeam == YELLOW) ? false : true;
+    }
 
     /********************* CONDITIONS POUR LE RETURN HOME ***********************/
     if(_millis() > tableStatus.startTime + 90000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy

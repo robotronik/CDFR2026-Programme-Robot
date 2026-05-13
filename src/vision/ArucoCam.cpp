@@ -365,7 +365,7 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
     }
     // 4. MAPPING : On remplit les pinces dans l'ordre de détection
     // On reset tout à true par sécurité
-    for(int i = 0; i < 4; i++) order[i] = true; 
+    //for(int i = 0; i < 4; i++) order[i] = true; 
 
     for (int i = 0; i < std::min(4, count); i++) {
         order[4 - blocks.size() + i] = blocks[i].color;
