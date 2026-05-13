@@ -55,7 +55,7 @@
 // Define timing to consider oppenent has succesfully taken the mark
 #define TIME_TO_TAKE 30 // Time to take a stock (time in s * number of lidar rotation per second)
 #define TIME_TO_DROP 30 // Time to drop a stock (time in s * number of lidar rotation per second)
-#define MIN_DROPZONE_TIME 10 // Minimum time to consider a dropzone as controlled by the opponent (time in s * number of lidar rotation per second)
+#define MIN_DROPZONE_TIME 20 // Minimum time to consider a dropzone as controlled by the opponent (time in s * number of lidar rotation per second)
 // Define the positions of the stocks 
 const position_t STOCK_POSITIONS_TABLE[] = {
     position_t{.x = -200, .y = 1325, .a = 90},\
