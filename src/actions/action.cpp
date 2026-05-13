@@ -411,11 +411,6 @@ ReturnFSM_t ActionFSM::StealStock(){
 
             dropStockState = FSM_DROP_NAV;
             if (dropzone_num > 9) dropStockState = FSM_DROP_NONE;
-            if (dropzone_num == 3)  tableStatus.granaryAlreadyTaken[0] = true;
-            if (dropzone_num == 8)  tableStatus.granaryAlreadyTaken[1] = true;
-            if (dropzone_num == 10) tableStatus.granaryAlreadyTaken[2] = true;
-            if (dropzone_num == 11) tableStatus.granaryAlreadyTaken[3] = true;
-
 
             rotate_done = false;
             stock_num = 1; // marking random value to pass Best Action condition on drop action
@@ -534,7 +529,6 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
 
             if (nav_ret == NAV_DONE || (_millis() - startTime > 1000)) {
                 drive.stopMotion();
-                moveServoAndWait(SERVO_NUM_6, 90, 200);
                 sweepState = FSM_SWEEP_COLLECT;
             }
             break;
@@ -622,6 +616,10 @@ ReturnFSM_t ActionFSM::DropStock(){
         case FSM_DROP:
             // Drop the stock
             if (dropBlock()){
+                if (dropzone_num == 3)  tableStatus.granaryAlreadyTaken[0] = true;
+                if (dropzone_num == 8)  tableStatus.granaryAlreadyTaken[1] = true;
+                if (dropzone_num == 10) tableStatus.granaryAlreadyTaken[2] = true;
+                if (dropzone_num == 11) tableStatus.granaryAlreadyTaken[3] = true;
                 LOG_EXTENDED_DEBUG("FSM_DROP: Stock ", stock_num, " dropped");
                 dropStockState = FSM_DROP_NAV_BACK;
                 backPos = drive.position;
