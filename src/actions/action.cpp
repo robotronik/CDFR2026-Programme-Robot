@@ -639,6 +639,9 @@ ReturnFSM_t ActionFSM::DropStock(){
                 stock_num = -1;
                 dropzone_num = -1;
                 steal_count = -1;
+                for(size_t _ = 0; _<4 ; _++){
+                    stockOrder[_] = (tableStatus.colorTeam == YELLOW) ? false : true;
+                }
             }
             break;
         case FSM_DROP_NAV_BACK:
@@ -740,9 +743,6 @@ void ActionFSM::SetBestAction(position_t position){
     /*********************** RESET DES DISTANCES POUR BEST ACTIONS *********************/
     closestStock = INFINITY;
     closestSteal = INFINITY;
-    for(size_t _ = 0; _<4 ; _++){
-        stockOrder[_] = (tableStatus.colorTeam == YELLOW) ? false : true;
-    }
 
     /********************* CONDITIONS POUR LE RETURN HOME ***********************/
     if(_millis() > tableStatus.startTime + 90000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
