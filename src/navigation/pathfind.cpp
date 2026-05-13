@@ -5,17 +5,6 @@
 #include "main.hpp" //lidar
 #include "math.h" // round()
 
-position_int_t convert_to_astar(position_t p){
-    position_int_t k;
-    k.x = (int)round((p.x + 1000.0) / SCALE);
-    k.y = (int)round((p.y + 1500.0) / SCALE);
-    if (k.x < 0) k.x = 0;
-    else if (k.x >= AS_HEIGHT) k.x = AS_HEIGHT - 1;
-    if (k.y < 0) k.y = 0;
-    else if (k.y >= AS_WIDTH) k.y = AS_WIDTH - 1;
-    return k;
-}
-
 position_t convert_from_astar(position_int_t k){
     position_t p;
     p.x = k.x * SCALE - 1000.0;

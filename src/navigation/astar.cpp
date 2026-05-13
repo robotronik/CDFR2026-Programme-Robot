@@ -49,9 +49,22 @@ void fill_costmap_square(position_int_t s, position_int_t e, unsigned char cost)
     }
 }
 
+position_int_t convert_to_astar(position_t p){
+    position_int_t k;
+    k.x = (int)round((p.x + 1000.0) / SCALE);
+    k.y = (int)round((p.y + 1500.0) / SCALE);
+    if (k.x < 0) k.x = 0;
+    else if (k.x >= AS_HEIGHT) k.x = AS_HEIGHT - 1;
+    if (k.y < 0) k.y = 0;
+    else if (k.y >= AS_WIDTH) k.y = AS_WIDTH - 1;
+    return k;
+}
+
 void astar_initialize_costmap(){
     memset(costmap, FREE_SPACE, sizeof(costmap));
-    fill_costmap_square({TO_AS_COORD(-350), TO_AS_COORD(700)}, {TO_AS_COORD(100), TO_AS_COORD(-700)}, UN_OPTI_SPACE);
+    position_int_t s = convert_to_astar(position_t{-350,700});
+    position_int_t e = convert_to_astar(position_t{100,-700});
+    fill_costmap_square(s, e, UN_OPTI_SPACE);
 }
 
 int astar_pathfind(position_int_t start, position_int_t goal, position_int_t path[]) {
