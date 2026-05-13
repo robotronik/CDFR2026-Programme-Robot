@@ -294,11 +294,12 @@ void GetLidar()
 {
     static position_t pos_opponent = {3000,0,0};
     double IsDataValid = (fabs(drive.velocity.a) <= 45.0) || (position_distance(drive.position, pos_opponent) < 1000);
-    convertAngularToAxial(lidar.data, lidar.count, drive.position, 150);
-    pathfind_fill_lidar();
-    if (lidar.getData() && IsDataValid){
+    
+    if (lidar.getData()){
+        convertAngularToAxial(lidar.data, lidar.count, drive.position, 150);
+        pathfind_fill_lidar();
         // Only update opponent position if the robot is not moving too fast to avoid noise
-        if ((fabs(drive.velocity.a) <= 45.0) && position_opponentV2(lidar.data, lidar.count, drive.position, pos_opponent) &&
+        if (IsDataValid && position_opponentV2(lidar.data, lidar.count, drive.position, pos_opponent) &&
                 (currentState == RUN || currentState == MANUAL) && (_millis() - tableStatus.startTime > 1000)){ // Only update opponent position after 1 second from the start to avoid false readings at the beginning
             tableStatus.pos_opponent.x = pos_opponent.x;
             tableStatus.pos_opponent.y = pos_opponent.y;
