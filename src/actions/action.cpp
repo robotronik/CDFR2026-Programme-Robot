@@ -26,7 +26,6 @@ void ActionFSM::Reset(){
     /*RESET OF ACTION ID*/
     dropzone_num = -1;
     stock_num = -1;
-    steal_count = 0;
     offset = 0;
     distToAction = 0;
     noStockCalibrationDone = false;
@@ -416,11 +415,11 @@ ReturnFSM_t ActionFSM::StealStock(){
             // Force le drop dans la même zone
 
             dropStockState = FSM_DROP_NAV;
-            if (dropzone_num > 9) dropStockState = FSM_DROP_NONE;
-
+            if (dropzone_num > 9){
+                dropStockState = FSM_DROP_NONE;
+            }
             rotate_done = false;
             stock_num = 1; // marking random value to pass Best Action condition on drop action
-            steal_count = -1;
             tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY);
             return FSM_RETURN_DONE;
         }
@@ -639,7 +638,6 @@ ReturnFSM_t ActionFSM::DropStock(){
                 //No more stock in hand
                 stock_num = -1;
                 dropzone_num = -1;
-                steal_count = -1;
                 for(size_t _ = 0; _<4 ; _++){
                     stockOrder[_] = (tableStatus.colorTeam == YELLOW) ? false : true;
                 }
