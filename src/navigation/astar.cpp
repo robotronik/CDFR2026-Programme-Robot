@@ -28,6 +28,27 @@ inline bool is_position_int_equal(position_int_t a, position_int_t b){
     return (a.x == b.x && a.y == b.y);
 }
 
+/*
+The fill_costmap_square function modifies a rectangular region of a costmap, 
+defined by the start (s) and end (e) positions, by filling it with a specified cost value. 
+
+It ensures the region is clamped within predefined boundaries (AS_HEIGHT and AS_WIDTH) 
+and uses memset to efficiently update the cost values.
+*/
+void fill_costmap_square(position_int_t s, position_int_t e, unsigned char cost){
+    s.x = (s.x < 0) ? 0 : s.x;
+    e.x = (e.x > AS_HEIGHT) ? AS_HEIGHT : e.x;
+    s.y = (s.y < 0) ? 0 : s.y;
+    e.y = (e.y > AS_WIDTH) ? AS_WIDTH : e.y;
+    
+    const int width = e.y - s.y;
+    if (width <= 0 || e.x <= s.x) return;
+
+    for (int x = s.x; x < e.x; x++) {
+        memset(&costmap[x][s.y], cost, (size_t)width);
+    }
+}
+
 void astar_initialize_costmap(){
     memset(costmap, FREE_SPACE, sizeof(costmap));
     fill_costmap_square({TO_AS_COORD(-350), TO_AS_COORD(700)}, {TO_AS_COORD(100), TO_AS_COORD(-700)}, UN_OPTI_SPACE);
@@ -116,27 +137,6 @@ int astar_pathfind(position_int_t start, position_int_t goal, position_int_t pat
     }
 
     return len;
-}
-
-/*
-The fill_costmap_square function modifies a rectangular region of a costmap, 
-defined by the start (s) and end (e) positions, by filling it with a specified cost value. 
-
-It ensures the region is clamped within predefined boundaries (AS_HEIGHT and AS_WIDTH) 
-and uses memset to efficiently update the cost values.
-*/
-void fill_costmap_square(position_int_t s, position_int_t e, unsigned char cost){
-    s.x = (s.x < 0) ? 0 : s.x;
-    e.x = (e.x > AS_HEIGHT) ? AS_HEIGHT : e.x;
-    s.y = (s.y < 0) ? 0 : s.y;
-    e.y = (e.y > AS_WIDTH) ? AS_WIDTH : e.y;
-    
-    const int width = e.y - s.y;
-    if (width <= 0 || e.x <= s.x) return;
-
-    for (int x = s.x; x < e.x; x++) {
-        memset(&costmap[x][s.y], cost, (size_t)width);
-    }
 }
 
 void fill_costmap_sphere(position_int_t center, int radius, unsigned char cost){
