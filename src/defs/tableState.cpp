@@ -78,8 +78,19 @@ void TableState::setDropzoneState(int dropzoneNum, TableState::dropzone_state_t 
     }else{
         tableStatus.dropzone_proba[dropzoneNum] += (tableStatus.dropzone_proba[dropzoneNum] < TIME_TO_DROP) ? 1 : 0;
     }
-    dropzone_states[dropzoneNum] = state;
-    LOG_EXTENDED_DEBUG("Set dropzone ", dropzoneNum, " state to ", state);
+
+    // Condition de vérification pour le passage à une zone controllée par l'adversaire 
+    bool teamCheck = (state == TableState::DROPZONE_BLUE && tableStatus.colorTeam == YELLOW) 
+                    || (state == TableState::DROPZONE_YELLOW && tableStatus.colorTeam == BLUE);
+    if(!teamCheck){
+        dropzone_states[dropzoneNum] = state;
+        LOG_EXTENDED_DEBUG("Set dropzone ", dropzoneNum, " state to ", state);
+    }else if(tableStatus.dropzone_proba[dropzoneNum] >= MIN_DROPZONE_TIME){
+        dropzone_states[dropzoneNum] = state;
+        LOG_EXTENDED_DEBUG("Set dropzone ", dropzoneNum, " state to ", state);
+    }else{
+        LOG_EXTENDED_DEBUG("Opponent detected at dropZone but not for long enough");
+    }
 }
 
 void TableState::setDropzoneAsError(int dropzoneNum){
