@@ -170,7 +170,7 @@ bool ArucoCam::ToObjectColor(bool* order, int& success){
     if(alignBlocks.size()<=2){
         start = 1;
     }
-    for(size_t i =  0; i< alignBlocks.size() + start; i++){  
+    for(size_t i =  0; i< alignBlocks.size(); i++){  
         order[start + i ] = alignBlocks[i].color;
         if(alignBlocks[i].color){
             LOG_EXTENDED_DEBUG("Blue");
@@ -365,7 +365,7 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
     }
     // 4. MAPPING : On remplit les pinces dans l'ordre de détection
     // On reset tout à true par sécurité
-    for(int i = 0; i < 4; i++) order[i] = true; 
+    //for(int i = 0; i < 4; i++) order[i] = true; 
 
     for (int i = 0; i < std::min(4, count); i++) {
         order[4 - blocks.size() + i] = blocks[i].color;
@@ -432,7 +432,7 @@ bool ArucoCam::ToIsolatedObject(json& data, double & x, double & y, double & a, 
 
     std::sort(possible.begin(), possible.end(), sortBlockT);
     LOG_GREEN_INFO("Isolated on one side is ", possible[0].color, " at ( ",possible[0].x,", ",possible[0].y,")");
-    LOG_GREEN_INFO("Isolated on the other side is ", possible[count-1].color, " at ( ",possible[count-1].x,", ",possible[3].y,")");
+    LOG_GREEN_INFO("Isolated on the other side is ", possible[count-1].color, " at ( ",possible[count-1].x,", ",possible[count-1].y,")");
     x += possible[0].x;
     y += possible[0].y;
     a += possible[0].a;

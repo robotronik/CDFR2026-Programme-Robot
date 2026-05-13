@@ -9,6 +9,7 @@
 #define OBSTACLE_COST 255
 #define MARGIN_COST   200
 #define FREE_SPACE     0
+#define UN_OPTI_SPACE 10
 
 // Maximum possible path length on the A* grid (conservative bound).
 #define MAX_PATH_LEN (4 * (AS_HEIGHT + AS_WIDTH))
@@ -18,6 +19,11 @@ typedef struct {
     int y;
 } position_int_t;
 
+inline int to_as_coord(int x){
+    return (x / SCALE) + 1;
+}
+
+position_int_t convert_to_astar(position_t p);
 void astar_initialize_costmap();
 void astar_place_obstacle_with_margin(position_int_t c, int w, int h, int margin, bool traversable = true, bool square = true);
 int astar_pathfind(position_int_t start, position_int_t goal, position_int_t path[]);

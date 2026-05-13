@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
             // colorTeam_t color = readColorSensorSwitch();
             // switchTeamSide(color);
 
-            if (readLimitSwitchTop() && motorUpFirst){ // Why TF is there an "and" 
+            if (readLimitSwitchTop() && motorUpFirst){ 
                 arduino.moveMotorDC(20,false);
                 motorUpFirst = false;
             }
@@ -204,7 +204,6 @@ int main(int argc, char *argv[])
                 arduino.RGB_Solid(0, 255, 0);
                 openClaws();
                 disableActuators();
-                // Clear command buffer
                 drive.disable();
                 // Clear manual_func
                 manual_currentFunc = NULL;
