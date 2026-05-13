@@ -537,7 +537,7 @@ bool ArucoCam::getObjectInfoColors(bool* order, double & x, double & y, double &
 
 }
 
-bool ArucoCam::getObjectForSweep(bool* order, double & x, double & y, double & a, int& success, double dist_balayage){
+bool ArucoCam::getObjectForSweep(bool* order, double & x, double & y, double & a, int& success, double& dist_balayage){
     json data;
     int data_success;
 

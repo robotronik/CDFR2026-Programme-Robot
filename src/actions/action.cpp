@@ -429,7 +429,7 @@ ReturnFSM_t ActionFSM::StealStock(){
 
 ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double distanceBalayage){
     //targetPos1 = position premier block à voler
-    double margeBalayage = 300;
+    double margeBalayage = 150;
     distanceBalayage += margeBalayage;
     static long unsigned startTime = 0;
     static double cosinus, sinus;
@@ -741,7 +741,7 @@ void ActionFSM::SetBestAction(position_t position){
     closestSteal = INFINITY;
 
     /********************* CONDITIONS POUR LE RETURN HOME ***********************/
-    if(_millis() > tableStatus.startTime + 90000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
+    if(_millis() > tableStatus.startTime + 100000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
         LOG_GREEN_INFO("95 seconds passed, switching to NAV_HOME");
         runState = FSM_ACTION_NAV_HOME;
         return;
@@ -756,7 +756,7 @@ void ActionFSM::SetBestAction(position_t position){
     }
     /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
     int numStockCurseur = (tableStatus.colorTeam == BLUE) ? 2 : 6;
-        if(!tableStatus.cursorIsDone() && (position_distance(drive.position, tableStatus.CursorPos) < 300) && !tableStatus.avail_stocks[numStockCurseur]){ 
+        if(!tableStatus.cursorIsDone() && (position_distance(drive.position, tableStatus.CursorPos) < 400) && !tableStatus.avail_stocks[numStockCurseur]){ 
             LOG_GREEN_INFO("Going for cursor action");
             runState = FSM_ACTION_CURSOR;
             return;

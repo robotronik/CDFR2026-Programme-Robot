@@ -37,7 +37,7 @@ public:
 
     bool getObjectPos(double & x, double & y, double & a, int& success);
     bool getObjectInfoColors(bool* order, double & x, double & y, double & a, int& success);
-    bool getObjectForSweep(bool* order, double & x, double & y, double & a, int& success, double dist_balayage);
+    bool getObjectForSweep(bool* order, double & x, double & y, double & a, int& success, double& dist_balayage);
 
     bool getBestIsolatedObject(double & x, double & y, double & a, bool& success);
 
