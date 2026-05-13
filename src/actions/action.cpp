@@ -659,9 +659,9 @@ ReturnFSM_t ActionFSM::DropStock(){
 
 ReturnFSM_t ActionFSM::Cursor(){
     static long unsigned startTime = 0;
-    position_t navTarget = {780.0, 190.0, -180.0};
+    position_t navTarget = {780.0, 180.0, -180.0};
     position_t moveTarget = navTarget;
-    moveTarget.y += 480.0;
+    moveTarget.y += 510.0;
     position_t moveSafeTarget = moveTarget;
     moveSafeTarget.x -= 100.0;
     
