@@ -33,9 +33,11 @@ void TableState::reset(){
         dropzone_states[i] = DROPZONE_EMPTY;
         dropzone_proba[i] = 0;
     }
+    colorTeamDropZone = (colorTeam == BLUE) ? DROPZONE_BLUE : DROPZONE_YELLOW;
+
     //Don't Drop on the Zone in front of the granary
-    dropzone_states[3] = (tableStatus.colorTeam == YELLOW) ? DROPZONE_YELLOW : DROPZONE_BLUE;
-    dropzone_states[8] = (tableStatus.colorTeam == YELLOW) ? DROPZONE_YELLOW : DROPZONE_BLUE;
+    dropzone_states[3] = colorTeamDropZone;
+    dropzone_states[8] = colorTeamDropZone;
 
     for(int i = 0; i < 4; i++){
         granaryAlreadyTaken[i] = false;

@@ -75,7 +75,7 @@ bool ActionFSM::RunFSM(){
         }
         else if (ret == FSM_RETURN_ERROR){
             LOG_ERROR("FSM_ACTION_STEAL: Couldn't steal zone : ", dropzone_num);
-            tableStatus.setDropzoneState(dropzone_num,TableState::DROPZONE_EMPTY);
+            tableStatus.setDropzoneState(dropzone_num,tableStatus.colorTeamDropZone);
             stealStockState = FSM_GATHER_NAV;
             tableStatus.calibrationAge += CALIBRATION_DEPLETION_TIME;
             dropzone_num = -1;
@@ -106,7 +106,7 @@ bool ActionFSM::RunFSM(){
     case FSM_ACTION_WAIT:
     {
         if (startTime == 0) startTime = _millis();
-        if (_millis() - startTime > 2000){
+        if (_millis() - startTime > 500){
             SetBestAction(drive.position);
             startTime = 0;
         }
@@ -746,7 +746,7 @@ void ActionFSM::SetBestAction(position_t position){
     closestSteal = INFINITY;
 
     /********************* CONDITIONS POUR LE RETURN HOME ***********************/
-    if(_millis() > tableStatus.startTime + 100000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
+    if(_millis() > tableStatus.startTime + 94000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
         LOG_GREEN_INFO("95 seconds passed, switching to NAV_HOME");
         runState = FSM_ACTION_NAV_HOME;
         return;

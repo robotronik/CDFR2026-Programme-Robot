@@ -39,6 +39,7 @@ class TableState
         } dropzone_state_t;
 
         dropzone_state_t dropzone_states[DROPZONE_COUNT];
+        dropzone_state_t colorTeamDropZone = (colorTeam == BLUE) ? DROPZONE_BLUE : DROPZONE_YELLOW;
         int dropzone_proba[DROPZONE_COUNT];
         bool granaryAlreadyTaken[4];
         inline bool remainingDropExist(){for(size_t _ = 0; _ < DROPZONE_COUNT; _++ ){if(dropzone_states[_] == DROPZONE_EMPTY) return true;}; return false;}
