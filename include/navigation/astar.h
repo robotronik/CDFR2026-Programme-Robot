@@ -9,8 +9,7 @@
 #define OBSTACLE_COST 255
 #define MARGIN_COST   200
 #define FREE_SPACE     0
-#define UN_OPTI_SPACE 10
-
+#define UN_OPTI_SPACE 50
 // Maximum possible path length on the A* grid (conservative bound).
 #define MAX_PATH_LEN (4 * (AS_HEIGHT + AS_WIDTH))
 
