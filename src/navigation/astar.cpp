@@ -62,8 +62,8 @@ position_int_t convert_to_astar(position_t p){
 
 void astar_initialize_costmap(){
     memset(costmap, FREE_SPACE, sizeof(costmap));
-    position_int_t s = convert_to_astar(position_t{-350,700});
-    position_int_t e = convert_to_astar(position_t{100,-700});
+    position_int_t s = convert_to_astar(position_t{-350,-700});
+    position_int_t e = convert_to_astar(position_t{100,700});
     fill_costmap_square(s, e, UN_OPTI_SPACE);
 }
 
