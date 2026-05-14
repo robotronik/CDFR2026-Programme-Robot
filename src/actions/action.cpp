@@ -337,7 +337,7 @@ ReturnFSM_t ActionFSM::StealStock(){
                 }
                 else if(sucess>0){
                     targetPos_ = position_t{x,y,a};
-                    double marge = 100.0; //marge de 100mm
+                    double marge = 75.0; //marge de 100mm
                     LOG_ERROR("angle = ", targetPos_.a);
                     targetPos_.x = targetPos_.x + (dist/2 + marge) * sin(DEG_TO_RAD * targetPos_.a);
                     targetPos_.y = targetPos_.y - (dist/2 + marge) * cos(DEG_TO_RAD * targetPos_.a);
@@ -429,7 +429,7 @@ ReturnFSM_t ActionFSM::StealStock(){
 
 ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double distanceBalayage){
     //targetPos1 = position premier block à voler
-    double margeBalayage = 150;
+    double margeBalayage = 175;
     distanceBalayage += margeBalayage;
     static long unsigned startTime = 0;
     static double cosinus, sinus;
