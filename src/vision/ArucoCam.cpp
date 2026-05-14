@@ -387,8 +387,8 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
     double ar = a * M_PI / 180.0;
     x += mean_x * cos(ar) - mean_y * sin(ar);
     y += mean_x * sin(ar) + mean_y * cos(ar);
-    x -= 270.0 * cos(chosen * M_PI / 180.0);
-    y -= 270.0 * sin(chosen * M_PI / 180.0);
+    x -= 260.0 * cos(chosen * M_PI / 180.0);
+    y -= 260.0 * sin(chosen * M_PI / 180.0);
     a = chosen;
 
     return true;

@@ -103,6 +103,7 @@ class ActionFSM{
             FSM_DROP_NONE,
             FSM_DROP_NAV,
             FSM_DROP,
+            FSM_DROP_NAV_FRONT,
             FSM_DROP_NAV_BACK
         } StateDropStock_t;
         StateDropStock_t dropStockState = FSM_DROP_NONE;

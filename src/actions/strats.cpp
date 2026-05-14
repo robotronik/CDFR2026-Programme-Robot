@@ -238,6 +238,7 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
         zone_of_interest = (tableStatus.colorTeam == YELLOW ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);
     }
     else if (drop2time){
+        dropZoneOffset = OFFSET_STOCK*1.25;
         zone_of_interest = (tableStatus.colorTeam == YELLOW ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE);
     }
 
