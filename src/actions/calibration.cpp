@@ -24,9 +24,10 @@ bool calibrate_otos() {
         static bool has_prev_measure = false;
         static bool skip_first_scalar = true;
         static position_t prev_pos = {0.0, 0.0, 0.0};
+        static position_t prev_pos_otos = {0.0, 0.0, 0.0};
         static std::vector<double> scalar_angle_samples;
 
-        position_t pos1 = {0.0, 700.0, 90.0};
+        position_t pos1 = {0.0, 1100.0, -90.0};
 
         if (state)
             pos1.a += 70.0;
@@ -40,11 +41,12 @@ bool calibrate_otos() {
         if (ret == NAV_DONE){
             if (!has_prev_measure){
                 prev_pos = nav_prev_final_pos_cam;
+                prev_pos_otos = nav_prev_final_pos_otos;
                 has_prev_measure = true;
                 LOG_GREEN_INFO("OTOS angle calibration: first pose recorded");
             } else {
                 const double da_cam = normalize_angle(nav_prev_final_pos_cam.a - prev_pos.a);
-                const double da_otos = normalize_angle(nav_prev_final_pos_otos.a - prev_pos.a);
+                const double da_otos = normalize_angle(nav_prev_final_pos_otos.a - prev_pos_otos.a);
 
                 if (fabs(da_otos) > 1e-3){
                     const double scalar_angle = da_cam / da_otos;
@@ -65,11 +67,12 @@ bool calibrate_otos() {
                 }
 
                 prev_pos = nav_prev_final_pos_cam;
+                prev_pos_otos = nav_prev_final_pos_otos;
             }
 
             state = !state;
 
-            if (scalar_angle_samples.size() >= 8){
+            if (scalar_angle_samples.size() >= 6){
                 const double mean = std::accumulate(scalar_angle_samples.begin(),
                                                     scalar_angle_samples.end(),
                                                     0.0) /
@@ -86,11 +89,11 @@ bool calibrate_otos() {
                 }
 
                 if (within_variance){
-                    // drive.setAngularScalar(mean);
+                    drive.setAngularScalar(mean);
                     step = 1;
                     scalar_angle_samples.clear();
                     skip_first_scalar = true;
-                    LOG_GREEN_INFO("OTOS calibration done, moving to step 2");
+                    LOG_GREEN_INFO("OTOS calibration done with mean = ", mean);
                 }
             }
         }
@@ -104,9 +107,8 @@ bool calibrate_otos() {
         static position_t prev_nav_prev_final_pos_otos = {0.0, 0.0, 0.0};
         static std::vector<double> scalar_dist_samples;
 
-        position_t pos1 = {300.0, 500.0, 90.0};
-        if (state)
-            pos1.x *= -1.0;
+        position_t pos1 = {0.0f, 1250.0f, -90.0f};
+        pos1.x += state ? 400.0 : -400.0;
 
         if (tableStatus.colorTeam == YELLOW)
             position_robot_flip(pos1);
@@ -136,7 +138,7 @@ bool calibrate_otos() {
                         skip_first_scalar = false;
                         LOG_GREEN_INFO("OTOS distance calibration: first scalar ignored");
                     } else {
-                        if (scalar_dist_samples.size() >= 8){
+                        if (scalar_dist_samples.size() >= 6){
                             scalar_dist_samples.erase(scalar_dist_samples.begin());
                         }
                         scalar_dist_samples.push_back(scalar_dist);
@@ -151,7 +153,7 @@ bool calibrate_otos() {
 
             state = !state;
 
-            if (scalar_dist_samples.size() >= 8){
+            if (scalar_dist_samples.size() >= 6){
                 const double mean = std::accumulate(scalar_dist_samples.begin(),
                                                     scalar_dist_samples.end(),
                                                     0.0) /
@@ -168,8 +170,8 @@ bool calibrate_otos() {
                 }
 
                 if (within_variance){
-                    // drive.setLinearScalar(mean);
-                    LOG_GREEN_INFO("OTOS calibration done");
+                    drive.setLinearScalar(mean);
+                    LOG_GREEN_INFO("OTOS calibration done with mean = ", mean);
                     step ++;
                     scalar_dist_samples.clear();
                     skip_first_scalar = true;
@@ -179,8 +181,10 @@ bool calibrate_otos() {
     } break;
     case 2:{
         // Calibrate using a code close to init pos
-        position_t pos = StratStartingPos();
-        pos.x = -400;
+        position_t pos = {-400, 1250, -90.0};
+        if (tableStatus.colorTeam == YELLOW)
+            position_robot_flip(pos);
+            
         ret = navigationGoTo(pos, false, true, true);
         if (ret == NAV_DONE){
             step++;
