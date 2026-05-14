@@ -318,7 +318,7 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
 
     int count = blocks.size();
     if (count == 0) { success = -2; return true; }
-    success = count; // ON RENVOIE LE NOMBRE REEL DE BLOCS
+    success = std::min(4, count); // ON RENVOIE LE NOMBRE REEL DE BLOCS
 
     // 2. Trouver les deux blocs les plus éloignés pour définir l'axe
     double theta = 0;
@@ -366,7 +366,7 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
     // 4. MAPPING : On remplit les pinces dans l'ordre de détection
     // On reset tout à true par sécurité
     //for(int i = 0; i < 4; i++) order[i] = true; 
-    success = std::min(4, count);
+    
     for (int i = 0; i < success; i++) {
         order[4 - blocks.size() + i] = blocks[i].color;
     }
