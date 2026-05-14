@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
                 // Clear manual_func
                 manual_currentFunc = NULL;
                 lidar.stopSpin();
-                arduino.stopMotorDC();
+                arduino.keepMotorDCup();
             }
 
             if (!readLatchSensor()){
