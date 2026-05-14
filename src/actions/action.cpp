@@ -47,7 +47,6 @@ void ActionFSM::Reset(){
 bool ActionFSM::RunFSM(){
     ReturnFSM_t ret;
     static long unsigned startTime = 0;
-    updateGranaryStock();
 
     switch (runState)
     {
@@ -737,6 +736,8 @@ ReturnFSM_t ActionFSM::Cursor(){
         - Take
 */
 void ActionFSM::SetBestAction(position_t position){
+    updateGranaryStock();
+
     //ENDLESSMODE
     if (tableStatus.strategy == 4){
         if (_millis() > tableStatus.startTime + 50000) tableStatus.startTime = _millis();
