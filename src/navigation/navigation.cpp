@@ -78,8 +78,10 @@ nav_return_t navigationGo(){
             LOG_EXTENDED_DEBUG("Navigation drive completed");
             if (current_complete_stop) // If came to a complete stop, calibrate using camera, else nav is done
                 driving = false;
-            else
+            else {
+                stuck_start = 0;
                 return NAV_DONE;
+            }
         } else if (result == NAV_ERROR){
             LOG_ERROR("Navigation drive error");
             return NAV_ERROR;
@@ -104,6 +106,7 @@ nav_return_t navigationGo(){
                 LOG_EXTENDED_DEBUG("Camera did not have a good position estimate, skipping calibration");
             }
             driving = true;
+            stuck_start = 0;
             return NAV_DONE;
         }
     }
