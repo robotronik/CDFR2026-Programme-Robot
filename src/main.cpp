@@ -16,6 +16,7 @@
 #include "restAPI/restAPI.hpp"
 #include "restAPI/manual_mode.h"
 #include "mat/mat.hpp"
+#include "actions/calibration.h"
 
 #ifndef __CROSS_COMPILE_ARM__
     #define DISABLE_LIDAR
@@ -116,8 +117,7 @@ int main(int argc, char *argv[])
         }
         //****************************************************************
         case WAITSTART:
-        {   
-            static nav_return_t nav_ret;
+        {
             if (initState){
                 LOG_GREEN_INFO("WAITSTART");  
                 enableActuators();
@@ -128,7 +128,6 @@ int main(int argc, char *argv[])
 
                 if (tableStatus.colorTeam == NONE)
                     arduino.RGB_Blinking(255, 0, 0); // Red Blinking
-                nav_ret = NAV_IN_PROCESS;
                 tableStatus.calibrationAge = -1;
             }
             
@@ -139,14 +138,12 @@ int main(int argc, char *argv[])
                 arduino.moveMotorDC(20,false);
                 motorUpFirst = false;
             }
-            if (tableStatus.calibrationAge ==-1){
-                navigationGo(); // Calibrate the robot using the camera while waiting for the start signal
-            } else if (nav_ret == NAV_IN_PROCESS){
-                nav_ret = navigationGo();
-            }
-            if(nav_ret == NAV_ERROR){
-                LOG_ERROR("Error while calibrating in WAITSTART");
-                nav_ret = navigationGo();
+            if (tableStatus.calibrationAge == -1){
+                // Calibrate the robot using the camera while waiting for the start signal
+                if (navigationGo() == NAV_DONE)
+                    nextState = CALIBRATION;
+            } else {
+                nextState = CALIBRATION;
             }
 
             if (readLatchSensor() && tableStatus.colorTeam != NONE)
@@ -154,7 +151,26 @@ int main(int argc, char *argv[])
             if (manual_ctrl)
                 nextState = MANUAL;
             break;
+        }
+        //****************************************************************
+        case CALIBRATION:
+        {
+            if (initState){
+                LOG_GREEN_INFO("CALIBRATION");
+            }
+            static bool has_calib = false;
+            if (!has_calib){
+                if (calibrate_otos()){
+                    LOG_GREEN_INFO("Calibration successful");
+                    has_calib = true;
+                }
+            }
 
+            if (readLatchSensor() && tableStatus.colorTeam != NONE)
+                nextState = RUN;
+            if (manual_ctrl)
+                nextState = MANUAL;
+            break;
         }
         //****************************************************************
         case RUN:
