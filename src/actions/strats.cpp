@@ -227,7 +227,7 @@ double getBestStockPositionOff(int stockNum, int& bestOff){
     return bestDist; // INFINITY si échec
 }
 
-double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool steal){
+double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool steal, bool drop2time){
     //Changer le 0 pour décaler le robot sur les zones de dépose
     const int DROPZONE_OFFSET = 0;
 
@@ -236,6 +236,9 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
     if(steal){
         dropZoneOffset = OFFSET_STOCK*1.18;
         zone_of_interest = (tableStatus.colorTeam == YELLOW ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);
+    }
+    else if (drop2time){
+        zone_of_interest = (tableStatus.colorTeam == YELLOW ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE);
     }
 
     double min = INFINITY;
