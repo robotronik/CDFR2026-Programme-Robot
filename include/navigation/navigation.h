@@ -12,6 +12,9 @@ typedef enum {
     NAV_ERROR,  // If locked for too long, for example
 } nav_return_t;
 
+extern position_t nav_prev_final_pos_cam;
+extern position_t nav_prev_final_pos_otos;
+
 // Navigation functions
 nav_return_t navigationGoTo(position_t pos, bool useAStar = false, bool slow_mode = false, bool complete_stop = true);
 void navigation_path_json(json& j);
