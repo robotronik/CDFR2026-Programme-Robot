@@ -564,11 +564,18 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
 }
 
 ReturnFSM_t ActionFSM::DropStock(){
+    static bool drop2StockInOne = false;
     switch (dropStockState){
         case FSM_DROP_NONE:
         {
             rotate_done = false;
+            drop2StockInOne = false;
             getBestDropZonePosition(dropzone_num, dropzonePos);
+            if (dropzone_num == -1){
+                getBestDropZonePosition(dropzone_num, dropzonePos, false, true);
+                if (dropzone_num == -1) return FSM_RETURN_ERROR;
+                drop2StockInOne = true;
+            }
             if (dropzone_num == -1) {
                 LOG_ERROR("FSM_DROP_NONE: No more dropzone available, cannot drop stock ", stock_num);
                 return FSM_RETURN_ERROR;
@@ -625,7 +632,6 @@ ReturnFSM_t ActionFSM::DropStock(){
                 if (dropzone_num == 10) tableStatus.granaryAlreadyTaken[2] = true;
                 if (dropzone_num == 11) tableStatus.granaryAlreadyTaken[3] = true;
                 LOG_EXTENDED_DEBUG("FSM_DROP: Stock ", stock_num, " dropped");
-                dropStockState = FSM_DROP_NAV_BACK;
                 backPos = drive.position;
                 backPos.x -= 100 * cos(DEG_TO_RAD * drive.position.a);
                 backPos.y -= 100 * sin(DEG_TO_RAD * drive.position.a);
@@ -640,7 +646,31 @@ ReturnFSM_t ActionFSM::DropStock(){
                 for(size_t _ = 0; _<4 ; _++){
                     stockOrder[_] = (tableStatus.colorTeam == YELLOW) ? false : true;
                 }
+                dropStockState = FSM_DROP_NAV_BACK;
+                if (drop2StockInOne){
+                    drop2StockInOne = false;
+                    dropStockState = FSM_DROP_NAV_FRONT;
+                }
+
             }
+            break;
+        case FSM_DROP_NAV_FRONT:
+        {
+            position_t frontPos = dropzonePos;
+            frontPos.x += 250 * cos(DEG_TO_RAD * dropzonePos.a);
+            frontPos.y += 250 * sin(DEG_TO_RAD * dropzonePos.a);
+
+            nav_ret = navigationGoTo(frontPos, false, true, false);
+        
+            if (nav_ret == NAV_DONE || nav_ret == NAV_ERROR) {
+                LOG_EXTENDED_DEBUG("FSM_DROP_NAV_FRONT: Finished Drop Nav Front");
+                backPos = drive.position;
+                backPos.x -= 250 * cos(DEG_TO_RAD * drive.position.a);
+                backPos.y -= 250 * sin(DEG_TO_RAD * drive.position.a);
+                dropStockState = FSM_DROP_NAV_BACK;
+            }
+
+        }
             break;
         case FSM_DROP_NAV_BACK:
         {

@@ -18,7 +18,7 @@ double toAStarDist(position_t a);
 
 double chooseStockStrategy(int& stockNum, int& stockOffset);
 
-double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool steal = false);
+double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool steal = false, bool drop2time = false);
 double getBestStealZonePosition(int& bestDropZone, position_t& bestPos);
 double getBestStockPositionOff(int stockNum, int& bestOffset);
 void updateGranaryStock();
