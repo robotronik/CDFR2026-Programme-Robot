@@ -83,7 +83,7 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
 
     // Linear motion
     double position_acceleration = (is_slow_mode ? 60.0 : 150.0); // mm/s²
-    double position_top_speed    =  (is_slow_mode ? 300.0 : 1000.0); // mm/s
+    double position_top_speed    =  (is_slow_mode ? 300.0 : 1500.0); // mm/s
     double current_linear_velocity = position_length(velocity); // mm/s
     double position_speed; // mm/s
 
