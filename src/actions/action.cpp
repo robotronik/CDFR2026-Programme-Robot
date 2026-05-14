@@ -329,7 +329,7 @@ ReturnFSM_t ActionFSM::StealStock(){
             int sucess;
             dist = 0;
             if(arucoCam1.getObjectForSweep(stockOrder,x,y,a,sucess, dist)){
-                if (sucess > 0 && countMyColorBlocks(stockOrder) == sucess && dropzone_num < 10){
+                if (sucess > 0 && countMyColorBlocks(stockOrder) == 4 && dropzone_num < 10){
                     stealStockState = FSM_GATHER_NAV;
                     tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
                     dropzone_num = -1;
