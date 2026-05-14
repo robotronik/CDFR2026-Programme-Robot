@@ -427,7 +427,7 @@ bool isRobotInArrivalZone(position_t position){
 
 int countMyColorBlocks(const bool *order){
     int count = 0;
-    bool myColor = (tableStatus.colorTeam == YELLOW) ? false : true;
+    bool myColor = tableStatus.colorTeam == BLUE;
 
     for (int i = 0; i < 4; i++){
         if (order[i] == myColor){
