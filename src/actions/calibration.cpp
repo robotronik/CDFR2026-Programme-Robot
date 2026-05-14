@@ -89,11 +89,13 @@ bool calibrate_otos() {
                 }
 
                 if (within_variance){
-                    drive.setAngularScalar(mean);
+                    float current_scalar = drive.getAngularScalar();
+                    float new_scalar = current_scalar * mean;
+                    drive.setAngularScalar(new_scalar);
                     step = 1;
                     scalar_angle_samples.clear();
                     skip_first_scalar = true;
-                    LOG_GREEN_INFO("OTOS calibration done with mean = ", mean);
+                    LOG_GREEN_INFO("OTOS calibration done with mean = ", new_scalar);
                 }
             }
         }
@@ -170,8 +172,10 @@ bool calibrate_otos() {
                 }
 
                 if (within_variance){
-                    drive.setLinearScalar(mean);
-                    LOG_GREEN_INFO("OTOS calibration done with mean = ", mean);
+                    float current_scalar = drive.getLinearScalar();
+                    float new_scalar = current_scalar * mean;
+                    drive.setLinearScalar(new_scalar);
+                    LOG_GREEN_INFO("OTOS calibration done with mean = ", new_scalar);
                     step ++;
                     scalar_dist_samples.clear();
                     skip_first_scalar = true;

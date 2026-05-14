@@ -96,7 +96,7 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
     vec.x = pos_target.x - position.x;
     vec.y = pos_target.y - position.y;
     position_normalize(vec);
-    const double kP_lin = 5.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
+    const double kP_lin = 4.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
     vec.x *= position_speed / kP_lin;
     vec.y *= position_speed / kP_lin;
     if (distance_to_target > position_length(vec) && distance_to_target > 30.0) {
