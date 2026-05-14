@@ -113,7 +113,7 @@ void pathfind_fill_lidar(){
 
     for (int i = 0; i < lidar.count; i++){
         if (!lidar.data[i].onTable) continue;
-        place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y, 400, 400, 220, false, false);
+        place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y, 400, 400, 230, false, false);
     }
     pathfind_place_border();
 }
