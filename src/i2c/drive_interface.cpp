@@ -90,3 +90,40 @@ status_t drive_interface::get_status()
     I2cReceiveData(i2cFile, CMD_GET_STATUS, (uint8_t*)&status, sizeof(status));
     return status;
 }
+
+void drive_interface::set_linear_scalar(float scalar)
+{
+    I2cSendData(i2cFile, CMD_SET_LINEAR_SCALAR, (uint8_t*)&scalar, sizeof(scalar));
+}
+
+float drive_interface::get_linear_scalar()
+{
+    float scalar = 1.0f;
+    I2cReceiveData(i2cFile, CMD_GET_LINEAR_SCALAR, (uint8_t*)&scalar, sizeof(scalar));
+    return scalar;
+}
+
+void drive_interface::set_angular_scalar(float scalar)
+{
+    I2cSendData(i2cFile, CMD_SET_ANGULAR_SCALAR, (uint8_t*)&scalar, sizeof(scalar));
+}
+
+float drive_interface::get_angular_scalar()
+{
+    float scalar = 1.0f;
+    I2cReceiveData(i2cFile, CMD_GET_ANGULAR_SCALAR, (uint8_t*)&scalar, sizeof(scalar));
+    return scalar;
+}
+
+void drive_interface::set_offset(position_t offset)
+{
+    packed_position_t p = convertPositionToPacked(offset);
+    I2cSendData(i2cFile, CMD_SET_OFFSET, (uint8_t*)&p, sizeof(p));
+}
+
+position_t drive_interface::get_offset()
+{
+    packed_position_t p;
+    I2cReceiveData(i2cFile, CMD_GET_OFFSET, (uint8_t*)&p, sizeof(p));
+    return convertPackedToPosition(p);
+}

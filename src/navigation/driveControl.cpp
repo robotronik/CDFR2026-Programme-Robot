@@ -169,6 +169,31 @@ void DriveControl::setRedLed(bool status){
     drive_interface::set_red_led(status);
 }
 
+
+void DriveControl::setLinearScalar(float scalar){
+    drive_interface::set_linear_scalar(scalar);
+}
+
+float DriveControl::getLinearScalar(){
+    return drive_interface::get_linear_scalar();
+}
+
+void DriveControl::setAngularScalar(float scalar){
+    drive_interface::set_angular_scalar(scalar);
+}
+
+float DriveControl::getAngularScalar(){
+    return drive_interface::get_angular_scalar();
+}
+
+void DriveControl::setOffset(position_t offset){
+    drive_interface::set_offset(offset);
+}
+
+position_t DriveControl::getOffset(){
+    return drive_interface::get_offset();
+}
+
 void DriveControl::logStatus(){
     status_t status = drive_interface::get_status();
     if (status.is_error1)

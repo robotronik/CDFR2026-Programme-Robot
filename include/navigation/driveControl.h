@@ -34,5 +34,14 @@ class DriveControl : private drive_interface {
 
         void stopMotion();
 
+        void setLinearScalar(float scalar);
+        float getLinearScalar();
+
+        void setAngularScalar(float scalar);
+        float getAngularScalar();
+
+        void setOffset(position_t offset);
+        position_t getOffset();
+
         void reset();
 };
