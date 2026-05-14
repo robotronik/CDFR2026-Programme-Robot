@@ -799,7 +799,7 @@ void ActionFSM::SetBestAction(position_t position){
         }
     /**************************** CONDITIONS POUR DROP UN STOCK ***************************************/
     LOG_ERROR("stock_num ; ", stock_num);
-    if(tableStatus.remainingDropExist() && stock_num != -1){ // On peut DROP à partir du moment où on a un stock et qu'il reste des drop zones
+    if(stock_num != -1){ // On peut DROP à partir du moment où on a un stock et qu'il reste des drop zones
         runState = FSM_ACTION_DROP;
         tableStatus.calibrationAge += 1;
         LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to drop a stock, going to FSM_ACTION_DROP");
