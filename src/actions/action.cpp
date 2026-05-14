@@ -358,7 +358,7 @@ ReturnFSM_t ActionFSM::StealStock(){
                     return FSM_RETURN_ERROR;
                 }else if(sucess == -3 ){
                     stealStockState = FSM_GATHER_NAV;
-                    // Marking zone as our but not sure if it is need to be improved in other branch
+                    // TODO Marking zone as our but not sure if it is need to be improved in other branch
                     tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
                     dropzone_num = -1;
                     return FSM_RETURN_DONE;
@@ -417,6 +417,7 @@ ReturnFSM_t ActionFSM::StealStock(){
             if (dropzone_num > 9){
                 dropStockState = FSM_DROP_NONE;
             }
+            LOG_WARNING("dropStockState ", dropStockState);
             rotate_done = false;
             stock_num = 1; // marking random value to pass Best Action condition on drop action
             tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY);
@@ -799,12 +800,12 @@ void ActionFSM::SetBestAction(position_t position){
         }
     /**************************** CONDITIONS POUR DROP UN STOCK ***************************************/
     LOG_ERROR("stock_num ; ", stock_num);
-    if(stock_num != -1){ // On peut DROP à partir du moment où on a un stock et qu'il reste des drop zones
+    if(stock_num != -1){ // On peut DROP à partir du moment où on a un stock
         runState = FSM_ACTION_DROP;
         tableStatus.calibrationAge += 1;
         LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to drop a stock, going to FSM_ACTION_DROP");
         return;
-    }//TODO cas pas de drop mais blocks dans la main -> poser 2 stocks même zone ou poser dans une zone adverse
+    }
 
     /********** CALCUL BEST STOCK ************/
     if (stock_num == -1 && gatherStockState == FSM_GATHER_NAV){
