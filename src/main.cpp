@@ -133,7 +133,6 @@ int main(int argc, char *argv[])
                 motorUpFirst = false;
             }
             if (tableStatus.calibrationAge == -1){
-                LOG_DEBUG("Cal");
                 navigationGo();
             } else{
                 nextState = CALIBRATION;
@@ -151,6 +150,10 @@ int main(int argc, char *argv[])
             if (initState){
                 LOG_GREEN_INFO("CALIBRATION");
             }
+            tableStatus.pos_opponent.x = 3000.0f;
+            tableStatus.pos_opponent.y = 0;
+            opponentInAction(tableStatus.pos_opponent);     
+            tableStatus.startTime = _millis();
             static bool has_calib = false;
             if (!has_calib){
                 if (calibrate_otos()){
@@ -315,7 +318,8 @@ void GetLidar()
         pathfind_fill_lidar();
         // Only update opponent position if the robot is not moving too fast to avoid noise
         if (IsDataValid && position_opponentV2(lidar.data, lidar.count, drive.position, pos_opponent) &&
-                (currentState == RUN || currentState == MANUAL) && (_millis() - tableStatus.startTime > 1000)){ // Only update opponent position after 1 second from the start to avoid false readings at the beginning
+                (currentState == RUN || currentState == MANUAL) &&
+                (_millis() - tableStatus.startTime > 1000)){ // Only update opponent position after 1 second from the start to avoid false readings at the beginning
             tableStatus.pos_opponent.x = pos_opponent.x;
             tableStatus.pos_opponent.y = pos_opponent.y;
             opponentInAction(pos_opponent);            
