@@ -133,10 +133,9 @@ int main(int argc, char *argv[])
                 motorUpFirst = false;
             }
             if (tableStatus.calibrationAge == -1){
-                // Calibrate the robot using the camera while waiting for the start signal
-                if (navigationGo() == NAV_DONE)
-                    nextState = CALIBRATION;
-            } else {
+                LOG_DEBUG("Cal");
+                navigationGo();
+            } else{
                 nextState = CALIBRATION;
             }
 
