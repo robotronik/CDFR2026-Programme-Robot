@@ -32,7 +32,7 @@ bool calibrate_otos() {
             pos1.a += 70.0;
         else
             pos1.a -= 70.0;
-        if (colorTeam == YELLOW)
+        if (tableStatus.colorTeam == YELLOW)
             position_robot_flip(pos1);
 
         ret = navigationGoTo(pos1, false, false, true);
@@ -108,7 +108,7 @@ bool calibrate_otos() {
         if (state)
             pos1.x *= -1.0;
 
-        if (colorTeam == YELLOW)
+        if (tableStatus.colorTeam == YELLOW)
             position_robot_flip(pos1);
         ret = navigationGoTo(pos1, false, false, true);
 
@@ -182,7 +182,7 @@ bool calibrate_otos() {
         position_t pos = StratStartingPos();
         pos.x = -400;
         ret = navigationGoTo(pos, false, true, true);
-        if (ret == NAV_RETURN_DONE){
+        if (ret == NAV_DONE){
             step++;
             LOG_GREEN_INFO("OTOS calibration done, moving to step 3");
         }
@@ -191,7 +191,7 @@ bool calibrate_otos() {
         // goto home
         position_t pos = StratStartingPos();
         ret = navigationGoTo(pos, false, true, true);
-        if (ret == NAV_RETURN_DONE){
+        if (ret == NAV_DONE){
             LOG_GREEN_INFO("OTOS calibration done, returned to home position");
             step = 0; // Reset for next time            
             return true;
