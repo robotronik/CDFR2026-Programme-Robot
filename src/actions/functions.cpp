@@ -336,9 +336,9 @@ void disableActuators(){
 bool returnToHome(){
     unsigned long time = _millis() - tableStatus.startTime;
     position_t homePos;
-    homePos.x = (time < 97000) ? -200 : -800;
-    homePos.y = (tableStatus.colorTeam == BLUE) ? 1200 : -1200;
-    homePos.a = (tableStatus.colorTeam == BLUE) ? 135 : -135;
+    homePos.x = -100;
+    homePos.y = (tableStatus.colorTeam == BLUE) ? -800 : 800;
+    homePos.a = 180;
     raiseClaws();
     nav_return_t res = navigationGoTo(homePos, true);
     if (res == NAV_ERROR){
