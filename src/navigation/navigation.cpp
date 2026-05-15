@@ -81,8 +81,10 @@ nav_return_t navigationGo(){
 
         if (result == NAV_DONE){
             LOG_EXTENDED_DEBUG("Navigation drive completed");
-            if (current_complete_stop) // If came to a complete stop, calibrate using camera, else nav is done
+            if (current_complete_stop){ // If came to a complete stop, calibrate using camera, else nav is done
                 driving = false;
+                drive.setBrakeState(true);
+            }
             else {
                 stuck_start = 0;
                 nav_prev_final_pos_otos = drive.position;
@@ -115,6 +117,7 @@ nav_return_t navigationGo(){
                 LOG_EXTENDED_DEBUG("Camera did not have a good position estimate, skipping calibration");
             }
             driving = true;
+            drive.setBrakeState(false);
             stuck_start = 0;
             return NAV_DONE;
         }
