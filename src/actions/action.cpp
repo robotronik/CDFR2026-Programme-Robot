@@ -488,7 +488,7 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
         }
         case FSM_SWEEP_NAV_RIGHT:
         {
-            nav_ret = navigationGoTo(targetPos1, false, false, false); //First Move
+            nav_ret = navigationGoTo(targetPos1, true, false, false); //First Move
             snapClaws(false,false);
    
             if (nav_ret == NAV_DONE && moveServoAndWait(SERVO_NUM_6, 170, 200)){
@@ -698,7 +698,7 @@ ReturnFSM_t ActionFSM::Cursor(){
     static long unsigned startTime = 0;
     position_t navTarget = {780.0, 180.0, -180.0};
     position_t moveTarget = navTarget;
-    moveTarget.y += 480.0;
+    moveTarget.y += 485.0;
     position_t moveSafeTarget = moveTarget;
     moveSafeTarget.x -= 100.0;
     
@@ -826,7 +826,7 @@ void ActionFSM::SetBestAction(position_t position){
     if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV && tableStatus.dropToStealExist()){
         //LOG_DEBUG("Getting next stock to take");
         closestSteal = getBestStealZonePosition(dropzone_num, dropzonePos);
-        if (dropzone_num == -1){
+        if (dropzone_num == -1 || position_distance(tableStatus.pos_opponent, dropzonePos) < 400){ // If no more dropzone to steal or if the steal is too close from the opponent, we don't steal
             LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
             dropzone_num = -1;
             stealStockState = FSM_GATHER_NAV;
