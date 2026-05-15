@@ -82,7 +82,7 @@ void pathfind_setup() {
     place_obstacle_with_margin(    0, 1500,   50, 2000, RayonRobot, false);
     place_obstacle_with_margin(-1000,    0, 3000,   50, RayonRobot, false);
     place_obstacle_with_margin( 1000,    0, 3000,   50, RayonRobot, false);
-    place_obstacle_with_margin( -775 + 100,    0, 1800,  550, RayonRobot, false);
+    place_obstacle_with_margin( -775,    0, 1800,  550, RayonRobot, false);
 }
 
 void pathfind_place_border(){
@@ -93,7 +93,7 @@ void pathfind_place_border(){
     place_obstacle_with_margin(    0, 1500,   50, 2000, RayonRobot, false);
     place_obstacle_with_margin(-1000,    0, 3000,   50, RayonRobot, false);
     place_obstacle_with_margin( 1000,    0, 3000,   50, RayonRobot, false);
-    place_obstacle_with_margin( -775 + 100,    0, 1800,  550, RayonRobot, false);
+    place_obstacle_with_margin( -775,    0, 1800,  550, RayonRobot, false);
 }
 
 void pathfind_fill_lidar(){
