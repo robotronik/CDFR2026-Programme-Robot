@@ -10,6 +10,7 @@ static bool is_robot_stuck = false;  // Because of no path found
 static unsigned long robot_stall_start_time;
 static unsigned long robot_stuck_start_time;
 bool forced_slow_mode = false;
+static unsigned long stuck_start = 0;
 
 static position_t current_pos_target;
 static bool current_use_astar;
@@ -49,20 +50,19 @@ nav_return_t navigationGo(){
     // FSM which does drive and calibration
     static bool driving = true;
     static position_t last_pos = {0,0,0};
-    static unsigned long stuck_start = 0;
     if (driving){
         nav_return_t result = navigationDrive();
 
         double dist = position_distance(drive.position, current_pos_target);
         double move = position_distance(drive.position, last_pos);
         //LOG_DEBUG("NAV: Distance to target: ", dist, "mm, movement since last check: ", move, "mm");
-        if (dist > 10 && move < 4){
+        if (dist > 20 && move < 4){
             if (stuck_start == 0) stuck_start = _millis();
             if (_millis() - stuck_start > 500.0)
                 LOG_WARNING("NAV: Robot might be stuck, distance to target: ", dist, "mm, movement since last check: ", move, "mm, time stuck: ", _millis() - stuck_start, "ms");
             
 
-            if (_millis() - stuck_start > 1000){
+            if (_millis() - stuck_start > 1600){
                 LOG_ERROR("NAV: Robot stuck");
                 drive.stopMotion();
                 stuck_start = 0;
@@ -121,9 +121,10 @@ nav_return_t navigationGoTo(position_t pos, bool useAStar, bool slow_mode, bool 
         LOG_INFO("New navigation target: { x = ", pos.x, " y = ", pos.y, " a = ", pos.a, " }, useAStar = ", useAStar);
         current_pos_target = pos;
         current_use_astar = useAStar;
+        stuck_start = 0;
     }
     current_slow_mode = slow_mode;
-    if (forced_slow_mode || (_millis() - tableStatus.startTime > 87000))
+    if (forced_slow_mode || (_millis() - tableStatus.startTime > 90000))
         current_slow_mode = true;
     
     current_complete_stop = complete_stop;
