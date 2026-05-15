@@ -107,6 +107,9 @@ double chooseStockStrategy(int& stockNum, int& stockOffset){
     switch (strategy)
     {   
         case 1:
+            todo_stocks[0] = 3;
+            todo_stocks[1] = 2;
+            num = 2;
             break;
         case 2:
             todo_stocks[0] = 5;
