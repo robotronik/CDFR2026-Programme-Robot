@@ -594,8 +594,12 @@ ReturnFSM_t ActionFSM::DropStock(){
             distToAction = position_distance(drive.position, dropzonePos);
             if (distToAction > D_THRESHOLD_LATERAL) PretargetPos.a = 0;
 
-            nav_ret = navigationGoTo(PretargetPos, true);
-    
+            if(distToAction <= AS_THRESHOLD && ADVERSARY_THRESH > position_distance(dropzonePos, tableStatus.pos_opponent)){
+                nav_ret = navigationGoTo(PretargetPos, false);
+            }else{
+                nav_ret = navigationGoTo(PretargetPos, true);
+            }
+            
             if (!rotate_done) rotate_done = rotateTwoBlocks(stockOrder);
         
             if ((nav_ret == NAV_DONE) && rotate_done ) {
