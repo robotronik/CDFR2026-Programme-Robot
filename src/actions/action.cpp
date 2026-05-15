@@ -409,8 +409,8 @@ ReturnFSM_t ActionFSM::StealStock(){
             break;
         case FSM_GATHER_COLLECTED:
         {
-            dropzonePos.x += 150 * cos(DEG_TO_RAD * targetPos_.a);
-            dropzonePos.y += 150 * sin(DEG_TO_RAD * targetPos_.a);
+            dropzonePos.x += 200 * cos(DEG_TO_RAD * dropzonePos.a);
+            dropzonePos.y += 200 * sin(DEG_TO_RAD * dropzonePos.a);
             // Force le drop dans la même zone
 
             dropStockState = FSM_DROP_NAV;
@@ -670,8 +670,8 @@ ReturnFSM_t ActionFSM::DropStock(){
             if (nav_ret == NAV_DONE || nav_ret == NAV_ERROR) {
                 LOG_EXTENDED_DEBUG("FSM_DROP_NAV_FRONT: Finished Drop Nav Front");
                 backPos = drive.position;
-                backPos.x -= 250 * cos(DEG_TO_RAD * drive.position.a);
-                backPos.y -= 250 * sin(DEG_TO_RAD * drive.position.a);
+                backPos.x -= 225 * cos(DEG_TO_RAD * drive.position.a);
+                backPos.y -= 225 * sin(DEG_TO_RAD * drive.position.a);
                 dropStockState = FSM_DROP_NAV_BACK;
             }
 
