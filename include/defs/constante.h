@@ -52,7 +52,7 @@
 #define STOCKS_LENGTH 150
 
 #define AS_THRESHOLD 200
-#define ADVERSARY_THRESH 350
+#define ADVERSARY_THRESH 300
 
 // Define timing to consider oppenent has succesfully taken the mark
 #define TIME_TO_TAKE 30 // Time to take a stock (time in s * number of lidar rotation per second)
