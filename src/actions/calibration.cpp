@@ -11,7 +11,7 @@
 bool calibrate_otos() {
     // Function called continuously from the main loop to calibrate the otosensors
     // Returns true when calibration is done
-    static int step = 0;
+    static int step = 1; // We skip angle calib
     static bool state = false; // Used to alternate between two positions
 
     // Aruco tags are at pos (+/-400, +/-900)
@@ -103,11 +103,13 @@ bool calibrate_otos() {
     case 1:{
         // Position compensation test, also compensate for otos angle
         // New Scalar = Current Scalar * (Actual Distance / Reported Distance)
+        constexpr int kCalibrationRuns = 2;
         static bool has_prev_measure = false;
         static bool skip_first_scalar = true;
         static position_t prev_nav_prev_final_pos_cam = {0.0, 0.0, 0.0};
         static position_t prev_nav_prev_final_pos_otos = {0.0, 0.0, 0.0};
         static std::vector<double> scalar_dist_samples;
+        static int calibration_runs = 0;
 
         position_t pos1 = {0.0f, 1250.0f, -90.0f};
         pos1.x += state ? 400.0 : -400.0;
@@ -176,9 +178,13 @@ bool calibrate_otos() {
                     float new_scalar = current_scalar * mean;
                     drive.setLinearScalar(new_scalar);
                     LOG_GREEN_INFO("OTOS calibration done with mean = ", new_scalar);
-                    step ++;
                     scalar_dist_samples.clear();
                     skip_first_scalar = true;
+                    calibration_runs++;
+                    if (calibration_runs >= kCalibrationRuns){
+                        step++;
+                        calibration_runs = 0;
+                    }
                 }
             }
         }
