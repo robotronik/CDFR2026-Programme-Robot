@@ -107,6 +107,9 @@ double chooseStockStrategy(int& stockNum, int& stockOffset){
     switch (strategy)
     {   
         case 1:
+            todo_stocks[0] = 3;
+            todo_stocks[1] = 2;
+            num = 2;
             break;
         case 2:
             todo_stocks[0] = 5;
@@ -314,12 +317,15 @@ void updateGranaryStock(){
     static int wave = 0;
     double time = _millis() - tableStatus.startTime;
 
-    if ((wave == 0 && time > 70000) || ( false && wave == 1 && time > 80000)){
+    if (wave == 0 && time > 50000){
         TableState::dropzone_state_t etat = (tableStatus.colorTeam == YELLOW) ? tableStatus.DROPZONE_BLUE : tableStatus.DROPZONE_YELLOW;
-        respawnGranaryZone(3 ,0, etat);
-        respawnGranaryZone(8 ,1, etat);
-        respawnGranaryZone(10,2, etat);
-        respawnGranaryZone(11,3, etat);
+        if (tableStatus.colorTeam == BLUE){
+            respawnGranaryZone(3 ,0, etat);
+            respawnGranaryZone(10,2, etat);
+        }else{
+            respawnGranaryZone(8 ,1, etat);
+            respawnGranaryZone(11,3, etat);
+        }
         wave++;
     }
 }
