@@ -481,6 +481,7 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
                     targetPos4.a = targetPos3.a;
                     targetPos2.a += 10.0; 
                 }
+                startTime = _millis();
                 sweepState = FSM_SWEEP_NAV_RIGHT;
             }
             
@@ -488,10 +489,10 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
         }
         case FSM_SWEEP_NAV_RIGHT:
         {
-            nav_ret = navigationGoTo(targetPos1, true, false, false); //First Move
+            nav_ret = navigationGoTo(targetPos1, false, false, false); //First Move
             snapClaws(false,false);
    
-            if (nav_ret == NAV_DONE && moveServoAndWait(SERVO_NUM_6, 170, 200)){
+            if ((nav_ret == NAV_DONE && moveServoAndWait(SERVO_NUM_6, 170, 200)) || (_millis() - startTime > 2000)){
                 LOG_DEBUG("FSM_SWEEP_NAV_RIGHT: Moving to right of the stock at position (", targetPos1.x, ",", targetPos1.y, ") with angle ", angle);
                 if (needToGoToWall){
                     targetPos1.y += 100.0 * sinus;
@@ -670,8 +671,8 @@ ReturnFSM_t ActionFSM::DropStock(){
             if (nav_ret == NAV_DONE || nav_ret == NAV_ERROR) {
                 LOG_EXTENDED_DEBUG("FSM_DROP_NAV_FRONT: Finished Drop Nav Front");
                 backPos = drive.position;
-                backPos.x -= 225 * cos(DEG_TO_RAD * drive.position.a);
-                backPos.y -= 225 * sin(DEG_TO_RAD * drive.position.a);
+                backPos.x -= 200 * cos(DEG_TO_RAD * drive.position.a);
+                backPos.y -= 200 * sin(DEG_TO_RAD * drive.position.a);
                 dropStockState = FSM_DROP_NAV_BACK;
             }
 
