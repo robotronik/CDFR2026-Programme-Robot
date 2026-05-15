@@ -328,6 +328,7 @@ ReturnFSM_t ActionFSM::StealStock(){
             double a = drive.position.a;
             int sucess;
             dist = 0;
+            sucess = tableStatus.colorTeam == BLUE ? 1 : 0;
             if(arucoCam1.getObjectForSweep(stockOrder,x,y,a,sucess, dist)){
                 if (sucess > 0 && countMyColorBlocks(stockOrder) == 4 && dropzone_num < 10){
                     stealStockState = FSM_GATHER_NAV;

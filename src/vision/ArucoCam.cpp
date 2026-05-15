@@ -294,6 +294,7 @@ bool ArucoCam::ToObjectPos(json& data, double & x, double & y, double & a, int& 
 
 bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, double &a, double &dist_balayage, int& success){
     LOG_DEBUG("=== ENTER ToObjectSweep ===");
+    bool myBlue = (success == 1); // true si notre équipe est BLEUE // on considère que si success == 1 alors le bloc trouvé est de notre couleur, sinon c'est un bloc ennemi
 
     if (!data.contains("objects") || data["objects"].is_null() || !data["objects"].is_object()) {
         success = -1; return true;
@@ -359,9 +360,20 @@ bool ArucoCam::ToObjectSweep(bool* order, json& data, double &x, double &y, doub
 
         if(d > 100.0){
             LOG_WARNING("dist = ", d);
-            success = -3; // TODO success = -3 et prendre qu'un bloc
-            return true;
-        }
+            int enemyBlocks = 0;
+            for(const auto& b : blocks){
+                if(b.color != myBlue) enemyBlocks++;
+            }
+
+            // abandon seulement si < 2 blocs adverses
+            if(enemyBlocks < 2){
+                success = -3;
+                return true;
+            }
+
+        LOG_WARNING("Far blocks but enough enemy blocks -> continue");
+        break;
+    }
     }
     // 4. MAPPING : On remplit les pinces dans l'ordre de détection
     // On reset tout à true par sécurité
