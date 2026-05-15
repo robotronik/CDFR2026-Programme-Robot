@@ -25,16 +25,17 @@ void TableState::reset(){
     if (tableStatus.colorTeam == YELLOW) position_robot_flip(CursorPos);
 
     resetCalibrationAge();
-    for (int i = 0; i < STOCK_COUNT; i++)
+    for (int i = 0; i < STOCK_COUNT; i++){
         avail_stocks[i] = TIME_TO_TAKE;
+    }
 
+    colorTeamDropZone = (colorTeam == BLUE) ? DROPZONE_BLUE : DROPZONE_YELLOW;
     // Initialize all drop zones to the empty state
     for (int i = 0; i < DROPZONE_COUNT; i++){
         dropzone_states[i] = DROPZONE_EMPTY;
         dropzone_proba[i] = 0;
     }
-    colorTeamDropZone = (colorTeam == BLUE) ? DROPZONE_BLUE : DROPZONE_YELLOW;
-
+    
     //Don't Drop on the Zone in front of the granary
     dropzone_states[3] = colorTeamDropZone;
     dropzone_states[8] = colorTeamDropZone;
