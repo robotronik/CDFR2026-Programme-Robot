@@ -104,52 +104,29 @@ void TableState::setDropzoneAsError(int dropzoneNum){
     setDropzoneState(dropzoneNum, TableState::DROPZONE_ERROR);
 }
 
-void TableState::updateMapStatus(){
-    std::vector<bool> stock;
-    std::vector<std::pair<int, int>> dropzone;
-    int success;
+void TableState::updateMapStatus(const std::vector<bool>& stock, const std::vector<std::pair<int, int>>& dropzone){
 
-    if (mat.getMapStatus(stock, dropzone, success)){
-        if(success == 1){
-            for(size_t i = 0; i < stock.size() && i < STOCK_COUNT; i++){
-                if(!stock[i]) setStockAsRemoved(i);
+    for(size_t i = 0; i < stock.size() && i < STOCK_COUNT; i++){
+        if(!stock[i]) setStockAsRemoved(i);
+    }
+    for(size_t i = 0; i < dropzone.size() && i < DROPZONE_COUNT; i++){
+        if(std::get<0>(dropzone[i]) == 0 && std::get<1>(dropzone[i]) == 0){
+            continue;
+        }else if(std::get<1>(dropzone[i]) > std::get<0>(dropzone[i])){
+            setDropzoneState(i, DROPZONE_YELLOW);
+            if(tableStatus.colorTeam == BLUE){
+                dropzone_proba[i] = TIME_TO_DROP + 50 * std::get<0>(dropzone[i]);
             }
-            for(size_t i = 0; i < dropzone.size() && i < DROPZONE_COUNT; i++){
-                if(std::get<0>(dropzone[i]) == 0 && std::get<1>(dropzone[i]) == 0){
-                    continue;
-                }else if(std::get<1>(dropzone[i]) > std::get<0>(dropzone[i])){
-                    setDropzoneState(i, DROPZONE_YELLOW);
-                    if(tableStatus.colorTeam == BLUE){
-                        dropzone_proba[i] = TIME_TO_DROP + 50 * std::get<0>(dropzone[i]);
-                    }
-                }else if(std::get<1>(dropzone[i]) < std::get<0>(dropzone[i])){
-                    setDropzoneState(i, DROPZONE_BLUE); 
-                    if(colorTeam == YELLOW){
-                        dropzone_proba[i] = TIME_TO_DROP + 50 * std::get<1>(dropzone[i]); 
-                    }
-                }else{
-                    setDropzoneState(i, colorTeamDropZoneOpponent); // Si égalité, on considère que c'est l'adversaire qui contrôle la zone pour être plus prudent
-                    dropzone_proba[i] = TIME_TO_DROP;
-                }
-                
+        }else if(std::get<1>(dropzone[i]) < std::get<0>(dropzone[i])){
+            setDropzoneState(i, DROPZONE_BLUE); 
+            if(colorTeam == YELLOW){
+                dropzone_proba[i] = TIME_TO_DROP + 50 * std::get<1>(dropzone[i]); 
             }
         }else{
-            LOG_ERROR("Failed to get map status from MAT");
+            setDropzoneState(i, colorTeamDropZoneOpponent); // Si égalité, on considère que c'est l'adversaire qui contrôle la zone pour être plus prudent
+            dropzone_proba[i] = TIME_TO_DROP;
         }
-    }else{
-        LOG_ERROR("Failed to get map status from MAT");
+        
     }
-}
 
-bool TableState::StartMat(){
-    static unsigned long startTime = _millis();
-    if (mat.Start()){
-        LOG_GREEN_INFO("MAT started successfully");
-        return true;
-    }else if (_millis() - startTime > 5000){ // Si le MAT ne démarre pas après 5 secondes, on considère que c'est foutu
-        LOG_ERROR("Failed to start MAT after 5 seconds");
-        return true;
-    }else{
-        return false;
-    }
 }

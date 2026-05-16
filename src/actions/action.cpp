@@ -701,7 +701,6 @@ ReturnFSM_t ActionFSM::DropStock(){
 }
 
 ReturnFSM_t ActionFSM::Cursor(){
-    static long unsigned startTime = 0;
     position_t navTarget = {780.0, 180.0, -180.0};
     position_t moveTarget = navTarget;
     moveTarget.y += 485.0;
@@ -774,7 +773,11 @@ ReturnFSM_t ActionFSM::Cursor(){
 */
 void ActionFSM::SetBestAction(position_t position){
     updateGranaryStock();
-
+    std::vector<bool> stockStatus;
+    std::vector<std::pair<int, int>> dropZoneStatus;
+    if (getMapStatus(stockStatus, dropZoneStatus)){
+        tableStatus.updateMapStatus(stockStatus, dropZoneStatus);
+    }
     //ENDLESSMODE
     if (tableStatus.strategy == 4){
         if (_millis() > tableStatus.startTime + 50000) tableStatus.startTime = _millis();

@@ -14,6 +14,8 @@
 #include "utils/utils.h"
 #include "utils/logger.hpp"
 #include "restAPI/restAPI.hpp"
+#include "mat/mat.hpp"
+
 
 #ifndef __CROSS_COMPILE_ARM__
     #define DISABLE_LIDAR
@@ -27,7 +29,6 @@ ActionFSM action;
 
 DriveControl drive;
 Arduino arduino;
-
 Lidar lidar;
 
 #ifndef EMULATE_CAM
@@ -95,15 +96,19 @@ int main(int argc, char *argv[])
         //****************************************************************
         case INIT:
         {
+            static bool mast = false;
             if (initState)
             {
                 LOG_GREEN_INFO("INIT");
                 disableActuators();
                 tableStatus.reset();
                 arduino.RGB_Rainbow();
+                mast = false;
             }
-
-            if (tableStatus.StartMat() && readButtonSensor() && !readLatchSensor() && tableStatus.colorTeam != NONE)
+            if(!mast){
+                mast = StartMat();
+            }
+            if (readButtonSensor() && !readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = WAITSTART;
             break;
         }

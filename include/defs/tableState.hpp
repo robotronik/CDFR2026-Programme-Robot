@@ -2,7 +2,6 @@
 #include "defs/structs.hpp"
 #include "defs/constante.h"
 #include <utils/json.hpp>
-#include "mat/mat.hpp"
 
 using json = nlohmann::json;
 
@@ -19,7 +18,6 @@ class TableState
         /* common data */
         position_t pos_opponent;
         unsigned long startTime;
-        MatCam mat;
         colorTeam_t colorTeam;
         int strategy;
         int calibrationAge;
@@ -55,8 +53,7 @@ class TableState
         void setDropzoneState(int dropzoneNum, TableState::dropzone_state_t state);
         void setDropzoneAsError(int dropzoneNum);
 
-        void updateMapStatus();
-        bool StartMat();
+        void updateMapStatus(const std::vector<bool>& stock, const std::vector<std::pair<int, int>>& dropzone);
 
 };
 

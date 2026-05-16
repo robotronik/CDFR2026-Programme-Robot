@@ -1,7 +1,7 @@
 #pragma once
-
 #include "drive_interface.h" // For position_t
 #include "navigation/navigation.h" // For nav_return_t
+#include "mat/mat.hpp"
 
 // Consider using enum class for better type safety
 typedef enum

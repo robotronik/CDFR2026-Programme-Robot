@@ -3,7 +3,7 @@
 
 
 
-bool MatCam::restAPI_GET(const std::string &url, const std::string &resquest, json &response) {
+bool restAPI_GET_(const std::string &url, const std::string &resquest, json &response) {
     // HTTP
     httplib::Client cli(url);
     auto res = cli.Get(resquest.c_str());
@@ -31,29 +31,43 @@ bool MatCam::restAPI_GET(const std::string &url, const std::string &resquest, js
     }
 }
 
-bool MatCam::Start() {
+bool StartMat() {
+    static unsigned long startTime = 0;
     json response;
-    if (restAPI_GET(MAT_URL, "/start", response) == false) {
+    bool status;
+    if (restAPI_GET_(MAT_URL, "/start", response) == false) {
         LOG_ERROR("Failed to start MAT");
-        return false;
-    }
-    if (response.is_null()) {
+        status = false;
+    }else if (response.is_null()) {
         LOG_ERROR("Response is null, MAT might not be running");
+        status = false;
+    }else{
+        bool success = response.value("success", false);
+        if (!success) {
+            LOG_ERROR("MAT failed to start");
+            status = false;
+        }
+    }
+    if(status){
+        startTime = 0;
+        return true;
+    }else{
+        if (startTime == 0) {
+            startTime = _millis();
+        } else if (_millis() - startTime > 5000) { // 5 seconds timeout
+            LOG_ERROR("MAT failed to start within timeout");
+            return true;
+        }
+        LOG_EXTENDED_DEBUG("Waiting for MAT to start...");
         return false;
     }
-    bool success = response.value("success", false);
-    if (!success) {
-        LOG_ERROR("MAT failed to start");
-        return false;
-    }
-    LOG_GREEN_INFO("MAT started successfully");
-    return true;
+
 }
 
-bool MatCam::getMapStatus(std::vector<bool>& stock, std::vector<std::pair<int, int>>& dropzone, int& sucess) {
+bool getMapStatus(std::vector<bool>& stock, std::vector<std::pair<int, int>>& dropzone) {
     json response;
     
-    if (restAPI_GET(MAT_URL, "/map_status", response) == false) {
+    if (restAPI_GET_(MAT_URL, "/map_status", response) == false) {
         LOG_ERROR("Failed to fetch map status from MAT");
         return false;
     }
@@ -70,10 +84,8 @@ bool MatCam::getMapStatus(std::vector<bool>& stock, std::vector<std::pair<int, i
         for (int val : temp_stock) {
             stock.push_back(val != 0); 
         }
-
         dropzone = response.value("dropzone", std::vector<std::pair<int, int>>{});
         
-        sucess = 1;
         return true;
         
     } catch (const json::exception& e) { // Utilisez json::exception pour attraper toutes les erreurs JSON
