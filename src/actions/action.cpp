@@ -779,6 +779,9 @@ void ActionFSM::SetBestAction(position_t position){
         LOG_WARNING("Updating map status with mast information");
         if(getMapStatus(stockStatus, dropZoneStatus)){
             tableStatus.updateMapStatus(stockStatus, dropZoneStatus);
+        }else{
+            LOG_ERROR("Failed to get map status from mast");
+            tableStatus.mastStatus = false; // Don't try to get mast information for the rest of the match
         }
     }
     //ENDLESSMODE
