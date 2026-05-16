@@ -430,7 +430,7 @@ ReturnFSM_t ActionFSM::StealStock(){
 
 ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double distanceBalayage){
     //targetPos1 = position premier block à voler
-    double margeBalayage = 175;
+    double margeBalayage = 200;
     distanceBalayage += margeBalayage;
     static long unsigned startTime = 0;
     static double cosinus, sinus;
@@ -480,7 +480,7 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
                     LOG_DEBUG("NeedToGoToWall 2");
                     targetPos3.a = targetPos2.a;
                     targetPos4.a = targetPos3.a;
-                    targetPos2.a += 10.0; 
+                    targetPos2.a += 8.0; 
                 }
                 startTime = _millis();
                 sweepState = FSM_SWEEP_NAV_RIGHT;
