@@ -334,18 +334,27 @@ void disableActuators(){
 // ------------------------------------------------------
 
 bool returnToHome(){
-    unsigned long time = _millis() - tableStatus.startTime;
-    position_t homePos;
-    homePos.x = -100;
-    homePos.y = (tableStatus.colorTeam == BLUE) ? -800 : 800;
-    homePos.a = 180;
-    raiseClaws();
+    static bool clawsRaised = false;
+    position_t homePos = {-100,(tableStatus.colorTeam == BLUE) ? -800 : 800,180};
+    if (!clawsRaised){
+        if (raiseClaws())
+            clawsRaised = true;
+        return false;
+    }
     nav_return_t res = navigationGoTo(homePos, true);
     if (res == NAV_ERROR){
-        LOG_ERROR("RETURN_TO_HOME: Navigation error while returning to home");
+        LOG_ERROR("RETURN_TO_HOME: Navigation error");
+        clawsRaised = false;
         return true;
     }
-    return res == NAV_DONE && isRobotInArrivalZone(drive.position);
+    if (res == NAV_DONE){
+        if (lowerClaws()){
+            LOG_GREEN_INFO("RETURN_TO_HOME: Done");
+            clawsRaised = false;
+            return true;
+        }
+    }
+    return false;
 }
 
 // Function to check if a point (px, py) lies inside the rectangle
