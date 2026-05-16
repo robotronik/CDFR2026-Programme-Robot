@@ -20,13 +20,14 @@ TableState::~TableState(){}
 void TableState::reset(){
     /* data Winter is comming */
     mastStatus = false;
-    setCursorIsDone(false);
+
+    setCursorIsDone(true);
     CursorPos = {780.0, 190.0, -180.0};
     if (tableStatus.colorTeam == YELLOW) position_robot_flip(CursorPos);
 
     resetCalibrationAge();
     for (int i = 0; i < STOCK_COUNT; i++){
-        avail_stocks[i] = TIME_TO_TAKE;
+        avail_stocks[i] = 0;
     }
 
     colorTeamDropZone = (colorTeam == BLUE) ? DROPZONE_BLUE : DROPZONE_YELLOW;
@@ -107,7 +108,15 @@ void TableState::setDropzoneAsError(int dropzoneNum){
 void TableState::updateMapStatus(const std::vector<bool>& stock, const std::vector<std::pair<int, int>>& dropzone){
 
     for(size_t i = 0; i < stock.size() && i < STOCK_COUNT; i++){
-        if(!stock[i]) setStockAsRemoved(i);
+        if(!stock[i]){
+            if(avail_stocks[i] <= TIME_TO_TAKE - MIN_TAKEZONE_TIME){
+                avail_stocks[i] = 0;
+            }else{
+                avail_stocks[i] = TIME_TO_TAKE / 2;
+            }
+        }else{
+            avail_stocks[i] = TIME_TO_TAKE;
+        }
     }
     for(size_t i = 0; i < dropzone.size() && i < DROPZONE_COUNT; i++){
         if(std::get<0>(dropzone[i]) == 0 && std::get<1>(dropzone[i]) == 0){
