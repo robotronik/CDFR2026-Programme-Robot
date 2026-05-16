@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
                 arduino.RGB_Rainbow();
             }
 
-            if (readButtonSensor() && !readLatchSensor() && tableStatus.colorTeam != NONE)
+            if (tableStatus.StartMat() && readButtonSensor() && !readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = WAITSTART;
             break;
         }

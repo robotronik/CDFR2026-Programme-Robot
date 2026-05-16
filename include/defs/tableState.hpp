@@ -2,6 +2,8 @@
 #include "defs/structs.hpp"
 #include "defs/constante.h"
 #include <utils/json.hpp>
+#include "mat/mat.hpp"
+
 using json = nlohmann::json;
 
 class TableState
@@ -17,7 +19,7 @@ class TableState
         /* common data */
         position_t pos_opponent;
         unsigned long startTime;
-
+        MatCam mat;
         colorTeam_t colorTeam;
         int strategy;
         int calibrationAge;
@@ -40,6 +42,8 @@ class TableState
 
         dropzone_state_t dropzone_states[DROPZONE_COUNT];
         dropzone_state_t colorTeamDropZone = (colorTeam == BLUE) ? DROPZONE_BLUE : DROPZONE_YELLOW;
+        dropzone_state_t colorTeamDropZoneOpponent = (colorTeam == BLUE) ? DROPZONE_YELLOW : DROPZONE_BLUE;
+
         int dropzone_proba[DROPZONE_COUNT];
         bool granaryAlreadyTaken[4];
         inline bool remainingDropExist(){for(size_t _ = 0; _ < DROPZONE_COUNT; _++ ){if(dropzone_states[_] == DROPZONE_EMPTY) return true;}; return false;}
@@ -50,6 +54,9 @@ class TableState
         void setStockAsRemoved(int num);
         void setDropzoneState(int dropzoneNum, TableState::dropzone_state_t state);
         void setDropzoneAsError(int dropzoneNum);
+
+        void updateMapStatus();
+        bool StartMat();
 
 };
 
