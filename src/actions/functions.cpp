@@ -344,8 +344,7 @@ bool returnToHome(){
     nav_return_t res = navigationGoTo(homePos, true);
     if (res == NAV_ERROR){
         LOG_ERROR("RETURN_TO_HOME: Navigation error");
-        clawsRaised = false;
-        return true;
+        homePos.y += (tableStatus.colorTeam == BLUE) ? 50 : -50; // recule un peu et retente
     }
     if (res == NAV_DONE){
         if (lowerClaws()){
