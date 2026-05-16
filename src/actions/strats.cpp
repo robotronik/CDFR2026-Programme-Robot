@@ -254,9 +254,10 @@ double getBestDropZonePosition(int& dropzoneNum, position_t& bestPoss, bool stea
     position_t temp_pos;
 
     for(int k = 0; k< DROPZONE_COUNT -2; k++){
-        if(tableStatus.dropzone_states[k] != zone_of_interest || ( !steal && (k == 3 || k == 8 || k == (tableStatus.colorTeam == BLUE ? 7 : 2)))){ // Don't drop on zone == 3 or 8 or 10 or 11 or ennemi middle
+        if(tableStatus.dropzone_states[k] != zone_of_interest || ( !steal && (k == 3 || k == 8 || k == 2 || k == 4 || k == 7 || k == (tableStatus.colorTeam == BLUE ? 6 : 1)))){ // Don't drop on zone == 3 or 8 or 10 or 11 or ennemi middle
             continue;
         }else{
+            if(tableStatus.dropzone_proba[k] >= 50) continue;
             if (k == 7 || k == 4 || k == 2 ){// DropZone centrales
                 temp_pos = DROPZONE_POSITIONS_TABLE[k];
 

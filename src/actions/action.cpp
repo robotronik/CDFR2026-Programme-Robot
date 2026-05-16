@@ -645,8 +645,8 @@ ReturnFSM_t ActionFSM::DropStock(){
 
                 gatherStockState = FSM_GATHER_NAV;
                 stealStockState = FSM_GATHER_NAV;
-                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
-
+                tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW); 
+                if(drop2StockInOne) tableStatus.dropzone_proba[dropzone_num] = 100;
                 //No more stock in hand
                 stock_num = -1;
                 dropzone_num = -1;
@@ -794,7 +794,7 @@ void ActionFSM::SetBestAction(position_t position){
     closestSteal = INFINITY;
 
     /********************* CONDITIONS POUR LE RETURN HOME ***********************/
-    if(_millis() > tableStatus.startTime + 80000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
+    if(_millis() > tableStatus.startTime + 55000 || !tableStatus.remainingStocksExist()){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
         LOG_GREEN_INFO("80 seconds passed, switching to NAV_HOME");
         runState = FSM_ACTION_NAV_HOME;
         return;

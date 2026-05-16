@@ -334,27 +334,49 @@ void disableActuators(){
 // ------------------------------------------------------
 
 bool returnToHome(){
-    static bool clawsRaised = false;
-    static position_t homePos;
-    if (!clawsRaised){
-        homePos = {-100,(tableStatus.colorTeam == BLUE) ? -800.0 : 800.0,180.0};
-        if (raiseClaws())
-            clawsRaised = true;
+    if (_millis() > tableStatus.startTime + 75000){
+        static bool clawsRaised = false;
+        static position_t homePos;
+        if (!clawsRaised){
+            homePos = {-100,(tableStatus.colorTeam == BLUE) ? -800.0 : 800.0,180.0};
+            if (raiseClaws())
+                clawsRaised = true;
+            return false;
+        }
+        nav_return_t res = navigationGoTo(homePos, true);
+        if (res == NAV_ERROR){
+            LOG_ERROR("RETURN_TO_HOME: Navigation error");
+            homePos.y += (tableStatus.colorTeam == BLUE) ? 50 : -50; // recule un peu et retente
+        }
+        if (res == NAV_DONE){
+            if (lowerClaws()){
+                LOG_GREEN_INFO("RETURN_TO_HOME: Done");
+                clawsRaised = false;
+                return true;
+            }
+        }
         return false;
     }
-    nav_return_t res = navigationGoTo(homePos, true);
-    if (res == NAV_ERROR){
-        LOG_ERROR("RETURN_TO_HOME: Navigation error");
-        homePos.y += (tableStatus.colorTeam == BLUE) ? 50 : -50; // recule un peu et retente
-    }
-    if (res == NAV_DONE){
-        if (lowerClaws()){
-            LOG_GREEN_INFO("RETURN_TO_HOME: Done");
-            clawsRaised = false;
-            return true;
+    else if (_millis() > tableStatus.startTime + 50000){
+        static bool clawsRaised = false;
+        static position_t homePos;
+        if (!clawsRaised){
+            homePos = {600,(tableStatus.colorTeam == BLUE) ? -400.0 : 400.0,0.0};
+            if (raiseClaws())
+                clawsRaised = true;
+            return false;
         }
+        nav_return_t res = navigationGoTo(homePos, true);
+        if (res == NAV_ERROR){
+            LOG_ERROR("RETURN_TO_HOME: Navigation error");
+            homePos.y += (tableStatus.colorTeam == BLUE) ? 10 : -10; // recule un peu et retente
+        }
+        if (res == NAV_DONE){
+                clawsRaised = false;
+            
+        }
+        return false;
     }
-    return false;
 }
 
 // Function to check if a point (px, py) lies inside the rectangle
