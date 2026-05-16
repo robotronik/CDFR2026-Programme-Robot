@@ -108,8 +108,8 @@ int main(int argc, char *argv[])
             if(!mast){
                 mast = StartMat();
             }else{
+                if(!mast) LOG_GREEN_INFO("MAT is ready");
                 tableStatus.mastStatus = true;
-                LOG_GREEN_INFO("MAT is ready");
             }
             if (readButtonSensor() && !readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = WAITSTART;
