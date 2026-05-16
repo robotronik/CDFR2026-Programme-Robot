@@ -773,7 +773,7 @@ ReturnFSM_t ActionFSM::Cursor(){
         - Take
 */
 void ActionFSM::SetBestAction(position_t position){
-    updateGranaryStock();
+    //updateGranaryStock();
     std::vector<bool> stockStatus;
     std::vector<std::pair<int, int>> dropZoneStatus;
     if (tableStatus.mastStatus) {
