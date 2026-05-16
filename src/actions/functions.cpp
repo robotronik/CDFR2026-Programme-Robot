@@ -335,8 +335,9 @@ void disableActuators(){
 
 bool returnToHome(){
     static bool clawsRaised = false;
-    position_t homePos = {-100,(tableStatus.colorTeam == BLUE) ? -800 : 800,180};
+    static position_t homePos;
     if (!clawsRaised){
+        homePos = {-100,(tableStatus.colorTeam == BLUE) ? -800.0 : 800.0,180.0};
         if (raiseClaws())
             clawsRaised = true;
         return false;
