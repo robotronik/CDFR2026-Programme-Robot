@@ -105,8 +105,9 @@ int main(int argc, char *argv[])
                 arduino.RGB_Rainbow();
             }
             if(!mast){
-                mast = StartMat();
-                if(mast){
+                bool sucess;
+                mast = StartMat(sucess);
+                if(sucess){
                     tableStatus.mastStatus = true;
                     LOG_GREEN_INFO("MAT is ready");
                 } 

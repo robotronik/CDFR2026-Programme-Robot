@@ -32,7 +32,7 @@ bool restAPI_GET_(const std::string &url, const std::string &resquest, json &res
     }
 }
 
-bool StartMat() {
+bool StartMat(bool& connectionOk) {
     static unsigned long startTime = 0;
     json response;
     
@@ -47,12 +47,14 @@ bool StartMat() {
         if (!success) {
             LOG_ERROR("MAT failed to start");
         } else {
+            
             status = true; 
         }
     }
 
     if (status) {
         startTime = 0;
+        connectionOk = true;
         return true;
     } else {
         if (startTime == 0) {
@@ -60,6 +62,7 @@ bool StartMat() {
         } else if (_millis() - startTime > 5000) { // 5 seconds timeout
             LOG_ERROR("MAT failed to start within timeout");
             startTime = 0; 
+            connectionOk = false;
             return true; 
         }
         LOG_EXTENDED_DEBUG("Waiting for MAT to start...");

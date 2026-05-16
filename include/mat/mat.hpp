@@ -10,5 +10,5 @@ using json = nlohmann::json;
 const std::string MAT_URL = "mat.local:8000";
 
 bool getMapStatus(std::vector<bool>& stock, std::vector<std::pair<int, int>>& dropzone);
-bool StartMat();
+bool StartMat(bool& connectionOk);
 void StopMat();
