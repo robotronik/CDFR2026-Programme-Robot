@@ -67,6 +67,23 @@ bool StartMat() {
     }
 }
 
+void StopMat() {
+    json response;
+    
+    if (restAPI_GET_(MAT_URL, "/stop", response) == false) {
+        LOG_ERROR("Failed to stop MAT");
+    } else if (response.is_null()) {
+        LOG_ERROR("Response is null, MAT might not be running");
+    } else {
+        bool success = response.value("success", false);
+        if (!success) {
+            LOG_ERROR("MAT failed to stop");
+        } else {
+            LOG_INFO("MAT stopped successfully");
+        }
+    }
+}
+
 bool getMapStatus(std::vector<bool>& stock, std::vector<std::pair<int, int>>& dropzone) {
     json response;
     
