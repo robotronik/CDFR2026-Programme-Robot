@@ -19,6 +19,7 @@ class TableState
         position_t pos_opponent;
         unsigned long startTime;
         colorTeam_t colorTeam;
+        bool mastStatus = false;
         int strategy;
         int calibrationAge;
         bool cursorStatus = false;

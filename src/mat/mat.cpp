@@ -8,8 +8,8 @@ bool restAPI_GET_(const std::string &url, const std::string &resquest, json &res
     
     // --- AJOUT : Définir des timeouts courts ---
     // Les paramètres sont (secondes, microsecondes)
-    cli.set_connection_timeout(0, 20000); // Timeout de connexion à 20ms
-    cli.set_read_timeout(0, 20000);       // Timeout de lecture à 20ms
+    cli.set_connection_timeout(0, 10000); // Timeout de connexion à 20ms
+    cli.set_read_timeout(0, 10000);       // Timeout de lecture à 20ms
     // -------------------------------------------
 
     auto res = cli.Get(resquest.c_str());
@@ -70,7 +70,7 @@ bool StartMat() {
 bool getMapStatus(std::vector<bool>& stock, std::vector<std::pair<int, int>>& dropzone) {
     json response;
     
-    if (restAPI_GET_(MAT_URL, "/map_status", response) == false) {
+    if (restAPI_GET_(MAT_URL, "/map", response) == false) {
         LOG_ERROR("Failed to fetch map status from MAT");
         return false;
     }

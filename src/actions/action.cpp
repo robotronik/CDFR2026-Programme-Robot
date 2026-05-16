@@ -775,7 +775,7 @@ void ActionFSM::SetBestAction(position_t position){
     updateGranaryStock();
     std::vector<bool> stockStatus;
     std::vector<std::pair<int, int>> dropZoneStatus;
-    if (getMapStatus(stockStatus, dropZoneStatus)){
+    if (tableStatus.mastStatus && getMapStatus(stockStatus, dropZoneStatus)){
         tableStatus.updateMapStatus(stockStatus, dropZoneStatus);
     }
     //ENDLESSMODE
