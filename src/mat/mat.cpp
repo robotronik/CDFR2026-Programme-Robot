@@ -97,14 +97,14 @@ bool getMapStatus(std::vector<bool>& stock, std::vector<std::pair<int, int>>& dr
     }
     
     try {
-        std::vector<int> temp_stock = response.value("stock", std::vector<int>{});
+        std::vector<int> temp_stock = response.value("P", std::vector<int>{});
         
         stock.clear();
         stock.reserve(temp_stock.size()); // Optimisation de la mémoire
         for (int val : temp_stock) {
             stock.push_back(val != 0); 
         }
-        dropzone = response.value("dropzone", std::vector<std::pair<int, int>>{});
+        dropzone = response.value("D", std::vector<std::pair<int, int>>{});
         
         return true;
         

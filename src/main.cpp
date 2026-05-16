@@ -96,12 +96,19 @@ int main(int argc, char *argv[])
         //****************************************************************
         case INIT:
         {
+            static bool mast = false;
             if (initState)
             {
                 LOG_GREEN_INFO("INIT");
                 disableActuators();
                 tableStatus.reset();
                 arduino.RGB_Rainbow();
+            }
+            if(!mast){
+                mast = StartMat();
+                if(mast) LOG_GREEN_INFO("MAT is ready");
+            }else{
+                tableStatus.mastStatus = true;
             }
             if (readButtonSensor() && !readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = WAITSTART;
@@ -111,7 +118,6 @@ int main(int argc, char *argv[])
         case WAITSTART:
         {   
             static nav_return_t nav_ret;
-            static bool mast = false;
             if (initState){
                 LOG_GREEN_INFO("WAITSTART");  
                 enableActuators();
@@ -126,12 +132,7 @@ int main(int argc, char *argv[])
                 nav_ret = NAV_IN_PROCESS;
                 tableStatus.calibrationAge = -1;
             }
-            if(!mast){
-                mast = StartMat();
-            }else{
-                if(!mast) LOG_GREEN_INFO("MAT is ready");
-                tableStatus.mastStatus = true;
-            }
+            
             // colorTeam_t color = readColorSensorSwitch();
             // switchTeamSide(color);
 
@@ -154,6 +155,7 @@ int main(int argc, char *argv[])
             if (manual_ctrl)
                 nextState = MANUAL;
             break;
+
         }
         //****************************************************************
         case RUN:

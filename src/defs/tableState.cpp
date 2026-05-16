@@ -19,15 +19,15 @@ TableState::~TableState(){}
 
 void TableState::reset(){
     /* data Winter is comming */
-    mastStatus = false;
+    //mastStatus = false;
 
-    setCursorIsDone(true);
+    setCursorIsDone(false);
     CursorPos = {780.0, 190.0, -180.0};
     if (tableStatus.colorTeam == YELLOW) position_robot_flip(CursorPos);
 
     resetCalibrationAge();
     for (int i = 0; i < STOCK_COUNT; i++){
-        avail_stocks[i] = 0;
+        avail_stocks[i] = TIME_TO_TAKE;
     }
 
     colorTeamDropZone = (colorTeam == BLUE) ? DROPZONE_BLUE : DROPZONE_YELLOW;
