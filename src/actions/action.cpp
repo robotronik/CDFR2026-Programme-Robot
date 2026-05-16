@@ -430,7 +430,7 @@ ReturnFSM_t ActionFSM::StealStock(){
 
 ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double distanceBalayage){
     //targetPos1 = position premier block à voler
-    double margeBalayage = 175;
+    double margeBalayage = 200;
     distanceBalayage += margeBalayage;
     static long unsigned startTime = 0;
     static double cosinus, sinus;
@@ -480,7 +480,7 @@ ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double 
                     LOG_DEBUG("NeedToGoToWall 2");
                     targetPos3.a = targetPos2.a;
                     targetPos4.a = targetPos3.a;
-                    targetPos2.a += 10.0; 
+                    targetPos2.a += 8.0; 
                 }
                 startTime = _millis();
                 sweepState = FSM_SWEEP_NAV_RIGHT;
@@ -787,8 +787,8 @@ void ActionFSM::SetBestAction(position_t position){
     closestSteal = INFINITY;
 
     /********************* CONDITIONS POUR LE RETURN HOME ***********************/
-    if(_millis() > tableStatus.startTime + 94000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
-        LOG_GREEN_INFO("95 seconds passed, switching to NAV_HOME");
+    if(_millis() > tableStatus.startTime + 85000){ // After 95 seconds, switch to NAV_HOME to be sure to be in the arrival zone at the end of the match, even if we are late on the strategy
+        LOG_GREEN_INFO("85 seconds passed, switching to NAV_HOME");
         runState = FSM_ACTION_NAV_HOME;
         return;
     }
