@@ -4,26 +4,27 @@
 
 
 bool restAPI_GET_(const std::string &url, const std::string &resquest, json &response) {
-    // HTTP
     httplib::Client cli(url);
+    
+    // --- AJOUT : Définir des timeouts courts ---
+    // Les paramètres sont (secondes, microsecondes)
+    cli.set_connection_timeout(0, 20000); // Timeout de connexion à 20ms
+    cli.set_read_timeout(0, 20000);       // Timeout de lecture à 20ms
+    // -------------------------------------------
+
     auto res = cli.Get(resquest.c_str());
-    // Check for nullptr
+    
     if (!res) {
         LOG_ERROR("Failed to fetch response from ", url, resquest);
         return false;
     }
-    // LOG_GREEN_INFO("HTML Status is ", res->status);
-    // LOG_GREEN_INFO("HTML Body is ", res->body);
 
-    // Check if the response code is 200 (OK)
     if (res->status != 200) {
         LOG_ERROR("HTTP error: ", res->status);
         return false;
     }
     try {
-        // Parse JSON response
         response = json::parse(res->body);
-        // LOG_GREEN_INFO("API Response: ", response.dump(4));
         return true;
     } catch (const json::parse_error& e) {
         LOG_ERROR("JSON parse error: ", e.what());
@@ -34,34 +35,36 @@ bool restAPI_GET_(const std::string &url, const std::string &resquest, json &res
 bool StartMat() {
     static unsigned long startTime = 0;
     json response;
-    bool status;
+    
+    bool status = false; 
+
     if (restAPI_GET_(MAT_URL, "/start", response) == false) {
         LOG_ERROR("Failed to start MAT");
-        status = false;
-    }else if (response.is_null()) {
+    } else if (response.is_null()) {
         LOG_ERROR("Response is null, MAT might not be running");
-        status = false;
-    }else{
+    } else {
         bool success = response.value("success", false);
         if (!success) {
             LOG_ERROR("MAT failed to start");
-            status = false;
+        } else {
+            status = true; 
         }
     }
-    if(status){
+
+    if (status) {
         startTime = 0;
         return true;
-    }else{
+    } else {
         if (startTime == 0) {
             startTime = _millis();
         } else if (_millis() - startTime > 5000) { // 5 seconds timeout
             LOG_ERROR("MAT failed to start within timeout");
-            return true;
+            startTime = 0; 
+            return true; 
         }
         LOG_EXTENDED_DEBUG("Waiting for MAT to start...");
         return false;
     }
-
 }
 
 bool getMapStatus(std::vector<bool>& stock, std::vector<std::pair<int, int>>& dropzone) {
