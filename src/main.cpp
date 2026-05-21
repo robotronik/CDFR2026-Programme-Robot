@@ -15,6 +15,7 @@
 #include "utils/logger.hpp"
 #include "restAPI/restAPI.hpp"
 #include "restAPI/manual_mode.h"
+#include "mat/mat.hpp"
 
 #ifndef __CROSS_COMPILE_ARM__
     #define DISABLE_LIDAR
@@ -205,12 +206,11 @@ int main(int argc, char *argv[])
             if (initState){
                 LOG_GREEN_INFO("FIN");
                 arduino.RGB_Solid(0, 255, 0);
-                openClaws();
-                disableActuators();
-                drive.disable();
-                // Clear manual_func
                 manual_clearFunc();
+                drive.disable();
+                disableActuators();
                 lidar.stopSpin();
+                openClaws();
                 arduino.keepMotorDCup();
                 StopMat();
             }

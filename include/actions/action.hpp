@@ -1,9 +1,7 @@
 #pragma once
 #include "drive_interface.h" // For position_t
 #include "navigation/navigation.h" // For nav_return_t
-#include "mat/mat.hpp"
 
-// Consider using enum class for better type safety
 typedef enum
 {
     FSM_RETURN_WORKING =0x0,
@@ -23,12 +21,8 @@ class ActionFSM{
         void SetBestAction(position_t position);
 
         ReturnFSM_t TakeStock();
-        ReturnFSM_t StealStock();
-        ReturnFSM_t BalayageSteal(position_t targetPos, double angle, double distanceBalayage);
         ReturnFSM_t DropStock();
-        ReturnFSM_t Cursor();
         ReturnFSM_t Calibrate();
-        ReturnFSM_t GetRobotCenter();
 
         int stock_num;// Num of stock
         int dropzone_num;// Num of dropzone to drop the stock or to steal from
@@ -54,12 +48,9 @@ class ActionFSM{
         typedef enum
         {
             FSM_ACTION_GATHER,
-            FSM_ACTION_STEAL,
             FSM_ACTION_DROP,
-            FSM_ACTION_CURSOR,
             FSM_ACTION_NAV_HOME,
             FSM_ACTION_CALIBRATION,
-            FSM_CENTER_CALIBRATION,
             FSM_ACTION_WAIT
         } StateRun_t;
         StateRun_t runState = FSM_ACTION_GATHER;
@@ -76,26 +67,6 @@ class ActionFSM{
             FSM_GATHER_COLLECTED
         } StateGatherStock_t;
         StateGatherStock_t gatherStockState = FSM_GATHER_NAV;
-        
-        /************ FSM STEAL **************/
-
-        StateGatherStock_t stealStockState = FSM_GATHER_NAV;
-
-        /************  FSM BALAYAGE ************/
-        typedef enum
-        {
-            FSM_SWEEP_INIT,
-            FSM_SWEEP_DETECT,
-            FSM_SWEEP_NAV_RIGHT,
-            FSM_SWEEP_WALL,
-            FSM_SWEEP_NAV_LEFT,
-            FSM_SWEEP_PRE_COLLECT,
-            FSM_SWEEP_COLLECT,
-            FSM_SWEEP_END
-
-
-        } StateSweepSteal_t;
-        StateSweepSteal_t sweepState = FSM_SWEEP_INIT;
 
         /************  FSM DROP ************/
         typedef enum
@@ -108,16 +79,6 @@ class ActionFSM{
         } StateDropStock_t;
         StateDropStock_t dropStockState = FSM_DROP_NONE;
 
-        /************  FSM CURSOR ************/
-        typedef enum
-        {
-            FSM_CURSOR_NAV,
-            FSM_CURSOR_ROT_NAV,
-            FSM_CURSOR_MOVE,
-            FSM_CURSOR_END
-        } StateCursor_t;
-        StateCursor_t CursorState = FSM_CURSOR_NAV;
-
         /************  FSM CALIBRATION ************/
         typedef enum
         {   
@@ -125,16 +86,4 @@ class ActionFSM{
             FSM_CALIBRATION_NAV,
         } StateCalibration_t;
         StateCalibration_t calibrationState = FSM_CALCULATION;
-
-        /************  FSM CENTER CALIBRATION ************/
-        typedef enum
-        {
-            FSM_ARUCO_1,
-            FSM_ARUCO_2,
-            FSM_ARUCO_NAV
-
-        } StateCalibrationCamera_t;
-        StateCalibrationCamera_t calibrationCameraState = FSM_ARUCO_1;
-
-
 };

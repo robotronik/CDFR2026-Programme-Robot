@@ -7,6 +7,8 @@
 #include "utils/logger.hpp"
 #include "main.hpp"
 #include "defs/constante.h"
+#include "mat/mat.hpp"
+
 ActionFSM::ActionFSM(){
     Reset();
 }
@@ -16,11 +18,7 @@ ActionFSM::~ActionFSM(){}
 void ActionFSM::Reset(){
     /****** RESET OF FSM STATES *******/
     gatherStockState = FSM_GATHER_NAV;
-    stealStockState = FSM_GATHER_NAV;
-    sweepState = FSM_SWEEP_INIT;
     dropStockState = FSM_DROP_NONE;
-    CursorState = FSM_CURSOR_NAV;
-    calibrationCameraState = FSM_ARUCO_1;
     calibrationState = FSM_CALCULATION;
 
     /*RESET OF ACTION ID*/
@@ -41,7 +39,6 @@ void ActionFSM::Reset(){
     }
     runState = FSM_ACTION_GATHER;
     //SetBestAction(drive.position);
-    // TODO reset other states (num,offset, etc.)
 }
 
 bool ActionFSM::RunFSM(){
@@ -66,23 +63,6 @@ bool ActionFSM::RunFSM(){
             if (raiseClaws()) SetBestAction(drive.position);
         }
         break;
-    case FSM_ACTION_STEAL:
-        ret = StealStock();
-        if (ret == FSM_RETURN_DONE){
-            LOG_INFO("FSM_ACTION_STEAL: Finished stealing");
-            SetBestAction(drive.position);
-        }
-        else if (ret == FSM_RETURN_ERROR){
-            LOG_ERROR("FSM_ACTION_STEAL: Couldn't steal zone : ", dropzone_num);
-            tableStatus.setDropzoneState(dropzone_num,tableStatus.colorTeamDropZone);
-            stealStockState = FSM_GATHER_NAV;
-            tableStatus.calibrationAge += CALIBRATION_DEPLETION_TIME;
-            dropzone_num = -1;
-            drive.stopMotion();
-            if (raiseClaws()) SetBestAction(drive.position);
-        }
-        break;
-  
     case FSM_ACTION_DROP:
         ret = DropStock();
         if (ret == FSM_RETURN_DONE){
@@ -111,34 +91,6 @@ bool ActionFSM::RunFSM(){
         }
         break;
     }
-
-    case FSM_ACTION_CURSOR:
-        ret = Cursor();
-        if (ret == FSM_RETURN_DONE){
-            LOG_INFO("ACTION_CURSOR: Finished cursor action");
-            tableStatus.setCursorIsDone(true); // Place le curseur comme virtuellement fait
-            SetBestAction(drive.position);
-        }
-        else if (ret == FSM_RETURN_ERROR){
-            LOG_ERROR("ACTION_CURSOR: Couldn't do cursor action");
-            tableStatus.setCursorIsDone(true); // Place le curseur comme virtuellement fait
-            drive.stopMotion();
-            tableStatus.calibrationAge += CALIBRATION_DEPLETION_TIME;
-            if (enableCursor(false)) SetBestAction(drive.position);
-        }
-        break;
-
-    /*
-        Action retour sur zone de départ
-        n'est run que si plus rien n'est possible sur la table ou si le temps est écoulé
-    */
-    case FSM_ACTION_NAV_HOME:
-        if (returnToHome()){
-            LOG_INFO("ACTION_NAV_HOME: Finished going home");
-            runState = FSM_ACTION_GATHER;
-            return true; // Robot is done
-        }
-        break;
     /*
         Action forçant la calibration 
     */
@@ -157,18 +109,15 @@ bool ActionFSM::RunFSM(){
             SetBestAction(drive.position);
         }
         break;
+
     /*
-        Action de calibration ne sera pas éxecutée en match
-        En cas d'erreur return true pour mettre fin au match
+        Action retour sur zone de départ
+        n'est run que si plus rien n'est possible sur la table ou si le temps est écoulé
     */
-    case FSM_CENTER_CALIBRATION:
-        ret = GetRobotCenter();
-        if(ret == FSM_RETURN_DONE){
-            LOG_INFO("CENTER_CALIBRATION: Finished center calibration step ", calibrationCameraState);
-            runState = FSM_ACTION_NAV_HOME;
-        }
-        else if (ret == FSM_RETURN_ERROR){
-            LOG_ERROR("CENTER_CALIBRATION: Error during center calibration step ", calibrationCameraState);
+    case FSM_ACTION_NAV_HOME:
+        if (returnToHome()){
+            LOG_INFO("ACTION_NAV_HOME: Finished going home");
+            runState = FSM_ACTION_GATHER;
             return true; // Robot is done
         }
         break;
@@ -287,285 +236,6 @@ ReturnFSM_t ActionFSM::TakeStock(){
     return FSM_RETURN_WORKING;
 }
 
-ReturnFSM_t ActionFSM::StealStock(){
-    static position_t targetPos_;
-    static double dist;
-    if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV){
-        //LOG_DEBUG("Getting next stock to take");
-        LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
-        return FSM_RETURN_ERROR;
-    }
-
-    switch (stealStockState)
-    {   
-
-        case FSM_GATHER_NAV:
-            {
-            position_t PretargetPos = dropzonePos;
-            distToAction = position_distance(drive.position, dropzonePos);
-            if (distToAction > D_THRESHOLD_LATERAL) PretargetPos.a = 0;
-
-            nav_ret = navigationGoTo(PretargetPos, true); // Enabeling A*
-            if (nav_ret == NAV_DONE){
-                LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to dropZone at postition (",PretargetPos.x,", ",PretargetPos.y, ") now searching for blocks");
-                stealStockState = FSM_GATHER_DETECT;
-            }else if(nav_ret == NAV_IN_PROCESS){
-                snapClaws(false,false);
-            }
-            else if (nav_ret == NAV_ERROR){//marche pas si le stock c'est le plus proche et qu'on essaye de le prendre en boucle
-                LOG_ERROR("FSM_GATHER_NAV: Navigation error while going to dropzone ", dropzone_num);
-                dropzone_num = -1;
-                stealStockState = FSM_GATHER_NAV;
-                return FSM_RETURN_DONE;
-            }
-            }
-            break;
-
-        case FSM_GATHER_DETECT:
-        {
-            double x = drive.position.x;
-            double y = drive.position.y;
-            double a = drive.position.a;
-            int sucess;
-            dist = 0;
-            sucess = tableStatus.colorTeam == BLUE ? 1 : 0;
-            if(arucoCam1.getObjectForSweep(stockOrder,x,y,a,sucess, dist)){
-                if (sucess > 0 && countMyColorBlocks(stockOrder) == 4 && dropzone_num < 10){
-                    stealStockState = FSM_GATHER_NAV;
-                    tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
-                    dropzone_num = -1;
-                    return FSM_RETURN_DONE;
-                }
-                else if(sucess>0){
-                    targetPos_ = position_t{x,y,a};
-                    double marge = 75.0; //marge de 100mm
-                    LOG_ERROR("angle = ", targetPos_.a);
-                    targetPos_.x = targetPos_.x + (dist/2 + marge) * sin(DEG_TO_RAD * targetPos_.a);
-                    targetPos_.y = targetPos_.y - (dist/2 + marge) * cos(DEG_TO_RAD * targetPos_.a);
-                    targetPos_.a = targetPos_.a;
-
-                    stealStockState = FSM_GATHER_COLLECT;
-                    LOG_EXTENDED_DEBUG("FSM_GATHER_DETECT: Found ", sucess, " objects to steal");
-                }else if (sucess == -2 || sucess == 0){
-                    LOG_WARNING("FSM_GATHER_DETECT: DropZone was empty");
-                    stealStockState = FSM_GATHER_NAV;
-                    tableStatus.setDropzoneState(dropzone_num,TableState::DROPZONE_EMPTY);
-                    dropzone_num = -1;
-                    return FSM_RETURN_DONE;
-                }else if(sucess == -1){
-                    LOG_ERROR("FSM_GATHER_DETECT: Camera Error don't know what to do");
-                    stealStockState = FSM_GATHER_NAV;
-                    dropzone_num = -1;
-                    return FSM_RETURN_ERROR;
-                }else if(sucess == -3 ){
-                    stealStockState = FSM_GATHER_NAV;
-                    // TODO Marking zone as our but not sure if it is need to be improved in other branch
-                    tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
-                    dropzone_num = -1;
-                    return FSM_RETURN_DONE;
-                }
-            }
-            break;
-        }
-        case FSM_GATHER_CLAWS:
-            {
-            if (lowerClaws()){
-                LOG_EXTENDED_DEBUG("FSM_GATHER_CLAWS: Claws lowered and snap for dropZone ", dropzone_num);
-                stealStockState = FSM_GATHER_MOVE;
-            }
-            }
-            break;
-        case FSM_GATHER_PREMOVE:
-            {
-            
-            nav_ret = navigationGoTo(targetStockFirstPos, false, false, false); // Slow mode for more precision
-            if (nav_ret == NAV_DONE){
-                gatherStockState = FSM_GATHER_MOVE;
-                LOG_EXTENDED_DEBUG("FSM_GATHER_PREMOVE: Pre-Moving to stock ", stock_num, " at position (", targetStockFirstPos.x, ",", targetStockFirstPos.y, ") with angle ", targetStockFirstPos.a);
-            }
-            else if (nav_ret == NAV_ERROR) return FSM_RETURN_ERROR;
-
-            }
-            break;
-        case FSM_GATHER_MOVE:
-        {
-            nav_ret = navigationGoTo(targetPos_, true);
-            if (nav_ret == NAV_DONE){
-                LOG_EXTENDED_DEBUG("FSM_GATHER_NAV: moved to dropZone at postition (",targetPos_.x,", ",targetPos_.y, ")");
-                stealStockState = FSM_GATHER_COLLECT;
-                break;
-            }
-            else if (nav_ret == NAV_ERROR) return FSM_RETURN_ERROR;
-
-        }
-            break;
-        case FSM_GATHER_COLLECT:
-            // Collect the steal
-        {
-            if (BalayageSteal(targetPos_, targetPos_.a, dist)){
-                LOG_EXTENDED_DEBUG("FSM_GATHER_COLLECT: dropZone", dropzone_num, " collected");
-                stealStockState = FSM_GATHER_COLLECTED;
-            }
-        }
-            break;
-        case FSM_GATHER_COLLECTED:
-        {
-            dropzonePos.x += 200 * cos(DEG_TO_RAD * dropzonePos.a);
-            dropzonePos.y += 200 * sin(DEG_TO_RAD * dropzonePos.a);
-            // Force le drop dans la même zone
-
-            dropStockState = FSM_DROP_NAV;
-            if (dropzone_num > 9){
-                dropStockState = FSM_DROP_NONE;
-            }
-            LOG_WARNING("dropStockState ", dropStockState);
-            rotate_done = false;
-            stock_num = 1; // marking random value to pass Best Action condition on drop action
-            tableStatus.setDropzoneState(dropzone_num, TableState::DROPZONE_EMPTY);
-            return FSM_RETURN_DONE;
-        }
-    }
-    return FSM_RETURN_WORKING;
-}
-
-ReturnFSM_t ActionFSM::BalayageSteal(position_t targetPos, double angle, double distanceBalayage){
-    //targetPos1 = position premier block à voler
-    double margeBalayage = 200;
-    distanceBalayage += margeBalayage;
-    static long unsigned startTime = 0;
-    static double cosinus, sinus;
-    static position_t targetPos1,targetPos2, targetPos3, targetPos4;
-    static bool needToGoToWall = false;
-
-    switch(sweepState){
-
-        case FSM_SWEEP_INIT: //
-        {
-            LOG_INFO("SWEEP: init");
-            needToGoToWall = false;
-            startTime = 0;
-            sweepState = FSM_SWEEP_DETECT;
-            break;
-        }
-
-        case FSM_SWEEP_DETECT:
-        {
-            if (lowerClaws()){
-                LOG_DEBUG("FSM_SWEEP_DETECT: Detection sucess calibration on blocks");
-                targetPos1 = targetPos;
-                cosinus = cos(DEG_TO_RAD * angle);
-                sinus   = sin(DEG_TO_RAD * angle);
-                
-                // Se décaler distanceBalayage mm à gauche du stock (va reculer un peu si trop proche du mur avec NearestValidZone())
-                targetPos2.y = targetPos1.y + distanceBalayage * cosinus;
-                targetPos2.x = targetPos1.x - distanceBalayage * sinus;
-                targetPos2.a = angle + 5.0;
-
-                // S'avancer de 50 mm pour prendre le stock de  et se décaler de 80mm à gauche
-                targetPos3.y = targetPos2.y + 60.0 * sinus + 80.0 * cosinus;
-                targetPos3.x = targetPos2.x + 60.0 * cosinus - 80.0 * sinus;
-                targetPos3.a = angle;
-                
-                //S'avance de 50 mm pour collect
-                targetPos4.y = targetPos3.y + 50.0 * sinus + 50.0 * cosinus;
-                targetPos4.x = targetPos3.x + 50.0 * cosinus - 50.0 * sinus; 
-                targetPos4.a = targetPos3.a;
-
-                if (NearestValidZone(&targetPos1)){
-                    needToGoToWall = true;
-                    LOG_DEBUG("NeedToGoToWall 1");
-                }
-
-                if (NearestValidZone(&targetPos2)){
-                    LOG_DEBUG("NeedToGoToWall 2");
-                    targetPos3.a = targetPos2.a;
-                    targetPos4.a = targetPos3.a;
-                    targetPos2.a += 8.0; 
-                }
-                startTime = _millis();
-                sweepState = FSM_SWEEP_NAV_RIGHT;
-            }
-            
-            break;
-        }
-        case FSM_SWEEP_NAV_RIGHT:
-        {
-            nav_ret = navigationGoTo(targetPos1, false, false, false); //First Move
-            snapClaws(false,false);
-   
-            if ((nav_ret == NAV_DONE && moveServoAndWait(SERVO_NUM_6, 170, 200)) || (_millis() - startTime > 2000)){
-                LOG_DEBUG("FSM_SWEEP_NAV_RIGHT: Moving to right of the stock at position (", targetPos1.x, ",", targetPos1.y, ") with angle ", angle);
-                if (needToGoToWall){
-                    targetPos1.y += 100.0 * sinus;
-                    targetPos1.x += 100.0 * cosinus;
-                    startTime = _millis();
-                    sweepState = FSM_SWEEP_WALL;
-                    break;
-                }
-                startTime = _millis();
-                sweepState = FSM_SWEEP_NAV_LEFT;
-            }
-            break;
-        }
-        case FSM_SWEEP_WALL:
-        {
-            nav_ret = navigationGoTo(targetPos1, false, true, false); // Go slowly to the wall
-            if (nav_ret == NAV_DONE || (_millis() - startTime > 1000)){ // If stuck > 1 second, we are against the wall
-                LOG_INFO("SWEEP: arrived at wall");
-                startTime = _millis();
-                sweepState = FSM_SWEEP_NAV_LEFT;
-            }
-            break;
-        }
-        case FSM_SWEEP_NAV_LEFT:
-        {
-            nav_ret = navigationGoTo(targetPos2, false, true, false); // Second Move, Slow mode
-            if (nav_ret == NAV_DONE || (_millis() - startTime > 2000)){
-                LOG_DEBUG("FSM_SWEEP_NAV_LEFT: Moving to left of the stock " " at position (", targetPos2.x, ",", targetPos2.y, ") with angle ", targetPos2.a);
-                startTime = _millis();
-                sweepState = FSM_SWEEP_PRE_COLLECT;
-            }
-            break;
-        }
-        case FSM_SWEEP_PRE_COLLECT:
-        {
-            if (needToGoToWall)
-                nav_ret = navigationGoTo(targetPos3, false, true, true);
-            else 
-                sweepState = FSM_SWEEP_COLLECT;
-
-            if (nav_ret == NAV_DONE || (_millis() - startTime > 1000)) {
-                drive.stopMotion();
-                sweepState = FSM_SWEEP_COLLECT;
-            }
-            break;
-        } 
-        case FSM_SWEEP_COLLECT:
-        {
-            nav_ret = navigationGoTo(targetPos4, false, true, true);
-
-            if (nav_ret == NAV_DONE || (_millis() - startTime > 1000)) {
-                drive.stopMotion();
-                moveServoAndWait(SERVO_NUM_6, 90, 200);
-                sweepState = FSM_SWEEP_END;
-            }
-        } 
-        break;
-        case FSM_SWEEP_END:
-        {
-            if (rotateTwoBlocks(stockOrder)){
-                LOG_EXTENDED_DEBUG("FSM_SWEEP_COLLECT: Claws rotated for collection");
-                LOG_DEBUG("FSM_SWEEP_COLLECT: Stock collected");
-                needToGoToWall = false;
-                sweepState = FSM_SWEEP_INIT; // reset
-                return FSM_RETURN_DONE;
-            }
-            break;
-        } 
-    }
-    return FSM_RETURN_WORKING;
-}
-
 ReturnFSM_t ActionFSM::DropStock(){
     static bool drop2StockInOne = false;
     switch (dropStockState){
@@ -644,7 +314,6 @@ ReturnFSM_t ActionFSM::DropStock(){
                 backPos.y -= 100 * sin(DEG_TO_RAD * drive.position.a);
 
                 gatherStockState = FSM_GATHER_NAV;
-                stealStockState = FSM_GATHER_NAV;
                 tableStatus.setDropzoneState(dropzone_num, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_BLUE : TableState::DROPZONE_YELLOW);  
 
                 //No more stock in hand
@@ -700,68 +369,6 @@ ReturnFSM_t ActionFSM::DropStock(){
     return FSM_RETURN_WORKING;
 }
 
-ReturnFSM_t ActionFSM::Cursor(){
-    static long unsigned startTime = 0;
-    position_t navTarget = {750.0, 180.0, -180.0};
-    position_t moveTarget = navTarget;
-    moveTarget.y += 485.0;
-    position_t moveSafeTarget = moveTarget;
-    moveSafeTarget.x -= 100.0;
-    
-    if (tableStatus.colorTeam == YELLOW){
-        position_robot_flip(navTarget);
-        position_robot_flip(moveTarget);
-        position_robot_flip(moveSafeTarget);
-    }
-
-    switch (CursorState){
-        case FSM_CURSOR_NAV:
-            nav_ret = navigationGoTo(navTarget, true);
-            if (rotateTwoBlocks(stockOrder) && nav_ret == NAV_DONE){ 
-                LOG_EXTENDED_DEBUG("FSM_CURSOR_NAV: Nav done, going to FSM_CURSOR");
-                CursorState = FSM_CURSOR_ROT_NAV;
-            }
-            else if (nav_ret == NAV_ERROR){
-                LOG_WARNING("FSM_CURSOR_NAV: Navigation error while going to cursor position for lowerClaws");
-                return FSM_RETURN_ERROR;
-            }
-            break;
-        case FSM_CURSOR_ROT_NAV:
-            
-            if (enableCursor(true)){
-                CursorState = FSM_CURSOR_MOVE;
-            }
-            break;
-
-        case FSM_CURSOR_MOVE:
-            nav_ret = navigationGoTo(moveTarget, true, true);
-            if (nav_ret == NAV_DONE){
-                LOG_EXTENDED_DEBUG("FSM_CURSOR_MOVE: Nav done , going to FSM_CURSOR");
-                CursorState = FSM_CURSOR_END;
-            }
-            else if (nav_ret == NAV_ERROR){
-                LOG_WARNING("FSM_CURSOR_MOVE: Navigation error while going to cursor position for lowerClaws");
-                return FSM_RETURN_ERROR;
-            }
-            break;
-
-        case FSM_CURSOR_END:
-            nav_ret = navigationGoTo(moveSafeTarget, false, true);
-            enableCursor(false);
-            if (nav_ret == NAV_DONE ){
-                LOG_EXTENDED_DEBUG("FSM_CURSOR_END: Nav done for move safe target");
-                LOG_EXTENDED_DEBUG("FSM_CURSOR_END: Cursor action done");
-                CursorState = FSM_CURSOR_NAV;
-                return FSM_RETURN_DONE;
-            }    
-            else if (nav_ret == NAV_ERROR)return FSM_RETURN_ERROR;
-
-            break;
-
-    }
-    return FSM_RETURN_WORKING;
-}
-
 /*
     Plus l'action est prioritaire plus elle apparaît tôt dans le code.
         Ex: le retour êtant prioritaire sur toutes les autres actions on fera toujours le retour si les conditions sont remplies
@@ -807,13 +414,6 @@ void ActionFSM::SetBestAction(position_t position){
         LOG_GREEN_INFO("Calibration aged is greater than 2 going for forced calibration");
         return;
     }
-    /*********************** CONDITIONS POUR FAIRE LE CURSEUR ************************/
-    int numStockCurseur = (tableStatus.colorTeam == BLUE) ? 2 : 6;
-        if(!tableStatus.cursorIsDone() && (position_distance(drive.position, tableStatus.CursorPos) < 400) && !tableStatus.avail_stocks[numStockCurseur]){ 
-            LOG_GREEN_INFO("Going for cursor action");
-            runState = FSM_ACTION_CURSOR;
-            return;
-        }
     /**************************** CONDITIONS POUR DROP UN STOCK ***************************************/
     LOG_ERROR("stock_num ; ", stock_num);
     if(stock_num != -1){ // On peut DROP à partir du moment où on a un stock
@@ -838,39 +438,11 @@ void ActionFSM::SetBestAction(position_t position){
         }
     }
 
-    /************** CALCUL BEST STEAL *****************/
-    if (dropzone_num == -1 && stealStockState == FSM_GATHER_NAV && tableStatus.dropToStealExist()){
-        //LOG_DEBUG("Getting next stock to take");
-        closestSteal = getBestStealZonePosition(dropzone_num, dropzonePos);
-        if (dropzone_num == -1 || position_distance(tableStatus.pos_opponent, dropzonePos) < 400){ // If no more dropzone to steal or if the steal is too close from the opponent, we don't steal
-            LOG_ERROR("ACTION_STEAL: No dropZone to steal, exiting GatherStock");//Should never be catch
-            dropzone_num = -1;
-            stealStockState = FSM_GATHER_NAV;
-            closestSteal = INFINITY;
-        }
-    }
-
     if(closestSteal == INFINITY && closestStock == INFINITY){
         LOG_ERROR("Nothing else to do waiting");
         runState = FSM_ACTION_WAIT;
         return;
-    }else{
-        /*********************** CONDITION POUR VOLER UN STOCK OU TAKE STOCK ****************************/
-        if(closestSteal * 2 < closestStock){
-            LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to steal a drop, going to FSM_ACTION_STEAL");
-            LOG_GREEN_INFO("ACTION_STEAL: Next dropZone to steal: ", dropzone_num);
-            runState = FSM_ACTION_STEAL;
-            stock_num = -1;
-            return;
-        }else{
-            runState = FSM_ACTION_GATHER;
-            dropzone_num = -1;
-            LOG_GREEN_INFO("Best action for position (", position.x, ", ", position.y, ") is to gather a stock, going to FSM_ACTION_GATHER");
-            LOG_GREEN_INFO("ACTION_GATHER: Next stock to take: ", stock_num, " offset: ", offset);
-            return;
-        }
     }
-
 }
 
 
@@ -906,55 +478,6 @@ ReturnFSM_t ActionFSM::Calibrate(){
             
             }
             break;
-    }
-    return FSM_RETURN_WORKING;
-}
-
-
-/*
-* FSM de récupération du centre du robot
-*/
-ReturnFSM_t ActionFSM::GetRobotCenter(){
-    static position_t aruco1;
-    static position_t aruco2;
-    static position_t target_ = {drive.position.x, drive.position.y, drive.position.a + 180}; // Look in the opposite direction to find the second aruco marker
-    switch (calibrationCameraState){
-        case FSM_ARUCO_1:
-            {
-            bool sucess;
-            if (arucoCam1.getPos(aruco1.x, aruco1.y, aruco1.a, sucess) && sucess){
-                calibrationCameraState = FSM_ARUCO_NAV;
-                LOG_EXTENDED_DEBUG("FSM_ARUCO_1: Found first aruco marker at (", aruco1.x, ", ", aruco1.y, ", ", aruco1.a, "), going to FSM_ARUCO_2");
-            }
-            }
-            break;
-        
-        case FSM_ARUCO_2:
-            {
-            // Look towards the next aruco marker by only spinning in place
-            bool sucess;
-            if (arucoCam1.getPos(aruco2.x, aruco2.y, aruco2.a, sucess) && sucess){
-                position_t center = {(aruco1.x + aruco2.x) / 2, (aruco1.y + aruco2.y) / 2, aruco2.a};
-                position_t offset = {aruco1.x - center.x, aruco1.y - center.y, 0};
-                LOG_GREEN_INFO("FSM_ARUCO_2: Calculated offset between cam and center for aruco1: (", offset.x, ", ", offset.y, ")");
-                offset = {aruco2.x - center.x, aruco2.y - center.y, 0};
-                LOG_GREEN_INFO("FSM_ARUCO_2: Calculated offset between cam and center for aruco2: (", offset.x, ", ", offset.y, ")");
-                drive.setCoordinates(center);
-                return FSM_RETURN_DONE;
-            }
-            }
-            break;
-        case FSM_ARUCO_NAV:
-            {
-            nav_ret = navigationGoTo(target_);
-            if (nav_ret == NAV_DONE){
-                LOG_EXTENDED_DEBUG("FSM_ARUCO_NAV: Nav done for FSM_ARUCO_NAV, going to FSM_ARUCO_2");
-                calibrationCameraState = FSM_ARUCO_2;
-            }
-            else if (nav_ret == NAV_ERROR) return FSM_RETURN_ERROR;
-            
-            }
-             break;
     }
     return FSM_RETURN_WORKING;
 }

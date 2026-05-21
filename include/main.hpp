@@ -27,8 +27,4 @@ extern Arduino arduino;
 extern Lidar lidar;
 extern ArucoCam arucoCam1;
 
-extern bool manual_ctrl;
-// Declare a function pointer
-extern bool (*manual_currentFunc)();
-
 extern bool exit_requested;

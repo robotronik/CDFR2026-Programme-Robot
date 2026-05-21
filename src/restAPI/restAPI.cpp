@@ -15,6 +15,7 @@
 #include "navigation/astar.h" //for static variable
 #include "actions/functions.h" //for state machine functions
 #include "vision/ArucoCam.hpp" //for vision fuction
+#include "restAPI/manual_mode.h" // for manual mode functions
 
 #include <crow.h>
 #include "utils/json.hpp" // For handling JSON

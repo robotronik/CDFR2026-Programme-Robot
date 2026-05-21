@@ -1,4 +1,4 @@
-#include "manual_mode.h"
+#include "restAPI/manual_mode.h"
 
 bool manual_ctrl = false;
 bool (*manual_currentFunc)() = nullptr;
