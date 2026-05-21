@@ -14,8 +14,7 @@
 #include "utils/utils.h"
 #include "utils/logger.hpp"
 #include "restAPI/restAPI.hpp"
-#include "mat/mat.hpp"
-
+#include "restAPI/manual_mode.h"
 
 #ifndef __CROSS_COMPILE_ARM__
     #define DISABLE_LIDAR
@@ -40,9 +39,7 @@ ArucoCam arucoCam1(-1, "");
 main_State_t currentState;
 main_State_t nextState;
 bool initState;
-bool manual_ctrl;
 bool motorUpFirst = true;
-bool (*manual_currentFunc)(); //Pointer to a function to execute of type bool func(void)
 
 std::thread api_server_thread;
 
@@ -196,14 +193,10 @@ int main(int argc, char *argv[])
             navigationGo();
 
             // Execute the function as long as it returns false
-            if (manual_currentFunc != NULL && manual_currentFunc != nullptr){
-                if (manual_currentFunc()){
-                    manual_currentFunc = NULL;
+                manual_loop();
+                if (!manual_ctrl){
+                    exit_requested = true;
                 }
-            }
-            if (!manual_ctrl){
-                exit_requested = true;
-            }
             break;
         }
         //****************************************************************
@@ -216,7 +209,7 @@ int main(int argc, char *argv[])
                 disableActuators();
                 drive.disable();
                 // Clear manual_func
-                manual_currentFunc = NULL;
+                manual_clearFunc();
                 lidar.stopSpin();
                 arduino.keepMotorDCup();
                 StopMat();
@@ -289,8 +282,7 @@ int StartSequence()
 #endif // TEST_API_ONLY
 
     initState = true;
-    manual_ctrl = false;
-    manual_currentFunc = NULL;
+    manual_init();
 
     pathfind_setup();
 
@@ -350,27 +342,8 @@ void EndSequence()
 
 void tests()
 {
-    TestAPIServer();
-    pathfind_setup();
-    
-    while(!exit_requested){
-        usleep(500000); 
-
-        //position depart et arrivé aléatoire
-        position_t target, start;
-        target.x = rand() % (800) - 800 / 2;
-        target.y = rand() % (1400) - 1400 / 2;
-
-        start.x = rand() % (800) - 800 / 2;
-        start.y = rand() % (2000) - 2000 / 2;
-        start.a = rand() % 360;
-        drive.setCoordinates(start);
-        
-        navigationGoTo(target, true);
-    }
-    StopAPIServer();
-    api_server_thread.join();
-
-    LOG_GREEN_INFO("Tests finished");
-    nextState = FIN;    
+    /*
+        * Call test functions here. 
+        * They will be executed in loop until the program is stopped. 
+    */ 
 }

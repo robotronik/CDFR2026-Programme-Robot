@@ -677,19 +677,6 @@ void StopAPIServer(){
     app.stop();
     LOG_INFO("Stopped API Server");
 }
-
-void TestAPIServer(){
-    // Sets some variable to display them statically
-
-    drive.position.a = 15;
-    drive.position.x = 100;
-    drive.position.y = 100;
-
-    tableStatus.pos_opponent.x = 300;
-    tableStatus.pos_opponent.y = 300;
-}
-
-
 // Function to read an HTML file and return its content as a crow::response
 crow::response readHtmlFile(const std::string& path) {
     std::ifstream file(path);
