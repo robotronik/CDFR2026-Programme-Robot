@@ -98,19 +98,10 @@ void pathfind_place_border(){
 
 void pathfind_fill_lidar(){
     astar_initialize_costmap();
-    //place stock zone if available
-    for (int i = 0; i < STOCK_COUNT; i++){
-        if (!tableStatus.avail_stocks[i]) continue;
-        position_t stock_pos = STOCK_POSITIONS_TABLE[i];
-        place_obstacle_with_margin(stock_pos.x, stock_pos.y, STOCKS_WIDTH, STOCKS_WIDTH, 220, true);
-    }
-    //place dropzones if not empty
-    for (int i = 0; i < DROPZONE_COUNT; i++){
-        if (tableStatus.dropzone_states[i] == TableState::DROPZONE_EMPTY) continue;
-        position_t dropzone_pos = DROPZONE_POSITIONS_TABLE[i];
-        place_obstacle_with_margin(dropzone_pos.x, dropzone_pos.y, DROPZONE_WIDTH, DROPZONE_LENGTH, 220, true);
-    }
+    // TODO place Camelot specific obstacle on the map
 
+
+    /* Place adversary on the map */
     for (int i = 0; i < lidar.count; i++){
         if (!lidar.data[i].onTable) continue;
         place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y, 400, 400, 230, false, false);

@@ -18,66 +18,18 @@ class ActionFSM{
         
     private:
         /***** FUNCTIONS  *******/
-        void SetBestAction(position_t position);
-
-        ReturnFSM_t TakeStock();
-        ReturnFSM_t DropStock();
+        void SetBestAction();
         ReturnFSM_t Calibrate();
-
-        int stock_num;// Num of stock
-        int dropzone_num;// Num of dropzone to drop the stock or to steal from
-        int offset;// Offset  is direction to take the stock from
-        int steal_count; // Number of blocks taken from dropZone
-        bool rotate_done = false;
-        double distToAction;
-        position_t backPos;
-        bool noStockCalibrationDone = false;
-
         nav_return_t nav_ret;
-        position_t dropzonePos;
-        position_t targetStockPos;
-        position_t targetStockFirstPos;
-        bool stockOrder[4];
-
-        double closestStock;
-        double closestSteal;
-        position_t stockPos;
-        position_t stockOff;
         
         /************  FSM GLOBAL ************/
         typedef enum
         {
-            FSM_ACTION_GATHER,
-            FSM_ACTION_DROP,
             FSM_ACTION_NAV_HOME,
             FSM_ACTION_CALIBRATION,
             FSM_ACTION_WAIT
         } StateRun_t;
-        StateRun_t runState = FSM_ACTION_GATHER;
-
-        /************  FSM GATHER ************/
-        typedef enum
-        {
-            FSM_GATHER_NAV,
-            FSM_GATHER_DETECT,
-            FSM_GATHER_CLAWS,
-            FSM_GATHER_PREMOVE,
-            FSM_GATHER_MOVE,
-            FSM_GATHER_COLLECT,
-            FSM_GATHER_COLLECTED
-        } StateGatherStock_t;
-        StateGatherStock_t gatherStockState = FSM_GATHER_NAV;
-
-        /************  FSM DROP ************/
-        typedef enum
-        {
-            FSM_DROP_NONE,
-            FSM_DROP_NAV,
-            FSM_DROP,
-            FSM_DROP_NAV_FRONT,
-            FSM_DROP_NAV_BACK
-        } StateDropStock_t;
-        StateDropStock_t dropStockState = FSM_DROP_NONE;
+        StateRun_t runState = FSM_ACTION_CALIBRATION;
 
         /************  FSM CALIBRATION ************/
         typedef enum

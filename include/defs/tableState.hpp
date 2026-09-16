@@ -19,42 +19,17 @@ class TableState
         position_t pos_opponent;
         unsigned long startTime;
         colorTeam_t colorTeam;
-        bool mastStatus = false;
         int strategy;
-        int calibrationAge;
-        bool cursorStatus = false;
-        bool cursorIsDone(){ return cursorStatus; }
-        void setCursorIsDone(bool val){ cursorStatus = val; }
-        position_t CursorPos = {625, 1220, 45};
 
-        /* data Winter is comming */
-        int avail_stocks[STOCK_COUNT];     // Is stock available
-        inline bool remainingStocksExist(){for(size_t _ = 0; _ < STOCK_COUNT; _++ ){if(avail_stocks[_]) return true;}; return false;}
-        
-        typedef enum
-        {
-            DROPZONE_EMPTY,
-            DROPZONE_YELLOW,
-            DROPZONE_BLUE,
-            DROPZONE_ERROR
-        } dropzone_state_t;
-
-        dropzone_state_t dropzone_states[DROPZONE_COUNT];
-        dropzone_state_t colorTeamDropZone = (colorTeam == BLUE) ? DROPZONE_BLUE : DROPZONE_YELLOW;
-        dropzone_state_t colorTeamDropZoneOpponent = (colorTeam == BLUE) ? DROPZONE_YELLOW : DROPZONE_BLUE;
-
-        int dropzone_proba[DROPZONE_COUNT];
-        bool granaryAlreadyTaken[4];
-        inline bool remainingDropExist(){for(size_t _ = 0; _ < DROPZONE_COUNT; _++ ){if(dropzone_states[_] == DROPZONE_EMPTY) return true;}; return false;}
-        inline bool dropToStealExist(){for(size_t _ = 0; _ < DROPZONE_COUNT; _++ ){if(dropzone_states[_] == (colorTeam == BLUE ? DROPZONE_YELLOW : DROPZONE_BLUE)) return true;}; return false;}
-
-        
+        /* Cam calibration related*/
+        int calibrationAge; // Age of calibration by Camera if exist
         void resetCalibrationAge(){ calibrationAge = 0;}
-        void setStockAsRemoved(int num);
-        void setDropzoneState(int dropzoneNum, TableState::dropzone_state_t state);
-        void setDropzoneAsError(int dropzoneNum);
 
-        void updateMapStatus(const std::vector<bool>& stock, const std::vector<std::pair<int, int>>& dropzone);
+        bool mastStatus = false; // Status of mast if exist
+        void updateMapStatus(); // update of tableState relative to data recived by mast
+
+        /* data the Legend of Camelot */
+
 
 };
 

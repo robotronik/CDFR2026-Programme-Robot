@@ -40,83 +40,12 @@
 
 #define MAX_WIDTH_TABLE 1000
 #define MAX_LENGTH_TABLE 1500
-#define OFFSET_STOCK 330 // Offset to be in the middle of the stock, could be changed if we want to take the stock from the top or the bottom*
-#define MULT_PARAM 0.68
-#define STOCK_COUNT  8
-#define DROPZONE_COUNT 12
-#define OFFSET_DROPZONE 250 // Offset to be in the middle of the dropzone, could be tweaked
+
 #define CALIBRATION_DEPLETION_TIME 2 // Max time between to calibration
 #define D_THRESHOLD_LATERAL 500
-// Define the dimensions of the stocks
-#define STOCKS_WIDTH 200
-#define STOCKS_LENGTH 150
 
 #define AS_THRESHOLD 200
 #define ADVERSARY_THRESH 300
-
-// Define timing to consider oppenent has succesfully taken the mark
-#define TIME_TO_TAKE 30 // Time to take a stock (time in s * number of lidar rotation per second)
-#define TIME_TO_DROP 30 // Time to drop a stock (time in s * number of lidar rotation per second)
-#define MIN_DROPZONE_TIME 5 // Minimum time to consider a dropzone as controlled by the opponent (time in s * number of lidar rotation per second)
-#define MIN_TAKEZONE_TIME 5
-
-// Define the positions of the stocks 
-const position_t STOCK_POSITIONS_TABLE[] = {
-    position_t{.x = -200, .y = 1325, .a = 90},\
-    position_t{.x = 600, .y = 1325, .a = 90},\
-    position_t{.x = 825, .y = 400, .a = 0}, \
-    position_t{.x = 200, .y = 350, .a = 0}, \
-
-    position_t{.x = -200, .y = -1325, .a = 90}, \
-    position_t{.x = 600, .y = -1325, .a = 90}, \
-    position_t{.x = 825, .y = -400, .a = 0}, \
-    position_t{.x = 200, .y = -350, .a = 0}};
-    
-    
-// The stock table is ordered following symetry of the table, could be ordered by proximity
-
-const position_t STOCK_OFFSETS[] = {
-    { 0, OFFSET_STOCK, -90},  //0 : Offset depuis droite
-    { 0, - OFFSET_STOCK, 90},  //1 : Offset depuis gauche
-    { OFFSET_STOCK, 0, 180 },  //2 : Offset depuis bas
-    { - OFFSET_STOCK,0, 0},  //3 : Offset depuis haut
-}; 
-
-const int STOCK_OFFSET_MAPPING[STOCK_COUNT][2] = {
-    {1,-1}, // Stock 0 utilise les offsets 1
-    {1,-1}, // Stock 1 utilise les offsets 1
-    {3,-1}, // Stock 2 utilise les offsets 3
-    {2, 3}, // Stock 3 utilise les offsets 2 et 3
-
-    {0,-1}, // Stock 4 utilise les offsets 0
-    {0,-1}, // Stock 5 utilise les offsets 0
-    {3,-1}, // Stock 6 utilise les offsets 3
-    {2,3}, // Stock 7 utilise les offsets 2,3
-};
-
-// Define the dimensions of the Dropzone
-#define DROPZONE_WIDTH 200
-#define DROPZONE_LENGTH 200
-
-//Define the positions of the Dropzone
-const position_t DROPZONE_POSITIONS_TABLE[] = {
-    position_t{.x = 200, .y = 1400}, \
-    position_t{.x = 900, .y = 800}, \
-    position_t{.x = 200, .y = 700}, \
-    position_t{.x = -450, .y = 250}, \
-    position_t{.x = 200, .y = 0}, \
-
-    position_t{.x = 200, .y = -1400}, \
-    position_t{.x = 900, .y = -800}, \
-    position_t{.x = 200, .y = -700}, \
-    position_t{.x = -450, .y = -250}, \
-    position_t{.x = 900, .y = 0},
-
-    //Granary Stock : can Steal but not drop
-    position_t{.x = -450, .y = 700}, \
-    position_t{.x = -450, .y = -700}};
-    // The dropzone table is ordered following symetry of the table, could be ordered by proximity
-
 
 const position_t ARUCO_POSITIONS_TABLE[] = {
     position_t{.x = -400, .y = -900, .a = 0}, \
@@ -135,3 +64,5 @@ const position_t ARUCO_CALIB_POSITIONS[] = {
     position_t{.x = 550, .y = 300, .a = 0}};
     
 const int ARUCO_CALIB_POSITIONS_COUNT = sizeof(ARUCO_CALIB_POSITIONS) / sizeof(position_t);
+
+/******* CONSTANT FOR THE LEGEND OF CAMELOT *******/

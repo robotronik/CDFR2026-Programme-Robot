@@ -125,7 +125,6 @@ int main(int argc, char *argv[])
                 lidar.startSpin();
                 arucoCam1.start();
                 arduino.moveMotorDC(80, false);
-                enableCursor(false);
 
                 if (tableStatus.colorTeam == NONE)
                     arduino.RGB_Blinking(255, 0, 0); // Red Blinking
@@ -210,7 +209,6 @@ int main(int argc, char *argv[])
                 drive.disable();
                 disableActuators();
                 lidar.stopSpin();
-                openClaws();
                 arduino.keepMotorDCup();
                 StopMat();
             }

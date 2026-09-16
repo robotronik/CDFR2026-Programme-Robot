@@ -6,9 +6,7 @@
 #include "navigation/pathfind.h"
 
 static bool is_robot_stalled = false;  // Because of opponent in direction of movement
-static bool is_robot_stuck = false;  // Because of no path found
 static unsigned long robot_stall_start_time;
-static unsigned long robot_stuck_start_time;
 bool forced_slow_mode = false;
 static unsigned long stuck_start = 0;
 

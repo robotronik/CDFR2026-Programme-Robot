@@ -12,249 +12,13 @@
 //                   BASIC FSM CONTROL
 // ------------------------------------------------------
 
-bool lowerClaws(){
-    static int state = 1;
-    static unsigned long startTime = 0;
-
-    switch (state){
-        case 1:
-            LOG_DEBUG("Lower Claws");
-            if (readLimitSwitchBottom()){
-                state = 1;
-                return true;
-            }
-            arduino.moveMotorDC(100, true);
-            startTime = _millis();
-            state = 2;
-            break;
-        case 2:
-            if (readLimitSwitchBottom() || _millis() - startTime >= 750){
-                arduino.stopMotorDC();
-                state = 1;
-                return true;
-            }
-            break;
-    }
-    return false;
-}
-
-bool raiseClaws(){
-    static int state = 1;
-    static unsigned long startTime = 0;
-
-    switch(state){
-        case 1: // montée rapide
-            LOG_DEBUG("Raise Claws");
-            if (readLimitSwitchTop()){
-                arduino.keepMotorDCup();
-                state = 1;
-                return true;
-            }
-            arduino.moveMotorDC(120, false);
-            startTime = _millis();
-            state = 2;
-            break;
-        case 2: // approche lente jusqu'au switch
-            if (readLimitSwitchTop() || (_millis() - startTime >= 2000)){ // timeout de sécurité
-                arduino.keepMotorDCup();        // maintenir la pince levée
-                state = 1;
-                return true;
-            }
-            break;
-    }
-
-    return false;
-}
-
-bool rotateTwoBlocksDefault(){
-    bool order[4]{false,false,false,false};
-    return rotateTwoBlocks(order);
-}
-
-bool rotateTwoBlocks(bool *order){  
-    static int state = 1;
-    static unsigned long startTime = 0;
-    switch (state){
-        case 1:
-            if (closeClaws() && raiseClaws()){
-                state = 2;
-                startTime = _millis();
-            }
-            break;
-        case 2:
-
-            bool any;
-            if (tableStatus.colorTeam == colorTeam_t::YELLOW){
-                any = order[0] || order[1] || order[2] || order[3] ;//if jaune
-            }else{
-                any = !(order[0] && order[1] && order[2] && order[3]); // if bleu
-            }
-            bool a=false,b=false,c=false,d=false;
-
-            if (any){
-                if (tableStatus.colorTeam == colorTeam_t::BLUE){
-                    a = !order[0]; b = !order[1]; c = !order[2]; d = !order[3];
-                }else{
-                    a = order[0]; b = order[1]; c = order[2]; d = order[3];
-                }
-                
-            }
-            if (!any || spinClaws(a,b,c,d) || _millis() - startTime >= 150){ // Attendre bloc tourne un peu
-                state = 1;
-                return true;
-            }
-            break;
-    }
-    return false;
-}
-
-bool dropBlock(){
-    static int state = 0;
-    switch (state){
-        case 0:
-            LOG_DEBUG("Drop Block");
-            state++;
-            break;
-        case 1:
-            if (lowerClaws()) // Si pinces bloquées
-                state++;
-            break;
-        case 2:
-            if (openClaws() & resetSpinClaws() & raiseClaws()){
-                state = 0;
-                return true;
-            }
-            break;
-    }
-    return false;
-}
-
-bool enableCursor(bool enable){
-    int target = enable ? 18 : 150;
-    return moveServoAndWait(SENSOR_NUM_7, target, 300);;
-}
-
-bool flipOneBlock(){
-    static int state = 0;
-    static unsigned long startTime = 0;
-    //servo 7 : 90 = bras haut / 150 = intermédiaire / 180 = bras bas
-    //servo 8 : 170 = ventouse bas,  0 = ventouse haut 
-    switch(state){
-        case 0: //take block
-            if ( arduino.writeSensor(1, true) && moveServoAndWait(SERVO_NUM_7,180,200) && moveServoAndWait(SERVO_NUM_6,175,200)){
-                startTime = _millis();
-                state = 1;
-            }
-            break;
-
-        case 1: //monte bras
-            if (_millis() > startTime + 500){
-                if (moveServoAndWait(SERVO_NUM_6,150,200))
-                    state = 2;
-            }
-            break;
-
-        case 2: // tourne ventouse
-            if (moveServoAndWait(SERVO_NUM_7,0,200))
-                state = 3;
-            break;
-
-        case 3: //baisse bras
-            if (moveServoAndWait(SERVO_NUM_6,180,200)){
-                startTime = _millis();
-                state = 4;
-            }
-            break;
-        case 4: //lacher ventouse
-            if (arduino.writeSensor(1, false) &&  _millis() > startTime + 1000){
-                if (moveServoAndWait(SERVO_NUM_6,80,200) & moveServoAndWait(SERVO_NUM_7,180,200)){
-                    state = 0; 
-                    return true;
-                }
-            }
-            break;
-    }
-
-    return false;
-}
+/* Code for basic FSM (elemental actions)*/
 
 // ------------------------------------------------------
 //                   SERVO CONTROL
 // ------------------------------------------------------
 
-
-bool closeClaws(){
-    return snapClaws(true);
-}
-bool openClaws(){
-    return snapClaws(false);
-}
-bool snapClaws(bool closed){
-    return snapClaws(closed, true);
-}
-
-bool snapClaws(bool closed, bool small){
-    static int prevTarget = -1;
-    int target = closed ? 0 : (small ? 30 : 100);
-    if (prevTarget != target){
-        arduino.moveServoSpeed(SERVO_CLAW_CLOSE_1, target, 300);
-        prevTarget = target;
-    }
-    int current = 0;
-    if (!arduino.getServo(SERVO_CLAW_CLOSE_1, current)) return false;
-    return current == target;
-}
-
-bool resetSpinClaws(){
-    return spinClaws(false, false, false, false);
-}
-bool spinAllClaws(){
-    return spinClaws(true, true, true, true);
-}
-
-bool spinClaws(bool spin1, bool spin2, bool spin3, bool spin4){
-    const int speed = 200;
-    static bool prevSpin1 = !spin1;
-    static bool prevSpin2 = !spin2;
-    static bool prevSpin3 = !spin3;
-    static bool prevSpin4 = !spin4;
-    int target1 = spin1 ? 180 : 0;
-    int target2 = spin2 ? 0 : 180;
-    int target3 = spin3 ? 180 : 0;
-    int target4 = spin4 ? 0 : 180;
-    if (prevSpin1 != spin1){
-        arduino.moveServoSpeed(SERVO_SPIN_1, target1, speed);
-        prevSpin1 = spin1;
-    }
-    if (prevSpin2 != spin2){
-        arduino.moveServoSpeed(SERVO_SPIN_2, target2, speed);
-        prevSpin2 = spin2;
-    }
-    if (prevSpin3 != spin3){
-        arduino.moveServoSpeed(SERVO_SPIN_3, target3, speed);
-        prevSpin3 = spin3;
-    }
-    if (prevSpin4 != spin4){
-        arduino.moveServoSpeed(SERVO_SPIN_4, target4, speed);
-        prevSpin4 = spin4;
-    }
-    bool done1 = true, done2 = true, done3 = true, done4 = true;
-    int current = 0;
-    if (!arduino.getServo(SERVO_SPIN_1, current)) 
-        return false; 
-    done1 = (current == target1);
-    if (!arduino.getServo(SERVO_SPIN_2, current)) 
-        return false; 
-    done2 = (current == target2);
-    if (!arduino.getServo(SERVO_SPIN_3, current)) 
-        return false; 
-    done3 = (current == target3);
-    if (!arduino.getServo(SERVO_SPIN_4, current)) 
-        return false; 
-    done4 = (current == target4);
-    return (done1 && done2 && done3 && done4);
-}
-
+// Exemple of servo control
 bool moveServoAndWait(int servo, int target, int speed){
     static int prevServo = -1;
     static int prevTarget = -1;
@@ -275,6 +39,7 @@ bool moveServoAndWait(int servo, int target, int speed){
 //                   STEPPER CONTROL
 // ------------------------------------------------------
 
+// Exemple of stepper control
 // Moves the platforms elevator to a predefined level
 // 0:startpos, 1:lowest, 2:Banner, 3:highest
 bool moveColumnsElevator(int level){
@@ -309,8 +74,7 @@ bool moveColumnsElevator(int level){
 
 // Returns true if actuators are home
 bool homeActuators(){
-    arduino.moveServo(SERVO_NUM_6, 90);
-    return ( resetSpinClaws() & openClaws());
+    return true; // TODO
 }
 void enableActuators(){
     for (int i = 0; i < 4; i++){
@@ -334,25 +98,16 @@ void disableActuators(){
 // ------------------------------------------------------
 
 bool returnToHome(){
-    static bool clawsRaised = false;
+
     static position_t homePos;
-    if (!clawsRaised){
-        homePos = {-100,(tableStatus.colorTeam == BLUE) ? -800.0 : 800.0,180.0};
-        if (raiseClaws())
-            clawsRaised = true;
-        return false;
-    }
     nav_return_t res = navigationGoTo(homePos, true);
     if (res == NAV_ERROR){
         LOG_ERROR("RETURN_TO_HOME: Navigation error");
         homePos.y += (tableStatus.colorTeam == BLUE) ? 50 : -50; // recule un peu et retente
     }
     if (res == NAV_DONE){
-        if (lowerClaws()){
-            LOG_GREEN_INFO("RETURN_TO_HOME: Done");
-            clawsRaised = false;
-            return true;
-        }
+        LOG_GREEN_INFO("RETURN_TO_HOME: Done");
+        return true;
     }
     return false;
 }
@@ -365,23 +120,8 @@ bool m_isPointInsideRectangle(float px, float py, float cx, float cy, float w, f
 }
 
 void opponentInAction(position_t position){
-    for(int i = 0; i < STOCK_COUNT; i++){
-        position_t stock_pos = STOCK_POSITIONS_TABLE[i];
-        if (tableStatus.avail_stocks[i] && m_isPointInsideRectangle(position.x, position.y, stock_pos.x, stock_pos.y, OPPONENT_ROBOT_RADIUS * 2, OPPONENT_ROBOT_RADIUS * 2)){
-            LOG_INFO("Opponent in action at stock ", i, " at position ", position.x, " / ", position.y);
-            tableStatus.avail_stocks[i] -= (tableStatus.avail_stocks[i] > 0) ? 1 : 0;
-            return;
-        }
-    }
-    for(int i = 0; i < DROPZONE_COUNT -2; i++){//Don't detect in the 2 last Zone because they are Granary Stock pushed by the Ninja
-        position_t dropzone_pos = DROPZONE_POSITIONS_TABLE[i];
-        if (m_isPointInsideRectangle(position.x, position.y, dropzone_pos.x, dropzone_pos.y, OPPONENT_ROBOT_RADIUS*2 + DROPZONE_WIDTH, OPPONENT_ROBOT_RADIUS*2 + DROPZONE_LENGTH))
-        {
-            LOG_INFO("Opponent at dropzone ", i ," at position ", position.x, position.y);
-            tableStatus.setDropzoneState(i, (tableStatus.colorTeam == BLUE) ? TableState::DROPZONE_YELLOW : TableState::DROPZONE_BLUE);
-            return;
-        }
-    }
+    // TODO implement this function
+    /* Detect from position of adversary the action of the adversary */
 }
 
 void switchTeamSide(colorTeam_t color){
@@ -434,19 +174,6 @@ bool isRobotInArrivalZone(position_t position){
     return m_isPointInsideRectangle(position.x, position.y, c_x, c_y, w + 2*robotSmallRadius, h + 2*robotSmallRadius);
 }
 
-int countMyColorBlocks(const bool *order){
-    int count = 0;
-    bool myColor = tableStatus.colorTeam == BLUE;
-
-    for (int i = 0; i < 4; i++){
-        if (order[i] == myColor){
-            count++;
-        }
-    }
-
-    return count;
-}
-
 // ------------------------------------------------------
 //                    INPUT SENSOR
 // ------------------------------------------------------
@@ -462,6 +189,7 @@ bool readButtonSensor(){
         count = 0;
     return (count >= 5);
 }
+
 // Returns true if the latch sensor is disconnected
 bool readLatchSensor(){
     static int count = 0;

@@ -87,7 +87,7 @@ void StopMat() {
     }
 }
 
-bool getMapStatus(std::vector<bool>& stock, std::vector<std::pair<int, int>>& dropzone) {
+bool getMapStatus() {
     json response;
     
     if (restAPI_GET_(MAT_URL, "/map", response) == false) {
@@ -100,15 +100,8 @@ bool getMapStatus(std::vector<bool>& stock, std::vector<std::pair<int, int>>& dr
     }
     
     try {
-        std::vector<int> temp_stock = response.value("P", std::vector<int>{});
-        
-        stock.clear();
-        stock.reserve(temp_stock.size()); // Optimisation de la mémoire
-        for (int val : temp_stock) {
-            stock.push_back(val != 0); 
-        }
-        dropzone = response.value("D", std::vector<std::pair<int, int>>{});
-        
+        std::vector<int> temp_stock = response.value("P", std::vector<int>{}); // Getting data
+        // TODO process data from mast to update tableState
         return true;
         
     } catch (const json::exception& e) { // Utilisez json::exception pour attraper toutes les erreurs JSON
