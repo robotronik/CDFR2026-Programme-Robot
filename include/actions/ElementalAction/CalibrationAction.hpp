@@ -1,0 +1,42 @@
+#pragma once
+#include "actions/VirtualAction.hpp"
+#include "drive_interface.h" // For position_t
+#include "navigation/navigation.h" // For nav_return_t
+
+/*
+    Action de calibration : force la calibration en se tournant vers
+    un tag aruco (ou en s'en éloignant si trop proche/trop loin).
+    Si la navigation échoue la calibration est considérée échouée
+    (FSM_RETURN_ERROR) et sera retentée une action plus tard.
+*/
+class CalibrationAction : public VirtualAction {
+    public:
+        CalibrationAction();
+        ~CalibrationAction() override = default;
+
+        ReturnFSM_t run() override;
+        bool stop() override;
+        void reset() override;
+        float available() override;
+        bool fullBlock() override;
+        bool mouvementBlock() override;
+
+    protected:
+        bool errorManagement(ReturnFSM_t error_code) override;
+        bool successManagement() override;
+
+    private:
+        typedef enum
+        {
+            FSM_CALCULATION,
+            FSM_CALIBRATION_NAV,
+        } StateCalibration_t;
+
+        StateCalibration_t calibrationState;
+        position_t calibrationTarget_;
+        nav_return_t nav_ret;
+
+        // Anciennement dans strats.cpp : renvoie la position la plus proche
+        // à adopter pour regarder un marqueur aruco et se recalibrer.
+        position_t calculateClosestArucoPosition(position_t currentPos);
+};
