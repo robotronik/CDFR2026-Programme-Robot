@@ -1,5 +1,5 @@
 #include <math.h>
-#include "ElementalAction/CalibrationAction.hpp"
+#include "actions/ElementalAction/CalibrationAction.hpp"
 #include "actions/functions.h"
 #include "utils/logger.hpp"
 #include "defs/structs.hpp"
@@ -35,14 +35,13 @@ ReturnFSM_t CalibrationAction::run(){
                 LOG_EXTENDED_DEBUG("FSM_CALIBRATION_NAV: Nav done");
                 if (tableStatus.calibrationAge){
                     // Si calibrationAge != 0 la calibration a échoué
-                    tableStatus.calibrationAge -= 1; // we try again after one action
-                    LOG_WARNING("ACTION_CALIBRATION: Failed calibration action on aruco scan");
+                    errorManagement(NAV_DONE);
                     return FSM_RETURN_ERROR;
                 }
                 return FSM_RETURN_DONE;
             }
             else if (nav_ret == NAV_ERROR){
-                errorManagement(FSM_RETURN_ERROR);
+                errorManagement(NAV_ERROR);
                 return FSM_RETURN_ERROR;
             }
             break;
@@ -51,9 +50,20 @@ ReturnFSM_t CalibrationAction::run(){
     return FSM_RETURN_WORKING;
 }
 
-bool CalibrationAction::errorManagement(ReturnFSM_t error_code){
+bool CalibrationAction::errorManagement(nav_return_t error_code){
     tableStatus.calibrationAge -= 1;
+    if (error_code == NAV_DONE){
+        LOG_WARNING("ACTION_CALIBRATION: Failed nav to calibration action");
+    }else if (error_code == NAV_ERROR)
+    {
+        LOG_WARNING("ACTION_CALIBRATION: Failed calibration action on aruco scan");
+    }
+    return true;
+}
 
+bool CalibrationAction::successManagement(){
+    LOG_GREEN_INFO("ACTION_CALIBRATION: calibration on aruco tag sucess");
+    return true;
 }
 
 float CalibrationAction::available(){

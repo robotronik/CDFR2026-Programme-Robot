@@ -1,4 +1,4 @@
-#include "ElementalAction/WaitAction.hpp"
+#include "actions/ElementalAction/WaitAction.hpp"
 #include "main.hpp" // for _millis()
 #include "utils/logger.hpp"
 
@@ -15,6 +15,14 @@ ReturnFSM_t WaitAction::run(){
         return FSM_RETURN_DONE;
     }
     return FSM_RETURN_WORKING;
+}
+
+bool WaitAction::successManagement(){
+    return true;
+}
+
+bool WaitAction::errorManagement(){
+    return true;
 }
 
 bool WaitAction::stop(){

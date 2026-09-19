@@ -1,5 +1,4 @@
-#include "ElementalAction/NavHomeAction.hpp"
-#include "actions/functions.h"
+#include "actions/ElementalAction/NavHomeAction.hpp"
 #include "utils/logger.hpp"
 
 NavHomeAction::NavHomeAction(){
@@ -8,10 +7,26 @@ NavHomeAction::NavHomeAction(){
 }
 
 ReturnFSM_t NavHomeAction::run(){
-    if (returnToHome()){
+    nav_return_t res = navigationGoTo(homePos, true);
+    if (res == NAV_ERROR){
+        errorManagement();
+    }
+    if (res == NAV_DONE){
+        successManagement();
         return FSM_RETURN_DONE;
     }
     return FSM_RETURN_WORKING;
+}
+
+bool NavHomeAction::errorManagement(){
+    LOG_ERROR("RETURN_TO_HOME: Navigation error");
+    homePos.y += (tableStatus.colorTeam == BLUE) ? 50 : -50; // recule un peu et retente
+    return true;
+}
+
+bool NavHomeAction::successManagement(){
+    LOG_GREEN_INFO("RETURN_TO_HOME: Done");
+    return true;
 }
 
 bool NavHomeAction::stop(){

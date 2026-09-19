@@ -20,8 +20,10 @@ class WaitAction : public VirtualAction {
 
     protected:
         /*
-            Error management and sucess management not implemented because never used but should be
+            Error management and sucess management not used but still implemented for exemple
         */
+        bool errorManagement();
+        bool successManagement();
     private:
         static constexpr unsigned long WAIT_DURATION_MS = 500;
         unsigned long startTime;

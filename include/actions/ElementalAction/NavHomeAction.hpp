@@ -1,5 +1,7 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
+#include "navigation/navigation.h"
+#include "main.hpp"
 
 /*
     Action de retour sur la zone de départ.
@@ -18,6 +20,9 @@ class NavHomeAction : public VirtualAction {
         bool fullBlock() override;
         bool mouvementBlock() override;
     protected:
-        bool errorManagement(ReturnFSM_t error_code) override;
-        bool successManagement() override;
+        bool errorManagement();
+        bool successManagement();
+    private:
+        position_t homePos;
+
 };

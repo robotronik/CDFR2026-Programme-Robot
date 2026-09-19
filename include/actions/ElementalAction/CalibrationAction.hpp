@@ -1,7 +1,6 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
 #include "drive_interface.h" // For position_t
-#include "navigation/navigation.h" // For nav_return_t
 
 /*
     Action de calibration : force la calibration en se tournant vers
@@ -22,8 +21,8 @@ class CalibrationAction : public VirtualAction {
         bool mouvementBlock() override;
 
     protected:
-        bool errorManagement(ReturnFSM_t error_code) override;
-        bool successManagement() override;
+        bool errorManagement(nav_return_t error_code);
+        bool successManagement();
 
     private:
         typedef enum
