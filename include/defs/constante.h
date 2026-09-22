@@ -1,5 +1,5 @@
 #pragma once
-#include "defs/structs.hpp"
+#include "drive_interface.h"
 #define SIZEDATALIDAR 15000
 
 #define LOOP_TIME_MS 20

@@ -1,9 +1,6 @@
 #include <string>
-#include <exception>
 #include "actions/MainActionFSM.hpp"
 #include "actions/VirtualAction.hpp"
-#include "actions/functions.h"
-#include "defs/tableState.hpp"
 #include "utils/logger.hpp"
 #include "main.hpp"
 #include "defs/constante.h"

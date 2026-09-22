@@ -1,6 +1,5 @@
 #pragma once
 #include "defs/structs.hpp"
-#include "defs/constante.h"
 #include <utils/json.hpp>
 
 using json = nlohmann::json;

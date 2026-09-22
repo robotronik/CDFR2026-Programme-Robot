@@ -1,6 +1,5 @@
 #include "navigation/navigation.h"
 #include "main.hpp"
-#include "defs/constante.h" // DISTANCESTOP and DISTANCESTART
 #include "utils/logger.hpp"
 #include "lidar/lidarAnalize.h"
 #include "navigation/pathfind.h"

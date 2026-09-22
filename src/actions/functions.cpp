@@ -1,7 +1,6 @@
-#include "actions/functions.h"
+#include "defs/structs.hpp"
+#include "drive_interface.h"
 #include "navigation/navigation.h"
-#include "lidar/lidarAnalize.h"
-#include "lidar/Lidar.hpp"
 #include "defs/constante.h"
 #include "i2c/Arduino.hpp"
 #include "actions/strats.hpp"
@@ -120,6 +119,9 @@ bool m_isPointInsideRectangle(float px, float py, float cx, float cy, float w, f
 }
 
 void opponentInAction(position_t position){
+    if (position_equals(position, position_t{.x=0, .y=0, .a=0})){
+        return; // useless code to get rid of warning 
+    }
     // TODO implement this function
     /* Detect from position of adversary the action of the adversary */
 }
@@ -150,6 +152,7 @@ void switchTeamSide(colorTeam_t color){
         navigationGoTo(pos, true, true); // Go to starting pos with A* and slow mode to avoid collisions during the switch
     }
 }
+
 void switchStrategy(int strategy){
     if (currentState == RUN) return;
     if (strategy < 1 || strategy > 4){

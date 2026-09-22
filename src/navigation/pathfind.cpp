@@ -1,6 +1,5 @@
 #include "navigation/pathfind.h"
 #include "navigation/astar.h"
-#include "defs/constante.h"
 #include "utils/logger.hpp"
 #include "main.hpp" //lidar
 #include "math.h" // round()

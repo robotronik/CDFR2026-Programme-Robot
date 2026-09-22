@@ -1,6 +1,6 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
-#include "drive_interface.h" // For position_t
+#include "navigation/navigation.h" //For nav_return_t & position_t
 
 /*
     Action de calibration : force la calibration en se tournant vers

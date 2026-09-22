@@ -1,5 +1,7 @@
 #include "actions/ElementalAction/NavHomeAction.hpp"
 #include "utils/logger.hpp"
+#include "navigation/navigation.h" //For nav_return_t & position_t
+#include "main.hpp" // for tableStatus
 
 NavHomeAction::NavHomeAction(){
     nom = "NavHome";

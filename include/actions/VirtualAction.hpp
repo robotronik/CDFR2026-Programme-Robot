@@ -1,6 +1,5 @@
 #pragma once
 #include <string>
-#include "navigation/navigation.h" //For nav_return_t
 
 typedef enum
 {

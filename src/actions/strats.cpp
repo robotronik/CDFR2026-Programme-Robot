@@ -1,8 +1,6 @@
 #include "actions/strats.hpp"
-#include "actions/functions.h"
 #include "utils/logger.hpp"
 #include "defs/structs.hpp"
-#include "navigation/driveControl.h"
 #include <math.h>
 #include "main.hpp" // for tableStatus
 #include "navigation/pathfind.h"

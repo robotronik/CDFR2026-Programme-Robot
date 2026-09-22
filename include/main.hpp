@@ -1,8 +1,6 @@
 #pragma once
 #include "i2c/Arduino.hpp"
 #include "defs/tableState.hpp"
-#include "defs/structs.hpp"
-#include "defs/constante.h"
 #include "lidar/Lidar.hpp"
 #include "navigation/driveControl.h"
 #include "vision/ArucoCam.hpp"

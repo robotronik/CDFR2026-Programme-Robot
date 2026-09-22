@@ -1,9 +1,6 @@
 #include <math.h>
 #include "actions/ElementalAction/CalibrationAction.hpp"
-#include "actions/functions.h"
 #include "utils/logger.hpp"
-#include "defs/structs.hpp"
-#include "navigation/driveControl.h"
 #include "navigation/pathfind.h"
 #include "main.hpp" // for tableStatus, drive
 

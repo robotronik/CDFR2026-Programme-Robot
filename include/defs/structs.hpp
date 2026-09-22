@@ -1,5 +1,4 @@
 #pragma once
-#include "utils/utils.h"
 #include "drive_interface.h"
 #include <utils/json.hpp>
 using json = nlohmann::json;
@@ -34,6 +33,12 @@ typedef struct
     double    y;
     bool   onTable;
 } lidarAnalize_t;
+
+typedef enum {
+    NONE,
+    BLUE,
+    YELLOW
+} colorTeam_t;
 
 // Define serialization for lidarAnalize_t
 void to_json(json& j, const lidarAnalize_t& p);

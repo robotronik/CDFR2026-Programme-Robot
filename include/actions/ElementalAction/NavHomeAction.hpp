@@ -1,8 +1,6 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
-#include "navigation/navigation.h"
-#include "main.hpp"
-
+#include "drive_interface.h"
 /*
     Action de retour sur la zone de départ.
     N'est run que si plus rien n'est possible sur la table

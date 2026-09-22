@@ -1,6 +1,7 @@
 #include "mat/mat.hpp"
 #include "utils/logger.hpp"
-
+#include "utils/httplib.h"
+#include <vector>
 
 
 bool restAPI_GET_(const std::string &url, const std::string &resquest, json &response) {
