@@ -1,7 +1,6 @@
 #pragma once
 #include "actions/VirtualStrategy.hpp"
 #include "actions/VirtualAction.hpp"
-#include "defs/structs.hpp"
 
 /*
     ExempleStrat

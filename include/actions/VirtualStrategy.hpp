@@ -35,7 +35,11 @@ public:
     }
 
     /*Return the list of actions possible at the moment*/
-    std::vector<std::pair<float, std::unique_ptr<VirtualAction>>> available(){
+    // NB: renvoyée par référence constante, car possible_actions contient
+    // des std::unique_ptr : un vector de unique_ptr n'est pas copiable
+    // (unique_ptr(const unique_ptr&) = delete), donc un retour par valeur
+    // ne compile pas dès que cette fonction est ODR-utilisée.
+    const std::vector<std::pair<float, std::unique_ptr<VirtualAction>>>& available() const {
         return possible_actions;
     }
 
