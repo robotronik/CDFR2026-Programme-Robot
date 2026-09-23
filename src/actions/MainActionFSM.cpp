@@ -6,7 +6,6 @@
 #include "utils/logger.hpp"
 #include "main.hpp"
 #include "defs/constante.h"
-#include "mat/mat.hpp"
 
 ActionFSM::ActionFSM(){
     Reset();
@@ -84,15 +83,6 @@ bool ActionFSM::RunFSM(){
         - Attente (si rien d'autre n'est disponible)
 */
 VirtualAction* ActionFSM::SetBestAction(){
-    if (tableStatus.mastStatus) {
-        LOG_WARNING("Updating map status with mast information");
-        if(getMapStatus()){ // Getting data from mast
-            tableStatus.updateMapStatus();
-        }else{
-            LOG_ERROR("Failed to get map status from mast");
-            tableStatus.mastStatus = false; // Don't try to get mast information for the rest of the match
-        }
-    }
     //ENDLESSMODE
     if (tableStatus.strategy == 4){
         if (_millis() > tableStatus.startTime + 50000) tableStatus.startTime = _millis();
