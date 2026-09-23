@@ -1,6 +1,7 @@
 #include "actions/ElementalAction/NavHomeAction.hpp"
 #include "utils/logger.hpp"
 #include "navigation/navigation.h" //For nav_return_t & position_t
+#include "navigation/pathfind.h"
 #include "main.hpp" // for tableStatus
 
 NavHomeAction::NavHomeAction(){
@@ -32,6 +33,7 @@ bool NavHomeAction::successManagement(){
 }
 
 bool NavHomeAction::stop(){
+    drive.stopMotion();
     return true;
 }
 
@@ -40,7 +42,10 @@ void NavHomeAction::reset(){
 }
 
 float NavHomeAction::available(){
-    return 0.0f;
+    double path_length_mm;
+    position_t path[100];
+    pathfind(drive.position, homePos, path, path_length_mm);
+    return path_length_mm;
 }
 
 bool NavHomeAction::fullBlock(){

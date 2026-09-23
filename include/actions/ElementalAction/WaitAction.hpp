@@ -8,7 +8,7 @@
 */
 class WaitAction : public VirtualAction {
     public:
-        WaitAction();
+        WaitAction(unsigned long wait);
         ~WaitAction() override = default;
 
         ReturnFSM_t run() override;
@@ -26,5 +26,6 @@ class WaitAction : public VirtualAction {
         bool successManagement();
     private:
         static constexpr unsigned long WAIT_DURATION_MS = 500;
+        unsigned long wait = WAIT_DURATION_MS;
         unsigned long startTime;
 };

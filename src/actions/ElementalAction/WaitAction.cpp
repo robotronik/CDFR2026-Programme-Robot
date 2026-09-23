@@ -2,9 +2,10 @@
 #include "main.hpp" // for _millis()
 //#include "utils/logger.hpp"
 
-WaitAction::WaitAction(){
+WaitAction::WaitAction(unsigned long tps){
     nom = "Wait";
-    duree = WAIT_DURATION_MS;
+    duree = tps;
+    wait = tps;
     startTime = 0;
 }
 

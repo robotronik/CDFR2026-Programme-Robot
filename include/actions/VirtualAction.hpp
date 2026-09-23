@@ -11,7 +11,7 @@ typedef enum
 class VirtualAction {
 protected:
     std::string nom;
-    int duree;
+    float duree;
 
     /******* ERROR AND SUCCESS MANAGEMENT ******
      * These functions should be implemented to ensure errors are correctly manage 
