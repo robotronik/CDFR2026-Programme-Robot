@@ -8,9 +8,11 @@ Lidar::Lidar(){
     drv = NULL;
     isSpinning = false;
 }
+
 Lidar::~Lidar(){
     Stop();
 }
+
 bool Lidar::setup(const char* serialPort, int baudrate){
 
     static sl_result op_result;
@@ -102,6 +104,7 @@ void Lidar::Stop(void){
     }
     stopSpin();
 }
+
 void Lidar::Delete(){
     if (drv) {
         delete drv;
@@ -114,6 +117,7 @@ void Lidar::startSpin(){
     arduino.SetLidarPWM(150);
     isSpinning = true;
 }
+
 void Lidar::stopSpin(){
     arduino.SetLidarPWM(0);
     isSpinning = false;
