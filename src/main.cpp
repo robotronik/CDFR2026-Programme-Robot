@@ -7,6 +7,7 @@
 #include "main.hpp"
 #include "actions/MainActionFSM.hpp"
 #include "actions/functions.h"
+#include "lidar/Lidar.hpp"
 #include "lidar/lidarAnalize.h"
 #include "navigation/navigation.h"
 #include "navigation/pathfind.h"
@@ -29,7 +30,7 @@ ActionFSM action;
 
 DriveControl drive;
 Arduino arduino;
-Lidar lidar;
+Lidar lidar= Lidar(&arduino);
 
 #ifndef EMULATE_CAM
 ArucoCam arucoCam1 = ArucoCam(0, "data/OV9281_1280_800.yaml");
