@@ -17,6 +17,7 @@
 #include "restAPI/manual_mode.h"
 #include "mat/mat.hpp"
 #include "actions/calibration.h"
+#include "actions/Strategy/ExempleStrat.hpp"
 
 #ifndef __CROSS_COMPILE_ARM__
     #define DISABLE_LIDAR
@@ -30,8 +31,9 @@ Arduino arduino;
 Lidar lidar= Lidar(&arduino);
 
 // Brain Init
+VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus);
 TableState tableStatus(&drive);
-ActionFSM action(&drive, &tableStatus);
+ActionFSM action(currentStrategy, &drive, &tableStatus);
 
 #ifndef EMULATE_CAM
 ArucoCam arucoCam1 = ArucoCam(0, "data/OV9281_1280_800.yaml");

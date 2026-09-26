@@ -1,12 +1,12 @@
 #include "actions/Strategy/ExempleStrat.hpp"
 #include "actions/strats.hpp"
+#include "navigation/driveControl.h"
 #include "utils/logger.hpp"
-#include "main.hpp" // pour tableStatus, _millis()
 #include "navigation/pathfind.h"
 #include "actions/ElementalAction/WaitAction.hpp"
 #include "actions/ElementalAction/CalibrationAction.hpp"
 #include "actions/ElementalAction/NavHomeAction.hpp"
-#include "actions/ElementalAction/GoToPositionAction.hpp"
+//#include "actions/ElementalAction/GoToPositionAction.hpp"
 /*
     ============================================================
     Actions élémentaires de la stratégie d'exemple
@@ -18,8 +18,10 @@
     mesure qu'elles deviennent la plus prioritaire.
 */
 
-ExempleStrat::ExempleStrat(){
+ExempleStrat::ExempleStrat(DriveControl* dc, TableState* ts){
     nom = "ExempleStrat";
+    drive = dc;
+    tableStatus = ts;
     reset();
 }
 
@@ -40,31 +42,33 @@ void ExempleStrat::reset(){
     et on enchaîne quelques actions d'exemple.
 */
 void ExempleStrat::buildPossibleActions(){
-    check(tableStatus.colorTeam, tableStatus.strategy);
+    check(tableStatus->colorTeam, tableStatus->strategy);
 
-    position_t objective = {0, 1000, 0}; // exemple, à adapter
+    //position_t objective = {0, 1000, 0}; // exemple, à adapter
 
-    possible_actions.emplace_back(
-        1.0f, // pondération
-        std::make_unique<WaitAction>(400)
-    );
-    possible_actions.emplace_back(
-        1.0f,
-        std::make_unique<CalibrationAction>()
-    );
-    possible_actions.emplace_back(
-        1.0f,
-        std::make_unique<NavHomeAction>()
-    );
-    possible_actions.emplace_back(
-        1.0f,
-        std::make_unique<GoToPositionAction>("SecondAction", objective)
-    );
+    auto addAction = [this](float weight, std::unique_ptr<VirtualAction> action){
+        std::string key = action->getNom();
+        auto result = possible_actions.emplace(key, std::make_pair(weight, std::move(action)));
+        if (!result.second){
+            // emplace() ne remplace pas si la clé existe déjà : deux
+            // actions avec le même nom écraseraient silencieusement l'une
+            // l'autre sinon.
+            LOG_WARNING("ExempleStrat: action '", key.c_str(), "' déjà présente dans le pool, ignorée");
+        }
+    };
+
+    addAction(1.0f, std::make_unique<WaitAction>(400));
+    addAction(1.0f, std::make_unique<CalibrationAction>(drive, tableStatus));
+    addAction(1.0f, std::make_unique<NavHomeAction>(tableStatus, drive));
+    //addAction(1.0f, std::make_unique<GoToPositionAction>("SecondAction", objective));
+}
+
+std::unique_ptr<VirtualAction> ExempleStrat::tempAction(){
+    return extractAction("Wait");
 }
 
 std::unique_ptr<VirtualAction> ExempleStrat::bestAction(){
     if (!status){
-        // Stratégie arrêtée (stop()) : on ne propose plus rien.
         return nullptr;
     }
 
@@ -73,37 +77,27 @@ std::unique_ptr<VirtualAction> ExempleStrat::bestAction(){
         return nullptr;
     }
 
-    // Recherche, parmi possible_actions, celle avec le meilleur score.
-    // score = pondération * available() ; available() < 0 => action
-    // écartée (non jouable dans le contexte actuel).
-    int bestIndex = -1;
+    std::string bestKey;
     float bestScore = -1.0f;
 
-    for (size_t i = 0; i < possible_actions.size(); ++i){
-        float cost = possible_actions[i].second->available();
+    for (const auto& [key, weightedAction] : possible_actions){
+        float cost = weightedAction.second->available();
         if (cost < 0.0f) continue; // action non disponible
 
-        float score = possible_actions[i].first * cost;
+        float score = weightedAction.first * cost;
         if (score > bestScore){
             bestScore = score;
-            bestIndex = static_cast<int>(i);
+            bestKey = key;
         }
     }
 
-    if (bestIndex < 0){
-        // Aucune action du pool n'est jouable actuellement
+    if (bestKey.empty()){
         return nullptr;
     }
 
-    LOG_GREEN_INFO("ExempleStrat: sélection de l'action ",
-                    possible_actions[bestIndex].second->getNom().c_str());
+    LOG_GREEN_INFO("ExempleStrat: sélection de l'action ", bestKey.c_str());
 
-    // On retire l'action choisie du pool : elle est dispatchée une
-    // seule fois (la stratégie ne la reproposera pas). Si vous voulez
-    // qu'une action puisse revenir dans le pool, ré-ajoutez-la ici
-    // après son exécution (ex: depuis MainActionFSM une fois FSM_RETURN_DONE reçu).
-    std::unique_ptr<VirtualAction> chosen = std::move(possible_actions[bestIndex].second);
-    possible_actions.erase(possible_actions.begin() + bestIndex);
-
-    return chosen;
+    // extractAction() fait exactement le find + move + erase qu'on
+    // faisait "à la main" avec l'index dans la version vector.
+    return extractAction(bestKey);
 }

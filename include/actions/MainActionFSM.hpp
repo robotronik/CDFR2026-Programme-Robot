@@ -2,9 +2,6 @@
 #include <memory>
 #include "actions/VirtualAction.hpp"
 #include "actions/VirtualStrategy.hpp"
-#include "ElementalAction/WaitAction.hpp"
-#include "ElementalAction/CalibrationAction.hpp"
-#include "ElementalAction/NavHomeAction.hpp"
 #include "defs/tableState.hpp"
 #include "navigation/driveControl.h"
 
@@ -27,13 +24,6 @@ class ActionFSM{
         /***** FUNCTIONS  *******/
         // Détermine et renvoie l'action la plus prioritaire à exécuter
         VirtualAction* SetBestAction();
-
-        /************  INSTANCES DES ACTIONS "SYSTÈME" ************/
-        // Ces actions sont toujours disponibles, indépendamment de la
-        // stratégie en cours, et restent prioritaires sur elle.
-        WaitAction waitAction{500};
-        CalibrationAction calibrationAction{driveControl, tableState};
-        NavHomeAction navHomeAction{tableState, driveControl};
 
         /************  STRATÉGIE COURANTE ************/
         // La stratégie n'appartient pas au FSM (juste référencée) : elle

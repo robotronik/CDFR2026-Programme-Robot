@@ -2,6 +2,9 @@
 #include "actions/VirtualStrategy.hpp"
 #include "actions/VirtualAction.hpp"
 
+#include "navigation/driveControl.h"
+#include "defs/tableState.hpp"
+
 /*
     ExempleStrat
     ------------
@@ -17,7 +20,7 @@
 */
 class ExempleStrat : public VirtualStrategy {
 public:
-    ExempleStrat();
+    ExempleStrat(DriveControl* dc, TableState* ts);
     ~ExempleStrat() override = default;
 
     /*
@@ -30,6 +33,7 @@ public:
         aucune action du pool n'est disponible.
     */
     std::unique_ptr<VirtualAction> bestAction() override;
+    std::unique_ptr<VirtualAction> tempAction() override;
 
     /* Ré-remplit le pool d'actions possibles (à appeler par exemple au
        Reset() du FSM, ou quand la stratégie a écoulé toutes ses actions
@@ -39,4 +43,6 @@ public:
 private:
     // (Re)construit le pool possible_actions pour la stratégie courante
     void buildPossibleActions();
+    DriveControl* drive;
+    TableState* tableStatus;
 };
