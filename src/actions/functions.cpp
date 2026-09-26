@@ -126,7 +126,7 @@ void opponentInAction(position_t position){
     /* Detect from position of adversary the action of the adversary */
 }
 
-void switchTeamSide(colorTeam_t color){
+void switchTeamSide(colorTeam_t color){ // TODO moove to tableState
     if (color == NONE) return;
     if (currentState == RUN) return;
     if (color != tableStatus.colorTeam){
@@ -153,7 +153,7 @@ void switchTeamSide(colorTeam_t color){
     }
 }
 
-void switchStrategy(int strategy){
+void switchStrategy(int strategy){ // TODO moove to tableState
     if (currentState == RUN) return;
     if (strategy < 1 || strategy > 4){
         LOG_ERROR("Invalid strategy");

@@ -1,5 +1,7 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
+#include "defs/tableState.hpp"
+#include "navigation/driveControl.h"
 #include "navigation/navigation.h" //For nav_return_t & position_t
 
 /*
@@ -10,7 +12,7 @@
 */
 class CalibrationAction : public VirtualAction {
     public:
-        CalibrationAction();
+        CalibrationAction(DriveControl* drive, TableState* tableState);
         ~CalibrationAction() override = default;
 
         ReturnFSM_t run() override;
@@ -30,6 +32,9 @@ class CalibrationAction : public VirtualAction {
             FSM_CALCULATION,
             FSM_CALIBRATION_NAV,
         } StateCalibration_t;
+
+        DriveControl* drive;
+        TableState* tableState;
 
         StateCalibration_t calibrationState;
         position_t calibrationTarget_;

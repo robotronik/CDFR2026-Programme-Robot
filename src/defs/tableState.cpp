@@ -1,8 +1,8 @@
 #include "defs/tableState.hpp"
 #include "actions/functions.h"
-#include "main.hpp"
 
-TableState::TableState(){
+TableState::TableState(DriveControl* drive){
+    this->drive = drive;
     pos_opponent.x = 3000; pos_opponent.y = 0; //si on detect pas l'adversaire, on se mettrait en slow mode proche de 0,0
     colorTeam = NONE;
     strategy = 1;
@@ -23,7 +23,7 @@ int TableState::getScore()
 {
     int totalScore = 0;
     // TODO, should be "completely inside" and not just "in"
-    if (isRobotInArrivalZone((position_t)drive.position))
+    if (isRobotInArrivalZone((position_t)drive->getPosition()))
         totalScore += 5;
     return totalScore;
 }

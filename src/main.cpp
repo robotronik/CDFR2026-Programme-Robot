@@ -24,13 +24,14 @@
     #define EMULATE_I2C
 #endif
 
-
-TableState tableStatus;
-ActionFSM action;
-
+// Hardware init
 DriveControl drive;
 Arduino arduino;
 Lidar lidar= Lidar(&arduino);
+
+// Brain Init
+TableState tableStatus(&drive);
+ActionFSM action(&drive, &tableStatus);
 
 #ifndef EMULATE_CAM
 ArucoCam arucoCam1 = ArucoCam(0, "data/OV9281_1280_800.yaml");

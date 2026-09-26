@@ -1,5 +1,5 @@
 #include "actions/ElementalAction/WaitAction.hpp"
-#include "main.hpp" // for _millis()
+#include "utils/utils.h"
 //#include "utils/logger.hpp"
 
 WaitAction::WaitAction(unsigned long tps){

@@ -1,6 +1,7 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
-#include "drive_interface.h"
+#include "navigation/driveControl.h"
+#include "defs/tableState.hpp"
 /*
     Action de retour sur la zone de départ.
     N'est run que si plus rien n'est possible sur la table
@@ -8,7 +9,7 @@
 */
 class NavHomeAction : public VirtualAction {
     public:
-        NavHomeAction();
+        NavHomeAction(TableState* tableState, DriveControl* drive);
         ~NavHomeAction() override = default;
 
         ReturnFSM_t run() override;
@@ -22,5 +23,7 @@ class NavHomeAction : public VirtualAction {
         bool successManagement();
     private:
         position_t homePos;
+        TableState* tableState;
+        DriveControl* drive;
 
 };

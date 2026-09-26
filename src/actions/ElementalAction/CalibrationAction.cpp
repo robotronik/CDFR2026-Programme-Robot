@@ -3,12 +3,14 @@
 #include "utils/logger.hpp"
 #include "navigation/pathfind.h"
 #include "defs/constante.h"
-#include "main.hpp" // for tableStatus, drive
+#include "vision/ArucoCam.hpp"
 
-CalibrationAction::CalibrationAction(){
+CalibrationAction::CalibrationAction(DriveControl* drive, TableState* tableState){
     nom = "Calibration";
     duree = 0;
     calibrationState = FSM_CALCULATION;
+    this->drive = drive;
+    this->tableState = tableState;
 }
 
 bool CalibrationAction::stop(){
@@ -22,7 +24,7 @@ void CalibrationAction::reset(){
 ReturnFSM_t CalibrationAction::run(){
     switch (calibrationState){
         case FSM_CALCULATION:
-            calibrationTarget_ = calculateClosestArucoPosition(drive.position);
+            calibrationTarget_ = calculateClosestArucoPosition(drive->getPosition());
             calibrationState = FSM_CALIBRATION_NAV;
             break;
         case FSM_CALIBRATION_NAV:
@@ -31,7 +33,7 @@ ReturnFSM_t CalibrationAction::run(){
             nav_ret = navigationGoTo(calibrationTarget_, true);
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_CALIBRATION_NAV: Nav done");
-                if (tableStatus.calibrationAge){
+                if (tableState->calibrationAge){
                     // Si calibrationAge != 0 la calibration a échoué
                     errorManagement(NAV_DONE);
                     return FSM_RETURN_ERROR;
@@ -49,7 +51,7 @@ ReturnFSM_t CalibrationAction::run(){
 }
 
 bool CalibrationAction::errorManagement(nav_return_t error_code){
-    tableStatus.calibrationAge -= 1;
+    tableState->calibrationAge -= 1;
     if (error_code == NAV_DONE){
         LOG_WARNING("ACTION_CALIBRATION: Failed nav to calibration action");
     }else if (error_code == NAV_ERROR)

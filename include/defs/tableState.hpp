@@ -1,5 +1,6 @@
 #pragma once
 #include "defs/structs.hpp"
+#include "navigation/driveControl.h"
 #include <utils/json.hpp>
 
 using json = nlohmann::json;
@@ -8,7 +9,7 @@ class TableState
 {
     public:
 
-        TableState();
+        TableState(DriveControl* drive);
         ~TableState();
 
         void reset();
@@ -29,7 +30,8 @@ class TableState
 
         /* data the Legend of Camelot */
 
-
+    private:
+        DriveControl* drive;
 };
 
 // Serialize tableState

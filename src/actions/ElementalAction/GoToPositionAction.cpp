@@ -2,10 +2,9 @@
 #include "utils/logger.hpp"
 #include "navigation/navigation.h" // pour nav_return_t & position_t
 #include "navigation/pathfind.h"
-#include "main.hpp" // pour tableStatus
 
-GoToPositionAction::GoToPositionAction(const std::string& name, position_t target)
-    : target(target), moving(false)
+GoToPositionAction::GoToPositionAction(const std::string& name, position_t target, DriveControl* drive)
+    : target(target), drive(drive), moving(false)
 {
     nom = name;
     duree = 2000; // durée estimée, à ajuster
@@ -47,7 +46,7 @@ bool GoToPositionAction::successManagement(){
 
 bool GoToPositionAction::stop(){
     if(moving){
-        drive.stopMotion();
+        drive->stopMotion();
         moving = false;
     }
     return true;
@@ -55,7 +54,7 @@ bool GoToPositionAction::stop(){
 
 void GoToPositionAction::reset(){
     stop();
-    target = drive.position; // Reset target to current position
+    target = drive->getPosition(); // Reset target to current position
 }
 
 float GoToPositionAction::available(){
@@ -63,8 +62,8 @@ float GoToPositionAction::available(){
     // (couleur/stratégie) est valide.
     double path_length_mm;
     position_t path[100]; // Assuming a maximum path length
-    pathfind(drive.position, target, path, path_length_mm);
-    return (tableStatus.colorTeam == NONE) ? -1.0f : path_length_mm/ duree;
+    pathfind(drive->getPosition(), target, path, path_length_mm);
+    return path_length_mm/ duree;
 }
 
 bool GoToPositionAction::fullBlock(){

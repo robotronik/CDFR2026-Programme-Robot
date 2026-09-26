@@ -29,6 +29,7 @@ class DriveControl : private drive_interface {
         void setRedLed(bool status);
 
         void setCoordinates(position_t pos);
+        position_t getPosition(){ return position; }
 
         void logStatus();
 

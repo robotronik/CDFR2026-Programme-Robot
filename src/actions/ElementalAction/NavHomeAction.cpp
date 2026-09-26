@@ -2,11 +2,12 @@
 #include "utils/logger.hpp"
 #include "navigation/navigation.h" //For nav_return_t & position_t
 #include "navigation/pathfind.h"
-#include "main.hpp" // for tableStatus
 
-NavHomeAction::NavHomeAction(){
+NavHomeAction::NavHomeAction(TableState* tableState, DriveControl* drive){
     nom = "NavHome";
     duree = 0;
+    this->tableState = tableState;
+    this->drive = drive;
 }
 
 ReturnFSM_t NavHomeAction::run(){
@@ -23,7 +24,7 @@ ReturnFSM_t NavHomeAction::run(){
 
 bool NavHomeAction::errorManagement(){
     LOG_ERROR("RETURN_TO_HOME: Navigation error");
-    homePos.y += (tableStatus.colorTeam == BLUE) ? 50 : -50; // recule un peu et retente
+    homePos.y += (tableState->colorTeam == BLUE) ? 50 : -50; // recule un peu et retente
     return true;
 }
 
@@ -33,7 +34,7 @@ bool NavHomeAction::successManagement(){
 }
 
 bool NavHomeAction::stop(){
-    drive.stopMotion();
+    drive->stopMotion();
     return true;
 }
 
@@ -44,7 +45,7 @@ void NavHomeAction::reset(){
 float NavHomeAction::available(){
     double path_length_mm;
     position_t path[100];
-    pathfind(drive.position, homePos, path, path_length_mm);
+    pathfind(drive->getPosition(), homePos, path, path_length_mm);
     return path_length_mm;
 }
 

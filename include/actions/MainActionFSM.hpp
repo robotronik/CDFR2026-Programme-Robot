@@ -5,11 +5,13 @@
 #include "ElementalAction/WaitAction.hpp"
 #include "ElementalAction/CalibrationAction.hpp"
 #include "ElementalAction/NavHomeAction.hpp"
+#include "defs/tableState.hpp"
+#include "navigation/driveControl.h"
 
 class ActionFSM{
     public:
-        ActionFSM();
-        explicit ActionFSM(VirtualStrategy* strategy);
+        ActionFSM(DriveControl* drive, TableState* tableState);
+        explicit ActionFSM(VirtualStrategy* strategy, DriveControl* drive, TableState* tableState);
         ~ActionFSM();
         void Reset();
         bool RunFSM();
@@ -20,6 +22,8 @@ class ActionFSM{
         void setStrategy(VirtualStrategy* strategy);
 
     private:
+        DriveControl* driveControl = nullptr;
+        TableState* tableState = nullptr;
         /***** FUNCTIONS  *******/
         // Détermine et renvoie l'action la plus prioritaire à exécuter
         VirtualAction* SetBestAction();
@@ -27,9 +31,9 @@ class ActionFSM{
         /************  INSTANCES DES ACTIONS "SYSTÈME" ************/
         // Ces actions sont toujours disponibles, indépendamment de la
         // stratégie en cours, et restent prioritaires sur elle.
-        WaitAction waitAction = WaitAction(500);
-        CalibrationAction calibrationAction;
-        NavHomeAction navHomeAction;
+        WaitAction waitAction{500};
+        CalibrationAction calibrationAction{driveControl, tableState};
+        NavHomeAction navHomeAction{tableState, driveControl};
 
         /************  STRATÉGIE COURANTE ************/
         // La stratégie n'appartient pas au FSM (juste référencée) : elle

@@ -1,18 +1,22 @@
 #include <string>
 #include "actions/MainActionFSM.hpp"
-#include "actions/ElementalAction/WaitAction.hpp"
 #include "actions/VirtualAction.hpp"
 #include "actions/VirtualStrategy.hpp"
 #include "utils/logger.hpp"
 #include "main.hpp"
 #include "defs/constante.h"
 
-ActionFSM::ActionFSM(){
+ActionFSM::ActionFSM(DriveControl* drive, TableState* tableState)
+    : driveControl(drive), tableState(tableState)
+{
+    waitAction = WaitAction(500);
+    calibrationAction = CalibrationAction(drive, tableState);
+    navHomeAction = NavHomeAction(tableState, drive);
     Reset();
 }
 
-ActionFSM::ActionFSM(VirtualStrategy* strategy)
-    : currentStrategy(strategy)
+ActionFSM::ActionFSM(VirtualStrategy* strategy, DriveControl* drive, TableState* tableState)
+    : driveControl(drive), tableState(tableState), currentStrategy(strategy)
 {
     Reset();
 }
