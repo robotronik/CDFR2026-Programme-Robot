@@ -96,7 +96,7 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
     vec.x = pos_target.x - position.x;
     vec.y = pos_target.y - position.y;
     position_normalize(vec);
-    const double kP_lin = 5.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
+    const double kP_lin = 4.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
     vec.x *= position_speed / kP_lin;
     vec.y *= position_speed / kP_lin;
     if (distance_to_target > position_length(vec) && distance_to_target > 30.0) {
@@ -167,6 +167,31 @@ void DriveControl::setGreenLed(bool status){
 
 void DriveControl::setRedLed(bool status){
     drive_interface::set_red_led(status);
+}
+
+
+void DriveControl::setLinearScalar(float scalar){
+    drive_interface::set_linear_scalar(scalar);
+}
+
+float DriveControl::getLinearScalar(){
+    return drive_interface::get_linear_scalar();
+}
+
+void DriveControl::setAngularScalar(float scalar){
+    drive_interface::set_angular_scalar(scalar);
+}
+
+float DriveControl::getAngularScalar(){
+    return drive_interface::get_angular_scalar();
+}
+
+void DriveControl::setOffset(position_t offset){
+    drive_interface::set_offset(offset);
+}
+
+position_t DriveControl::getOffset(){
+    return drive_interface::get_offset();
 }
 
 void DriveControl::logStatus(){

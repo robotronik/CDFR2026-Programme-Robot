@@ -11,28 +11,14 @@ bool isRobotInArrivalZone(position_t position);
 void opponentInAction(position_t position);
 void switchTeamSide(colorTeam_t color);
 void switchStrategy(int strategy);
-int countMyColorBlocks(const bool *order);
 
 
 // Basic functions (FSM)
-bool lowerClaws();
-bool raiseClaws();
-bool rotateTwoBlocks(bool *order);
-bool rotateTwoBlocksDefault();
-bool dropBlock();
-bool enableCursor(bool enable);
-bool flipOneBlock();
+//bool lowerClaws(); function must be define here 
 
 
 // Servo Control
-bool closeClaws();
-bool openClaws();
-bool snapClaws(bool closed);
-bool snapClaws(bool closed, bool small);
-bool resetSpinClaws();
-bool spinAllClaws();
-bool spinClaws(bool spin1, bool spin2, bool spin3, bool spin4);
-bool moveServoAndWait(int servo, int target, int speed);
+bool moveServoAndWait(int servo, int target, int speed); // Example
 
 
 // Stepper Control

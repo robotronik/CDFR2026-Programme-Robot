@@ -1,14 +1,16 @@
 #include "navigation/navigation.h"
 #include "main.hpp"
-#include "defs/constante.h" // DISTANCESTOP and DISTANCESTART
 #include "utils/logger.hpp"
 #include "lidar/lidarAnalize.h"
 #include "navigation/pathfind.h"
 
+// Public variables (Read-only)
+position_t nav_prev_final_pos_cam = {0, 0, 0};
+position_t nav_prev_final_pos_otos = {0, 0, 0};
+
+// Private variables
 static bool is_robot_stalled = false;  // Because of opponent in direction of movement
-static bool is_robot_stuck = false;  // Because of no path found
 static unsigned long robot_stall_start_time;
-static unsigned long robot_stuck_start_time;
 bool forced_slow_mode = false;
 static unsigned long stuck_start = 0;
 
@@ -76,10 +78,13 @@ nav_return_t navigationGo(){
 
         if (result == NAV_DONE){
             LOG_EXTENDED_DEBUG("Navigation drive completed");
-            if (current_complete_stop) // If came to a complete stop, calibrate using camera, else nav is done
+            if (current_complete_stop){ // If came to a complete stop, calibrate using camera, else nav is done
                 driving = false;
+                drive.setBrakeState(true);
+            }
             else {
                 stuck_start = 0;
+                nav_prev_final_pos_otos = drive.position;
                 return NAV_DONE;
             }
         } else if (result == NAV_ERROR){
@@ -98,6 +103,9 @@ nav_return_t navigationGo(){
         position_t robot_pos;
         if (arucoCam1.getRobotPos(robot_pos.x, robot_pos.y, robot_pos.a, cam_success)){
             if (cam_success){
+                // Save the results and set coords
+                nav_prev_final_pos_cam = robot_pos;
+                nav_prev_final_pos_otos = drive.position;
                 drive.setCoordinates(robot_pos);
                 tableStatus.resetCalibrationAge();
                 LOG_GREEN_INFO("Camera calibration during move successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
@@ -106,6 +114,7 @@ nav_return_t navigationGo(){
                 LOG_EXTENDED_DEBUG("Camera did not have a good position estimate, skipping calibration");
             }
             driving = true;
+            drive.setBrakeState(false);
             stuck_start = 0;
             return NAV_DONE;
         }

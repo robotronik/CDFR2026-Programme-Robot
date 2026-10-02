@@ -1,8 +1,6 @@
 #pragma once
 #include "i2c/Arduino.hpp"
 #include "defs/tableState.hpp"
-#include "defs/structs.hpp"
-#include "defs/constante.h"
 #include "lidar/Lidar.hpp"
 #include "navigation/driveControl.h"
 #include "vision/ArucoCam.hpp"
@@ -13,7 +11,8 @@ typedef enum {
     RUN = 4,
     FIN = 5,
     TEST = 6,
-    MANUAL = 7
+    MANUAL = 7,
+    CALIBRATION = 8
 } main_State_t;
 
 
@@ -26,9 +25,5 @@ extern DriveControl drive;
 extern Arduino arduino;
 extern Lidar lidar;
 extern ArucoCam arucoCam1;
-
-extern bool manual_ctrl;
-// Declare a function pointer
-extern bool (*manual_currentFunc)();
 
 extern bool exit_requested;

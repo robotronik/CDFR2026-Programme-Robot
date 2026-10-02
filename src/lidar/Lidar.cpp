@@ -1,16 +1,18 @@
 #include "lidar/Lidar.hpp"
-#include "main.hpp"
 #include <vector>
 
 static bool checkSLAMTECLIDARHealth(ILidarDriver * drv);
 
-Lidar::Lidar(){
+Lidar::Lidar(Arduino* arduinoPtr){
     drv = NULL;
     isSpinning = false;
+    arduino = arduinoPtr;
 }
+
 Lidar::~Lidar(){
     Stop();
 }
+
 bool Lidar::setup(const char* serialPort, int baudrate){
 
     static sl_result op_result;
@@ -102,6 +104,7 @@ void Lidar::Stop(void){
     }
     stopSpin();
 }
+
 void Lidar::Delete(){
     if (drv) {
         delete drv;
@@ -111,11 +114,12 @@ void Lidar::Delete(){
 
 
 void Lidar::startSpin(){
-    arduino.SetLidarPWM(150);
+    arduino->SetLidarPWM(150);
     isSpinning = true;
 }
+
 void Lidar::stopSpin(){
-    arduino.SetLidarPWM(0);
+    arduino->SetLidarPWM(0);
     isSpinning = false;
 }
 

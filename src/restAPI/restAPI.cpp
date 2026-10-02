@@ -15,6 +15,7 @@
 #include "navigation/astar.h" //for static variable
 #include "actions/functions.h" //for state machine functions
 #include "vision/ArucoCam.hpp" //for vision fuction
+#include "restAPI/manual_mode.h" // for manual mode functions
 
 #include <crow.h>
 #include "utils/json.hpp" // For handling JSON
@@ -589,14 +590,10 @@ void StartAPIServer(){
         std::string req_value = req_data["value"];
 
         // Apply the value
-        if      (req_value == "closeClaws")       manual_currentFunc = closeClaws;
-        else if (req_value == "openClaws")        manual_currentFunc = openClaws;
-        else if (req_value == "resetSpinClaws")   manual_currentFunc = resetSpinClaws;
-        else if (req_value == "dropBlock")     manual_currentFunc = dropBlock;
-        else if (req_value == "lowerClaws")       manual_currentFunc = lowerClaws;
-        else if (req_value == "raiseClaws")       manual_currentFunc = raiseClaws;
-        else if (req_value == "rotateTwoBlocks")  manual_currentFunc = rotateTwoBlocksDefault;
-        else if (req_value == "flipOneBlock")  manual_currentFunc = flipOneBlock;
+        if      (req_value == "Test"){
+            // TODO change condition to check if 'req_value' is a command and associate it with mouvement to test
+            //manual_currentFunc = NULL; NULL should be replace by the value to test
+        }
         else {
             json response;
             response["message"] = "Invalid action requested";
@@ -677,19 +674,6 @@ void StopAPIServer(){
     app.stop();
     LOG_INFO("Stopped API Server");
 }
-
-void TestAPIServer(){
-    // Sets some variable to display them statically
-
-    drive.position.a = 15;
-    drive.position.x = 100;
-    drive.position.y = 100;
-
-    tableStatus.pos_opponent.x = 300;
-    tableStatus.pos_opponent.y = 300;
-}
-
-
 // Function to read an HTML file and return its content as a crow::response
 crow::response readHtmlFile(const std::string& path) {
     std::ifstream file(path);

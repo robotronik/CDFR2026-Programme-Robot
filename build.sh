@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # --- Config Raspi ---
-PI_USER="robotronik"; PI_HOST="raspitronik.local"; PI_DIR="/home/$PI_USER/CDFR"; PI_DEST="arm_bin"
+PI_USER="robotronik"; PI_HOST="172.27.123.146"; PI_DIR="/home/$PI_USER/CDFR"; PI_DEST="arm_bin"
 
 # --- Config build ---
 GEN=""; OPT=""

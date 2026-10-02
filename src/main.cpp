@@ -1,21 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-#include <string.h>
 #include <thread>
 #include <unistd.h>  // for usleep
 
 #include "main.hpp"
-#include "actions/action.hpp"
+#include "actions/MainActionFSM.hpp"
 #include "actions/functions.h"
+#include "lidar/Lidar.hpp"
 #include "lidar/lidarAnalize.h"
 #include "navigation/navigation.h"
 #include "navigation/pathfind.h"
 #include "utils/utils.h"
 #include "utils/logger.hpp"
 #include "restAPI/restAPI.hpp"
+#include "restAPI/manual_mode.h"
 #include "mat/mat.hpp"
-
+#include "actions/calibration.h"
+#include "actions/Strategy/ExempleStrat.hpp"
 
 #ifndef __CROSS_COMPILE_ARM__
     #define DISABLE_LIDAR
@@ -23,13 +25,15 @@
     #define EMULATE_I2C
 #endif
 
-
-TableState tableStatus;
-ActionFSM action;
-
+// Hardware init
 DriveControl drive;
 Arduino arduino;
-Lidar lidar;
+Lidar lidar= Lidar(&arduino);
+
+// Brain Init
+VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus);
+TableState tableStatus(&drive);
+ActionFSM action(currentStrategy, &drive, &tableStatus);
 
 #ifndef EMULATE_CAM
 ArucoCam arucoCam1 = ArucoCam(0, "data/OV9281_1280_800.yaml");
@@ -40,9 +44,7 @@ ArucoCam arucoCam1(-1, "");
 main_State_t currentState;
 main_State_t nextState;
 bool initState;
-bool manual_ctrl;
 bool motorUpFirst = true;
-bool (*manual_currentFunc)(); //Pointer to a function to execute of type bool func(void)
 
 std::thread api_server_thread;
 
@@ -87,6 +89,14 @@ int main(int argc, char *argv[])
 #ifndef DISABLE_LIDAR
                 GetLidar();
 #endif
+                if (tableStatus.mastStatus) {
+                    if(getMapStatus()){ // Getting data from mast
+                        tableStatus.updateMapStatus();
+                    }else{
+                        LOG_ERROR("Failed to get map status from mast");
+                        tableStatus.mastStatus = false; // Don't try to get mast information for the rest of the match
+                    }
+                }
             }
         }
 
@@ -118,8 +128,7 @@ int main(int argc, char *argv[])
         }
         //****************************************************************
         case WAITSTART:
-        {   
-            static nav_return_t nav_ret;
+        {
             if (initState){
                 LOG_GREEN_INFO("WAITSTART");  
                 enableActuators();
@@ -127,11 +136,9 @@ int main(int argc, char *argv[])
                 lidar.startSpin();
                 arucoCam1.start();
                 arduino.moveMotorDC(80, false);
-                enableCursor(false);
 
                 if (tableStatus.colorTeam == NONE)
                     arduino.RGB_Blinking(255, 0, 0); // Red Blinking
-                nav_ret = NAV_IN_PROCESS;
                 tableStatus.calibrationAge = -1;
             }
             
@@ -142,14 +149,10 @@ int main(int argc, char *argv[])
                 arduino.moveMotorDC(20,false);
                 motorUpFirst = false;
             }
-            if (tableStatus.calibrationAge ==-1){
-                navigationGo(); // Calibrate the robot using the camera while waiting for the start signal
-            } else if (nav_ret == NAV_IN_PROCESS){
-                nav_ret = navigationGo();
-            }
-            if(nav_ret == NAV_ERROR){
-                LOG_ERROR("Error while calibrating in WAITSTART");
-                nav_ret = navigationGo();
+            if (tableStatus.calibrationAge == -1){
+                navigationGo();
+            } else{
+                nextState = CALIBRATION;
             }
 
             if (readLatchSensor() && tableStatus.colorTeam != NONE)
@@ -157,7 +160,30 @@ int main(int argc, char *argv[])
             if (manual_ctrl)
                 nextState = MANUAL;
             break;
+        }
+        //****************************************************************
+        case CALIBRATION:
+        {
+            if (initState){
+                LOG_GREEN_INFO("CALIBRATION");
+            }
+            tableStatus.pos_opponent.x = 3000.0f;
+            tableStatus.pos_opponent.y = 0;
+            opponentInAction(tableStatus.pos_opponent);     
+            tableStatus.startTime = _millis();
+            static bool has_calib = false;
+            if (!has_calib){
+                if (calibrate_otos()){
+                    LOG_GREEN_INFO("Calibration successful");
+                    has_calib = true;
+                }
+            }
 
+            if (readLatchSensor() && tableStatus.colorTeam != NONE)
+                nextState = RUN;
+            if (manual_ctrl)
+                nextState = MANUAL;
+            break;
         }
         //****************************************************************
         case RUN:
@@ -196,14 +222,10 @@ int main(int argc, char *argv[])
             navigationGo();
 
             // Execute the function as long as it returns false
-            if (manual_currentFunc != NULL && manual_currentFunc != nullptr){
-                if (manual_currentFunc()){
-                    manual_currentFunc = NULL;
+                manual_loop();
+                if (!manual_ctrl){
+                    exit_requested = true;
                 }
-            }
-            if (!manual_ctrl){
-                exit_requested = true;
-            }
             break;
         }
         //****************************************************************
@@ -212,11 +234,9 @@ int main(int argc, char *argv[])
             if (initState){
                 LOG_GREEN_INFO("FIN");
                 arduino.RGB_Solid(0, 255, 0);
-                openClaws();
-                disableActuators();
+                manual_clearFunc();
                 drive.disable();
-                // Clear manual_func
-                manual_currentFunc = NULL;
+                disableActuators();
                 lidar.stopSpin();
                 arduino.keepMotorDCup();
                 StopMat();
@@ -289,8 +309,7 @@ int StartSequence()
 #endif // TEST_API_ONLY
 
     initState = true;
-    manual_ctrl = false;
-    manual_currentFunc = NULL;
+    manual_init();
 
     pathfind_setup();
 
@@ -310,7 +329,8 @@ void GetLidar()
         pathfind_fill_lidar();
         // Only update opponent position if the robot is not moving too fast to avoid noise
         if (IsDataValid && position_opponentV2(lidar.data, lidar.count, drive.position, pos_opponent) &&
-                (currentState == RUN || currentState == MANUAL) && (_millis() - tableStatus.startTime > 1000)){ // Only update opponent position after 1 second from the start to avoid false readings at the beginning
+                (currentState == RUN || currentState == MANUAL) &&
+                (_millis() - tableStatus.startTime > 1000)){ // Only update opponent position after 1 second from the start to avoid false readings at the beginning
             tableStatus.pos_opponent.x = pos_opponent.x;
             tableStatus.pos_opponent.y = pos_opponent.y;
             opponentInAction(pos_opponent);            
@@ -350,27 +370,8 @@ void EndSequence()
 
 void tests()
 {
-    TestAPIServer();
-    pathfind_setup();
-    
-    while(!exit_requested){
-        usleep(500000); 
-
-        //position depart et arrivé aléatoire
-        position_t target, start;
-        target.x = rand() % (800) - 800 / 2;
-        target.y = rand() % (1400) - 1400 / 2;
-
-        start.x = rand() % (800) - 800 / 2;
-        start.y = rand() % (2000) - 2000 / 2;
-        start.a = rand() % 360;
-        drive.setCoordinates(start);
-        
-        navigationGoTo(target, true);
-    }
-    StopAPIServer();
-    api_server_thread.join();
-
-    LOG_GREEN_INFO("Tests finished");
-    nextState = FIN;    
+    /*
+        * Call test functions here. 
+        * They will be executed in loop until the program is stopped. 
+    */ 
 }

@@ -29,10 +29,20 @@ class DriveControl : private drive_interface {
         void setRedLed(bool status);
 
         void setCoordinates(position_t pos);
+        position_t getPosition(){ return position; }
 
         void logStatus();
 
         void stopMotion();
+
+        void setLinearScalar(float scalar);
+        float getLinearScalar();
+
+        void setAngularScalar(float scalar);
+        float getAngularScalar();
+
+        void setOffset(position_t offset);
+        position_t getOffset();
 
         void reset();
 };

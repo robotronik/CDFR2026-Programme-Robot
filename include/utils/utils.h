@@ -6,12 +6,6 @@
 #include <string>
 #include <fstream>
 
-typedef enum {
-    NONE,
-    BLUE,
-    YELLOW
-} colorTeam_t;
-
 inline unsigned long _millis() {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts); // Utilisation de CLOCK_MONOTONIC pour éviter les changements d'horloge
