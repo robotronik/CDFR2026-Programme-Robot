@@ -84,7 +84,12 @@ target_include_directories(robot_core PUBLIC
 find_package(SQLite3 REQUIRED)
 
 # OpenCV : détection native des marqueurs ArUco (cf. src/vision/ArucoDetector.cpp)
-find_package(OpenCV REQUIRED)
+# Le config CMake est cherché explicitement sous le chemin multiarch Debian/Ubuntu
+# (lib/<arch>/cmake/opencv4), que la recherche par défaut ne couvre pas toujours.
+find_package(OpenCV REQUIRED CONFIG
+    HINTS /usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}/cmake/opencv4
+          /usr/lib/cmake/opencv4
+          /usr/local/lib/cmake/opencv4)
 target_include_directories(robot_core PUBLIC ${OpenCV_INCLUDE_DIRS})
 
 target_link_directories(robot_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rplidar_sdk/output/Linux/Release)

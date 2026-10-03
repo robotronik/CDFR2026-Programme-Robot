@@ -16,7 +16,18 @@ jobs:
     - name: Cache and Install APT Packages
       uses: awalsh128/cache-apt-pkgs-action@v1.4.3
       with:
-        packages: make gcc g++ cmake libopencv-dev
+        packages: make gcc g++ cmake
+
+    # Installed on its own rather than through the cache action: the CMake
+    # config it ships is what find_package(OpenCV) needs, so its presence is
+    # verified here instead of failing opaquely at configure time.
+    - name: Install OpenCV
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libopencv-dev
+        test -f /usr/lib/*/cmake/opencv4/OpenCVConfig.cmake \
+          || { echo "OpenCVConfig.cmake not found after install"; exit 1; }
+        ls /usr/lib/*/cmake/opencv4/
 
     - name: Clone CDFR2026-Program-DriveControl
       run: git clone https://github.com/robotronik/CDFR2026-Program-DriveControl.git ../CDFR2026-Program-DriveControl
