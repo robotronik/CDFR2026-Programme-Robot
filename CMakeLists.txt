@@ -80,8 +80,30 @@ target_include_directories(robot_core PUBLIC
 # 4. Librairies externes
 # ------------------------------------------------------------------------------
 
-# SQLite : base des durées d'action (cf. src/db/ActionDurationDB.cpp)
-find_package(SQLite3 REQUIRED)
+# SQLite : base des durées d'action (cf. src/db/ActionDurationDB.cpp).
+#
+# FindSQLite3 de CMake cherche la lib dans des chemins multiarch (lib/<triplet>)
+# qui peuvent disparaître de la recherche selon l'état du cache, d'où un
+# "Could NOT find SQLite3 (missing: SQLite3_LIBRARY)" alors que la lib est bien
+# installée (cas vécu localement, alors qu'un configure neuf fonctionne).
+# pkg-config fournit le libdir de façon fiable : on l'utilise en priorité en
+# local, avec repli sur le module CMake. On expose dans tous les cas le target
+# SQLite::SQLite3 pour ne rien changer à la ligne de link. En cross-compilation
+# on garde find_package, qui respecte CMAKE_FIND_ROOT_PATH (cf. pi_toolchain).
+if(NOT CMAKE_CROSSCOMPILING)
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(SQLite3 QUIET IMPORTED_TARGET sqlite3)
+    endif()
+    if(TARGET PkgConfig::SQLite3)
+        add_library(SQLite::SQLite3 INTERFACE IMPORTED)
+        target_link_libraries(SQLite::SQLite3 INTERFACE PkgConfig::SQLite3)
+    endif()
+endif()
+
+if(NOT TARGET SQLite::SQLite3)
+    find_package(SQLite3 REQUIRED)
+endif()
 
 # OpenCV : détection native des marqueurs ArUco (cf. src/vision/ArucoDetector.cpp).
 # Sur Debian/Ubuntu le config vit sous lib/<arch>/cmake/opencv4, que la recherche
