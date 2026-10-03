@@ -4,6 +4,10 @@
 #include <utils/json.hpp>
 using json = nlohmann::json;
 
+class DriveControl;
+class TableState;
+class ArucoCam;
+
 // Navigation return type
 typedef enum {
     NAV_IN_PROCESS,
@@ -12,10 +16,46 @@ typedef enum {
     NAV_ERROR,  // If locked for too long, for example
 } nav_return_t;
 
-extern position_t nav_prev_final_pos_cam;
-extern position_t nav_prev_final_pos_otos;
+class Navigation {
+    public:
+        Navigation(DriveControl* drive, TableState* tableStatus, ArucoCam* arucoCam);
+        ~Navigation() = default;
 
-// Navigation functions
-nav_return_t navigationGoTo(position_t pos, bool useAStar = false, bool slow_mode = false, bool complete_stop = true);
-void navigation_path_json(json& j);
-nav_return_t navigationGo();
+        // Positions recorded during the last camera calibration
+        position_t prev_final_pos_cam = {0, 0, 0};
+        position_t prev_final_pos_otos = {0, 0, 0};
+
+        // Go to a position, returns the navigation state
+        nav_return_t goTo(position_t pos, bool useAStar = false, bool slow_mode = false, bool complete_stop = true);
+        nav_return_t go();
+
+        // Serialize the current navigation path
+        void pathJson(json& j);
+
+    private:
+        nav_return_t driveStep();
+        void opponentDetection();
+
+        DriveControl* drive;
+        TableState* tableStatus;
+        ArucoCam* arucoCam;
+
+        bool is_robot_stalled = false;  // Because of opponent in direction of movement
+        unsigned long robot_stall_start_time = 0;
+        bool forced_slow_mode = false;
+        unsigned long stuck_start = 0;
+
+        position_t current_pos_target = {0, 0, 0};
+        bool current_use_astar = false;
+        bool current_slow_mode = false;
+        bool current_complete_stop = true;
+
+        position_t currentPath[1024];
+        int currentPathLength = 0;
+
+        bool driving = true;
+        position_t last_pos = {0, 0, 0};
+};
+
+// Global navigation instance, created in main.cpp
+extern Navigation navigation;

@@ -36,17 +36,17 @@ bool calibrate_otos() {
         if (tableStatus.colorTeam == YELLOW)
             position_robot_flip(pos1);
 
-        ret = navigationGoTo(pos1, false, false, true);
+        ret = navigation.goTo(pos1, false, false, true);
 
         if (ret == NAV_DONE){
             if (!has_prev_measure){
-                prev_pos = nav_prev_final_pos_cam;
-                prev_pos_otos = nav_prev_final_pos_otos;
+                prev_pos = navigation.prev_final_pos_cam;
+                prev_pos_otos = navigation.prev_final_pos_otos;
                 has_prev_measure = true;
                 LOG_GREEN_INFO("OTOS angle calibration: first pose recorded");
             } else {
-                const double da_cam = normalize_angle(nav_prev_final_pos_cam.a - prev_pos.a);
-                const double da_otos = normalize_angle(nav_prev_final_pos_otos.a - prev_pos_otos.a);
+                const double da_cam = normalize_angle(navigation.prev_final_pos_cam.a - prev_pos.a);
+                const double da_otos = normalize_angle(navigation.prev_final_pos_otos.a - prev_pos_otos.a);
 
                 if (fabs(da_otos) > 1e-3){
                     const double scalar_angle = da_cam / da_otos;
@@ -66,8 +66,8 @@ bool calibrate_otos() {
                     LOG_WARNING("OTOS angle calibration skipped: reported angle too small");
                 }
 
-                prev_pos = nav_prev_final_pos_cam;
-                prev_pos_otos = nav_prev_final_pos_otos;
+                prev_pos = navigation.prev_final_pos_cam;
+                prev_pos_otos = navigation.prev_final_pos_otos;
             }
 
             state = !state;
@@ -116,19 +116,19 @@ bool calibrate_otos() {
 
         if (tableStatus.colorTeam == YELLOW)
             position_robot_flip(pos1);
-        ret = navigationGoTo(pos1, false, false, true);
+        ret = navigation.goTo(pos1, false, false, true);
 
         if (ret == NAV_DONE){
             if (!has_prev_measure){
-                prev_nav_prev_final_pos_cam = nav_prev_final_pos_cam;
-                prev_nav_prev_final_pos_otos = nav_prev_final_pos_otos;
+                prev_nav_prev_final_pos_cam = navigation.prev_final_pos_cam;
+                prev_nav_prev_final_pos_otos = navigation.prev_final_pos_otos;
                 has_prev_measure = true;
                 LOG_GREEN_INFO("OTOS scalar calibration: first pose recorded");
             } else {
-                const double d_cam_x = nav_prev_final_pos_cam.x - prev_nav_prev_final_pos_cam.x;
-                const double d_cam_y = nav_prev_final_pos_cam.y - prev_nav_prev_final_pos_cam.y;
-                const double d_otos_x = nav_prev_final_pos_otos.x - prev_nav_prev_final_pos_otos.x;
-                const double d_otos_y = nav_prev_final_pos_otos.y - prev_nav_prev_final_pos_otos.y;
+                const double d_cam_x = navigation.prev_final_pos_cam.x - prev_nav_prev_final_pos_cam.x;
+                const double d_cam_y = navigation.prev_final_pos_cam.y - prev_nav_prev_final_pos_cam.y;
+                const double d_otos_x = navigation.prev_final_pos_otos.x - prev_nav_prev_final_pos_otos.x;
+                const double d_otos_y = navigation.prev_final_pos_otos.y - prev_nav_prev_final_pos_otos.y;
 
                 const double dist_cam = sqrt(d_cam_x * d_cam_x + d_cam_y * d_cam_y);
                 const double dist_otos = sqrt(d_otos_x * d_otos_x + d_otos_y * d_otos_y);
@@ -151,8 +151,8 @@ bool calibrate_otos() {
                     LOG_WARNING("OTOS scalar calibration skipped: reported displacement too small");
                 }
 
-                prev_nav_prev_final_pos_cam = nav_prev_final_pos_cam;
-                prev_nav_prev_final_pos_otos = nav_prev_final_pos_otos;
+                prev_nav_prev_final_pos_cam = navigation.prev_final_pos_cam;
+                prev_nav_prev_final_pos_otos = navigation.prev_final_pos_otos;
             }
 
             state = !state;
@@ -195,7 +195,7 @@ bool calibrate_otos() {
         if (tableStatus.colorTeam == YELLOW)
             position_robot_flip(pos);
             
-        ret = navigationGoTo(pos, false, true, true);
+        ret = navigation.goTo(pos, false, true, true);
         if (ret == NAV_DONE){
             step++;
             LOG_GREEN_INFO("OTOS calibration done, moving to step 3");
@@ -204,7 +204,7 @@ bool calibrate_otos() {
     case 3:{
         // goto home
         position_t pos = StratStartingPos();
-        ret = navigationGoTo(pos, false, true, true);
+        ret = navigation.goTo(pos, false, true, true);
         if (ret == NAV_DONE){
             LOG_GREEN_INFO("OTOS calibration done, returned to home position");
             step = 0; // Reset for next time            

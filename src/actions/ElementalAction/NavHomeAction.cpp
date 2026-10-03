@@ -11,7 +11,7 @@ NavHomeAction::NavHomeAction(TableState* tableState, DriveControl* drive){
 }
 
 ReturnFSM_t NavHomeAction::run(){
-    nav_return_t res = navigationGoTo(homePos, true);
+    nav_return_t res = navigation.goTo(homePos, true);
     if (res == NAV_ERROR){
         errorManagement();
     }

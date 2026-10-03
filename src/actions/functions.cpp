@@ -99,7 +99,7 @@ void disableActuators(){
 bool returnToHome(){
 
     static position_t homePos;
-    nav_return_t res = navigationGoTo(homePos, true);
+    nav_return_t res = navigation.goTo(homePos, true);
     if (res == NAV_ERROR){
         LOG_ERROR("RETURN_TO_HOME: Navigation error");
         homePos.y += (tableStatus.colorTeam == BLUE) ? 50 : -50; // recule un peu et retente
@@ -149,7 +149,7 @@ void switchTeamSide(colorTeam_t color){ // TODO moove to tableState
 
         position_t pos = StratStartingPos();
         drive.setCoordinates(pos);
-        navigationGoTo(pos, true, true); // Go to starting pos with A* and slow mode to avoid collisions during the switch
+        navigation.goTo(pos, true, true); // Go to starting pos with A* and slow mode to avoid collisions during the switch
     }
 }
 

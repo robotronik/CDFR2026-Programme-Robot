@@ -30,7 +30,7 @@ ReturnFSM_t CalibrationAction::run(){
         case FSM_CALIBRATION_NAV:
         {
             // Look towards the closest aruco marker to recalibrate the position
-            nav_ret = navigationGoTo(calibrationTarget_, true);
+            nav_ret = navigation.goTo(calibrationTarget_, true);
             if (nav_ret == NAV_DONE){
                 LOG_EXTENDED_DEBUG("FSM_CALIBRATION_NAV: Nav done");
                 if (tableState->calibrationAge){

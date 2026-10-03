@@ -11,7 +11,7 @@ GoToPositionAction::GoToPositionAction(const std::string& name, position_t targe
 }
 
 ReturnFSM_t GoToPositionAction::run(){
-    nav_return_t res = navigationGoTo(target, true);
+    nav_return_t res = navigation.goTo(target, true);
 
     switch (res) {
         case NAV_PAUSED:

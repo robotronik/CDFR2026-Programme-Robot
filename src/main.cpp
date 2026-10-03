@@ -41,6 +41,9 @@ ArucoCam arucoCam1 = ArucoCam(0, "data/OV9281_1280_800.yaml");
 ArucoCam arucoCam1(-1, "");
 #endif
 
+// Navigation
+Navigation navigation(&drive, &tableStatus, &arucoCam1);
+
 main_State_t currentState;
 main_State_t nextState;
 bool initState;
@@ -150,7 +153,7 @@ int main(int argc, char *argv[])
                 motorUpFirst = false;
             }
             if (tableStatus.calibrationAge == -1){
-                navigationGo();
+                navigation.go();
             } else{
                 nextState = CALIBRATION;
             }
@@ -219,7 +222,7 @@ int main(int argc, char *argv[])
                 LOG_GREEN_INFO("MANUAL");
                 arduino.RGB_Blinking(255, 0, 255); // Purple blinking
             }
-            navigationGo();
+            navigation.go();
 
             // Execute the function as long as it returns false
                 manual_loop();
