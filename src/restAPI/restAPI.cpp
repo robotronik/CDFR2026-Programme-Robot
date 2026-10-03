@@ -15,7 +15,7 @@
 #include "lidar/lidarAnalize.h" //for static variable
 #include "navigation/navigation.h"
 #include "navigation/astar.h" //for static variable
-#include "actions/functions.h" //for state machine functions
+#include "actions/VirtualStrategy.hpp" // for the strategy list
 #include "vision/ArucoCam.hpp" //for vision fuction
 #include "restAPI/manual_mode.h" // for manual mode functions
 
@@ -31,14 +31,30 @@ RestAPI::RestAPI(main_State_t* currentState,
                  TableState* tableStatus,
                  Arduino* arduino,
                  Lidar* lidar,
-                 ArucoCam* arucoCam)
+                 ArucoCam* arucoCam,
+                 std::vector<VirtualStrategy*>* strategies)
     : currentState(currentState),
       nextState(nextState),
       drive(drive),
       tableStatus(tableStatus),
       arduino(arduino),
       lidar(lidar),
-      arucoCam(arucoCam){
+      arucoCam(arucoCam),
+      strategies(strategies){
+}
+
+bool RestAPI::consumeColorRequest(colorTeam_t& color){
+    if (!hasColorRequest) return false;
+    color = requestedColor;
+    hasColorRequest = false;
+    return true;
+}
+
+bool RestAPI::consumeStrategyRequest(std::string& strategy){
+    if (!hasStrategyRequest) return false;
+    strategy = requestedStrategy;
+    hasStrategyRequest = false;
+    return true;
 }
 
 crow::response readHtmlFile(const std::string& path);
@@ -206,6 +222,21 @@ void RestAPI::start(){
         return crow::response(response.dump(4));
     });
 
+    // Define a route that returns the names of the available strategies
+    CROW_ROUTE(app, "/get_strategies")
+    ([this](){
+        json strategies_json = json::array();
+        if (strategies != nullptr){
+            for (VirtualStrategy* strategy : *strategies){
+                if (strategy != nullptr)
+                    strategies_json.push_back(strategy->getNom());
+            }
+        }
+        json response;
+        response["strategies"] = strategies_json;
+        return crow::response(response.dump());
+    });
+
     // Define a route to return the local IP address(es)
     CROW_ROUTE(app, "/get_ip")
     ([this](){
@@ -333,7 +364,8 @@ void RestAPI::start(){
             return crow::response(400, response.dump(4));
         }
 
-        switchTeamSide(req_color);
+        requestedColor = req_color;
+        hasColorRequest = true;
 
         json response;
         response["message"] = "Successfull";
@@ -343,9 +375,18 @@ void RestAPI::start(){
     // Define a route for a POST request that accepts a strategy to apply
     CROW_ROUTE(app, "/set_strat").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         auto req_data = json::parse(req.body);
-        int req_strat = req_data["strat"];
+        std::string req_strat = req_data["strat"];
 
-        if (req_strat < 1 || req_strat > 4){
+        bool known = false;
+        if (strategies != nullptr){
+            for (VirtualStrategy* strategy : *strategies){
+                if (strategy != nullptr && strategy->getNom() == req_strat){
+                    known = true;
+                    break;
+                }
+            }
+        }
+        if (!known){
             json response;
             response["message"] = "Invalid Strategy Request";
             return crow::response(400, response.dump(4));
@@ -356,7 +397,8 @@ void RestAPI::start(){
             return crow::response(400, response.dump(4));
         }
 
-        switchStrategy(req_strat);
+        requestedStrategy = req_strat;
+        hasStrategyRequest = true;
 
         json response;
         response["message"] = "Successfull";

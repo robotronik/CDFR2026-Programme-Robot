@@ -1,11 +1,10 @@
 #include "actions/calibration.h"
 #include "navigation/navigation.h"
 #include "utils/logger.hpp"
-#include "actions/strats.hpp"
 #include <numeric>
 #include <vector>
 
-bool calibrate_otos(TableState* tableStatus, DriveControl* drive) {
+bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t startPos) {
     // Function called continuously from the main loop to calibrate the otosensors
     // Returns true when calibration is done
     static int step = 1; // We skip angle calib
@@ -200,7 +199,7 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive) {
     }break;
     case 3:{
         // goto home
-        position_t pos = StratStartingPos(tableStatus);
+        position_t pos = startPos;
         ret = navigation.goTo(pos, false, true, true);
         if (ret == NAV_DONE){
             LOG_GREEN_INFO("OTOS calibration done, returned to home position");

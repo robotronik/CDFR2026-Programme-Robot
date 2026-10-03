@@ -158,13 +158,8 @@
             </div>
             
             <div class="col-md-4" style="width: 17%;">
-                <!-- Control buttons, stacked vertically -->
-                <div class="btn-container">
-                    <button id="strat-btn-1" class="btn btn-outline-light control-btns" onclick="sendStrat(1)">1</button>
-                    <button id="strat-btn-2" class="btn btn-outline-light control-btns" onclick="sendStrat(2)">2</button>
-                    <button id="strat-btn-3" class="btn btn-outline-light control-btns" onclick="sendStrat(3)">3</button>
-                    <button id="strat-btn-4" class="btn btn-outline-light control-btns" onclick="sendStrat(4)">4</button>
-                </div>
+                <!-- Strategy buttons, built from the strategies available on the robot -->
+                <div id="strat-container" class="btn-container"></div>
             </div>
             
             <div class="col-md-4" style="width: 17%;">
@@ -310,7 +305,7 @@
             });
         }
         function sendStrat(strat) {
-            // Send POST request to /set_color with color data
+            // Send POST request to /set_strat with the strategy name
             fetch('/set_strat', {
                 method: 'POST', // HTTP method
                 headers: {
@@ -332,6 +327,31 @@
                 console.error('Error:', error); // Handle errors
             });
         }
+
+        // Build one button per strategy available on the robot (name given by getNom())
+        async function buildStrategyButtons() {
+            try {
+                const response = await fetch('/get_strategies');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                const container = document.getElementById("strat-container");
+                container.innerHTML = "";
+                data["strategies"].forEach(name => {
+                    const btn = document.createElement("button");
+                    btn.className = "btn btn-outline-light control-btns";
+                    btn.dataset.strat = name;
+                    btn.textContent = name;
+                    btn.addEventListener("click", () => sendStrat(name));
+                    container.appendChild(btn);
+                });
+            } catch (error) {
+                console.error('Failed to fetch strategies:', error);
+            }
+        }
+
+        buildStrategyButtons();
 
         // /stop GET method
         function sendStopRun() {
@@ -381,20 +401,11 @@
             }
         }
         function toggleStrat(strat) {
-            const strat1Btn = document.getElementById("strat-btn-1");
-            const strat2Btn = document.getElementById("strat-btn-2");
-            const strat3Btn = document.getElementById("strat-btn-3");
-            const strat4Btn = document.getElementById("strat-btn-4");
-
-
-            strat1Btn.classList.remove(strat != 1 ? 'btn-outline-danger' : 'btn-outline-light');
-            strat1Btn.classList.add   (strat == 1 ? 'btn-outline-danger' : 'btn-outline-light');
-            strat2Btn.classList.remove(strat != 2 ? 'btn-outline-danger' : 'btn-outline-light');
-            strat2Btn.classList.add   (strat == 2 ? 'btn-outline-danger' : 'btn-outline-light');
-            strat3Btn.classList.remove(strat != 3 ? 'btn-outline-danger' : 'btn-outline-light');
-            strat3Btn.classList.add   (strat == 3 ? 'btn-outline-danger' : 'btn-outline-light');
-            strat4Btn.classList.remove(strat != 4 ? 'btn-outline-danger' : 'btn-outline-light');
-            strat4Btn.classList.add   (strat == 4 ? 'btn-outline-danger' : 'btn-outline-light');
+            document.querySelectorAll("#strat-container .control-btns").forEach(btn => {
+                const selected = btn.dataset.strat === strat;
+                btn.classList.toggle('btn-outline-danger', selected);
+                btn.classList.toggle('btn-outline-light', !selected);
+            });
         }
         </script>
 

@@ -50,6 +50,9 @@ public:
        pointant sur une action libérée. */
     void reset();
 
+    // Function to handle the strategy
+    position_t StratStartingPos() override;
+
 private:
     // (Re)construit le pool possible_actions pour la stratégie courante
     void buildPossibleActions();

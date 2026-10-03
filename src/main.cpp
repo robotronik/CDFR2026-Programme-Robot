@@ -3,11 +3,12 @@
 
 #include <stdlib.h>
 #include <signal.h>
+#include <string>
 #include <thread>
+#include <vector>
 #include <unistd.h>  // for usleep
 
 #include "utils/logger.hpp" // logger 
-#include "actions/functions.h"
 
 //lidar related
 #include "lidar/Lidar.hpp"
@@ -21,12 +22,15 @@
 #include "utils/utils.h"
 #include "restAPI/restAPI.hpp"
 #include "restAPI/manual_mode.h"
+#include "vision/ArucoCam.hpp"
 #include "mat/mat.hpp"
 
 //brain include
 #include "actions/MainActionFSM.hpp"
 #include "actions/Strategy/ExempleStrat.hpp"
 
+//Arduino
+#include "i2c/Arduino.hpp"
 #include "actions/SensorControl.hpp"
 #include "actions/ActuatorsControl.hpp"
 
@@ -50,6 +54,10 @@ TableState tableStatus(&drive);
 
 // Brain Init
 VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus); //TODO create logic for strategy change
+
+// Strategies selectable through the REST API
+std::vector<VirtualStrategy*> strategies = { currentStrategy };
+
 ActionFSM action(currentStrategy, &drive, &tableStatus);
 
 #ifndef EMULATE_CAM
@@ -69,7 +77,7 @@ bool motorUpFirst = true;
 std::thread api_server_thread;
 
 // REST API
-RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &lidar, &arucoCam1);
+RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &lidar, &arucoCam1, &strategies);
 
 // Prototypes
 int StartSequence();
@@ -121,6 +129,17 @@ int main(int argc, char *argv[])
                     }
                 }
             }
+        }
+
+        // Apply the requests received through the REST API
+        {
+            colorTeam_t requestedColor;
+            if (api.consumeColorRequest(requestedColor))
+                switchTeamSide(requestedColor);
+
+            std::string requestedStrategy;
+            if (api.consumeStrategyRequest(requestedStrategy))
+                switchStrategy(requestedStrategy);
         }
 
         // State machine
@@ -196,7 +215,7 @@ int main(int argc, char *argv[])
             tableStatus.startTime = _millis();
             static bool has_calib = false;
             if (!has_calib){
-                if (calibrate_otos(&tableStatus, &drive)){
+                if (calibrate_otos(&tableStatus, &drive, action.getStrategy()->StratStartingPos())){
                     LOG_GREEN_INFO("Calibration successful");
                     has_calib = true;
                 }
@@ -397,4 +416,79 @@ void tests()
         * Call test functions here. 
         * They will be executed in loop until the program is stopped. 
     */ 
+}
+
+// ------------------------------------------------------
+//                        OTHER
+// ------------------------------------------------------
+
+bool returnToHome(){
+
+    static position_t homePos;
+    nav_return_t res = navigation.goTo(homePos, true);
+    if (res == NAV_ERROR){
+        LOG_ERROR("RETURN_TO_HOME: Navigation error");
+        homePos.y += (tableStatus.colorTeam == BLUE) ? 50 : -50; // recule un peu et retente
+    }
+    if (res == NAV_DONE){
+        LOG_GREEN_INFO("RETURN_TO_HOME: Done");
+        return true;
+    }
+    return false;
+}
+
+void opponentInAction(position_t position){
+    if (position_equals(position, position_t{.x=0, .y=0, .a=0})){
+        return; // useless code to get rid of warning 
+    }
+    // TODO implement this function
+    /* Detect from position of adversary the action of the adversary */
+}
+
+void switchTeamSide(colorTeam_t color){ // TODO moove to tableState
+    if (color == NONE) return;
+    if (currentState == RUN) return;
+    if (color != tableStatus.colorTeam){
+        LOG_INFO("Color switch detected");
+        tableStatus.colorTeam = color;
+
+        switch (color)
+        {
+        case BLUE:
+            LOG_INFO("Switching to BLUE");
+            arduino.RGB_Blinking(0, 0, 255);
+            break;
+        case YELLOW:
+            LOG_INFO("Switching to YELLOW");
+            arduino.RGB_Blinking(255, 56, 0);
+            break;
+        default:
+            break;
+        }
+
+        position_t pos = action.getStrategy()->StratStartingPos();
+        drive.setCoordinates(pos);
+        navigation.goTo(pos, true, true); // Go to starting pos with A* and slow mode to avoid collisions during the switch
+    }
+}
+
+void check(colorTeam_t color, std::string strategy){
+    // Check if the color and strategy are valid
+    if (color == NONE)
+        LOG_ERROR("Invalid color (", color, ") or strategy (", strategy, ")");
+    // TODO add check if necessary
+}
+
+void switchStrategy(std::string strategy){ // TODO moove to tableState
+    if (currentState == RUN) return;
+
+    if (strategy != action.getStrategy()->getNom()){
+        colorTeam_t color = tableStatus.colorTeam;
+
+        check(color, strategy);
+        LOG_INFO("Strategy switch detected");
+        tableStatus.strategy = strategy;
+        position_t pos = action.getStrategy()->StratStartingPos();
+        drive.setCoordinates(pos);
+    }
 }

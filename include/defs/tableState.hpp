@@ -19,7 +19,7 @@ class TableState
         position_t pos_opponent;
         unsigned long startTime;
         colorTeam_t colorTeam;
-        int strategy;
+        std::string strategy;
 
         /* Cam calibration related*/
         int calibrationAge; // Age of calibration by Camera if exist
@@ -27,6 +27,9 @@ class TableState
 
         bool mastStatus = false; // Status of mast if exist
         void updateMapStatus(); // update of tableState relative to data recived by mast
+
+        bool m_isPointInsideRectangle(float px, float py, float cx, float cy, float w, float h);
+        bool isRobotInArrivalZone(position_t position);
 
         /* data the Legend of Camelot */
 

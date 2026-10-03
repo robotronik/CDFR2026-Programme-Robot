@@ -40,7 +40,7 @@ class CalibrationAction : public VirtualAction {
         position_t calibrationTarget_;
         nav_return_t nav_ret;
 
-        // Anciennement dans strats.cpp : renvoie la position la plus proche
+        // renvoie la position la plus proche
         // à adopter pour regarder un marqueur aruco et se recalibrer.
         position_t calculateClosestArucoPosition(position_t currentPos);
 };

@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 #include "actions/VirtualAction.hpp"
+#include "drive_interface.h"
 
 class VirtualStrategy {
 protected:
@@ -33,6 +34,8 @@ public:
        Une action reste candidate tant que available() >= 0.
        Renvoie nullptr si aucune action n'est disponible. */
     virtual VirtualAction* bestAction() = 0;
+
+    virtual position_t StratStartingPos() = 0;
 
     void stop(){ status = false; }
     void resume(){ status = true; }

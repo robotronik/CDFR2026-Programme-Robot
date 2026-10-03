@@ -1,5 +1,4 @@
 #pragma once
-#include <memory>
 #include "actions/VirtualAction.hpp"
 #include "actions/VirtualStrategy.hpp"
 #include "db/ActionDurationDB.hpp"
@@ -14,10 +13,12 @@ class ActionFSM{
         void Reset();
         bool RunFSM();
 
+        bool endlessMod = false;
         // Permet de brancher/changer la stratégie utilisée par le FSM.
         // N'importe quelle classe dérivant de VirtualStrategy (ExempleStrat,
         // ou toute autre stratégie de match) peut être utilisée ici.
         void setStrategy(VirtualStrategy* strategy);
+        VirtualStrategy* getStrategy(){ return currentStrategy; }
 
     private:
         DriveControl* driveControl = nullptr;

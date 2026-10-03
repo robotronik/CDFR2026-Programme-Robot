@@ -26,6 +26,15 @@ ExempleStrat::ExempleStrat(DriveControl* dc, TableState* ts){
     reset();
 }
 
+position_t ExempleStrat::StratStartingPos(){
+    // Returns the starting position of the robot
+    position_t pos = {-675, 1125, 120};
+
+    if (tableStatus->colorTeam == YELLOW)
+        position_robot_flip(pos);
+    return pos;
+}
+
 void ExempleStrat::reset(){
     possible_actions.clear();
     running_actions.clear();
