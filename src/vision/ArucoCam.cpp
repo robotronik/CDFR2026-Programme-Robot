@@ -128,7 +128,9 @@ void ArucoCam::workerLoop() {
         std::lock_guard<std::mutex> lock(mutex_);
         detections_ = std::move(detections);
 
-        // Localisation comes from the first landmark tag in the frame.
+        // Localisation comes from the first landmark tag in the frame. A frame
+        // without a usable tag invalidates the previous fix.
+        hasLocalisation_ = false;
         for (const vision::DetectionResult& detection : detections_) {
             const cv::Point2d* field = vision::ArucoLocalizer::fieldPosition(detection.id);
             if (field == nullptr) {
