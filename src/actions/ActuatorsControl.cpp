@@ -1,6 +1,9 @@
 #include "defs/constante.h"
 #include "actions/ActuatorsControl.hpp"
 
+ActuatorsControl::ActuatorsControl(Arduino* arduino, DriveControl* drive) : arduino(arduino), drive(drive) {
+    // Constructor implementation
+}
 // ------------------------------------------------------
 //                   BASIC FSM CONTROL
 // ------------------------------------------------------
