@@ -3,6 +3,9 @@
 bool testLogger();
 bool test_lidar_opponent();
 bool test_lidar_beacons();
+bool test_aruco_detection();
+bool test_aruco_pose();
+bool test_aruco_sim_camera();
 
 int runAllTests();
 
@@ -24,6 +27,12 @@ int runAllTests() {
     //Runs the lidar tests
     LOG_INFO("Running lidar tests");
     UNIT_TEST(test_lidar_opponent());
+
+    //Runs the aruco tests
+    LOG_INFO("Running aruco tests");
+    UNIT_TEST(test_aruco_detection());
+    UNIT_TEST(test_aruco_pose());
+    UNIT_TEST(test_aruco_sim_camera());
 
     LOG_INFO("There has been ", numPassed, "/", numTests, " tests passed");
     //return (numTests == numPassed) ? 0 : 1;

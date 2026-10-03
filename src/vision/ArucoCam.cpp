@@ -1,152 +1,297 @@
-#include <iostream>
-#include <unistd.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <math.h>
-#include "utils/httplib.h"
-#include "vision/ArucoCam.hpp"
-#include "utils/logger.hpp"
 #include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <map>
+#include <string>
+#include <vector>
 
-#define PORT_OFFSET 5000
+#include <opencv2/calib3d.hpp>
+#include <opencv2/core.hpp>
+
+#include "vision/ArucoCam.hpp"
+#include "vision/ArucoDetector.hpp"
+#include "utils/logger.hpp"
+
 #define SCAN_FAIL_FRAMES_NUM 2
 #define SCAN_DONE_FRAMES_NUM 10
 
-pid_t startPythonProgram(char** args);
-void stopPythonProgram(pid_t pid);
-bool restAPI_GET(const std::string &url, const std::string &resquest, json &response);
+namespace {
+
+// Capture resolution, matching the previous Python service defaults.
+constexpr int kCameraWidth = 1280;
+constexpr int kCameraHeight = 800;
+
+constexpr double kDegToRad = M_PI / 180.0;
+constexpr double kRadToDeg = 180.0 / M_PI;
+
+// Calibration tags: physical size (mm) and known global position (mm).
+struct CalibrationTag {
+    double size;
+    double globalX;
+    double globalY;
+};
+
+const std::map<int, CalibrationTag> kCalibrationTags = {
+    {33, {100.0,    0.0,    0.0}}, // testing
+    {20, {100.0, -400.0, -900.0}}, // Top-right
+    {21, {100.0, -400.0,  900.0}}, // Top-left
+    {22, {100.0,  400.0, -900.0}}, // Bottom-left
+    {23, {100.0,  400.0,  900.0}}, // Bottom-right
+    { 0, {100.0,    0.0,    0.0}}, // test
+};
+
+// Game objects: physical size (mm) and team label.
+struct GameObjectTag {
+    double size;
+    const char* label;
+};
+
+const std::map<int, GameObjectTag> kGameObjectTags = {
+    {36, {30.0, "Blue"}},
+    {47, {30.0, "Yellow"}},
+};
+
+// Objects detected higher than this (mm) are ignored (side/elevated tags).
+constexpr double kObjectMaxHeight = 200.0;
+
+double nowSeconds() {
+    return std::chrono::duration<double>(
+               std::chrono::system_clock::now().time_since_epoch())
+        .count();
+}
+
+double normalizeAngle(double angle) {
+    while (angle > 180.0) angle -= 360.0;
+    while (angle < -180.0) angle += 360.0;
+    return angle;
+}
+
+// Yaw (rotation about Z) of the extrinsic 'zyx' Euler decomposition, matching
+// scipy's Rotation.as_euler('zyx')[0] used by the previous Python service.
+double yawFromRotation(const cv::Matx33d& R) {
+    return std::atan2(-R(0, 1), R(0, 0)) * kRadToDeg;
+}
+
+// Camera position expressed in the marker frame: -R^T * t.
+cv::Vec3d cameraPositionFromPose(const cv::Matx33d& R, const cv::Vec3d& tvec) {
+    const cv::Vec3d rotated = R.t() * tvec;
+    return cv::Vec3d{-rotated[0], -rotated[1], -rotated[2]};
+}
+
+} // namespace
 
 ArucoCam::ArucoCam(int cam_number, const char* calibration_file_path) {
     id = cam_number;
     if (id < 0) {
-        pid=-1;
-        status = true;
         LOG_INFO("Emulating ArucoCam");
         return;
     }
-    // Child process: Split the args string into individual arguments
-    std::string port = std::to_string(PORT_OFFSET + id);
 
-    char* args[] = {
-        (char*)"/usr/bin/python3",
-        (char*)"pi_detect_aruco.py",
-        (char*)calibration_file_path,
-        (char*)"--api-port",
-        (char*)port.c_str(),
-        (char*)"--headless",
-        (char*)"True",
-        nullptr
-    };
-
-    pid = startPythonProgram(args);
-    if (pid == -1) {
-        LOG_ERROR("Failed to start ArucoCam ", id);
+    if (!detector_.loadCalibration(calibration_file_path)) {
+        LOG_ERROR("ArucoCam ", id, " failed to load calibration from ", calibration_file_path);
     }
-    else
-    {
-        url = "http://localhost:" + std::to_string(PORT_OFFSET + id);
-        status = false;
-        LOG_GREEN_INFO("ArucoCam ", id, " started with PID ", pid, " at URL ", url);
+
+    std::map<int, double> markerSizes;
+    for (const auto& [markerId, tag] : kCalibrationTags) {
+        markerSizes[markerId] = tag.size;
+    }
+    for (const auto& [markerId, tag] : kGameObjectTags) {
+        markerSizes.emplace(markerId, tag.size);
+    }
+    detector_.setMarkerSizes(markerSizes);
+}
+
+ArucoCam::~ArucoCam() {
+    stop();
+}
+
+bool ArucoCam::start() {
+    if (id < 0) return false;
+    if (running_.load()) return true;
+
+    if (!detector_.isCameraOpen() && !detector_.initCamera(id, kCameraWidth, kCameraHeight)) {
+        LOG_ERROR("ArucoCam ", id, " failed to open camera");
+        return false;
+    }
+
+    reset_tracking(); // Fresh counters, matching the previous /start behaviour
+    running_.store(true);
+    worker_ = std::thread(&ArucoCam::workerLoop, this);
+    LOG_GREEN_INFO("ArucoCam ", id, " started");
+    return true;
+}
+
+void ArucoCam::stop() {
+    if (id < 0) return;
+    running_.store(false);
+    if (worker_.joinable()) {
+        worker_.join();
+    }
+    detector_.releaseCamera();
+    LOG_EXTENDED_DEBUG("ArucoCam ", id, " stopped");
+}
+
+void ArucoCam::reset_tracking() {
+    if (id < 0) return;
+    std::lock_guard<std::mutex> lock(stateMutex_);
+    state_ = State{};
+    LOG_EXTENDED_DEBUG("ArucoCam ", id, " reset tracking");
+}
+
+void ArucoCam::workerLoop() {
+    while (running_.load()) {
+        cv::Mat frame;
+        if (!detector_.captureFrame(frame)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            continue;
+        }
+
+        const std::vector<vision::DetectionResult> detections = detector_.detect(frame);
+
+        std::lock_guard<std::mutex> lock(stateMutex_);
+        if (processDetections(detections)) {
+            state_.successFrames++;
+        } else {
+            state_.failedFrames++;
+        }
     }
 }
-ArucoCam::~ArucoCam(){
-    if (pid > 0)
-        stopPythonProgram(pid);
+
+bool ArucoCam::processDetections(const std::vector<vision::DetectionResult>& detections) {
+    json detectedObjects = json::object();
+    bool found = false;
+
+    for (const auto& detection : detections) {
+        const bool isCalibrationTag = kCalibrationTags.count(detection.id) > 0;
+        const bool isGameObject = kGameObjectTags.count(detection.id) > 0;
+        if (!isCalibrationTag && !isGameObject) continue;
+        if (!detection.hasPose) continue;
+
+        cv::Matx33d rotation;
+        cv::Rodrigues(detection.rvec, rotation);
+        const cv::Vec3d cameraPosition = cameraPositionFromPose(rotation, detection.tvec);
+        const double yaw = yawFromRotation(rotation);
+
+        if (isCalibrationTag) {
+            const CalibrationTag& tag = kCalibrationTags.at(detection.id);
+            const double x = tag.globalX - cameraPosition[1];
+            const double y = tag.globalY + cameraPosition[0];
+            const double z = cameraPosition[2];
+            const double a = normalizeAngle(-yaw + 180.0);
+            addAveragePosition(x, y, z, a);
+            found = true;
+        }
+
+        if (isGameObject) {
+            if (cameraPosition[2] >= kObjectMaxHeight) continue;
+            const GameObjectTag& tag = kGameObjectTags.at(detection.id);
+            detectedObjects[std::to_string(detection.id)].push_back(json{
+                {"label", tag.label},
+                {"x", -cameraPosition[1]},
+                {"y", cameraPosition[0]},
+                {"z", cameraPosition[2]},
+                {"a", normalizeAngle(-yaw + 180.0)},
+                {"last_seen", nowSeconds()},
+            });
+        }
+    }
+
+    state_.objects = std::move(detectedObjects);
+    return found;
+}
+
+void ArucoCam::addAveragePosition(double x, double y, double z, double a) {
+    if (state_.successFrames == 0 || !state_.hasPosition) {
+        state_.x = x;
+        state_.y = y;
+        state_.z = z;
+        state_.a = a;
+        state_.hasPosition = true;
+        return;
+    }
+
+    const double newRatio = 1.0 / (state_.successFrames + 1.0);
+    const double oldRatio = 1.0 - newRatio;
+    state_.x = state_.x * oldRatio + x * newRatio;
+    state_.y = state_.y * oldRatio + y * newRatio;
+    state_.z = state_.z * oldRatio + z * newRatio;
+
+    const double y1 = std::sin(state_.a * kDegToRad) * oldRatio;
+    const double x1 = std::cos(state_.a * kDegToRad) * oldRatio;
+    const double y2 = std::sin(a * kDegToRad) * newRatio;
+    const double x2 = std::cos(a * kDegToRad) * newRatio;
+    state_.a = std::atan2(y1 + y2, x1 + x2) * kRadToDeg;
 }
 
 // Returns true when done
 bool ArucoCam::getPos(double & x, double & y, double & a, bool& success) {
-    static bool waiting_for_pos = false; // Wether reset tracking or not
     success = false;
     if (id < 0) {
-        // TODO change this to return a random position
         return true;
     }
-    if (status == false) { // Camera is not running
+    if (!running_.load()) { // Camera is not running
         LOG_EXTENDED_DEBUG("ArucoCam ", id, " is not running, will start it now");
-        start();
-        waiting_for_pos = true;
+        if (!start()) {
+            LOG_ERROR("ArucoCam ", id, " could not be started, aborting position fetch");
+            waitingForPos_ = false;
+            return true;
+        }
+        waitingForPos_ = true;
         return false;
     }
-    if (!waiting_for_pos){ // Reset tracking
+    if (!waitingForPos_) { // Reset tracking
         LOG_EXTENDED_DEBUG("ArucoCam ", id, " starting tracking");
         reset_tracking();
-        waiting_for_pos = true;
+        waitingForPos_ = true;
         return false;
     }
 
-    // LOG_DEBUG("Fetching position from ArucoCam ", id);
-    // Calls /position rest api endpoint of the ArucoCam API
-    // Returns true if the call was successful, false otherwise
-    json response;
-    if (restAPI_GET(url, "/position", response) == false) {
-        LOG_ERROR("ArucoCam::getPos() - Failed to fetch position");
-        waiting_for_pos = false;
-        return true;
+    int failedFrames = 0;
+    int successFrames = 0;
+    {
+        std::lock_guard<std::mutex> lock(stateMutex_);
+        failedFrames = state_.failedFrames;
+        successFrames = state_.successFrames;
+        if (failedFrames <= SCAN_FAIL_FRAMES_NUM && successFrames >= SCAN_DONE_FRAMES_NUM) {
+            x = state_.x;
+            y = state_.y;
+            a = state_.a;
+            success = true;
+        }
     }
 
-    if (!response.contains("position") || response["position"].is_null() || !response["position"].is_object()) {
-        LOG_ERROR("ArucoCam::getPos() - response missing or invalid 'position'");
-        waiting_for_pos = false;
-        return true;
-    }
-
-    int failedFrames = response.value("failedFrames", -1);
-    int sucessFrames = response.value("sucessFrames", -1);
-    // int totalFrames = response.value("totalFrames", -1);
-    if (failedFrames == -1 || sucessFrames == -1) {
-        LOG_ERROR("ArucoCam::getPos() - Invalid response data, camera might not be running");
-        waiting_for_pos = false;
-        return true;
-    }
     if (failedFrames > SCAN_FAIL_FRAMES_NUM) {
-        LOG_EXTENDED_DEBUG("Cam has too many failed frames : ", failedFrames);
-        waiting_for_pos = false;
+        LOG_EXTENDED_DEBUG("ArucoCam ", id, " has too many failed frames : ", failedFrames);
+        waitingForPos_ = false;
         return true;
     }
-    if (sucessFrames < SCAN_DONE_FRAMES_NUM) {
-        //LOG_EXTENDED_DEBUG("Cam has not enough good success frames : ", sucessFrames);
-        return false; 
+    if (successFrames < SCAN_DONE_FRAMES_NUM) {
+        return false;
     }
 
-    json position = response["position"];
-    x = position.value("x", -1.0);
-    y = position.value("y", -1.0);
-    a = position.value("a", -1.0);
-    success = true;
-    // LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a, " } with sucess frames : ", sucessFrames, " and failed frames : ", failedFrames);
-    // Return true if the values were successfully extracted
-    waiting_for_pos = false;
+    LOG_GREEN_INFO("ArucoCam ", id, " position: { x = ", x, ", y = ", y, ", a = ", a,
+                   " } with success frames : ", successFrames, " and failed frames : ", failedFrames);
+    waitingForPos_ = false;
     return true;
 }
 
 bool ArucoCam::getObjectData(json& objects, int& sucess){
     sucess = -1;
     if (id < 0) {
-        // TODO change this to return a random position
         return true;
     }
-    if (status == false) {
+    if (!running_.load()) {
         LOG_EXTENDED_DEBUG("ArucoCam ", id, " is not running, will start it now");
-        start();
+        if (!start()) {
+            LOG_ERROR("ArucoCam::getObjectData() - camera ", id, " could not be started");
+            return true;
+        }
         return false;
     }
 
-    // LOG_DEBUG("Fetching position from ArucoCam ", id);
-    // Calls /position rest api endpoint of the ArucoCam API
-    // Returns true if the call was successful, false otherwise
-    json response;
-    if (restAPI_GET(url, "/objects", response) == false) {
-        LOG_ERROR("ArucoCam::getObjectData() - Failed to fetch objects");
-        return true;
-    }
-    // Extract the values from the JSON object
-    if(response.is_null()){
-        LOG_ERROR("ArucoCam::getObjectData() - response is null, camera might not be running");
-        return true;
-    }
+    std::lock_guard<std::mutex> lock(stateMutex_);
+    objects = json{{"objects", state_.objects}};
     sucess = 0;
-    objects = response;
     return true;
 }
 
@@ -565,32 +710,6 @@ bool ArucoCam::getObjectForSweep(bool* order, double & x, double & y, double & a
     return ToObjectSweep(order, data, x, y, a, dist_balayage, success);
 }
 
-void ArucoCam::start() {
-    if (id < 0) return;
-    json response;
-    if (restAPI_GET(url, "/start", response)){
-        status = true;
-        LOG_EXTENDED_DEBUG("ArucoCam ", id, " started");
-    }
-}
-
-void ArucoCam::stop() {
-    if (id < 0) return;
-    json response;
-    if (restAPI_GET(url, "/stop", response)){
-        status = false;
-        LOG_EXTENDED_DEBUG("ArucoCam ", id, " stopped");
-    }
-}
-
-void ArucoCam::reset_tracking() {
-    if (id < 0) return;
-    json response;
-    if (restAPI_GET(url, "/reset_tracking", response)){
-        status = true;
-        LOG_EXTENDED_DEBUG("ArucoCam ", id, " reset tracking");
-    }
-}
 
 bool ArucoCam::getRobotPos(double & x, double & y, double & a, bool& success) {
     // Camera offset from robot center in mm and degrees
@@ -610,72 +729,3 @@ bool ArucoCam::getRobotPos(double & x, double & y, double & a, bool& success) {
     return result;    
 }
 
-bool restAPI_GET(const std::string &url, const std::string &resquest, json &response) {
-    // HTTP
-    httplib::Client cli(url);
-    auto res = cli.Get(resquest.c_str());
-    // Check for nullptr
-    if (!res) {
-        LOG_ERROR("Failed to fetch response from ", url, resquest);
-        return false;
-    }
-    // LOG_GREEN_INFO("HTML Status is ", res->status);
-    // LOG_GREEN_INFO("HTML Body is ", res->body);
-
-    // Check if the response code is 200 (OK)
-    if (res->status != 200) {
-        LOG_ERROR("HTTP error: ", res->status);
-        return false;
-    }
-    try {
-        // Parse JSON response
-        response = json::parse(res->body);
-        // LOG_GREEN_INFO("API Response: ", response.dump(4));
-        return true;
-    } catch (const json::parse_error& e) {
-        LOG_ERROR("JSON parse error: ", e.what());
-        return false;
-    }
-}
-
-pid_t startPythonProgram(char ** args) {
-    pid_t pid = fork();
-
-    setenv("HOME", "/home/robotronik", 1);
-    setenv("USER", "robotronik", 1);
-    setenv("PYTHONPATH", "/home/robotronik/.local/lib/python3.13/site-packages", 1);
-
-    if (pid == -1) {
-        LOG_ERROR("startPythonProgram - Failed to fork process");
-        return -1;
-    } else if (pid == 0) {
-        // Execute the Python program with arguments
-        execvp(args[0], args);
-        LOG_ERROR("startPythonProgram - Failed to execute Python script");
-        _exit(1); // Ensure child process exits
-    }
-
-    // Parent process: Return child PID
-    return pid;
-}
-
-void stopPythonProgram(pid_t pid) {
-    if (pid <= 0) {
-        LOG_ERROR("stopPythonProgram - Invalid PID");
-        return;
-    }
-
-    if (kill(pid, SIGTERM) == -1) {
-        LOG_ERROR("stopPythonProgram - Failed to terminate process with PID ", pid);
-    } else {
-        LOG_INFO("stopPythonProgram - Process with PID ", pid, " terminated");
-    }
-}
-
-size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* response) {
-    size_t totalSize = size * nmemb;
-    if (response) {
-        response->append(static_cast<char*>(contents), totalSize);
-    }
-    return totalSize;
-}

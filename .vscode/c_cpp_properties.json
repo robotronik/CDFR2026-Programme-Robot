@@ -6,7 +6,8 @@
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/../cdfr2024-programme-Actionneur/include/common",
-                "${workspaceFolder}/../CDFR2026-Program-DriveControl/include/interface"
+                "${workspaceFolder}/../CDFR2026-Program-DriveControl/include/interface",
+                "/usr/include/opencv4"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

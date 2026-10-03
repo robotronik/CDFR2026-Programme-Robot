@@ -13,13 +13,14 @@ This program enables the robot to perform various tasks such as navigation, data
 - **Navigation**: The robot can move through its environment using dedicated algorithms.
 - **Data Collection**: The robot gathers and stores data from onboard sensors.
 - **Communication**: The program supports communication with other systems or devices.
+- **Vision**: Native C++ ArUco marker detection using OpenCV, running in-process (no external Python/REST service).
 
 ## 🔧 Prerequisites
 
 Before running the program, make sure you have installed the following dependencies:
 
 ```bash
-sudo apt-get install cmake make gcc g++ python3-venv ninja-build
+sudo apt-get install cmake make gcc g++ ninja-build libopencv-dev
 ```
 
 To speed up compilation times massively, you can install CCache and MOLD:
@@ -34,6 +35,10 @@ For ARM (Raspberry Pi) compilation, install:
 sudo apt-get install g++-aarch64-linux-gnu
 sudo apt install sqlite3
 ```
+
+Cross-compiling for ARM also requires the OpenCV development packages for the
+`arm64` architecture (e.g. `libopencv-dev:arm64` with the `arm64` foreign
+architecture enabled).
 
 For debugging, install:
 

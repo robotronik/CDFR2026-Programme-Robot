@@ -121,7 +121,7 @@ deploy_pi() {
 
     step "$BG_BLU" "$F_BLU" "SYNC" "Transfert vers le robot ($PI_HOST)..."
     ssh $PI_USER@$PI_HOST "mkdir -p $PI_DIR/$PI_DEST"
-    rsync -az --progress --delete ./build_arm/data ./build_arm/html autoRunInstaller.sh ./build_arm/programCDFR ./build_arm/pi_detect_aruco.py $PI_USER@$PI_HOST:$PI_DIR/$PI_DEST | grep -v "/$"
+    rsync -az --progress --delete ./build_arm/data ./build_arm/html autoRunInstaller.sh ./build_arm/programCDFR $PI_USER@$PI_HOST:$PI_DIR/$PI_DEST | grep -v "/$"
     rsync_status=${PIPESTATUS[0]}
     if [ "$rsync_status" -ne 0 ]; then
         step "$BG_RED" "$F_RED" "ERROR" "Échec du transfert (rsync)."

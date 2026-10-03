@@ -1,6 +1,10 @@
 #pragma once
 #include "utils/json.hpp" // For handling JSON
+#include <atomic>
+#include <mutex>
 #include <string>
+#include <thread>
+#include "vision/ArucoDetector.hpp"
 #include "vision/ransac.hpp"
 
 using json = nlohmann::json;
@@ -14,15 +18,35 @@ using json = nlohmann::json;
 
 class ArucoCam {   
 private:
-    int pid;
-    int id;
-    bool status; // true if the camera is running, false otherwise
+    int id = -1;
+    std::atomic<bool> running_{false};
+    std::thread worker_;
+    vision::ArucoDetector detector_;
+
+    // Shared detection state, protected by stateMutex_.
+    struct State {
+        double x = 0.0;
+        double y = 0.0;
+        double z = 0.0;
+        double a = 0.0;
+        bool hasPosition = false;
+        int successFrames = 0;
+        int failedFrames = 0;
+        json objects = json::object();
+    };
+    State state_;
+    mutable std::mutex stateMutex_;
+    bool waitingForPos_ = false;
+
+    void workerLoop();
+    bool processDetections(const std::vector<vision::DetectionResult>& detections);
+    void addAveragePosition(double x, double y, double z, double a);
 public:
     std::vector<block_t> alignBlocks;
     ArucoCam(int cam_number, const char* calibration_file_path);
     ~ArucoCam();
 
-    void start();
+    bool start();
     void stop();
 
     bool getPos(double & x, double & y, double & a, bool& success);
@@ -46,6 +70,5 @@ public:
     json getRobotPosition_json();
 
 private:
-    std::string url;
     void reset_tracking();
 };

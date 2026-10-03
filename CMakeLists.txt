@@ -83,6 +83,10 @@ target_include_directories(robot_core PUBLIC
 # SQLite : base des durées d'action (cf. src/db/ActionDurationDB.cpp)
 find_package(SQLite3 REQUIRED)
 
+# OpenCV : détection native des marqueurs ArUco (cf. src/vision/ArucoDetector.cpp)
+find_package(OpenCV REQUIRED)
+target_include_directories(robot_core PUBLIC ${OpenCV_INCLUDE_DIRS})
+
 target_link_directories(robot_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rplidar_sdk/output/Linux/Release)
 
 if(CMAKE_CROSSCOMPILING)
@@ -91,7 +95,7 @@ else()
     target_link_directories(robot_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/x86_64-linux-gnu)
 endif()
 
-target_link_libraries(robot_core PUBLIC Crow::Crow pthread i2c rt sl_lidar_sdk SQLite::SQLite3)
+target_link_libraries(robot_core PUBLIC Crow::Crow pthread i2c rt sl_lidar_sdk SQLite::SQLite3 ${OpenCV_LIBS})
 
 # ------------------------------------------------------------------------------
 # 5. Cible 1 : L'exécutable Principal
@@ -106,12 +110,15 @@ file(GLOB_RECURSE TEST_SOURCES "tests/*.cpp")
 add_executable(robot_tests ${TEST_SOURCES})
 target_link_libraries(robot_tests PRIVATE robot_core)
 
+add_custom_command(TARGET robot_tests POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/tests/data $<TARGET_FILE_DIR:robot_tests>/tests/data
+)
+
 # ------------------------------------------------------------------------------
 # 7. Copie des fichiers annexes (Post-Build)
 # ------------------------------------------------------------------------------
 add_custom_command(TARGET programCDFR POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/html $<TARGET_FILE_DIR:programCDFR>/html
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/tests/lidar $<TARGET_FILE_DIR:programCDFR>/tests/lidar
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../PythonArucoOpenCV/data $<TARGET_FILE_DIR:programCDFR>/data
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/../PythonArucoOpenCV/pi_detect_aruco.py $<TARGET_FILE_DIR:programCDFR>/
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/data $<TARGET_FILE_DIR:programCDFR>/data
 )
