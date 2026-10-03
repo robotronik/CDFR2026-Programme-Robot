@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 
+#include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 
@@ -10,12 +11,17 @@
 
 namespace {
 
+// Virtual camera of Robotronik_CDFR_Sim_2027: 1280x800, 70 deg vertical FOV,
+// mounted 233.2 mm above the ground and pitched down 45 deg.
+constexpr double kSimCameraHeightMm = 233.2;
+
+// The field tags are 100 mm squares lying on the ground.
+constexpr double kTagSideMm = 100.0;
+
 std::string findImagePath(const std::string& name) {
     const std::string candidates[] = {
         "tests/data/" + name,
         "../tests/data/" + name,
-        "data/" + name,
-        "../data/" + name,
         name,
     };
     for (const std::string& path : candidates) {
@@ -62,113 +68,32 @@ const vision::DetectionResult* findMarker(const std::vector<vision::DetectionRes
 
 } // namespace
 
-// Loads the static synthetic image with marker id 33 and checks that detect()
-// reports the expected id and four corners.
-bool test_aruco_detection() {
-    const std::string imagePath = findImagePath("aruco_marker_33.png");
-    if (imagePath.empty()) {
-        LOG_ERROR("ArUco test - sample image not found");
-        return false;
-    }
-
-    const cv::Mat image = cv::imread(imagePath, cv::IMREAD_GRAYSCALE);
-    if (image.empty()) {
-        LOG_ERROR("ArUco test - failed to load ", imagePath);
-        return false;
-    }
-
-    vision::ArucoDetector detector;
-    detector.setMarkerSize(33, 100.0);
-
-    const std::vector<vision::DetectionResult> detections = detector.detect(image);
-    const vision::DetectionResult* marker = findMarker(detections, 33);
-    if (marker == nullptr) {
-        LOG_ERROR("ArUco test - marker 33 was not detected in ", imagePath);
-        return false;
-    }
-    if (marker->corners.size() != 4) {
-        LOG_ERROR("ArUco test - marker 33 did not return 4 corners");
-        return false;
-    }
-    if (polygonArea(marker->corners) < 100.0) {
-        LOG_ERROR("ArUco test - marker 33 corners are degenerate");
-        return false;
-    }
-
-    // A blank frame must not yield any detection (no false positives).
-    const cv::Mat blank(480, 640, CV_8UC1, cv::Scalar(255));
-    if (!detector.detect(blank).empty()) {
-        LOG_ERROR("ArUco test - unexpected detection on a blank frame");
-        return false;
-    }
-
-    return true;
-}
-
-// Checks that loading a calibration and registering a marker size enables pose
-// estimation for the detected marker.
-bool test_aruco_pose() {
-    const std::string imagePath = findImagePath("aruco_marker_33.png");
-    const std::string calibrationPath = findCalibrationPath("OV9281_1280_800.yaml");
-    if (imagePath.empty() || calibrationPath.empty()) {
-        LOG_WARNING("ArUco pose test skipped (missing sample image or calibration)");
-        return true;
-    }
-
-    const cv::Mat image = cv::imread(imagePath, cv::IMREAD_GRAYSCALE);
-    vision::ArucoDetector detector;
-    if (!detector.loadCalibration(calibrationPath) || image.empty()) {
-        LOG_ERROR("ArUco pose test - setup failed");
-        return false;
-    }
-    detector.setMarkerSize(33, 100.0);
-
-    const std::vector<vision::DetectionResult> detections = detector.detect(image);
-    const vision::DetectionResult* marker = findMarker(detections, 33);
-    if (marker == nullptr || !marker->hasPose) {
-        LOG_ERROR("ArUco pose test - marker 33 pose was not estimated");
-        return false;
-    }
-
-    const cv::Vec3d& r = marker->rvec;
-    const cv::Vec3d& t = marker->tvec;
-    for (int i = 0; i < 3; ++i) {
-        if (!std::isfinite(r[i]) || !std::isfinite(t[i])) {
-            LOG_ERROR("ArUco pose test - non-finite pose values");
-            return false;
-        }
-    }
-    if (t[2] <= 0.0) {
-        LOG_ERROR("ArUco pose test - marker should be in front of the camera (z > 0)");
-        return false;
-    }
-
-    return true;
-}
-
 // Runs detection and pose estimation on captures from the virtual camera of
-// Robotronik_CDFR_Sim_2027, using the camera's synthetic calibration. The tag
-// id and the camera's true field pose (mm, yaw in degrees) for each capture
-// come from the simulation's own filenames:
-//   capture_22_x586.6_y-810.1_yaw-109.2_pitch45.0 -> tag 22
-//   capture_82_x-310.9_y706.4_yaw-236.9_pitch45.0 -> tag 21
+// Robotronik_CDFR_Sim_2027, using that camera's synthetic calibration. For each
+// capture the filename records the camera's true field pose and the tag id is
+// known, so the camera position in the marker frame can be computed twice and
+// the two compared:
+//   - detected: -R^T * tvec, the ArUco pose convention;
+//   - expected: the camera's offset from the tag, from the true field poses.
 bool test_aruco_sim_camera() {
     struct SampleCase {
         const char* image;
         int expectedId;
-        double truthX;
-        double truthY;
-        double truthYaw;
+        double cameraFieldX; // camera (robot) field pose, from the filename
+        double cameraFieldY;
+        double tagFieldX;    // tag's known field position (SIM geometry)
+        double tagFieldY;
     };
+    // captures encode their true pose: capture_<..>_x<cx>_y<cy>_...
     static const SampleCase kCases[] = {
-        {"sim_capture_22_tag22.png", 22, 586.6, -810.1, -109.2},
-        {"sim_capture_82_tag21.png", 21, -310.9, 706.4, -236.9},
+        {"sim_capture_22_tag22.png", 22, 586.6, -810.1, 400.0, -900.0},
+        {"sim_capture_82_tag21.png", 21, -310.9, 706.4, -400.0, 900.0},
     };
 
     const std::string calibrationPath = findCalibrationPath("SIM_VFOV70_1280_800.yaml");
     if (calibrationPath.empty()) {
-        LOG_WARNING("ArUco sim test skipped (missing virtual camera calibration)");
-        return true;
+        LOG_ERROR("ArUco sim test - missing virtual camera calibration");
+        return false;
     }
 
     vision::ArucoDetector detector;
@@ -177,7 +102,7 @@ bool test_aruco_sim_camera() {
         return false;
     }
     for (int id : {20, 21, 22, 23}) {
-        detector.setMarkerSize(id, 100.0); // the field tags are 100 mm on the ground
+        detector.setMarkerSize(id, kTagSideMm);
     }
 
     for (const SampleCase& testCase : kCases) {
@@ -203,12 +128,37 @@ bool test_aruco_sim_camera() {
             return false;
         }
 
+        // Camera position in the marker frame, from the detected pose.
+        cv::Matx33d rotation;
+        cv::Rodrigues(marker->rvec, rotation);
+        const cv::Vec3d detected = -(rotation.t() * marker->tvec);
+
+        // Same position from the true field poses: the camera (cy - ty, tx - cx)
+        // relative to the tag, one camera height above the ground plane.
+        const cv::Vec3d expected{testCase.cameraFieldY - testCase.tagFieldY,
+                                 testCase.tagFieldX - testCase.cameraFieldX,
+                                 kSimCameraHeightMm};
+
+        const cv::Vec3d delta = detected - expected;
+        const double errorMm = std::sqrt(delta.dot(delta));
+
         LOG_INFO("ArUco sim test - tag ", testCase.expectedId, " in ", testCase.image,
-                 " : aruco position (x, y, z) = (",
-                 marker->tvec[0], ", ", marker->tvec[1], ", ", marker->tvec[2], ") mm",
-                 " rvec = (", marker->rvec[0], ", ", marker->rvec[1], ", ", marker->rvec[2], ")",
-                 " | real position x = ", testCase.truthX, " mm, y = ", testCase.truthY,
-                 " mm, yaw = ", testCase.truthYaw, " deg");
+                 ": camera in marker frame detected (", detected[0], ", ", detected[1], ", ", detected[2],
+                 ") mm, expected (", expected[0], ", ", expected[1], ", ", expected[2],
+                 ") mm, error = ", errorMm, " mm");
+
+        if (errorMm > 15.0) {
+            LOG_ERROR("ArUco sim test - tag ", testCase.expectedId,
+                      " camera position error too large: ", errorMm, " mm");
+            return false;
+        }
+    }
+
+    // A blank frame must not yield any detection (no false positives).
+    const cv::Mat blank(480, 640, CV_8UC1, cv::Scalar(255));
+    if (!detector.detect(blank).empty()) {
+        LOG_ERROR("ArUco sim test - unexpected detection on a blank frame");
+        return false;
     }
 
     return true;
