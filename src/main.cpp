@@ -326,7 +326,7 @@ void GetLidar()
     
     if (lidar.getData()){
         convertAngularToAxial(lidar.data, lidar.count, drive.position, 150);
-        pathfind_fill_lidar();
+        pathfind_fill_lidar(&lidar);
         // Only update opponent position if the robot is not moving too fast to avoid noise
         if (IsDataValid && position_opponentV2(lidar.data, lidar.count, drive.position, pos_opponent) &&
                 (currentState == RUN || currentState == MANUAL) &&

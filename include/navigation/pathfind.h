@@ -1,4 +1,5 @@
 #include "drive_interface.h"
+#include "lidar/Lidar.hpp"
 
 
 // Pathfinding function
@@ -7,4 +8,4 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
 
 void pathfind_setup();
 void pathfind_place_border();
-void pathfind_fill_lidar();
+void pathfind_fill_lidar(Lidar* lidar);

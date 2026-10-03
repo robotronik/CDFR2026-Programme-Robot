@@ -1,7 +1,6 @@
 #include "navigation/pathfind.h"
 #include "navigation/astar.h"
 #include "utils/logger.hpp"
-#include "main.hpp" //lidar
 #include "math.h" // round()
 
 position_t convert_from_astar(position_int_t k){
@@ -95,15 +94,15 @@ void pathfind_place_border(){
     place_obstacle_with_margin( -775,    0, 1800,  550, RayonRobot, false);
 }
 
-void pathfind_fill_lidar(){
+void pathfind_fill_lidar(Lidar* lidar){
     astar_initialize_costmap();
     // TODO place Camelot specific obstacle on the map
 
 
     /* Place adversary on the map */
-    for (int i = 0; i < lidar.count; i++){
-        if (!lidar.data[i].onTable) continue;
-        place_obstacle_with_margin(lidar.data[i].x,lidar.data[i].y, 400, 400, 230, false, false);
+    for (int i = 0; i < lidar->count; i++){
+        if (!lidar->data[i].onTable) continue;
+        place_obstacle_with_margin(lidar->data[i].x,lidar->data[i].y, 400, 400, 230, false, false);
     }
     pathfind_place_border();
 }
