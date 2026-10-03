@@ -1,22 +1,34 @@
+#pragma once
+#include "main.hpp"
+
 #include <stdlib.h>
 #include <signal.h>
 #include <thread>
 #include <unistd.h>  // for usleep
 
-#include "main.hpp"
-#include "actions/MainActionFSM.hpp"
+#include "utils/logger.hpp" // logger 
 #include "actions/functions.h"
+
+//lidar related
 #include "lidar/Lidar.hpp"
 #include "lidar/lidarAnalize.h"
+
+//navigation related
 #include "navigation/navigation.h"
 #include "navigation/pathfind.h"
+#include "actions/calibration.h"
+
 #include "utils/utils.h"
-#include "utils/logger.hpp"
 #include "restAPI/restAPI.hpp"
 #include "restAPI/manual_mode.h"
 #include "mat/mat.hpp"
-#include "actions/calibration.h"
+
+//brain include
+#include "actions/MainActionFSM.hpp"
 #include "actions/Strategy/ExempleStrat.hpp"
+
+#include "actions/SensorControl.hpp"
+#include "actions/ActuatorsControl.hpp"
 
 #ifndef __CROSS_COMPILE_ARM__
     #define DISABLE_LIDAR
@@ -29,9 +41,15 @@ DriveControl drive;
 Arduino arduino;
 Lidar lidar= Lidar(&arduino);
 
-// Brain Init
-VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus);
+// control of hardware
+SensorControl sensor(&arduino);
+ActuatorsControl actuators(&arduino, &drive);
+
+// status of table
 TableState tableStatus(&drive);
+
+// Brain Init
+VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus); //TODO create logic for strategy change
 ActionFSM action(currentStrategy, &drive, &tableStatus);
 
 #ifndef EMULATE_CAM
@@ -115,7 +133,7 @@ int main(int argc, char *argv[])
             if (initState)
             {
                 LOG_GREEN_INFO("INIT");
-                disableActuators();
+                actuators.disableActuators();
                 tableStatus.reset();
                 arduino.RGB_Rainbow();
             }
@@ -127,7 +145,7 @@ int main(int argc, char *argv[])
                     LOG_GREEN_INFO("MAT is ready");
                 } 
             }
-            if (readButtonSensor() && !readLatchSensor() && tableStatus.colorTeam != NONE)
+            if (sensor.readButtonSensor() && !sensor.readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = WAITSTART;
             break;
         }
@@ -136,8 +154,8 @@ int main(int argc, char *argv[])
         {
             if (initState){
                 LOG_GREEN_INFO("WAITSTART");  
-                enableActuators();
-                homeActuators();
+                actuators.enableActuators();
+                actuators.homeActuators();
                 lidar.startSpin();
                 arucoCam1.start();
                 arduino.moveMotorDC(80, false);
@@ -150,7 +168,7 @@ int main(int argc, char *argv[])
             // colorTeam_t color = readColorSensorSwitch();
             // switchTeamSide(color);
 
-            if (readLimitSwitchTop() && motorUpFirst){ 
+            if (sensor.readLimitSwitchTop() && motorUpFirst){ 
                 arduino.moveMotorDC(20,false);
                 motorUpFirst = false;
             }
@@ -160,7 +178,7 @@ int main(int argc, char *argv[])
                 nextState = CALIBRATION;
             }
 
-            if (readLatchSensor() && tableStatus.colorTeam != NONE)
+            if (sensor.readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = RUN;
             if (manual_ctrl)
                 nextState = MANUAL;
@@ -184,7 +202,7 @@ int main(int argc, char *argv[])
                 }
             }
 
-            if (readLatchSensor() && tableStatus.colorTeam != NONE)
+            if (sensor.readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = RUN;
             if (manual_ctrl)
                 nextState = MANUAL;
@@ -203,7 +221,7 @@ int main(int argc, char *argv[])
             }
             bool finished = action.RunFSM();
 
-            if (_millis() > tableStatus.startTime + 100000 || finished || readButtonSensor())
+            if (_millis() > tableStatus.startTime + 100000 || finished || sensor.readButtonSensor())
                 nextState = FIN;
             break;
         }
@@ -241,14 +259,14 @@ int main(int argc, char *argv[])
                 arduino.RGB_Solid(0, 255, 0);
                 manual_clearFunc();
                 drive.disable();
-                disableActuators();
+                actuators.disableActuators();
                 lidar.stopSpin();
                 arduino.keepMotorDCup();
                 StopMat();
             }
 
-            if (!readLatchSensor()){
-                enableActuators();
+            if (!sensor.readLatchSensor()){
+                actuators.enableActuators();
                 exit_requested = true;
             }
             break;
@@ -358,11 +376,11 @@ void EndSequence()
     arduino.RGB_Solid(0, 0, 0); // OFF
 
     for(int i = 0; i < 60; i++){
-        if (homeActuators())
+        if (actuators.homeActuators())
             break;
         delay(100);
     };
-    disableActuators();
+    actuators.disableActuators();
 #endif // EMULATE_I2C
 
     // Stop the API server

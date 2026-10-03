@@ -1,6 +1,5 @@
 #include "actions/Strategy/ExempleStrat.hpp"
 #include "actions/VirtualAction.hpp"
-#include "actions/strats.hpp"
 #include "navigation/driveControl.h"
 #include "utils/logger.hpp"
 #include "navigation/pathfind.h"
@@ -47,7 +46,6 @@ void ExempleStrat::reset(){
 
 */
 void ExempleStrat::buildPossibleActions(){
-    check(tableStatus->colorTeam, tableStatus->strategy);
 
     position_t objective = {0, 0, 0}; // exemple smple on va au centre de la table
 

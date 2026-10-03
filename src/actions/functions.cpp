@@ -1,95 +1,12 @@
 #include "defs/structs.hpp"
 #include "drive_interface.h"
 #include "navigation/navigation.h"
-#include "defs/constante.h"
 #include "i2c/Arduino.hpp"
 #include "actions/strats.hpp"
 #include "main.hpp"
 #include "utils/logger.hpp"
 #include <math.h>
-// ------------------------------------------------------
-//                   BASIC FSM CONTROL
-// ------------------------------------------------------
 
-/* Code for basic FSM (elemental actions)*/
-
-// ------------------------------------------------------
-//                   SERVO CONTROL
-// ------------------------------------------------------
-
-// Exemple of servo control
-bool moveServoAndWait(int servo, int target, int speed){
-    static int prevServo = -1;
-    static int prevTarget = -1;
-
-    if (servo != prevServo || target != prevTarget){
-        arduino.moveServoSpeed(servo, target, speed);
-        prevServo = servo;
-        prevTarget = target;
-    }
-
-    int s;
-    if (!arduino.getServo(servo, s)) return false;
-
-    return s == target;
-}
-
-// ------------------------------------------------------
-//                   STEPPER CONTROL
-// ------------------------------------------------------
-
-// Exemple of stepper control
-// Moves the platforms elevator to a predefined level
-// 0:startpos, 1:lowest, 2:Banner, 3:highest
-bool moveColumnsElevator(int level){
-    static int previousLevel = -1;
-
-    int target = 0;
-    switch (level)
-    {
-    case 0:
-        target = 0; break;
-    case 1:
-        target = 6000; break;
-    case 2:
-        target = 8000; break;
-    case 3:
-        target = 20000; break;
-    }
-    if (previousLevel != level){
-        previousLevel = level;
-        arduino.moveStepper(target, STEPPER_NUM_2);
-    }
-    int32_t currentValue;
-    if (!arduino.getStepper(currentValue, STEPPER_NUM_2)) return false; // TODO Might need to change this (throw error)
-    return (currentValue == target);
-}
-
-
-// ------------------------------------------------------
-//                GLOBAL SET/RES CONTROL
-// ------------------------------------------------------
-
-
-// Returns true if actuators are home
-bool homeActuators(){
-    return true; // TODO
-}
-void enableActuators(){
-    for (int i = 0; i < 4; i++){
-        arduino.enableStepper(i);
-    }
-    arduino.enableServos();
-    drive.enable();
-}
-void disableActuators(){
-    arduino.stopMotorDC();
-    for (int i = 0; i < 4; i++){
-        arduino.disableStepper(i);
-    }
-    arduino.disableServos();
-    drive.disable();
-}
 
 
 // ------------------------------------------------------
@@ -177,44 +94,3 @@ bool isRobotInArrivalZone(position_t position){
     return m_isPointInsideRectangle(position.x, position.y, c_x, c_y, w + 2*robotSmallRadius, h + 2*robotSmallRadius);
 }
 
-// ------------------------------------------------------
-//                    INPUT SENSOR
-// ------------------------------------------------------
-
-// Returns true if button sensor was high for the last N calls
-bool readButtonSensor(){
-    static int count = 0;
-    bool state;
-    if (!arduino.readSensor(BUTTON_SENSOR_NUM, state)) return false;
-    if (state)
-        count++;
-    else
-        count = 0;
-    return (count >= 5);
-}
-
-// Returns true if the latch sensor is disconnected
-bool readLatchSensor(){
-    static int count = 0;
-    static bool prev_state = false;
-    bool state;
-    if (!arduino.readSensor(LATCH_SENSOR_NUM, state)) return prev_state;
-    if (!state)
-        count++;
-    else
-        count = 0;    
-    prev_state = state;
-    return (count >= 5);
-}
-
-bool readLimitSwitchBottom(){
-    bool state;
-    if (!arduino.readSensor(LS_BOTTOM_NUM, state)) return false;
-    return state;
-}
-
-bool readLimitSwitchTop(){
-    bool state;
-    if (!arduino.readSensor(LS_TOP_NUM, state)) return false;
-    return state;
-}
