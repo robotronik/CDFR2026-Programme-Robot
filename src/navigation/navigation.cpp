@@ -81,7 +81,8 @@ nav_return_t Navigation::go(){
         const bool localised = arucoCam->getLocalisation(cam_x, cam_y, cam_a);
         if (localised || arucoCam->isEmulated()){
             if (localised){
-                // Save the results and set coords
+                // The camera is not the robot: convert to the robot's frame.
+                cameraToRobot(cam_x, cam_y, cam_a);
                 position_t robot_pos = {cam_x, cam_y, cam_a};
                 prev_final_pos_cam = robot_pos;
                 prev_final_pos_otos = drive->position;

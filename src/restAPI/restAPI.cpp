@@ -299,6 +299,7 @@ void RestAPI::start(){
             cam_x = drive->position.x;
             cam_y = drive->position.y;
             cam_a = drive->position.a;
+            robotToCamera(cam_x, cam_y, cam_a);
         }
         json objects = json::array();
         for (const GameElement& element : arucoCam->getGameElements(cam_x, cam_y, cam_a)){
@@ -316,6 +317,7 @@ void RestAPI::start(){
         double cam_x = 0.0, cam_y = 0.0, cam_a = 0.0;
         json response;
         if (arucoCam->getLocalisation(cam_x, cam_y, cam_a)){
+            cameraToRobot(cam_x, cam_y, cam_a);
             response["object"] = json{{"x", cam_x}, {"y", cam_y}, {"a", cam_a}};
         }
         else{

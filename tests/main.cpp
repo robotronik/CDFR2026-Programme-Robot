@@ -5,6 +5,7 @@ bool test_lidar_opponent();
 bool test_lidar_beacons();
 bool test_aruco_sim_camera();
 bool test_aruco_localizer();
+bool test_camera_robot_conversion();
 
 int runAllTests();
 
@@ -31,6 +32,7 @@ int runAllTests() {
     LOG_INFO("Running aruco tests");
     UNIT_TEST(test_aruco_sim_camera());
     UNIT_TEST(test_aruco_localizer());
+    UNIT_TEST(test_camera_robot_conversion());
 
     LOG_INFO("There has been ", numPassed, "/", numTests, " tests passed");
     //return (numTests == numPassed) ? 0 : 1;

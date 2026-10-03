@@ -6,6 +6,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 
+#include "vision/ArucoCam.hpp"
 #include "vision/ArucoDetector.hpp"
 #include "vision/ArucoLocalizer.hpp"
 #include "utils/logger.hpp"
@@ -232,6 +233,44 @@ bool test_aruco_localizer() {
     if (localizer.locate(blank, none)) {
         LOG_ERROR("ArUco localizer test - reported a position for a blank frame");
         return false;
+    }
+
+    return true;
+}
+
+// The camera is mounted off the robot's centre, so the two frames differ.
+// robotToCamera() and cameraToRobot() must be inverses of each other.
+bool test_camera_robot_conversion() {
+    struct SampleCase {
+        double robotX;
+        double robotY;
+        double robotA;
+    };
+    static const SampleCase kCases[] = {
+        {0.0, 0.0, 0.0},
+        {500.0, -300.0, 90.0},
+        {-250.0, 780.0, -135.0},
+    };
+
+    const double mountingDistance = std::hypot(OFFSET_CAM_X, OFFSET_CAM_Y);
+
+    for (const SampleCase& testCase : kCases) {
+        double x = testCase.robotX, y = testCase.robotY, a = testCase.robotA;
+        robotToCamera(x, y, a);
+
+        const double offset = std::hypot(x - testCase.robotX, y - testCase.robotY);
+        if (std::fabs(offset - mountingDistance) > 1e-6) {
+            LOG_ERROR("Camera/robot conversion test - camera offset is ", offset,
+                      " mm, expected ", mountingDistance, " mm");
+            return false;
+        }
+
+        cameraToRobot(x, y, a);
+        const double error = std::hypot(x - testCase.robotX, y - testCase.robotY);
+        if (error > 1e-6 || std::fabs(std::remainder(a - testCase.robotA, 360.0)) > 1e-6) {
+            LOG_ERROR("Camera/robot conversion test - round trip failed, error ", error, " mm");
+            return false;
+        }
     }
 
     return true;

@@ -15,8 +15,9 @@ constexpr int kCameraHeight = 800;
 // The game elements carry ArUco id 13. `kGameElementSideMm` is the physical
 // side of that marker, which sets the scale of its estimated pose.
 constexpr int kGameElementId = 13;
-constexpr double kGameElementSideMm = 100.0;
+constexpr double kGameElementSideMm = 80.0;
 
+constexpr double kDegToRad = M_PI / 180.0;
 constexpr double kRadToDeg = 180.0 / M_PI;
 
 double normalizeAngle(double angle) {
@@ -26,6 +27,25 @@ double normalizeAngle(double angle) {
 }
 
 } // namespace
+
+void cameraToRobot(double& x, double& y, double& a) {
+    const double robotA = a - OFFSET_CAM_A;
+    const double rad = robotA * kDegToRad;
+    const double c = std::cos(rad);
+    const double s = std::sin(rad);
+    x -= OFFSET_CAM_X * c - OFFSET_CAM_Y * s;
+    y -= OFFSET_CAM_X * s + OFFSET_CAM_Y * c;
+    a = normalizeAngle(robotA);
+}
+
+void robotToCamera(double& x, double& y, double& a) {
+    const double rad = a * kDegToRad;
+    const double c = std::cos(rad);
+    const double s = std::sin(rad);
+    x += OFFSET_CAM_X * c - OFFSET_CAM_Y * s;
+    y += OFFSET_CAM_X * s + OFFSET_CAM_Y * c;
+    a = normalizeAngle(a + OFFSET_CAM_A);
+}
 
 ArucoCam::ArucoCam(int camNumber, const char* calibrationFilePath) {
     id_ = camNumber;
