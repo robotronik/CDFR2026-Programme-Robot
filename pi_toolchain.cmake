@@ -6,7 +6,9 @@ set(CMAKE_C_COMPILER ${CROSS_COMPILE_PREFIX}-gcc)
 set(CMAKE_CXX_COMPILER ${CROSS_COMPILE_PREFIX}-g++)
 set(CMAKE_LINKER aarch64-linux-gnu-ld)
 
-set(CMAKE_FIND_ROOT_PATH /usr/${CROSS_COMPILE_PREFIX})
+# The compiler's own sysroot, plus /usr, so Debian/Ubuntu multiarch libraries
+# (installed under /usr/lib/<triplet>, e.g. libsqlite3) are found by CMake.
+set(CMAKE_FIND_ROOT_PATH /usr/${CROSS_COMPILE_PREFIX} /usr)
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
