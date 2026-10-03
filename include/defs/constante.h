@@ -53,6 +53,9 @@ const position_t ARUCO_POSITIONS_TABLE[] = {
     position_t{.x = 400, .y = -900, .a = 0}, \
     position_t{.x = 400, .y = 900, .a = 0}};
 
+// Heading offset of the camera relative to the robot, in degrees.
+#define OFFSET_CAM_A 0
+
 // Tableau de positions pour la calibration, orientation vers le code le plus proche
 // Valeurs uniquement pour le cote bleu
 const position_t ARUCO_CALIB_POSITIONS[] = {

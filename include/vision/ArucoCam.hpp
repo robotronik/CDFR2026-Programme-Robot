@@ -1,74 +1,57 @@
 #pragma once
-#include "utils/json.hpp" // For handling JSON
+
 #include <atomic>
 #include <mutex>
 #include <string>
 #include <thread>
-#include "vision/ArucoDetector.hpp"
-#include "vision/ransac.hpp"
+#include <vector>
 
-using json = nlohmann::json;
+#include "vision/ArucoLocalizer.hpp"
 
-#define OFFSET_CAM_X 129 // Offset of the camera in mm on the x axis
-#define OFFSET_CAM_Y 4.5 // Offset of the camera in mm on the y axis
-#define OFFSET_CAM_A 0 // Offset angle of the camera in degrees
-#define OFFSET_CLAW_Y -26 // Offset to align claw with block, diminuer = plus à droite
-#define OFFSET_STOCK 330
-#define MULT_PARAM 0.68
+// A game element is a marker with ArUco id 13. Its position is on the table, in
+// millimetres, with its heading in degrees.
+struct GameElement {
+    int id = 13;
+    double x = 0.0;
+    double y = 0.0;
+    double a = 0.0;
+};
 
-class ArucoCam {   
-private:
-    int id = -1;
-    std::atomic<bool> running_{false};
-    std::thread worker_;
-    vision::ArucoDetector detector_;
-
-    // Shared detection state, protected by stateMutex_.
-    struct State {
-        double x = 0.0;
-        double y = 0.0;
-        double z = 0.0;
-        double a = 0.0;
-        bool hasPosition = false;
-        int successFrames = 0;
-        int failedFrames = 0;
-        json objects = json::object();
-    };
-    State state_;
-    mutable std::mutex stateMutex_;
-    bool waitingForPos_ = false;
-
-    void workerLoop();
-    bool processDetections(const std::vector<vision::DetectionResult>& detections);
-    void addAveragePosition(double x, double y, double z, double a);
+// Captures frames on its own thread and detects ArUco markers. It answers two
+// questions: where the camera is on the table, and where the game elements are.
+class ArucoCam {
 public:
-    std::vector<block_t> alignBlocks;
-    ArucoCam(int cam_number, const char* calibration_file_path);
+    ArucoCam(int camNumber, const char* calibrationFilePath);
     ~ArucoCam();
 
-    bool start();
+    ArucoCam(const ArucoCam&) = delete;
+    ArucoCam& operator=(const ArucoCam&) = delete;
+
+    // Starts/stops the capture thread. A negative camNumber emulates a camera
+    // that is never started.
+    void start();
     void stop();
+    bool isEmulated() const { return id_ < 0; }
 
-    bool getPos(double & x, double & y, double & a, bool& success);
-    bool getRobotPos(double & x, double & y, double & a, bool& success);
-    bool getObjectData(json& objects, int& sucess);
+    // Latest camera localisation on the table. Returns true when one is known.
+    bool getLocalisation(double& x, double& y, double& a) const;
 
-    bool ToObjectPos(json& data, double & x, double & y, double & a, int& success);
-    bool ToObjectSweep(bool* order, json& data, double & x, double & y, double & a, double & dist_balayage, int& success);
-
-    bool ToObjectColor(bool* order, int& success);
-    bool ToIsolatedObject(json& data, double & x, double & y, double & a, bool& success);
-
-    bool getObjectPos(double & x, double & y, double & a, int& success);
-    bool getObjectInfoColors(bool* order, double & x, double & y, double & a, int& success);
-    bool getObjectForSweep(bool* order, double & x, double & y, double & a, int& success, double& dist_balayage);
-
-    bool getBestIsolatedObject(double & x, double & y, double & a, bool& success);
-
-    json getBestIsolatedObject_json();
-    json getObjectPosition_json();
-    json getRobotPosition_json();
+    // Game elements seen in the latest frame, placed on the table using the
+    // given robot/camera pose.
+    std::vector<GameElement> getGameElements(double x, double y, double a) const;
 
 private:
-    void reset_tracking();
+    void workerLoop();
+
+    int id_ = -1;
+    std::atomic<bool> running_{false};
+    std::thread worker_;
+    vision::ArucoLocalizer localizer_;
+
+    mutable std::mutex mutex_;
+    std::vector<vision::DetectionResult> detections_;
+    bool hasLocalisation_ = false;
+    double localisationX_ = 0.0;
+    double localisationY_ = 0.0;
+    double localisationA_ = 0.0;
 };

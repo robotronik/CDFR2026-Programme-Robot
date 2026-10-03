@@ -292,17 +292,20 @@ void RestAPI::start(){
         return crow::response(response.dump());
     });
 
-    CROW_ROUTE(app, "/get_isolated")
-    ([this](){
-        json response;
-        response["object"] = arucoCam->getBestIsolatedObject_json();
-        return crow::response(response.dump());
-    });
-
     CROW_ROUTE(app, "/get_blockPosition")
     ([this](){
+        double cam_x = 0.0, cam_y = 0.0, cam_a = 0.0;
+        if (!arucoCam->getLocalisation(cam_x, cam_y, cam_a)){
+            cam_x = drive->position.x;
+            cam_y = drive->position.y;
+            cam_a = drive->position.a;
+        }
+        json objects = json::array();
+        for (const GameElement& element : arucoCam->getGameElements(cam_x, cam_y, cam_a)){
+            objects.push_back(json{{"id", element.id}, {"x", element.x}, {"y", element.y}, {"a", element.a}});
+        }
         json response;
-        response["object"] = arucoCam->getObjectPosition_json();
+        response["objects"] = objects;
         crow::response res(response.dump());
         res.set_header("Content-Type", "application/json");
         return res;
@@ -310,8 +313,14 @@ void RestAPI::start(){
 
     CROW_ROUTE(app, "/position")
     ([this](){
+        double cam_x = 0.0, cam_y = 0.0, cam_a = 0.0;
         json response;
-        response["object"] = arucoCam->getRobotPosition_json();
+        if (arucoCam->getLocalisation(cam_x, cam_y, cam_a)){
+            response["object"] = json{{"x", cam_x}, {"y", cam_y}, {"a", cam_a}};
+        }
+        else{
+            response["object"] = nullptr;
+        }
         crow::response res(response.dump());
         res.set_header("Content-Type", "application/json");
         return res;

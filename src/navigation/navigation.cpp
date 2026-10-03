@@ -76,12 +76,13 @@ nav_return_t Navigation::go(){
         else if (is_robot_stalled)
             return NAV_PAUSED;
     } else {
-        // Calibrate using camera
-        bool cam_success;
-        position_t robot_pos;
-        if (arucoCam->getRobotPos(robot_pos.x, robot_pos.y, robot_pos.a, cam_success)){
-            if (cam_success){
+        // Calibrate using camera. An emulated camera has no fix, so skip.
+        double cam_x = 0.0, cam_y = 0.0, cam_a = 0.0;
+        const bool localised = arucoCam->getLocalisation(cam_x, cam_y, cam_a);
+        if (localised || arucoCam->isEmulated()){
+            if (localised){
                 // Save the results and set coords
+                position_t robot_pos = {cam_x, cam_y, cam_a};
                 prev_final_pos_cam = robot_pos;
                 prev_final_pos_otos = drive->position;
                 drive->setCoordinates(robot_pos);
@@ -89,7 +90,7 @@ nav_return_t Navigation::go(){
                 LOG_GREEN_INFO("Camera calibration during move successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
             }
             else{
-                LOG_EXTENDED_DEBUG("Camera did not have a good position estimate, skipping calibration");
+                LOG_EXTENDED_DEBUG("Camera emulated, skipping calibration");
             }
             driving = true;
             drive->setBrakeState(false);

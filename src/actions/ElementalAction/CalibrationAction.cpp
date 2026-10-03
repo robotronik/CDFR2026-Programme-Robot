@@ -3,7 +3,6 @@
 #include "utils/logger.hpp"
 #include "navigation/pathfind.h"
 #include "defs/constante.h"
-#include "vision/ArucoCam.hpp"
 
 CalibrationAction::CalibrationAction(DriveControl* drive, TableState* tableState){
     nom = "Calibration";
