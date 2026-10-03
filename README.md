@@ -32,6 +32,7 @@ For ARM (Raspberry Pi) compilation, install:
 
 ```bash
 sudo apt-get install g++-aarch64-linux-gnu
+sudo apt install sqlite3
 ```
 
 For debugging, install:
