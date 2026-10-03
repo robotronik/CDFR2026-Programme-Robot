@@ -18,12 +18,27 @@ constexpr int kGameElementId = 13;
 constexpr double kGameElementSideMm = 80.0;
 
 constexpr double kDegToRad = M_PI / 180.0;
-constexpr double kRadToDeg = 180.0 / M_PI;
 
 double normalizeAngle(double angle) {
     while (angle > 180.0) angle -= 360.0;
     while (angle <= -180.0) angle += 360.0;
     return angle;
+}
+
+// Rotation taking a vector from the camera's optical frame (x right, y down,
+// z forward) to the table frame (x, y in the plane, z up), for a camera looking
+// along `headingDeg` and pitched `pitchDeg` down.
+cv::Matx33d cameraToTableRotation(double headingDeg, double pitchDeg) {
+    const double a = headingDeg * kDegToRad;
+    const double p = pitchDeg * kDegToRad;
+    const double ca = std::cos(a), sa = std::sin(a);
+    const double cp = std::cos(p), sp = std::sin(p);
+
+    // Columns are the camera axes expressed in the table frame.
+    return cv::Matx33d(
+         sa, -sp * ca, cp * ca,
+        -ca, -sp * sa, cp * sa,
+          0,      -cp,     -sp);
 }
 
 } // namespace
@@ -141,7 +156,11 @@ bool ArucoCam::getLocalisation(position_t& cameraPose) const {
     return true;
 }
 
-std::vector<GameElement> ArucoCam::getGameElements(const position_t& cameraPose) const {
+std::vector<GameElement> ArucoCam::getGameElements(const position_t& robotPose) const {
+    const position_t cameraPose = robotToCamera(robotPose);
+    const cv::Matx33d cameraToTable = cameraToTableRotation(cameraPose.a, CAMERA_PITCH_DEG);
+    const cv::Vec3d cameraPosition{cameraPose.x, cameraPose.y, CAMERA_HEIGHT_MM};
+
     std::vector<GameElement> elements;
 
     std::lock_guard<std::mutex> lock(mutex_);
@@ -150,19 +169,22 @@ std::vector<GameElement> ArucoCam::getGameElements(const position_t& cameraPose)
             continue;
         }
 
-        cv::Matx33d rotation;
-        cv::Rodrigues(detection.rvec, rotation);
+        cv::Matx33d elementToCamera;
+        cv::Rodrigues(detection.rvec, elementToCamera);
 
-        // Camera position in the marker frame, and the marker's heading, are
-        // turned into the element's field position from the given pose.
-        const cv::Vec3d camera = -(rotation.t() * detection.tvec);
-        const double yaw = std::atan2(-rotation(0, 1), rotation(0, 0)) * kRadToDeg;
+        // The detected marker pose is in the camera's optical frame; lift it
+        // into the table frame through the camera's mounting.
+        const cv::Vec3d position = cameraPosition + cameraToTable * detection.tvec;
+        cv::Mat rqR, rqQ;
+        const cv::Vec3d euler = cv::RQDecomp3x3(cameraToTable * elementToCamera, rqR, rqQ);
 
         GameElement element;
-        element.id = detection.id;
-        element.x = cameraPose.x + camera[1];
-        element.y = cameraPose.y - camera[0];
-        element.a = normalizeAngle(cameraPose.a + yaw - 180.0);
+        element.x = position[0];
+        element.y = position[1];
+        element.z = position[2];
+        element.roll = euler[0];
+        element.pitch = euler[1];
+        element.yaw = euler[2];
         elements.push_back(element);
     }
 

@@ -13,13 +13,23 @@
 #define OFFSET_CAM_Y 4.5 // Offset of the camera in mm on the y axis
 #define OFFSET_CAM_A 0 // Offset angle of the camera in degrees
 
-// A game element is a marker with ArUco id 13. Its position is on the table, in
-// millimetres, with its heading in degrees.
+// Camera mounting used to lift a detection into the table frame: how high the
+// camera sits above the table and how far it tilts down. Provisional values, to
+// be calibrated for the robot.
+#define CAMERA_HEIGHT_MM 233.2
+#define CAMERA_PITCH_DEG 45.0
+
+// A game element is a marker with ArUco id 13. Its pose is on the table, in
+// millimetres, with its Euler angles in degrees. The yaw reference follows the
+// marker's own axes (a marker lying flat, oriented like the field tags, reads
+// about 90 degrees).
 struct GameElement {
-    int id = 13;
     double x = 0.0;
     double y = 0.0;
-    double a = 0.0;
+    double z = 0.0;
+    double roll = 0.0;
+    double pitch = 0.0;
+    double yaw = 0.0;
 };
 
 // The camera and the robot are not the same point: the camera sits at
@@ -49,8 +59,8 @@ public:
     bool getLocalisation(position_t& cameraPose) const;
 
     // Game elements seen in the latest frame, placed on the table from the
-    // given camera pose.
-    std::vector<GameElement> getGameElements(const position_t& cameraPose) const;
+    // given robot pose.
+    std::vector<GameElement> getGameElements(const position_t& robotPose) const;
 
 private:
     void workerLoop();
