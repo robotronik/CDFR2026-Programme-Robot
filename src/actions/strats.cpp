@@ -2,8 +2,6 @@
 #include "utils/logger.hpp"
 #include "defs/structs.hpp"
 #include <math.h>
-#include "main.hpp" // for tableStatus
-#include "navigation/pathfind.h"
 
 void check(colorTeam_t color, int strategy){
     // Check if the color and strategy are valid
@@ -12,10 +10,10 @@ void check(colorTeam_t color, int strategy){
 }
 
 // Function to handle the strategy
-position_t StratStartingPos(){
+position_t StratStartingPos(TableState* tableState){
     // Returns the starting position of the robot
-    colorTeam_t color = tableStatus.colorTeam;
-    int strategy = tableStatus.strategy;
+    colorTeam_t color = tableState->colorTeam;
+    int strategy = tableState->strategy;
     check(color, strategy);
     position_t pos = {-675, 1125, 120};
 

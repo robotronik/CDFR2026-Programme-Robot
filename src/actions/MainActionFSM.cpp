@@ -3,7 +3,6 @@
 #include "actions/VirtualAction.hpp"
 #include "actions/VirtualStrategy.hpp"
 #include "utils/logger.hpp"
-#include "main.hpp"
 
 ActionFSM::ActionFSM(DriveControl* drive, TableState* tableState)
     : driveControl(drive), tableState(tableState)
@@ -88,8 +87,8 @@ bool ActionFSM::RunFSM(){
 */
 VirtualAction* ActionFSM::SetBestAction(){
     //ENDLESSMODE
-    if (tableStatus.strategy == 4){
-        if (_millis() > tableStatus.startTime + 50000) tableStatus.startTime = _millis();
+    if (tableState->strategy == 4){
+        if (_millis() > tableState->startTime + 50000) tableState->startTime = _millis();
     }
 
     /************************** DEMANDE À LA STRATÉGIE COURANTE *************************/

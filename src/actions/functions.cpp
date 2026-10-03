@@ -147,7 +147,7 @@ void switchTeamSide(colorTeam_t color){ // TODO moove to tableState
             break;
         }
 
-        position_t pos = StratStartingPos();
+        position_t pos = StratStartingPos(&tableStatus);
         drive.setCoordinates(pos);
         navigation.goTo(pos, true, true); // Go to starting pos with A* and slow mode to avoid collisions during the switch
     }
@@ -162,7 +162,7 @@ void switchStrategy(int strategy){ // TODO moove to tableState
     if (strategy != tableStatus.strategy){
         LOG_INFO("Strategy switch detected");
         tableStatus.strategy = strategy;
-        position_t pos = StratStartingPos();
+        position_t pos = StratStartingPos(&tableStatus);
         drive.setCoordinates(pos);
     }
 }

@@ -1,14 +1,11 @@
 #include "actions/calibration.h"
-#include "main.hpp"// TODO remove
-#include "navigation/driveControl.h"
 #include "navigation/navigation.h"
 #include "utils/logger.hpp"
 #include "actions/strats.hpp"
-
 #include <numeric>
 #include <vector>
 
-bool calibrate_otos() {
+bool calibrate_otos(TableState* tableStatus, DriveControl* drive) {
     // Function called continuously from the main loop to calibrate the otosensors
     // Returns true when calibration is done
     static int step = 1; // We skip angle calib
@@ -33,7 +30,7 @@ bool calibrate_otos() {
             pos1.a += 70.0;
         else
             pos1.a -= 70.0;
-        if (tableStatus.colorTeam == YELLOW)
+        if (tableStatus->colorTeam == YELLOW)
             position_robot_flip(pos1);
 
         ret = navigation.goTo(pos1, false, false, true);
@@ -89,9 +86,9 @@ bool calibrate_otos() {
                 }
 
                 if (within_variance){
-                    float current_scalar = drive.getAngularScalar();
+                    float current_scalar = drive->getAngularScalar();
                     float new_scalar = current_scalar * mean;
-                    drive.setAngularScalar(new_scalar);
+                    drive->setAngularScalar(new_scalar);
                     step = 1;
                     scalar_angle_samples.clear();
                     skip_first_scalar = true;
@@ -114,7 +111,7 @@ bool calibrate_otos() {
         position_t pos1 = {0.0f, 1250.0f, -90.0f};
         pos1.x += state ? 400.0 : -400.0;
 
-        if (tableStatus.colorTeam == YELLOW)
+        if (tableStatus->colorTeam == YELLOW)
             position_robot_flip(pos1);
         ret = navigation.goTo(pos1, false, false, true);
 
@@ -174,9 +171,9 @@ bool calibrate_otos() {
                 }
 
                 if (within_variance){
-                    float current_scalar = drive.getLinearScalar();
+                    float current_scalar = drive->getLinearScalar();
                     float new_scalar = current_scalar * mean;
-                    drive.setLinearScalar(new_scalar);
+                    drive->setLinearScalar(new_scalar);
                     LOG_GREEN_INFO("OTOS calibration done with mean = ", new_scalar);
                     scalar_dist_samples.clear();
                     skip_first_scalar = true;
@@ -192,7 +189,7 @@ bool calibrate_otos() {
     case 2:{
         // Calibrate using a code close to init pos
         position_t pos = {-400, 1250, -90.0};
-        if (tableStatus.colorTeam == YELLOW)
+        if (tableStatus->colorTeam == YELLOW)
             position_robot_flip(pos);
             
         ret = navigation.goTo(pos, false, true, true);
@@ -203,7 +200,7 @@ bool calibrate_otos() {
     }break;
     case 3:{
         // goto home
-        position_t pos = StratStartingPos();
+        position_t pos = StratStartingPos(tableStatus);
         ret = navigation.goTo(pos, false, true, true);
         if (ret == NAV_DONE){
             LOG_GREEN_INFO("OTOS calibration done, returned to home position");

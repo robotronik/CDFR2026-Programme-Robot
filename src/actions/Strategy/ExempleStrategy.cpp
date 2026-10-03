@@ -45,8 +45,6 @@ void ExempleStrat::reset(){
     l'action a de chances d'être choisie par bestAction() lorsqu'elle
     est disponible (cf. calcul du score plus bas).
 
-    Ici on adapte la position de départ de strats.cpp (StratStartingPos)
-    et on enchaîne quelques actions d'exemple.
 */
 void ExempleStrat::buildPossibleActions(){
     check(tableStatus->colorTeam, tableStatus->strategy);

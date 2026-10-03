@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
             tableStatus.startTime = _millis();
             static bool has_calib = false;
             if (!has_calib){
-                if (calibrate_otos()){
+                if (calibrate_otos(&tableStatus, &drive)){
                     LOG_GREEN_INFO("Calibration successful");
                     has_calib = true;
                 }
