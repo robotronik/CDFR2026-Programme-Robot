@@ -7,7 +7,7 @@ GoToPositionAction::GoToPositionAction(const std::string& name, position_t targe
     : target(target), drive(drive), moving(false)
 {
     nom = name;
-    duree = 2000; // durée estimée, à ajuster
+    duree = 20; // durée estimée, à ajuster
 }
 
 ReturnFSM_t GoToPositionAction::run(){
@@ -21,10 +21,12 @@ ReturnFSM_t GoToPositionAction::run(){
         case NAV_ERROR:
             errorManagement();
             reset();
+            done = true; // après reset(), qui vient de la réarmer
             return FSM_RETURN_ERROR;
         case NAV_DONE:
             successManagement();
             moving = false;
+            done = true;
             return FSM_RETURN_DONE;
         case NAV_IN_PROCESS:
         default:
@@ -55,15 +57,19 @@ bool GoToPositionAction::stop(){
 void GoToPositionAction::reset(){
     stop();
     target = drive->getPosition(); // Reset target to current position
+    done = false;                  // l'action redevient candidate
 }
 
 float GoToPositionAction::available(){
-    // Un déplacement est toujours jouable tant que le contexte
-    // (couleur/stratégie) est valide.
+    // Déplacement déjà terminé (succès ou échec) : plus candidate tant
+    // qu'elle n'a pas été réarmée par reset().
+    if (done) return -1.0f;
     double path_length_mm;
     position_t path[100]; // Assuming a maximum path length
-    pathfind(drive->getPosition(), target, path, path_length_mm);
-    return path_length_mm/ duree;
+    if(!pathfind(drive->getPosition(), target, path, path_length_mm)){
+        return -1.0f;
+    }
+    return duree;
 }
 
 bool GoToPositionAction::fullBlock(){

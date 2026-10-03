@@ -2,6 +2,7 @@
 #include <memory>
 #include "actions/VirtualAction.hpp"
 #include "actions/VirtualStrategy.hpp"
+#include "db/ActionDurationDB.hpp"
 #include "defs/tableState.hpp"
 #include "navigation/driveControl.h"
 
@@ -31,11 +32,15 @@ class ActionFSM{
         // switch de couleur/stratégie sur le robot).
         VirtualStrategy* currentStrategy = nullptr;
 
-        // Action rendue par currentStrategy->bestAction() : le FSM en
-        // récupère la propriété (unique_ptr) tant qu'elle est exécutée.
-        std::unique_ptr<VirtualAction> strategyAction;
-
-        // Action actuellement en cours d'exécution (pointe soit sur une
-        // action système ci-dessus, soit sur strategyAction.get()).
+        // Action actuellement en cours d'exécution. Elle appartient à
+        // currentStrategy (bestAction() ou tempAction()) : le FSM ne la
+        // possède pas et ne doit jamais la libérer.
         VirtualAction* currentAction = nullptr;
+
+        /************  BASE DES DURÉES D'ACTION ************/
+        // Enregistre, pour chaque action menée à son terme (FSM_RETURN_DONE),
+        // le temps qu'elle a réellement mis à s'exécuter.
+        ActionDurationDB durationDB{ACTION_DB_PATH};
+        // Instant (_millis()) du début de l'exécution de currentAction.
+        unsigned long actionStartTime = 0;
 };

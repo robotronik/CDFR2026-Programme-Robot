@@ -67,7 +67,7 @@ bool CalibrationAction::successManagement(){
 }
 
 float CalibrationAction::available(){
-    return 0.0f;
+    return duree;
 }
 
 bool CalibrationAction::fullBlock(){

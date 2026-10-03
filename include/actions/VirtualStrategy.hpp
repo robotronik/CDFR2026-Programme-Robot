@@ -27,12 +27,21 @@ protected:
 public:
     virtual ~VirtualStrategy() = default;
 
-    virtual std::unique_ptr<VirtualAction> bestAction() = 0;
+    /* Sélectionne la meilleure action du pool et renvoie un pointeur NON
+       POSSÉDANT vers elle : l'action reste la propriété de la stratégie
+       (elle demeure dans le pool) et peut donc être rejouée plusieurs fois.
+       Une action reste candidate tant que available() >= 0.
+       Renvoie nullptr si aucune action n'est disponible. */
+    virtual VirtualAction* bestAction() = 0;
 
     void stop(){ status = false; }
     void resume(){ status = true; }
 
-    virtual std::unique_ptr<VirtualAction> tempAction() = 0;
+    /* Action de temporisation à exécuter quand la stratégie n'a plus rien à
+       proposer. L'action reste la propriété de la stratégie : le FSM n'en
+       reçoit qu'un pointeur, qu'il ne doit jamais libérer. Peut renvoyer
+       nullptr si la stratégie n'en fournit pas. */
+    virtual VirtualAction* tempAction() = 0;
 
     /* Cherche une action du pool par son nom, sans la retirer.
        Renvoie nullptr si absente. */

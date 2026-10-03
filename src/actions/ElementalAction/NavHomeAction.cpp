@@ -5,7 +5,7 @@
 
 NavHomeAction::NavHomeAction(TableState* tableState, DriveControl* drive){
     nom = "NavHome";
-    duree = 0;
+    duree = 2000.0f;
     this->tableState = tableState;
     this->drive = drive;
 }
@@ -17,6 +17,7 @@ ReturnFSM_t NavHomeAction::run(){
     }
     if (res == NAV_DONE){
         successManagement();
+        done = true;
         return FSM_RETURN_DONE;
     }
     return FSM_RETURN_WORKING;
@@ -39,14 +40,18 @@ bool NavHomeAction::stop(){
 }
 
 void NavHomeAction::reset(){
-    // Rien à réinitialiser pour l'instant
+    done = false;
 }
 
 float NavHomeAction::available(){
+    // Retour déjà effectué : plus candidate tant qu'elle n'a pas été réarmée.
+    if (done) return -1.0f;
     double path_length_mm;
     position_t path[100];
-    pathfind(drive->getPosition(), homePos, path, path_length_mm);
-    return path_length_mm;
+    if(!pathfind(drive->getPosition(), homePos, path, path_length_mm)){
+        return -1.0f;
+    }
+    return duree/(float)value;
 }
 
 bool NavHomeAction::fullBlock(){
