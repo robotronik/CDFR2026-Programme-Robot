@@ -58,8 +58,6 @@ void GoToPositionAction::reset(){
 }
 
 float GoToPositionAction::available(){
-    // Un déplacement est toujours jouable tant que le contexte
-    // (couleur/stratégie) est valide.
     double path_length_mm;
     position_t path[100]; // Assuming a maximum path length
     pathfind(drive->getPosition(), target, path, path_length_mm);

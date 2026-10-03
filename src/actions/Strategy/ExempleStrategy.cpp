@@ -1,4 +1,5 @@
 #include "actions/Strategy/ExempleStrat.hpp"
+#include "actions/VirtualAction.hpp"
 #include "actions/strats.hpp"
 #include "navigation/driveControl.h"
 #include "utils/logger.hpp"
@@ -6,7 +7,8 @@
 #include "actions/ElementalAction/WaitAction.hpp"
 #include "actions/ElementalAction/CalibrationAction.hpp"
 #include "actions/ElementalAction/NavHomeAction.hpp"
-//#include "actions/ElementalAction/GoToPositionAction.hpp"
+#include "actions/ElementalAction/GoToPositionAction.hpp"
+
 /*
     ============================================================
     Actions élémentaires de la stratégie d'exemple
@@ -29,6 +31,11 @@ void ExempleStrat::reset(){
     possible_actions.clear();
     running_actions.clear();
     buildPossibleActions();
+    // L'attente n'est pas une action candidate : on la réserve hors du pool
+    // pour que bestAction() ne puisse pas la consommer. extractAction() la
+    // fait passer du pool au membre waitAction, elle reste donc la propriété
+    // de la stratégie ; le FSM n'en verra jamais qu'un pointeur.
+    waitAction = extractAction("Wait");
     resume(); // la stratégie démarre active (status = true)
 }
 
@@ -44,7 +51,7 @@ void ExempleStrat::reset(){
 void ExempleStrat::buildPossibleActions(){
     check(tableStatus->colorTeam, tableStatus->strategy);
 
-    //position_t objective = {0, 1000, 0}; // exemple, à adapter
+    position_t objective = {0, 0, 0}; // exemple smple on va au centre de la table
 
     auto addAction = [this](float weight, std::unique_ptr<VirtualAction> action){
         std::string key = action->getNom();
@@ -60,11 +67,11 @@ void ExempleStrat::buildPossibleActions(){
     addAction(1.0f, std::make_unique<WaitAction>(400));
     addAction(1.0f, std::make_unique<CalibrationAction>(drive, tableStatus));
     addAction(1.0f, std::make_unique<NavHomeAction>(tableStatus, drive));
-    //addAction(1.0f, std::make_unique<GoToPositionAction>("SecondAction", objective));
+    addAction(1.0f, std::make_unique<GoToPositionAction>("MoveAction", objective, drive));
 }
 
-std::unique_ptr<VirtualAction> ExempleStrat::tempAction(){
-    return extractAction("Wait");
+VirtualAction* ExempleStrat::tempAction(){
+    return waitAction.get();
 }
 
 std::unique_ptr<VirtualAction> ExempleStrat::bestAction(){

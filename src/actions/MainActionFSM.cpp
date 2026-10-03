@@ -22,8 +22,10 @@ ActionFSM::~ActionFSM(){}
 void ActionFSM::setStrategy(VirtualStrategy* strategy){
     currentStrategy = strategy;
     // On abandonne toute action de stratégie en cours issue de l'ancienne
-    // stratégie : elle n'a plus de sens une fois la stratégie changée.
+    // stratégie : elle n'a plus de sens (et l'action de temporisation
+    // appartient à l'ancienne stratégie) une fois la stratégie changée.
     strategyAction.reset();
+    currentAction = nullptr;
 }
 
 void ActionFSM::Reset(){
@@ -45,10 +47,17 @@ void ActionFSM::Reset(){
 /*
     Boucle principale : on récupère la meilleure action à exécuter
     (si aucune n'est en cours) puis on la lance.
+    TODO: une seule action à la fois pour l'instant une parallélisation est envisageable à réfléchir
 */
 bool ActionFSM::RunFSM(){
-    if (currentAction == nullptr || currentStrategy->tempAction().get() == currentAction){
+    if (currentAction == nullptr || currentAction == currentStrategy->tempAction()){
         currentAction = SetBestAction();
+    }
+
+    if (currentAction == nullptr){
+        // Aucune action à exécuter : pas de stratégie branchée, ou pas
+        // même d'action de temporisation disponible.
+        return false;
     }
 
     ReturnFSM_t ret = currentAction->run();
@@ -66,13 +75,8 @@ bool ActionFSM::RunFSM(){
 }
 
 /*
-    Plus l'action est prioritaire plus elle apparaît tôt dans le code.
-        Ex: le retour êtant prioritaire sur toutes les autres actions on fera toujours le retour si les conditions sont remplies
-    Priorités actuelles:
-        - Retour
-        - Calibration
-        - Meilleure action de la stratégie courante (currentStrategy)
-        - Attente (si rien d'autre n'est disponible)
+    Wrapper pour déterminer la meilleure action à exécuter
+    Permet d'ajouter des modes comme endless mode
 */
 VirtualAction* ActionFSM::SetBestAction(){
     //ENDLESSMODE
@@ -93,5 +97,6 @@ VirtualAction* ActionFSM::SetBestAction(){
     }
 
     /************************** SINON, ON ATTEND *************************/
-    return nullptr;
+    if (currentStrategy == nullptr) return nullptr;
+    return currentStrategy->tempAction();
 }

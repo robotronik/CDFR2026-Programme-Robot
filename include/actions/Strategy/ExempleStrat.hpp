@@ -33,7 +33,12 @@ public:
         aucune action du pool n'est disponible.
     */
     std::unique_ptr<VirtualAction> bestAction() override;
-    std::unique_ptr<VirtualAction> tempAction() override;
+    /*
+        Action de temporisation ("attente") à exécuter quand aucune action
+        du pool n'est disponible. La stratégie en garde la propriété : le
+        FSM n'en reçoit qu'un pointeur, il ne doit jamais la libérer.
+    */
+    VirtualAction* tempAction() override;
 
     /* Ré-remplit le pool d'actions possibles (à appeler par exemple au
        Reset() du FSM, ou quand la stratégie a écoulé toutes ses actions
@@ -43,6 +48,10 @@ public:
 private:
     // (Re)construit le pool possible_actions pour la stratégie courante
     void buildPossibleActions();
+    // Action de temporisation possédée par la stratégie : elle est réservée
+    // hors du pool (cf. reset()) et n'en sort jamais, le FSM n'en obtient
+    // qu'un pointeur via tempAction().
+    std::unique_ptr<VirtualAction> waitAction;
     DriveControl* drive;
     TableState* tableStatus;
 };

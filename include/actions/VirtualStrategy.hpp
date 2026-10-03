@@ -32,7 +32,11 @@ public:
     void stop(){ status = false; }
     void resume(){ status = true; }
 
-    virtual std::unique_ptr<VirtualAction> tempAction() = 0;
+    /* Action de temporisation à exécuter quand la stratégie n'a plus rien à
+       proposer. L'action reste la propriété de la stratégie : le FSM n'en
+       reçoit qu'un pointeur, qu'il ne doit jamais libérer. Peut renvoyer
+       nullptr si la stratégie n'en fournit pas. */
+    virtual VirtualAction* tempAction() = 0;
 
     /* Cherche une action du pool par son nom, sans la retirer.
        Renvoie nullptr si absente. */
