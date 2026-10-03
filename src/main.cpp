@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <thread>
@@ -50,6 +49,9 @@ bool initState;
 bool motorUpFirst = true;
 
 std::thread api_server_thread;
+
+// REST API
+RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &lidar, &arucoCam1);
 
 // Prototypes
 int StartSequence();
@@ -300,7 +302,7 @@ int StartSequence()
 
     // Start the api server in a separate thread
     api_server_thread = std::thread([&]()
-                                    { StartAPIServer(); });
+                                    { api.start(); });
 
 #ifdef TEST_API_ONLY
     LOG_GREEN_INFO("Running in API test mode only");
@@ -364,7 +366,7 @@ void EndSequence()
 #endif // EMULATE_I2C
 
     // Stop the API server
-    StopAPIServer();
+    api.stop();
     api_server_thread.join();
 
     LOG_GREEN_INFO("Stopped");

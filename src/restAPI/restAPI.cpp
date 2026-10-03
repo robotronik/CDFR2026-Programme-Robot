@@ -8,8 +8,10 @@
 #include <net/if.h>
 
 #include "utils/logger.hpp"
-#include "main.hpp" //for static variables
+#include "defs/mainState.hpp"
 #include "defs/tableState.hpp"
+#include "i2c/Arduino.hpp"
+#include "lidar/Lidar.hpp"
 #include "lidar/lidarAnalize.h" //for static variable
 #include "navigation/navigation.h"
 #include "navigation/astar.h" //for static variable
@@ -22,6 +24,22 @@
 using json = nlohmann::json;
 
 #define API_PORT 80
+
+RestAPI::RestAPI(main_State_t* currentState,
+                 main_State_t* nextState,
+                 DriveControl* drive,
+                 TableState* tableStatus,
+                 Arduino* arduino,
+                 Lidar* lidar,
+                 ArucoCam* arucoCam)
+    : currentState(currentState),
+      nextState(nextState),
+      drive(drive),
+      tableStatus(tableStatus),
+      arduino(arduino),
+      lidar(lidar),
+      arucoCam(arucoCam){
+}
 
 crow::response readHtmlFile(const std::string& path);
 std::string getContentType(const std::string& path);
@@ -49,58 +67,58 @@ static std::vector<std::string> getLocalIPv4Addresses(){
     return ips;
 }
 
-crow::SimpleApp app;
+static crow::SimpleApp app;
 
-void StartAPIServer(){
+void RestAPI::start(){
     LOG_INFO("Starting API Server on port ", API_PORT);
 
     // ------------------------------- HTML Pages -------------------------------
 
     // Define a simple route for the root endpoint
     CROW_ROUTE(app, "/")
-    ([](){
+    ([this](){
         return readHtmlFile("html/index.html");
     });
 
     // Define a simple route for the display page
     CROW_ROUTE(app, "/display")
-    ([](){
+    ([this](){
         return readHtmlFile("html/display.html");
     });
 
     // Define a simple route for the lidar page
     CROW_ROUTE(app, "/lidar")
-    ([](){
+    ([this](){
         return readHtmlFile("html/lidar.html");
     });
 
     // Define a simple route for the lidar page
     CROW_ROUTE(app, "/logs")
-    ([](){
+    ([this](){
         return readHtmlFile("html/logs.html");
     });
 
     // Define a simple route for the navbar
     CROW_ROUTE(app, "/navbar.html")
-    ([](){
+    ([this](){
         return readHtmlFile("html/navbar.html");
     });
 
     // Define a simple route for robot page
     CROW_ROUTE(app, "/robot")
-    ([](){
+    ([this](){
         return readHtmlFile("html/robot.html");
     });
 
     // Define a simple route for the control page
     CROW_ROUTE(app, "/control")
-    ([](){
+    ([this](){
         return readHtmlFile("html/control.html");
     });
 
     // Define a simple route for the camera page
     CROW_ROUTE(app, "/camera")
-    ([](){
+    ([this](){
         return readHtmlFile("html/camera.html");
     });
 
@@ -108,52 +126,52 @@ void StartAPIServer(){
 
     // Define a route for a simple GET request that returns the status
     CROW_ROUTE(app, "/get_status")
-    ([](){
+    ([this](){
         json response;
-        response["status"] = currentState;
+        response["status"] = *currentState;
 
         return crow::response(response.dump(4));
     });
 
     // Define a route for a simple GET request that returns the position
     CROW_ROUTE(app, "/get_pos")
-    ([](){
+    ([this](){
         json response;
-        response["pos"] = (position_t)drive.position;
+        response["pos"] = (position_t)drive->position;
 
         return crow::response(response.dump(4));
     });
 
     // Define a route for a simple GET request that returns the table status
     CROW_ROUTE(app, "/get_table")
-    ([](){
+    ([this](){
         json response;
-        response["table"] = tableStatus;
-        response["score"] = tableStatus.getScore();
+        response["table"] = *tableStatus;
+        response["score"] = tableStatus->getScore();
         return crow::response(response.dump(4));
     });
 
     // Define a route for a simple GET request that returns all of the information
     CROW_ROUTE(app, "/get_global")
-    ([](){
+    ([this](){
         json response;
-        response["status"] = currentState;
-        response["table"] = tableStatus;
-        response["score"] = tableStatus.getScore();
+        response["status"] = *currentState;
+        response["table"] = *tableStatus;
+        response["score"] = tableStatus->getScore();
         
         json limitedAbsoluteLidarData = json::array();
 
-        // Add the first lidar.count elements to the new array
-        for (int i = 0; i < lidar.count; ++i) {
-            limitedAbsoluteLidarData.push_back({{"x", lidar.data[i].x}, {"y", lidar.data[i].y}});
+        // Add the first lidar->count elements to the new array
+        for (int i = 0; i < lidar->count; ++i) {
+            limitedAbsoluteLidarData.push_back({{"x", lidar->data[i].x}, {"y", lidar->data[i].y}});
         }
         response["lidar"] = limitedAbsoluteLidarData;
         json current_navigation_path;
         navigation.pathJson(current_navigation_path);
         response["navigation"] = current_navigation_path;
         
-        response["target_pos"] = (position_t)drive.target;
-        response["pos"] = (position_t)drive.position;
+        response["target_pos"] = (position_t)drive->target;
+        response["pos"] = (position_t)drive->position;
         // Costmap
         response["costmap"] = astar_get_costmap_json();
 
@@ -162,14 +180,14 @@ void StartAPIServer(){
 
     // Define a route for an simple GET request that returns the lidar data
     CROW_ROUTE(app, "/get_lidar")
-    ([](){
+    ([this](){
         json response;
         
         json limitedLidarData = json::array();
 
         // Add the first lidar_count elements to the new array
-        for (int i = 0; i < lidar.count; ++i) {
-            limitedLidarData.push_back(lidar.data[i]);
+        for (int i = 0; i < lidar->count; ++i) {
+            limitedLidarData.push_back(lidar->data[i]);
         }
         response["data"] = limitedLidarData;
         return crow::response(response.dump());
@@ -177,20 +195,20 @@ void StartAPIServer(){
 
     // Define a route for an simple GET request that returns the general data
     CROW_ROUTE(app, "/get_robot")
-    ([](){
+    ([this](){
         json response;
-        response["status"] = currentState;
-        response["team"] = tableStatus.colorTeam;
-        response["score"] = tableStatus.getScore();
-        response["time"] = (tableStatus.startTime == 0) ? 0 : (_millis() - tableStatus.startTime);
-        response["strategy"] = tableStatus.strategy;
+        response["status"] = *currentState;
+        response["team"] = tableStatus->colorTeam;
+        response["score"] = tableStatus->getScore();
+        response["time"] = (tableStatus->startTime == 0) ? 0 : (_millis() - tableStatus->startTime);
+        response["strategy"] = tableStatus->strategy;
         response["runid"] = log_main_get_id();
         return crow::response(response.dump(4));
     });
 
     // Define a route to return the local IP address(es)
     CROW_ROUTE(app, "/get_ip")
-    ([](){
+    ([this](){
         json response;
         auto ips = getLocalIPv4Addresses();
         if (ips.empty()){
@@ -205,7 +223,7 @@ void StartAPIServer(){
 
 
     CROW_ROUTE(app, "/get_log")
-    ([](){
+    ([this](){
         //std::string test = "\x1b[1;31mTESTTAPI\x1b[0m\x1b[2;37mFaint Gray\x1b[0m\x1b[3;34mItalic Blue\x1b[0m\x1b[4;32mUnderlined Green\x1b[0m\x1b[7;30;47mReverse Black on White\x1b[0m\n\ntest";
         std::string test = log_main_get_screen();
         json response;
@@ -215,19 +233,19 @@ void StartAPIServer(){
 
     // Define a route for an simple GET request that returns all of the information from the arduino
     CROW_ROUTE(app, "/get_arduino")
-    ([](){
+    ([this](){
         json response;
         response["message"] = "Failure to get Arduino data!";
         json stepper_pos = json::array();
         for (int i = 1; i <= 4; i++){
             int32_t val ;
-            if (!arduino.getStepper(val, i)) return crow::response(400, response.dump(4));
+            if (!arduino->getStepper(val, i)) return crow::response(400, response.dump(4));
             stepper_pos.push_back({i, val});
         }
         json sensor_state = json::array();
         for (int i = 1; i <= 6; i++){
             bool val ;
-            if (!arduino.readSensor(i, val)) return crow::response(400, response.dump(4));
+            if (!arduino->readSensor(i, val)) return crow::response(400, response.dump(4));
             sensor_state.push_back({i, val});
         }
         response["steppers_pos"] = stepper_pos;
@@ -237,32 +255,32 @@ void StartAPIServer(){
     });
 
     CROW_ROUTE(app, "/get_costmap")
-    ([](){
+    ([this](){
         json response;
         response["costmap"] = astar_get_costmap_json();
         return crow::response(response.dump());
     });
 
     CROW_ROUTE(app, "/get_isolated")
-    ([](){
+    ([this](){
         json response;
-        response["object"] = arucoCam1.getBestIsolatedObject_json();
+        response["object"] = arucoCam->getBestIsolatedObject_json();
         return crow::response(response.dump());
     });
 
     CROW_ROUTE(app, "/get_blockPosition")
-    ([](){
+    ([this](){
         json response;
-        response["object"] = arucoCam1.getObjectPosition_json();
+        response["object"] = arucoCam->getObjectPosition_json();
         crow::response res(response.dump());
         res.set_header("Content-Type", "application/json");
         return res;
     });
 
     CROW_ROUTE(app, "/position")
-    ([](){
+    ([this](){
         json response;
-        response["object"] = arucoCam1.getRobotPosition_json();
+        response["object"] = arucoCam->getRobotPosition_json();
         crow::response res(response.dump());
         res.set_header("Content-Type", "application/json");
         return res;
@@ -271,7 +289,7 @@ void StartAPIServer(){
     // ------------------------------- POST Routes -------------------------------
 
     // Define a route for a POST request that accepts JSON data and responds with a message
-    CROW_ROUTE(app, "/post_status").methods(crow::HTTPMethod::POST)([](const crow::request& req){
+    CROW_ROUTE(app, "/post_status").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         // Parse the incoming JSON
         LOG_INFO("Request body is " + req.body);
         auto req_data = json::parse(req.body);
@@ -289,7 +307,7 @@ void StartAPIServer(){
         }
 
         // Apply the post method
-        nextState = req_state;
+        *nextState = req_state;
 
         // Create a response JSON
         json response;
@@ -300,7 +318,7 @@ void StartAPIServer(){
     });
 
     // Define a route for a POST request that accepts a color as JSON data (0:None, 1:Blue, 2:Yellow)
-    CROW_ROUTE(app, "/set_color").methods(crow::HTTPMethod::POST)([](const crow::request& req){
+    CROW_ROUTE(app, "/set_color").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         auto req_data = json::parse(req.body);
         colorTeam_t req_color = req_data["color"];
 
@@ -309,7 +327,7 @@ void StartAPIServer(){
             response["message"] = "Invalid Request Color";
             return crow::response(400, response.dump(4));
         }
-        if (currentState == RUN){
+        if (*currentState == RUN){
             json response;
             response["message"] = "Cannot change the color in the current state";
             return crow::response(400, response.dump(4));
@@ -323,7 +341,7 @@ void StartAPIServer(){
     });
 
     // Define a route for a POST request that accepts a strategy to apply
-    CROW_ROUTE(app, "/set_strat").methods(crow::HTTPMethod::POST)([](const crow::request& req){
+    CROW_ROUTE(app, "/set_strat").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         auto req_data = json::parse(req.body);
         int req_strat = req_data["strat"];
 
@@ -332,7 +350,7 @@ void StartAPIServer(){
             response["message"] = "Invalid Strategy Request";
             return crow::response(400, response.dump(4));
         }
-        if (currentState == RUN){
+        if (*currentState == RUN){
             json response;
             response["message"] = "Cannot change the strategy in the current state";
             return crow::response(400, response.dump(4));
@@ -346,15 +364,15 @@ void StartAPIServer(){
     });
 
     // Define a route for a POST request that sets the manual control mode
-    CROW_ROUTE(app, "/set_manual_control_mode").methods(crow::HTTPMethod::POST)([](const crow::request& req){
+    CROW_ROUTE(app, "/set_manual_control_mode").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         auto req_data = json::parse(req.body);
         bool req_value = req_data["value"];
-        if(req_value && currentState != WAITSTART){
+        if(req_value && *currentState != WAITSTART){
             json response;
             response["message"] = "Cannot enter manual mode when not in WAITSTART";
             return crow::response(400, response.dump(4));
         }
-        else if (!req_value && currentState != MANUAL){
+        else if (!req_value && *currentState != MANUAL){
             json response;
             response["message"] = "Cannot exit manual mode when not in MANUAL";
             return crow::response(400, response.dump(4));
@@ -369,30 +387,30 @@ void StartAPIServer(){
     });
 
     // Define a route for a POST request that sets the robot position coordinates
-    CROW_ROUTE(app, "/set_coordinates").methods(crow::HTTPMethod::POST)([](const crow::request& req){
+    CROW_ROUTE(app, "/set_coordinates").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         auto req_data = json::parse(req.body);
 
-        if (currentState != MANUAL){
+        if (*currentState != MANUAL){
             json response;
             response["message"] = "Cannot change the coordinates when not in MANUAL mode";
             return crow::response(400, response.dump(4));
         }
 
-        double req_x_value = drive.position.x;
+        double req_x_value = drive->position.x;
         if (req_data.contains("x"))
             req_x_value = req_data["x"];
             
-        double req_y_value = drive.position.y;
+        double req_y_value = drive->position.y;
         if (req_data.contains("y"))
             req_y_value = req_data["y"];
 
-        double req_a_value = drive.position.a;
+        double req_a_value = drive->position.a;
         if (req_data.contains("a"))
             req_a_value = req_data["a"];
 
         //Apply the values
         position_t pos = {req_x_value, req_y_value, req_a_value};
-        drive.setCoordinates(pos);
+        drive->setCoordinates(pos);
         navigation.goTo(pos, false);
 
         json response;
@@ -401,24 +419,24 @@ void StartAPIServer(){
     });
 
     // Define a route for a POST request that sets a target position
-    CROW_ROUTE(app, "/set_target_coordinates").methods(crow::HTTPMethod::POST)([](const crow::request& req){
+    CROW_ROUTE(app, "/set_target_coordinates").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         auto req_data = json::parse(req.body);
 
-        if (currentState != MANUAL){
+        if (*currentState != MANUAL){
             json response;
             response["message"] = "Cannot change the coordinates when not in MANUAL mode";
             return crow::response(400, response.dump(4));
         }
 
-        double req_x_value = drive.position.x;
+        double req_x_value = drive->position.x;
         if (req_data.contains("x"))
             req_x_value = req_data["x"];
             
-        double req_y_value = drive.position.y;
+        double req_y_value = drive->position.y;
         if (req_data.contains("y"))
             req_y_value = req_data["y"];
 
-        double req_a_value = drive.position.a;
+        double req_a_value = drive->position.a;
 
         // Apply the values
         if (req_data.contains("a")){
@@ -439,24 +457,24 @@ void StartAPIServer(){
     });
 
     // Define a route for a POST request that sets a target position using Astarts
-    CROW_ROUTE(app, "/set_target_coordinates_Astart").methods(crow::HTTPMethod::POST)([](const crow::request& req){
+    CROW_ROUTE(app, "/set_target_coordinates_Astart").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         auto req_data = json::parse(req.body);
 
-        if (currentState != MANUAL){
+        if (*currentState != MANUAL){
             json response;
             response["message"] = "Cannot change the coordinates when not in MANUAL mode";
             return crow::response(400, response.dump(4));
         }
 
-        double req_x_value = drive.position.x;
+        double req_x_value = drive->position.x;
         if (req_data.contains("x"))
             req_x_value = req_data["x"];
             
-        double req_y_value = drive.position.y;
+        double req_y_value = drive->position.y;
         if (req_data.contains("y"))
             req_y_value = req_data["y"];
 
-        double req_a_value = drive.position.a;
+        double req_a_value = drive->position.a;
 
         // Apply the values
         if (req_data.contains("a")){
@@ -477,10 +495,10 @@ void StartAPIServer(){
     });
 
     // Define a route for a POST request that move by a certain amount in mm
-    CROW_ROUTE(app, "/set_move").methods(crow::HTTPMethod::POST)([](const crow::request& req){
+    CROW_ROUTE(app, "/set_move").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         auto req_data = json::parse(req.body);
 
-        if (currentState != MANUAL){
+        if (*currentState != MANUAL){
             json response;
             response["message"] = "Cannot move when not in MANUAL mode";
             return crow::response(400, response.dump(4));
@@ -488,13 +506,13 @@ void StartAPIServer(){
 
         double req_value = req_data["value"];
 
-        double newXvalue = drive.position.x + cos(drive.position.a * DEG_TO_RAD) * req_value;
-        double newYvalue = drive.position.y + sin(drive.position.a * DEG_TO_RAD) * req_value;
+        double newXvalue = drive->position.x + cos(drive->position.a * DEG_TO_RAD) * req_value;
+        double newYvalue = drive->position.y + sin(drive->position.a * DEG_TO_RAD) * req_value;
 
         LOG_INFO("Manual ctrl : Requested set_move, value=", req_value);
 
         // Apply the value
-        position_t pos = {newXvalue, newYvalue, drive.position.a};
+        position_t pos = {newXvalue, newYvalue, drive->position.a};
         navigation.goTo(pos);
 
         json response;
@@ -503,10 +521,10 @@ void StartAPIServer(){
     });
 
     // Define a route for a POST request to rotate by a certain amount in degrees
-    CROW_ROUTE(app, "/set_rotate").methods(crow::HTTPMethod::POST)([](const crow::request& req){
+    CROW_ROUTE(app, "/set_rotate").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         auto req_data = json::parse(req.body);
 
-        if (currentState != MANUAL){
+        if (*currentState != MANUAL){
             json response;
             response["message"] = "Cannot rotate when not in MANUAL mode";
             return crow::response(400, response.dump(4));
@@ -516,7 +534,7 @@ void StartAPIServer(){
 
         // Apply the value
         // TODO
-        position_t pos = {drive.position.x, drive.position.y, drive.position.a + req_value};
+        position_t pos = {drive->position.x, drive->position.y, drive->position.a + req_value};
         navigation.goTo(pos);
 
         LOG_INFO("Manual ctrl : Requested set_rotate, value=", req_value);
@@ -527,10 +545,10 @@ void StartAPIServer(){
     });
 
     // Define a route for a POST request to rotate a servo to a certain value
-    CROW_ROUTE(app, "/set_servo").methods(crow::HTTPMethod::POST)([](const crow::request& req){
+    CROW_ROUTE(app, "/set_servo").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         auto req_data = json::parse(req.body);
 
-        if (currentState != MANUAL){
+        if (*currentState != MANUAL){
             json response;
             response["message"] = "Cannot rotate servo when not in MANUAL mode";
             return crow::response(400, response.dump(4));
@@ -542,9 +560,9 @@ void StartAPIServer(){
 
         //Apply the value
         if (req_speed != 0)
-            arduino.moveServoSpeed(req_id, req_value, req_speed);
+            arduino->moveServoSpeed(req_id, req_value, req_speed);
         else
-            arduino.moveServo(req_id, req_value);
+            arduino->moveServo(req_id, req_value);
 
         json response;
         response["message"] = "Successfull";
@@ -552,10 +570,10 @@ void StartAPIServer(){
     });
 
     // Define a route for a POST request to rotate a stepper to a certain value
-    CROW_ROUTE(app, "/set_stepper").methods(crow::HTTPMethod::POST)([](const crow::request& req){
+    CROW_ROUTE(app, "/set_stepper").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         auto req_data = json::parse(req.body);
 
-        if (currentState != MANUAL){
+        if (*currentState != MANUAL){
             json response;
             response["message"] = "Cannot rotate stepper when not in MANUAL mode";
             return crow::response(400, response.dump(4));
@@ -565,7 +583,7 @@ void StartAPIServer(){
         int req_id = req_data["id"];
 
         //Apply the value
-        arduino.moveStepper(req_value, req_id);
+        arduino->moveStepper(req_value, req_id);
 
         json response;
         response["message"] = "Successfull";
@@ -573,10 +591,10 @@ void StartAPIServer(){
     });
 
     // Define a route for a PORT request to test action functions
-    CROW_ROUTE(app, "/test_action").methods(crow::HTTPMethod::POST)([](const crow::request& req){
+    CROW_ROUTE(app, "/test_action").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         auto req_data = json::parse(req.body);
 
-        if (currentState != MANUAL){
+        if (*currentState != MANUAL){
             json response;
             response["message"] = "Cannot test actions when not in MANUAL mode";
             return crow::response(400, response.dump(4));
@@ -606,14 +624,14 @@ void StartAPIServer(){
     });
 
     // Define a route for a stop request
-    CROW_ROUTE(app, "/stop").methods(crow::HTTPMethod::POST)([](const crow::request& req){
+    CROW_ROUTE(app, "/stop").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
 
         json response;
         response["message"] = "Successfull";
 
         // Apply the value
         //exit_requested = true;
-        nextState = FIN;
+        *nextState = FIN;
 
         return crow::response(response.dump(4));
     });
@@ -622,7 +640,7 @@ void StartAPIServer(){
 
     // Route for serving SVG and PNG files
     CROW_ROUTE(app, "/assets/<string>")
-    .methods(crow::HTTPMethod::GET)([](const std::string& filename) {
+    .methods(crow::HTTPMethod::GET)([this](const std::string& filename) {
         std::ifstream file("html/assets/" + filename, std::ios::binary);
         
         if (!file) {
@@ -639,18 +657,18 @@ void StartAPIServer(){
 
     // Route for serving css files
     CROW_ROUTE(app, "/css/<string>")
-    .methods(crow::HTTPMethod::GET)([](const std::string& filename) {
+    .methods(crow::HTTPMethod::GET)([this](const std::string& filename) {
         return readHtmlFile("html/css/" + filename);
     });
     // Route for serving js files
     CROW_ROUTE(app, "/js/<string>")
-    .methods(crow::HTTPMethod::GET)([](const std::string& filename) {
+    .methods(crow::HTTPMethod::GET)([this](const std::string& filename) {
         return readHtmlFile("html/js/" + filename);
     });
 
 
     // Route for serving the favicon ico files
-    CROW_ROUTE(app, "/favicon.ico") ([](){
+    CROW_ROUTE(app, "/favicon.ico") ([this](){
         std::ifstream file("html/favicon.ico", std::ios::binary);
         if (!file) {
             return crow::response(404, "File not found");
@@ -670,7 +688,7 @@ void StartAPIServer(){
     app.signal_clear().port(API_PORT).concurrency(2).run();
 }
 
-void StopAPIServer(){
+void RestAPI::stop(){
     app.stop();
     LOG_INFO("Stopped API Server");
 }
