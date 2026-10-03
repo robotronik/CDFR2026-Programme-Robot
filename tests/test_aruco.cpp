@@ -147,16 +147,22 @@ bool test_aruco_pose() {
 }
 
 // Runs detection and pose estimation on captures from the virtual camera of
-// Robotronik_CDFR_Sim_2027, using the camera's synthetic calibration. The
-// capture filenames record the true pose, so the expected tag id is known.
+// Robotronik_CDFR_Sim_2027, using the camera's synthetic calibration. The tag
+// id and the camera's true field pose (mm, yaw in degrees) for each capture
+// come from the simulation's own filenames:
+//   capture_22_x586.6_y-810.1_yaw-109.2_pitch45.0 -> tag 22
+//   capture_82_x-310.9_y706.4_yaw-236.9_pitch45.0 -> tag 21
 bool test_aruco_sim_camera() {
     struct SampleCase {
         const char* image;
         int expectedId;
+        double truthX;
+        double truthY;
+        double truthYaw;
     };
     static const SampleCase kCases[] = {
-        {"sim_capture_22_tag22.png", 22},
-        {"sim_capture_82_tag21.png", 21},
+        {"sim_capture_22_tag22.png", 22, 586.6, -810.1, -109.2},
+        {"sim_capture_82_tag21.png", 21, -310.9, 706.4, -236.9},
     };
 
     const std::string calibrationPath = findCalibrationPath("SIM_VFOV70_1280_800.yaml");
@@ -196,6 +202,13 @@ bool test_aruco_sim_camera() {
             LOG_ERROR("ArUco sim test - tag ", testCase.expectedId, " pose is invalid");
             return false;
         }
+
+        LOG_INFO("ArUco sim test - tag ", testCase.expectedId, " in ", testCase.image,
+                 " : aruco position (x, y, z) = (",
+                 marker->tvec[0], ", ", marker->tvec[1], ", ", marker->tvec[2], ") mm",
+                 " rvec = (", marker->rvec[0], ", ", marker->rvec[1], ", ", marker->rvec[2], ")",
+                 " | real position x = ", testCase.truthX, " mm, y = ", testCase.truthY,
+                 " mm, yaw = ", testCase.truthYaw, " deg");
     }
 
     return true;
