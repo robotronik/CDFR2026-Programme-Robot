@@ -7,7 +7,7 @@ GoToPositionAction::GoToPositionAction(const std::string& name, position_t targe
     : target(target), drive(drive), moving(false)
 {
     nom = name;
-    duree = 2000; // durée estimée, à ajuster
+    duree = 20; // durée estimée, à ajuster
 }
 
 ReturnFSM_t GoToPositionAction::run(){
