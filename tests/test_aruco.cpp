@@ -7,6 +7,7 @@
 #include <opencv2/imgcodecs.hpp>
 
 #include "vision/ArucoDetector.hpp"
+#include "vision/ArucoLocalizer.hpp"
 #include "utils/logger.hpp"
 
 namespace {
@@ -158,6 +159,78 @@ bool test_aruco_sim_camera() {
     const cv::Mat blank(480, 640, CV_8UC1, cv::Scalar(255));
     if (!detector.detect(blank).empty()) {
         LOG_ERROR("ArUco sim test - unexpected detection on a blank frame");
+        return false;
+    }
+
+    return true;
+}
+
+// ArucoLocalizer wraps the detector and reports the camera's field position from
+// the known landmark tags, or says it could not find one.
+bool test_aruco_localizer() {
+    struct SampleCase {
+        const char* image;
+        double cameraFieldX;
+        double cameraFieldY;
+        double headingDeg;
+    };
+    static const SampleCase kCases[] = {
+        {"sim_capture_22_tag22.png", 586.6, -810.1, -109.2},
+        {"sim_capture_82_tag21.png", -310.9, 706.4, -236.9},
+    };
+
+    const std::string calibrationPath = findCalibrationPath("SIM_VFOV70_1280_800.yaml");
+    if (calibrationPath.empty()) {
+        LOG_ERROR("ArUco localizer test - missing virtual camera calibration");
+        return false;
+    }
+
+    vision::ArucoLocalizer localizer;
+    if (!localizer.loadCalibration(calibrationPath)) {
+        LOG_ERROR("ArUco localizer test - failed to load ", calibrationPath);
+        return false;
+    }
+
+    for (const SampleCase& testCase : kCases) {
+        const std::string imagePath = findImagePath(testCase.image);
+        if (imagePath.empty()) {
+            LOG_ERROR("ArUco localizer test - missing capture ", testCase.image);
+            return false;
+        }
+
+        const cv::Mat image = cv::imread(imagePath, cv::IMREAD_COLOR);
+        vision::CameraPosition position;
+        if (!localizer.locate(image, position)) {
+            LOG_ERROR("ArUco localizer test - no position found in ", imagePath);
+            return false;
+        }
+
+        const double positionError = std::hypot(position.x - testCase.cameraFieldX,
+                                                position.y - testCase.cameraFieldY);
+        const double headingError =
+            std::fabs(std::remainder(position.heading - testCase.headingDeg, 360.0));
+
+        LOG_INFO("ArUco localizer test - ", testCase.image, ": camera (",
+                 position.x, ", ", position.y, ") mm, heading ", position.heading,
+                 " deg | expected (", testCase.cameraFieldX, ", ", testCase.cameraFieldY,
+                 ") mm, heading ", testCase.headingDeg, " deg | error ", positionError,
+                 " mm, ", headingError, " deg");
+
+        if (positionError > 15.0) {
+            LOG_ERROR("ArUco localizer test - position error too large: ", positionError, " mm");
+            return false;
+        }
+        if (headingError > 5.0) {
+            LOG_ERROR("ArUco localizer test - heading error too large: ", headingError, " deg");
+            return false;
+        }
+    }
+
+    // A frame with no known tag must report that no position was found.
+    const cv::Mat blank(480, 640, CV_8UC1, cv::Scalar(255));
+    vision::CameraPosition none;
+    if (localizer.locate(blank, none)) {
+        LOG_ERROR("ArUco localizer test - reported a position for a blank frame");
         return false;
     }
 

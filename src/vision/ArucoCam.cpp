@@ -10,6 +10,7 @@
 
 #include "vision/ArucoCam.hpp"
 #include "vision/ArucoDetector.hpp"
+#include "vision/ArucoLocalizer.hpp"
 #include "utils/logger.hpp"
 
 #define SCAN_FAIL_FRAMES_NUM 2
@@ -174,12 +175,11 @@ bool ArucoCam::processDetections(const std::vector<vision::DetectionResult>& det
 
         if (isCalibrationTag) {
             const CalibrationTag& tag = kCalibrationTags.at(detection.id);
-            const double x = tag.globalX - cameraPosition[1];
-            const double y = tag.globalY + cameraPosition[0];
-            const double z = cameraPosition[2];
-            const double a = normalizeAngle(-yaw + 180.0);
-            addAveragePosition(x, y, z, a);
-            found = true;
+            vision::CameraPosition position;
+            if (vision::ArucoLocalizer::cameraPositionForTag(detection, tag.globalX, tag.globalY, position)) {
+                addAveragePosition(position.x, position.y, position.z, position.heading);
+                found = true;
+            }
         }
 
         if (isGameObject) {
