@@ -27,7 +27,9 @@ jobs:
         sudo apt-get install -y libopencv-dev
         test -f /usr/lib/*/cmake/opencv4/OpenCVConfig.cmake \
           || { echo "OpenCVConfig.cmake not found after install"; exit 1; }
-        ls /usr/lib/*/cmake/opencv4/
+        echo "cmake binaries:"; which -a cmake
+        cmake --version
+        echo "opencv config dirs:"; ls -d /usr/lib/*/cmake/opencv4
 
     - name: Clone CDFR2026-Program-DriveControl
       run: git clone https://github.com/robotronik/CDFR2026-Program-DriveControl.git ../CDFR2026-Program-DriveControl

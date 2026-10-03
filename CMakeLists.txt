@@ -83,13 +83,22 @@ target_include_directories(robot_core PUBLIC
 # SQLite : base des durées d'action (cf. src/db/ActionDurationDB.cpp)
 find_package(SQLite3 REQUIRED)
 
-# OpenCV : détection native des marqueurs ArUco (cf. src/vision/ArucoDetector.cpp)
-# Le config CMake est cherché explicitement sous le chemin multiarch Debian/Ubuntu
-# (lib/<arch>/cmake/opencv4), que la recherche par défaut ne couvre pas toujours.
-find_package(OpenCV REQUIRED CONFIG
-    HINTS /usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}/cmake/opencv4
-          /usr/lib/cmake/opencv4
-          /usr/local/lib/cmake/opencv4)
+# OpenCV : détection native des marqueurs ArUco (cf. src/vision/ArucoDetector.cpp).
+# Sur Debian/Ubuntu le config vit sous lib/<arch>/cmake/opencv4, que la recherche
+# par défaut de CMake ne résout pas toujours (notamment sur les runners CI) : on
+# le localise explicitement pour renseigner OpenCV_DIR.
+if(NOT DEFINED OpenCV_DIR AND NOT CMAKE_CROSSCOMPILING)
+    file(GLOB _opencv_config_dirs
+        "/usr/lib/*/cmake/opencv4"
+        "/usr/lib/cmake/opencv4"
+        "/usr/local/lib/cmake/opencv4")
+    if(_opencv_config_dirs)
+        list(GET _opencv_config_dirs 0 _opencv_config_dir)
+        set(OpenCV_DIR "${_opencv_config_dir}" CACHE PATH "Répertoire du config CMake OpenCV")
+        message(STATUS "OpenCV config trouvé dans ${OpenCV_DIR}")
+    endif()
+endif()
+find_package(OpenCV REQUIRED CONFIG)
 target_include_directories(robot_core PUBLIC ${OpenCV_INCLUDE_DIRS})
 
 target_link_directories(robot_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rplidar_sdk/output/Linux/Release)
