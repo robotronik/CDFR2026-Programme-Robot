@@ -32,13 +32,21 @@ sudo apt-get install ccache mold
 For ARM (Raspberry Pi) compilation, install:
 
 ```bash
-sudo apt-get install g++-aarch64-linux-gnu
-sudo apt install sqlite3
+sudo apt-get install g++-aarch64-linux-gnu sqlite3
 ```
 
-Cross-compiling for ARM also requires the OpenCV development packages for the
-`arm64` architecture (e.g. `libopencv-dev:arm64` with the `arm64` foreign
-architecture enabled).
+Cross-compiling for ARM also needs the `arm64` OpenCV and SQLite libraries.
+They cannot be installed with `apt` next to the `amd64` ones: `libopencv-dev` is
+not `Multi-Arch: same`, so dpkg refuses to install `libopencv-dev:arm64`
+alongside the version required by the local build. They are instead downloaded
+and extracted into a local sysroot:
+
+```bash
+./scripts/fetch_arm64_sysroot.sh          # -> ~/aarch64-sysroot
+```
+
+`build.sh build_arm` uses it automatically. Set `ARM64_SYSROOT` to point at a
+sysroot extracted somewhere else.
 
 For debugging, install:
 

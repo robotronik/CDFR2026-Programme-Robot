@@ -6,6 +6,9 @@ PI_USER="robotronik"; PI_HOST="172.27.123.146"; PI_DIR="/home/$PI_USER/CDFR"; PI
 # --- Config build ---
 GEN=""; OPT=""
 LIDAR_LIB="rplidar_sdk/output/Linux/Release/libsl_lidar_sdk.a"
+# Sysroot arm64 (OpenCV + SQLite) pour la cross-compilation, cf.
+# scripts/fetch_arm64_sysroot.sh.
+ARM64_SYSROOT="${ARM64_SYSROOT:-$HOME/aarch64-sysroot/root}"
 
 # --- Palette ---
 export CLICOLOR_FORCE=1
@@ -25,6 +28,15 @@ export NINJA_STATUS="${F_GRN}[%p]${NC} ${F_BLU}[%es]${NC} "
 # Format [BADGE = BG_COLOR + LABEL] [MESSAGE = FG_COLOR + TEXT]
  
 step() { printf "${1}${BOLD} %-10s ${NC} ${2}%s${NC}\n" "$3" "$4"; }
+
+# La configuration CMake doit se faire sans NINJA_STATUS : les codes ANSI qu'il
+# contient se retrouvent préfixés devant la ligne de commande du linker, que
+# CMake parse pour détecter les bibliothèques liées implicitement. Avec un
+# NINJA_STATUS coloré, CMAKE_<LANG>_IMPLICIT_LINK_DIRECTORIES ressort vide, donc
+# CMAKE_LIBRARY_ARCHITECTURE aussi, et les bibliothèques multiarch
+# (lib/<triplet> : libsqlite3, OpenCV...) ne sont plus trouvées. On le neutralise
+# pour la configuration et on le garde pour la compilation ninja.
+cmake_configure() { env -u NINJA_STATUS cmake "$@"; }
 
 # Helpers de build
 
@@ -77,7 +89,7 @@ build_local() {
     setup_generator
     build_lidar
     step "$BG_BLU" "$F_BLU" "BUILD" "Compilation locale (x86_64)..."
-    cmake $GEN -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-fdiagnostics-color=always" >/dev/null
+    cmake_configure $GEN -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-fdiagnostics-color=always" >/dev/null
     if [ $? -ne 0 ]; then
         echo "Error: cmake configuration failed for local build."
         exit 1
@@ -92,9 +104,15 @@ build_local() {
 
 build_arm() {
     setup_generator
+    if [ ! -d "$ARM64_SYSROOT" ]; then
+        step "$BG_RED" "$F_RED" "ERR" "Sysroot ARM64 introuvable : $ARM64_SYSROOT"
+        echo "        Exécutez ./scripts/fetch_arm64_sysroot.sh"
+        exit 1
+    fi
+    export ARM64_SYSROOT
     build_lidar_arm 
     step "$BG_BLU" "$F_BLU" "BUILD" "Cross-compilation ARM64..."
-    cmake $GEN -B build_arm -DCMAKE_TOOLCHAIN_FILE=pi_toolchain.cmake >/dev/null
+    cmake_configure $GEN -B build_arm -DCMAKE_TOOLCHAIN_FILE=pi_toolchain.cmake >/dev/null
     if [ $? -ne 0 ]; then
         echo "Error: cmake configuration failed for ARM build."
         exit 1
@@ -110,7 +128,7 @@ build_arm() {
 # Fonction pour setup LSP (compile_commands.json et link)
 setup_lsp() {
     step "$BG_BLU" "$F_BLU" "SETUP" "Génération LSP..."
-    cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null
+    cmake_configure -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null
     [ -f "build/compile_commands.json" ] && { ln -sf build/compile_commands.json .; step "$BG_GRN" "$F_GRN" "DONE" "Lien créé."; } \
                                          || step "$BG_RED" "$F_RED" "ERROR" "Échec LSP."
 }

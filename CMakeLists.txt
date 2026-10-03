@@ -127,6 +127,14 @@ target_link_directories(robot_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rplidar_sd
 
 if(CMAKE_CROSSCOMPILING)
     target_link_directories(robot_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/aarch64-linux-gnu)
+    # Le sysroot arm64 (cf. scripts/fetch_arm64_sysroot.sh) ne contient qu'OpenCV
+    # et SQLite, pas les dépendances propres des modules OpenCV (libpng, libtiff,
+    # libavcodec, GStreamer, VTK...). En compilation croisée l'éditeur de liens
+    # exige par défaut que les symboles non résolus des .so liées soient
+    # satisfaits par les bibliothèques de la ligne de commande ; ces symboles
+    # seront résolus à l'exécution sur la Raspberry Pi, d'où l'option ci-dessous.
+    # Les symboles non résolus de nos propres objets restent, eux, des erreurs.
+    target_link_options(robot_core INTERFACE -Wl,--allow-shlib-undefined)
 else()
     target_link_directories(robot_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/x86_64-linux-gnu)
 endif()
