@@ -136,6 +136,30 @@ On a new Raspberry Pi, configure I2C and serial communication via:
 sudo raspi-config
 ```
 
+## 📷 Camera Setup (Raspi with OV9281)
+
+On Raspberry Pi 5, automatic camera detection must be disabled for the OV9281.
+Run:
+
+```bash
+sudo nano /boot/firmware/config.txt
+```
+
+Add (or edit) the following lines near the top:
+
+```bash
+camera_auto_detect=0
+dtoverlay=ov9281,cam0
+```
+
+If you plugged into the other CSI connector (CAM1), use `,cam1` instead.
+
+Then save and exit (Ctrl+O, Enter, Ctrl+X) and reboot:
+
+```bash
+sudo reboot
+```
+
 ## 🔍 Service Monitoring and Restart
 
 To view the service logs:
