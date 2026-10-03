@@ -255,19 +255,19 @@ bool test_camera_robot_conversion() {
     const double mountingDistance = std::hypot(OFFSET_CAM_X, OFFSET_CAM_Y);
 
     for (const SampleCase& testCase : kCases) {
-        double x = testCase.robotX, y = testCase.robotY, a = testCase.robotA;
-        robotToCamera(x, y, a);
+        const position_t robot = {testCase.robotX, testCase.robotY, testCase.robotA};
+        position_t camera = robotToCamera(robot);
 
-        const double offset = std::hypot(x - testCase.robotX, y - testCase.robotY);
+        const double offset = std::hypot(camera.x - robot.x, camera.y - robot.y);
         if (std::fabs(offset - mountingDistance) > 1e-6) {
             LOG_ERROR("Camera/robot conversion test - camera offset is ", offset,
                       " mm, expected ", mountingDistance, " mm");
             return false;
         }
 
-        cameraToRobot(x, y, a);
-        const double error = std::hypot(x - testCase.robotX, y - testCase.robotY);
-        if (error > 1e-6 || std::fabs(std::remainder(a - testCase.robotA, 360.0)) > 1e-6) {
+        const position_t back = cameraToRobot(camera);
+        const double error = std::hypot(back.x - robot.x, back.y - robot.y);
+        if (error > 1e-6 || std::fabs(std::remainder(back.a - robot.a, 360.0)) > 1e-6) {
             LOG_ERROR("Camera/robot conversion test - round trip failed, error ", error, " mm");
             return false;
         }

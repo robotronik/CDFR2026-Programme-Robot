@@ -77,13 +77,12 @@ nav_return_t Navigation::go(){
             return NAV_PAUSED;
     } else {
         // Calibrate using camera. An emulated camera has no fix, so skip.
-        double cam_x = 0.0, cam_y = 0.0, cam_a = 0.0;
-        const bool localised = arucoCam->getLocalisation(cam_x, cam_y, cam_a);
+        position_t camera_pos = {0.0, 0.0, 0.0};
+        const bool localised = arucoCam->getLocalisation(camera_pos);
         if (localised || arucoCam->isEmulated()){
             if (localised){
                 // The camera is not the robot: convert to the robot's frame.
-                cameraToRobot(cam_x, cam_y, cam_a);
-                position_t robot_pos = {cam_x, cam_y, cam_a};
+                const position_t robot_pos = cameraToRobot(camera_pos);
                 prev_final_pos_cam = robot_pos;
                 prev_final_pos_otos = drive->position;
                 drive->setCoordinates(robot_pos);

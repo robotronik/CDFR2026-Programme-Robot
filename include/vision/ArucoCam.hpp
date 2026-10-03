@@ -2,10 +2,10 @@
 
 #include <atomic>
 #include <mutex>
-#include <string>
 #include <thread>
 #include <vector>
 
+#include "defs/structs.hpp" // for position_t
 #include "vision/ArucoLocalizer.hpp"
 
 // The camera is mounted on the robot at this offset, in millimetres and degrees.
@@ -24,9 +24,9 @@ struct GameElement {
 
 // The camera and the robot are not the same point: the camera sits at
 // (OFFSET_CAM_X, OFFSET_CAM_Y) with heading OFFSET_CAM_A in the robot frame.
-// These convert a table pose between the two frames, in place.
-void cameraToRobot(double& x, double& y, double& a);
-void robotToCamera(double& x, double& y, double& a);
+// These convert a table pose between the two frames.
+position_t cameraToRobot(const position_t& cameraPose);
+position_t robotToCamera(const position_t& robotPose);
 
 // Captures frames on its own thread and detects ArUco markers. It answers two
 // questions: where the camera is on the table, and where the game elements are.
@@ -46,11 +46,11 @@ public:
 
     // Latest camera localisation on the table. Returns true when one is known.
     // This is the camera's pose; use cameraToRobot() for the robot's.
-    bool getLocalisation(double& x, double& y, double& a) const;
+    bool getLocalisation(position_t& cameraPose) const;
 
     // Game elements seen in the latest frame, placed on the table from the
     // given camera pose.
-    std::vector<GameElement> getGameElements(double x, double y, double a) const;
+    std::vector<GameElement> getGameElements(const position_t& cameraPose) const;
 
 private:
     void workerLoop();
@@ -63,7 +63,5 @@ private:
     mutable std::mutex mutex_;
     std::vector<vision::DetectionResult> detections_;
     bool hasLocalisation_ = false;
-    double localisationX_ = 0.0;
-    double localisationY_ = 0.0;
-    double localisationA_ = 0.0;
+    position_t localisation_ = {0.0, 0.0, 0.0};
 };

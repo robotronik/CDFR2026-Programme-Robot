@@ -28,23 +28,29 @@ double normalizeAngle(double angle) {
 
 } // namespace
 
-void cameraToRobot(double& x, double& y, double& a) {
-    const double robotA = a - OFFSET_CAM_A;
+position_t cameraToRobot(const position_t& cameraPose) {
+    const double robotA = cameraPose.a - OFFSET_CAM_A;
     const double rad = robotA * kDegToRad;
     const double c = std::cos(rad);
     const double s = std::sin(rad);
-    x -= OFFSET_CAM_X * c - OFFSET_CAM_Y * s;
-    y -= OFFSET_CAM_X * s + OFFSET_CAM_Y * c;
-    a = normalizeAngle(robotA);
+
+    position_t robotPose = {0.0, 0.0, 0.0};
+    robotPose.x = cameraPose.x - (OFFSET_CAM_X * c - OFFSET_CAM_Y * s);
+    robotPose.y = cameraPose.y - (OFFSET_CAM_X * s + OFFSET_CAM_Y * c);
+    robotPose.a = normalizeAngle(robotA);
+    return robotPose;
 }
 
-void robotToCamera(double& x, double& y, double& a) {
-    const double rad = a * kDegToRad;
+position_t robotToCamera(const position_t& robotPose) {
+    const double rad = robotPose.a * kDegToRad;
     const double c = std::cos(rad);
     const double s = std::sin(rad);
-    x += OFFSET_CAM_X * c - OFFSET_CAM_Y * s;
-    y += OFFSET_CAM_X * s + OFFSET_CAM_Y * c;
-    a = normalizeAngle(a + OFFSET_CAM_A);
+
+    position_t cameraPose = {0.0, 0.0, 0.0};
+    cameraPose.x = robotPose.x + (OFFSET_CAM_X * c - OFFSET_CAM_Y * s);
+    cameraPose.y = robotPose.y + (OFFSET_CAM_X * s + OFFSET_CAM_Y * c);
+    cameraPose.a = normalizeAngle(robotPose.a + OFFSET_CAM_A);
+    return cameraPose;
 }
 
 ArucoCam::ArucoCam(int camNumber, const char* calibrationFilePath) {
@@ -117,27 +123,25 @@ void ArucoCam::workerLoop() {
             if (!vision::ArucoLocalizer::cameraPositionForTag(detection, field->x, field->y, position)) {
                 continue;
             }
-            localisationX_ = position.x;
-            localisationY_ = position.y;
-            localisationA_ = position.heading;
+            localisation_.x = position.x;
+            localisation_.y = position.y;
+            localisation_.a = position.heading;
             hasLocalisation_ = true;
             break;
         }
     }
 }
 
-bool ArucoCam::getLocalisation(double& x, double& y, double& a) const {
+bool ArucoCam::getLocalisation(position_t& cameraPose) const {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!hasLocalisation_) {
         return false;
     }
-    x = localisationX_;
-    y = localisationY_;
-    a = localisationA_;
+    cameraPose = localisation_;
     return true;
 }
 
-std::vector<GameElement> ArucoCam::getGameElements(double x, double y, double a) const {
+std::vector<GameElement> ArucoCam::getGameElements(const position_t& cameraPose) const {
     std::vector<GameElement> elements;
 
     std::lock_guard<std::mutex> lock(mutex_);
@@ -156,9 +160,9 @@ std::vector<GameElement> ArucoCam::getGameElements(double x, double y, double a)
 
         GameElement element;
         element.id = detection.id;
-        element.x = x + camera[1];
-        element.y = y - camera[0];
-        element.a = normalizeAngle(a + yaw - 180.0);
+        element.x = cameraPose.x + camera[1];
+        element.y = cameraPose.y - camera[0];
+        element.a = normalizeAngle(cameraPose.a + yaw - 180.0);
         elements.push_back(element);
     }
 
