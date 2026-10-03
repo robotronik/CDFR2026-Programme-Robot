@@ -26,13 +26,14 @@ public:
     /*
         Sélectionne, parmi possible_actions, l'action dont le score
         (pondération * action->available()) est le plus élevé parmi
-        celles disponibles (available() >= 0), et la retourne en
-        transférant sa propriété à l'appelant.
+        celles disponibles (available() >= 0), et renvoie un pointeur
+        NON POSSÉDANT vers elle : elle reste dans le pool et appartient
+        toujours à la stratégie, qui peut donc la reproposer.
 
         Retourne nullptr si la stratégie est arrêtée (stop()) ou si
         aucune action du pool n'est disponible.
     */
-    std::unique_ptr<VirtualAction> bestAction() override;
+    VirtualAction* bestAction() override;
     /*
         Action de temporisation ("attente") à exécuter quand aucune action
         du pool n'est disponible. La stratégie en garde la propriété : le
@@ -42,7 +43,11 @@ public:
 
     /* Ré-remplit le pool d'actions possibles (à appeler par exemple au
        Reset() du FSM, ou quand la stratégie a écoulé toutes ses actions
-       et doit être rejouée depuis le début). */
+       et doit être rejouée depuis le début).
+
+       ATTENTION : les actions précédentes sont détruites. Appeler
+       ActionFSM::Reset() juste après, sinon le FSM garde un currentAction
+       pointant sur une action libérée. */
     void reset();
 
 private:

@@ -24,4 +24,8 @@ class GoToPositionAction : public VirtualAction {
         position_t target;
         DriveControl* drive;
         bool moving;
+
+        // Passe à true dès que l'action a rendu DONE ou ERROR : elle n'est
+        // alors plus candidate (available() renvoie -1) jusqu'à reset().
+        bool done = false;
 };

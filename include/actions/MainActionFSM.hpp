@@ -31,11 +31,8 @@ class ActionFSM{
         // switch de couleur/stratégie sur le robot).
         VirtualStrategy* currentStrategy = nullptr;
 
-        // Action rendue par currentStrategy->bestAction() : le FSM en
-        // récupère la propriété (unique_ptr) tant qu'elle est exécutée.
-        std::unique_ptr<VirtualAction> strategyAction;
-
-        // Action actuellement en cours d'exécution (pointe soit sur une
-        // action système ci-dessus, soit sur strategyAction.get()).
+        // Action actuellement en cours d'exécution. Elle appartient à
+        // currentStrategy (bestAction() ou tempAction()) : le FSM ne la
+        // possède pas et ne doit jamais la libérer.
         VirtualAction* currentAction = nullptr;
 };

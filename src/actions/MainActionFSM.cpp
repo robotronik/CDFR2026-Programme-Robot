@@ -21,17 +21,13 @@ ActionFSM::~ActionFSM(){}
 
 void ActionFSM::setStrategy(VirtualStrategy* strategy){
     currentStrategy = strategy;
-    // On abandonne toute action de stratégie en cours issue de l'ancienne
-    // stratégie : elle n'a plus de sens (et l'action de temporisation
-    // appartient à l'ancienne stratégie) une fois la stratégie changée.
-    strategyAction.reset();
+    // On abandonne l'action en cours : elle appartient à l'ancienne
+    // stratégie, qui peut disparaître à tout moment.
     currentAction = nullptr;
 }
 
 void ActionFSM::Reset(){
     /****** RESET OF FSM STATES *******/
-    strategyAction.reset();
-
     if (currentStrategy != nullptr){
         // Réactive la stratégie si elle avait été stoppée (stop()).
         // NB: si la stratégie a besoin de reconstruire son pool d'actions
@@ -86,14 +82,16 @@ VirtualAction* ActionFSM::SetBestAction(){
 
     /************************** DEMANDE À LA STRATÉGIE COURANTE *************************/
     if (currentStrategy != nullptr){
-        strategyAction = currentStrategy->bestAction();
-        if (strategyAction != nullptr){
+        // Pointeur non-possédant : l'action reste la propriété de la
+        // stratégie, le FSM ne la libère jamais.
+        VirtualAction* best = currentStrategy->bestAction();
+        if (best != nullptr){
             LOG_GREEN_INFO("ActionFSM: exécution de l'action de stratégie '",
-                            strategyAction->getNom().c_str(), "'");
-            return strategyAction.get();
+                            best->getNom().c_str(), "'");
+            return best;
         }
         // bestAction() a renvoyé nullptr : stratégie arrêtée (stop()) ou
-        // pool d'actions épuisé. On retombe sur l'attente ci-dessous.
+        // aucune action disponible. On retombe sur l'attente ci-dessous.
     }
 
     /************************** SINON, ON ATTEND *************************/

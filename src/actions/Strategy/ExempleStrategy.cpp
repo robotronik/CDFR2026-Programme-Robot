@@ -74,7 +74,7 @@ VirtualAction* ExempleStrat::tempAction(){
     return waitAction.get();
 }
 
-std::unique_ptr<VirtualAction> ExempleStrat::bestAction(){
+VirtualAction* ExempleStrat::bestAction(){
     if (!status){
         return nullptr;
     }
@@ -104,7 +104,8 @@ std::unique_ptr<VirtualAction> ExempleStrat::bestAction(){
 
     LOG_GREEN_INFO("ExempleStrat: sélection de l'action ", bestKey.c_str());
 
-    // extractAction() fait exactement le find + move + erase qu'on
-    // faisait "à la main" avec l'index dans la version vector.
-    return extractAction(bestKey);
+    // L'action n'est pas retirée du pool : la stratégie en garde la
+    // propriété, le FSM n'en reçoit qu'un pointeur et pourra la rejouer
+    // tant qu'elle reste disponible.
+    return findAction(bestKey);
 }

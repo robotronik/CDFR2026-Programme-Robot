@@ -26,4 +26,7 @@ class NavHomeAction : public VirtualAction {
         TableState* tableState;
         DriveControl* drive;
 
+        // Passe à true quand le retour est terminé : l'action n'est alors
+        // plus candidate (available() renvoie -1) jusqu'à reset().
+        bool done = false;
 };

@@ -4,7 +4,7 @@
 
 WaitAction::WaitAction(unsigned long tps){
     nom = "Wait";
-    duree = tps;
+    duree = (float)tps;
     wait = tps;
     startTime = 0;
 }
@@ -36,8 +36,8 @@ void WaitAction::reset(){
 }
 
 float WaitAction::available(){
-    // L'attente est toujours disponible, coût nul
-    return 0.0f;
+    // L'attente est toujours disponible, mais son coût est élevé car non rentable
+    return 1000.0f;
 }
 
 /*Wait is not a full block we could imagine positionning to block/anticipate adversary action*/

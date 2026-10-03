@@ -27,7 +27,12 @@ protected:
 public:
     virtual ~VirtualStrategy() = default;
 
-    virtual std::unique_ptr<VirtualAction> bestAction() = 0;
+    /* Sélectionne la meilleure action du pool et renvoie un pointeur NON
+       POSSÉDANT vers elle : l'action reste la propriété de la stratégie
+       (elle demeure dans le pool) et peut donc être rejouée plusieurs fois.
+       Une action reste candidate tant que available() >= 0.
+       Renvoie nullptr si aucune action n'est disponible. */
+    virtual VirtualAction* bestAction() = 0;
 
     void stop(){ status = false; }
     void resume(){ status = true; }
