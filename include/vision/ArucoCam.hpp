@@ -24,6 +24,10 @@
 // marker's own axes (a marker lying flat, oriented like the field tags, reads
 // about 90 degrees).
 struct GameElement {
+    // TODO 
+    // Change definition to have a position_t
+    // and a level (1,2 or 3)
+    // and a bool is_vertical
     double x = 0.0;
     double y = 0.0;
     double z = 0.0;
