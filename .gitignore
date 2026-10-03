@@ -16,6 +16,12 @@
 tmp/
 *.tmp
 
+# Base SQLite des durées d'action (cf. src/db/ActionDurationDB.cpp)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
 .DS_Store
 Thumbs.db
 /.vs
