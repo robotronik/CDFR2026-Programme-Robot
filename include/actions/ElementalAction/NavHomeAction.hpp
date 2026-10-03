@@ -25,7 +25,8 @@ class NavHomeAction : public VirtualAction {
         position_t homePos;
         TableState* tableState;
         DriveControl* drive;
-
+        // valeur de l'action en point
+        int value = 10;
         // Passe à true quand le retour est terminé : l'action n'est alors
         // plus candidate (available() renvoie -1) jusqu'à reset().
         bool done = false;

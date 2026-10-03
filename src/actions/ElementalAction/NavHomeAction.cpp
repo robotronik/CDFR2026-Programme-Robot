@@ -48,8 +48,10 @@ float NavHomeAction::available(){
     if (done) return -1.0f;
     double path_length_mm;
     position_t path[100];
-    pathfind(drive->getPosition(), homePos, path, path_length_mm);
-    return (float)(path_length_mm / duree); // duree = vitesse ici
+    if(!pathfind(drive->getPosition(), homePos, path, path_length_mm)){
+        return -1.0f;
+    }
+    return duree/(float)value;
 }
 
 bool NavHomeAction::fullBlock(){

@@ -46,8 +46,16 @@ void ActionFSM::Reset(){
     TODO: une seule action à la fois pour l'instant une parallélisation est envisageable à réfléchir
 */
 bool ActionFSM::RunFSM(){
+    // Sélection d'une nouvelle action : au démarrage, ou tant qu'on tourne sur
+    // l'action de temporisation (on resonde alors la stratégie à chaque tick
+    // pour voir si elle propose mieux). Réassigner la même action ne relance
+    // pas le chrono : il s'agit de la même exécution qui se poursuit.
     if (currentAction == nullptr || currentAction == currentStrategy->tempAction()){
-        currentAction = SetBestAction();
+        VirtualAction* best = SetBestAction();
+        if (best != currentAction){
+            currentAction = best;
+            actionStartTime = _millis();
+        }
     }
 
     if (currentAction == nullptr){
@@ -59,12 +67,16 @@ bool ActionFSM::RunFSM(){
     ReturnFSM_t ret = currentAction->run();
 
     if (ret == FSM_RETURN_DONE){
-        //TODO handle database
+        // Action menée à son terme : on enregistre le temps qu'elle a
+        // réellement pris.
+        durationDB.record(currentAction->getNom(), _millis() - actionStartTime);
         currentAction = SetBestAction();
+        actionStartTime = _millis();
     }
     else if (ret == FSM_RETURN_ERROR){
         // TODO handle database
         currentAction = SetBestAction();
+        actionStartTime = _millis();
     }
 
     return false;

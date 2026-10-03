@@ -80,6 +80,9 @@ target_include_directories(robot_core PUBLIC
 # 4. Librairies externes
 # ------------------------------------------------------------------------------
 
+# SQLite : base des durées d'action (cf. src/db/ActionDurationDB.cpp)
+find_package(SQLite3 REQUIRED)
+
 target_link_directories(robot_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rplidar_sdk/output/Linux/Release)
 
 if(CMAKE_CROSSCOMPILING)
@@ -88,7 +91,7 @@ else()
     target_link_directories(robot_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/x86_64-linux-gnu)
 endif()
 
-target_link_libraries(robot_core PUBLIC Crow::Crow pthread i2c rt sl_lidar_sdk)
+target_link_libraries(robot_core PUBLIC Crow::Crow pthread i2c rt sl_lidar_sdk SQLite::SQLite3)
 
 # ------------------------------------------------------------------------------
 # 5. Cible 1 : L'exécutable Principal
