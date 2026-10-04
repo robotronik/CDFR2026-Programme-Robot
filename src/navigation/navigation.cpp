@@ -58,7 +58,7 @@ nav_return_t Navigation::go(){
             LOG_EXTENDED_DEBUG("Navigation drive completed");
             if (current_complete_stop){ // If came to a complete stop, calibrate using camera, else nav is done
                 driving = false;
-                drive->setBrakeState(true);
+                //drive->setBrakeState(true);
             }
             else {
                 stuck_start = 0;
@@ -78,25 +78,20 @@ nav_return_t Navigation::go(){
     } else {
         // Calibrate using camera. An emulated camera has no fix, so skip.
         position_t camera_pos = {0.0, 0.0, 0.0};
-        const bool localised = arucoCam->getLocalisation(camera_pos);
-        if (localised || arucoCam->isEmulated()){
-            if (localised){
-                // The camera is not the robot: convert to the robot's frame.
-                const position_t robot_pos = cameraToRobot(camera_pos);
-                prev_final_pos_cam = robot_pos;
-                prev_final_pos_otos = drive->position;
-                drive->setCoordinates(robot_pos);
-                tableStatus->resetCalibrationAge();
-                LOG_GREEN_INFO("Camera calibration during move successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
-            }
-            else{
-                LOG_EXTENDED_DEBUG("Camera emulated, skipping calibration");
-            }
-            driving = true;
-            drive->setBrakeState(false);
-            stuck_start = 0;
-            return NAV_DONE;
+        // If position found, update the robot position and reset the calibration age
+        if (arucoCam->getLocalisation(camera_pos)){
+            // The camera is not the robot: convert to the robot's frame.
+            const position_t robot_pos = cameraToRobot(camera_pos);
+            prev_final_pos_cam = robot_pos;
+            prev_final_pos_otos = drive->position;
+            drive->setCoordinates(robot_pos);
+            tableStatus->resetCalibrationAge();
+            LOG_GREEN_INFO("Camera calibration during move successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
         }
+        driving = true;
+        //drive->setBrakeState(false);
+        stuck_start = 0;
+        return NAV_DONE;
     }
     return NAV_IN_PROCESS;
 }
