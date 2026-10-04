@@ -106,16 +106,6 @@ void ArucoDetector::setMarkerSize(int id, double size) {
     markerSizes_[id] = size;
 }
 
-void ArucoDetector::setMarkerSizes(const std::map<int, double>& sizes) {
-    for (const auto& [id, size] : sizes) {
-        markerSizes_[id] = size;
-    }
-}
-
-void ArucoDetector::clearMarkerSizes() {
-    markerSizes_.clear();
-}
-
 bool ArucoDetector::initCamera(int deviceIndex, int width, int height) {
     std::lock_guard<std::mutex> lock(captureMutex_);
     if (capture_.isOpened()) {
@@ -224,14 +214,6 @@ std::vector<DetectionResult> ArucoDetector::detect(const cv::Mat& frame) {
     }
 
     return results;
-}
-
-std::vector<DetectionResult> ArucoDetector::captureAndDetect() {
-    cv::Mat frame;
-    if (!captureFrame(frame)) {
-        return {};
-    }
-    return detect(frame);
 }
 
 } // namespace vision

@@ -44,8 +44,7 @@ struct DetectionResult {
  *
  * Replaces the previous Python/REST camera service. It owns the capture device,
  * the marker dictionary/parameters and the camera calibration, and exposes a
- * small synchronous API: open a camera, then detect markers either on an
- * existing frame (`detect`) or on a freshly captured one (`captureAndDetect`).
+ * small synchronous API: open a camera, then detect markers on a frame.
  */
 class ArucoDetector {
 public:
@@ -57,13 +56,10 @@ public:
 
     // Loads `camera_matrix` and `dist_coeffs` from an OpenCV YAML/XML file.
     bool loadCalibration(const std::string& calibrationFilePath);
-    bool isCalibrated() const { return calibrated_; }
 
     // Physical marker size (same unit as the calibration, e.g. mm). Pose is only
     // estimated for ids that have a registered size.
     void setMarkerSize(int id, double size);
-    void setMarkerSizes(const std::map<int, double>& sizes);
-    void clearMarkerSizes();
 
     bool initCamera(int deviceIndex = 0, int width = 640, int height = 480);
     bool isCameraOpen() const;
@@ -75,9 +71,6 @@ public:
 
     // Detects markers on an already acquired frame (BGR, BGRA or grayscale).
     std::vector<DetectionResult> detect(const cv::Mat& frame);
-
-    // Grabs a frame from the camera then runs detection.
-    std::vector<DetectionResult> captureAndDetect();
 
 private:
 #if ARUCO_OPENCV_NEW_API

@@ -316,7 +316,7 @@ bool test_camera_robot_conversion() {
     return true;
 }
 
-// A game element is a tagged cube. getGameElements() must report the cube's
+// A game element is a tagged cube. gameElementFromTag() must report the cube's
 // centre, not the centre of the marker on its visible face. The cube sits at
 // (0, 0, 55) with no rotation in every capture; only the camera moves, so each
 // visible marker must yield the same cube centre whatever the camera pose. Each

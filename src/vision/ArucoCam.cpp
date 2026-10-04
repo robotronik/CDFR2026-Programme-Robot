@@ -162,7 +162,6 @@ void ArucoCam::workerLoop() {
         // Localisation comes from the first landmark tag in the frame. A frame
         // without a usable tag invalidates the previous fix.
         hasLocalisation_ = false;
-        gameElements_.clear();
         for (const vision::DetectionResult& detection : detections_) {
             const cv::Point2d* field = vision::ArucoLocalizer::fieldPosition(detection.id);
             if (field == nullptr) {
@@ -177,11 +176,6 @@ void ArucoCam::workerLoop() {
             localisation_.a = position.heading;
             hasLocalisation_ = true;
             break;
-        }
-
-        // Elements are placed on the table from the latest known camera pose.
-        if (hasLocalisation_) {
-            updateGameElements(localisation_);
         }
     }
 }
@@ -253,19 +247,4 @@ std::vector<GameElement> ArucoCam::getGameElements(const position_t& cameraPose)
     }
 
     return elements;
-}
-
-std::vector<GameElement> ArucoCam::getGameElements() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return gameElements_;
-}
-
-void ArucoCam::updateGameElements(const position_t& cameraPose) {
-    gameElements_.clear();
-    for (const vision::DetectionResult& detection : detections_) {
-        GameElement element;
-        if (gameElementFromTag(detection, cameraPose, element)) {
-            gameElements_.push_back(element);
-        }
-    }
 }

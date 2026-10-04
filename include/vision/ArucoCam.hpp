@@ -67,7 +67,6 @@ public:
     // that is never started.
     void start();
     void stop();
-    bool isEmulated() const { return id_ < 0; }
 
     // Latest camera localisation on the table. Returns true when one is known.
     // This is the camera's pose; use cameraToRobot() for the robot's.
@@ -81,10 +80,6 @@ public:
     // given camera pose.
     std::vector<GameElement> getGameElements(const position_t& cameraPose) const;
 
-    // Game elements of the latest frame, placed on the table from the latest
-    // known camera pose.
-    std::vector<GameElement> getGameElements() const;
-
     // Places one detection on the table as the centre of its game element cube,
     // from the given camera pose. Returns false when the detection is not a
     // game element carrying a usable pose.
@@ -94,9 +89,6 @@ public:
 
 private:
     void workerLoop();
-    // Lifts the game elements of the latest frame into the table frame using
-    // the given camera pose. Called by the worker thread with mutex_ held.
-    void updateGameElements(const position_t& cameraPose);
 
     int id_ = -1;
     std::atomic<bool> running_{false};
@@ -108,5 +100,4 @@ private:
     cv::Mat frame_;
     bool hasLocalisation_ = false;
     position_t localisation_ = {0.0, 0.0, 0.0};
-    std::vector<GameElement> gameElements_;
 };

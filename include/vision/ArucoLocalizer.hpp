@@ -34,7 +34,6 @@ public:
     explicit ArucoLocalizer(double tagSideMm = 100.0);
 
     bool loadCalibration(const std::string& calibrationFilePath);
-    bool isCalibrated() const { return detector_.isCalibrated(); }
 
     bool initCamera(int deviceIndex = 0, int width = 1280, int height = 800);
     void releaseCamera();
@@ -43,9 +42,6 @@ public:
     // Detects the landmark tags on `frame`. Returns true and fills `position`
     // when at least one of them yields a usable pose, false otherwise.
     bool locate(const cv::Mat& frame, CameraPosition& position);
-
-    // Captures a frame from the camera, then locates.
-    bool locate(CameraPosition& position);
 
     // Field position (mm) of a known tag, or nullptr when the id is unknown.
     static const cv::Point2d* fieldPosition(int tagId);
@@ -56,7 +52,6 @@ public:
                                      CameraPosition& position);
 
     ArucoDetector& detector() { return detector_; }
-    const ArucoDetector& detector() const { return detector_; }
 
 private:
     ArucoDetector detector_;

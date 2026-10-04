@@ -121,12 +121,4 @@ bool ArucoLocalizer::locate(const cv::Mat& frame, CameraPosition& position) {
     return true;
 }
 
-bool ArucoLocalizer::locate(CameraPosition& position) {
-    cv::Mat frame;
-    if (!detector_.captureFrame(frame)) {
-        return false;
-    }
-    return locate(frame, position);
-}
-
 } // namespace vision
