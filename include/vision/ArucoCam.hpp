@@ -19,12 +19,14 @@
 #define CAMERA_HEIGHT_MM 233.2
 #define CAMERA_PITCH_DEG 45.0
 
-// Game elements are 110 mm cubes carrying a 100 mm ArUco id 13 tag on each
-// face. `GAME_ELEMENT_SIDE_MM` is the cube's physical side, used to move from a
-// tag's centre to the cube's centre; `GAME_ELEMENT_TAG_MM` is the tag's side,
-// which sets the scale of the tag's estimated pose.
+// Game elements are 110 mm cubes. Each face carries an ArUco id 13 marker whose
+// inner pattern is 80 mm, drawn with a white margin around it (the tag, 100 mm,
+// only matters for rendering). `GAME_ELEMENT_SIDE_MM` is the cube's physical
+// side, used to move from a marker's centre to the cube's centre;
+// `GAME_ELEMENT_TAG_MM` is the marker's own side, which sets the scale of its
+// estimated pose.
 #define GAME_ELEMENT_SIDE_MM 110.0
-#define GAME_ELEMENT_TAG_MM 100.0
+#define GAME_ELEMENT_TAG_MM 80.0
 
 // A game element is a marker with ArUco id 13. Its pose is on the table, in
 // millimetres, with its Euler angles in degrees. The yaw reference follows the

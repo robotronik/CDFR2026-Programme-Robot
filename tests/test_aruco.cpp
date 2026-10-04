@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -47,6 +48,45 @@ std::string findCalibrationPath(const std::string& name) {
         }
     }
     return {};
+}
+
+// Lists the game element captures, whose filenames encode the camera pose:
+// capture_<n>_x<X>_y<Y>_yaw<A>_pitch<P>_vfov<V>_hfov<H>.png. A leading path
+// prefix is tried so the tests run from either the build or the source tree.
+std::vector<std::string> captureNames() {
+    const std::string prefixes[] = {"tests/data/", "../tests/data/", ""};
+    for (const std::string& prefix : prefixes) {
+        std::vector<std::string> names;
+        cv::glob(prefix + "capture_*.png", names, false);
+        if (!names.empty()) {
+            std::vector<std::string> basenames;
+            for (const std::string& path : names) {
+                basenames.push_back(path.substr(path.find_last_of('/') + 1));
+            }
+            std::sort(basenames.begin(), basenames.end());
+            return basenames;
+        }
+    }
+    return {};
+}
+
+// Reads the camera pose from a capture filename. Returns false when the name
+// does not carry the expected fields.
+bool parseCapturePose(const std::string& name, position_t& cameraPose) {
+    const auto field = [&](const std::string& key) -> const char* {
+        const size_t at = name.find(key);
+        return at == std::string::npos ? nullptr : name.c_str() + at + key.size();
+    };
+    const char* x = field("_x");
+    const char* y = field("_y");
+    const char* yaw = field("_yaw");
+    if (x == nullptr || y == nullptr || yaw == nullptr) {
+        return false;
+    }
+    cameraPose.x = std::stod(x);
+    cameraPose.y = std::stod(y);
+    cameraPose.a = std::stod(yaw);
+    return true;
 }
 
 double polygonArea(const std::vector<cv::Point2f>& corners) {
@@ -277,24 +317,20 @@ bool test_camera_robot_conversion() {
 }
 
 // A game element is a tagged cube. getGameElements() must report the cube's
-// centre, not the centre of the tag on its visible face. The cube sits at
-// (0, 0, 55) with no rotation in both captures; only the camera moves, so both
-// visible tags must yield the same cube centre whatever the camera pose.
+// centre, not the centre of the marker on its visible face. The cube sits at
+// (0, 0, 55) with no rotation in every capture; only the camera moves, so each
+// visible marker must yield the same cube centre whatever the camera pose. Each
+// capture records its camera pose in the filename.
 bool test_game_element_cube_center() {
-    struct SampleCase {
-        const char* image;
-        double cameraX; // camera field pose, from the filename
-        double cameraY;
-        double cameraA;
-    };
-    static const SampleCase kCases[] = {
-        {"capture_1_x-304.6_y0.0_yaw0.0_pitch45.0_vfov70.0_hfov96.5.png", -304.6, 0.0, 0.0},
-        {"capture_105_x-271.5_y160.5_yaw-20.0_pitch45.0_vfov70.0_hfov96.5.png", -271.5, 160.5, -20.0},
-    };
-
     const std::string calibrationPath = findCalibrationPath("SIM_VFOV70_1280_800.yaml");
     if (calibrationPath.empty()) {
         LOG_ERROR("Game element test - missing virtual camera calibration");
+        return false;
+    }
+
+    const std::vector<std::string> captures = captureNames();
+    if (captures.empty()) {
+        LOG_ERROR("Game element test - no capture found in tests/data");
         return false;
     }
 
@@ -307,19 +343,23 @@ bool test_game_element_cube_center() {
 
     const double expectedX = 0.0, expectedY = 0.0, expectedZ = 55.0;
 
-    for (const SampleCase& testCase : kCases) {
-        const std::string imagePath = findImagePath(testCase.image);
+    for (const std::string& name : captures) {
+        position_t cameraPose = {0.0, 0.0, 0.0};
+        if (!parseCapturePose(name, cameraPose)) {
+            LOG_ERROR("Game element test - cannot read camera pose from ", name);
+            return false;
+        }
+
+        const std::string imagePath = findImagePath(name);
         if (imagePath.empty()) {
-            LOG_ERROR("Game element test - missing capture ", testCase.image);
+            LOG_ERROR("Game element test - missing capture ", name);
             return false;
         }
 
         const cv::Mat image = cv::imread(imagePath, cv::IMREAD_COLOR);
         const std::vector<vision::DetectionResult> detections = detector.detect(image);
 
-        // The cube shows on two faces; a field landmark tag may also be present
-        // but is not a game element.
-        const position_t cameraPose = {testCase.cameraX, testCase.cameraY, testCase.cameraA};
+        // A field landmark tag may also be present but is not a game element.
         std::vector<GameElement> elements;
         for (const vision::DetectionResult& detection : detections) {
             GameElement element;
@@ -328,32 +368,36 @@ bool test_game_element_cube_center() {
             }
         }
 
-        if (elements.size() < 2) {
-            LOG_ERROR("Game element test - ", testCase.image, ": expected two game elements, found ",
-                      elements.size());
+        if (elements.empty()) {
+            LOG_ERROR("Game element test - ", name, ": no game element found");
             return false;
         }
 
-        // Both visible faces must place the cube at the same point.
+        // When more than one face is visible they must agree on the cube centre.
+        for (size_t i = 0; i < elements.size(); ++i) {
+            for (size_t j = i + 1; j < elements.size(); ++j) {
+                const GameElement& a = elements[i];
+                const GameElement& b = elements[j];
+                const double spread = std::sqrt(std::pow(a.x - b.x, 2) +
+                                                std::pow(a.y - b.y, 2) +
+                                                std::pow(a.z - b.z, 2));
+                if (spread > 15.0) {
+                    LOG_ERROR("Game element test - ", name,
+                              ": two visible tags disagree on the cube centre: ", spread, " mm");
+                    return false;
+                }
+            }
+        }
+
         const GameElement& a = elements[0];
-        const GameElement& b = elements[1];
-        const double spread = std::sqrt(std::pow(a.x - b.x, 2) +
-                                        std::pow(a.y - b.y, 2) +
-                                        std::pow(a.z - b.z, 2));
-        if (spread > 15.0) {
-            LOG_ERROR("Game element test - ", testCase.image,
-                      ": the two visible tags disagree on the cube centre: ", spread, " mm");
-            return false;
-        }
-
         const double error = std::sqrt(std::pow(a.x - expectedX, 2) +
                                        std::pow(a.y - expectedY, 2) +
                                        std::pow(a.z - expectedZ, 2));
-        LOG_INFO("Game element test - ", testCase.image, ": cube centre (", a.x, ", ", a.y, ", ",
+        LOG_INFO("Game element test - ", name, ": cube centre (", a.x, ", ", a.y, ", ",
                  a.z, ") mm, expected (", expectedX, ", ", expectedY, ", ", expectedZ,
-                 ") mm, error = ", error, " mm, spread = ", spread, " mm");
+                 ") mm, error = ", error, " mm, faces = ", elements.size());
         if (error > 15.0) {
-            LOG_ERROR("Game element test - ", testCase.image,
+            LOG_ERROR("Game element test - ", name,
                       ": cube centre error too large: ", error, " mm");
             return false;
         }

@@ -19,7 +19,11 @@ void configureParameters(cv::aruco::DetectorParameters& p) {
     p.adaptiveThreshWinSizeMin = 3;
     p.adaptiveThreshWinSizeMax = 23;
     p.adaptiveThreshWinSizeStep = 10;
-    p.adaptiveThreshConstant = 7;
+    // A game element tag is drawn with a white margin around its marker. At the
+    // default constant the detector locks onto that outer margin instead of the
+    // marker itself, which flips its polarity; a higher constant makes it lock
+    // onto the marker's own border.
+    p.adaptiveThreshConstant = 20;
 
     p.minMarkerPerimeterRate = 0.03;
     p.maxMarkerPerimeterRate = 4.0;
@@ -40,9 +44,7 @@ void configureParameters(cv::aruco::DetectorParameters& p) {
     p.minOtsuStdDev = 5.0;
     p.errorCorrectionRate = 0.6;
 
-    // The game element tags are rendered inverted (white on black) in the
-    // simulator, so the detector must accept inverted markers.
-    p.detectInvertedMarker = true;
+    p.detectInvertedMarker = false;
     p.useAruco3Detection = true;
 }
 
