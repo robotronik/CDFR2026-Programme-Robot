@@ -292,10 +292,14 @@ void RestAPI::start(){
         return crow::response(response.dump());
     });
 
-    CROW_ROUTE(app, "/get_blockPosition")
+    // --------------------------- Camera Routes ---------------------------
+
+    // Game elements (ArUco id 13 markers) seen by the camera, as full poses on
+    // the table. Empty when the camera has no localisation yet.
+    CROW_ROUTE(app, "/objects")
     ([this](){
-        position_t camera_pos = {0.0, 0.0, 0.0};
         std::vector<GameElement> elements;
+        position_t camera_pos = {0.0, 0.0, 0.0};
         if (arucoCam->getLocalisation(camera_pos)){
             elements = arucoCam->getGameElements(camera_pos);
         }
@@ -311,6 +315,7 @@ void RestAPI::start(){
         return res;
     });
 
+    // Latest camera localisation, converted to the robot's frame.
     CROW_ROUTE(app, "/position")
     ([this](){
         position_t camera_pos = {0.0, 0.0, 0.0};
@@ -324,6 +329,37 @@ void RestAPI::start(){
         }
         crow::response res(response.dump());
         res.set_header("Content-Type", "application/json");
+        return res;
+    });
+
+    // Starts/stops the camera capture thread.
+    CROW_ROUTE(app, "/start")
+    ([this](){
+        arucoCam->start();
+        json response;
+        response["message"] = "Camera started";
+        return crow::response(response.dump());
+    });
+
+    CROW_ROUTE(app, "/stop")
+    ([this](){
+        arucoCam->stop();
+        json response;
+        response["message"] = "Camera stopped";
+        return crow::response(response.dump());
+    });
+
+    // Latest captured frame as a JPEG.
+    CROW_ROUTE(app, "/preview")
+    ([this](){
+        std::vector<uchar> jpeg;
+        if (!arucoCam->getPreview(jpeg)){
+            json response;
+            response["message"] = "No preview available";
+            return crow::response(503, response.dump());
+        }
+        crow::response res(200, std::string(jpeg.begin(), jpeg.end()));
+        res.set_header("Content-Type", "image/jpeg");
         return res;
     });
 

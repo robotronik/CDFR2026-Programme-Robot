@@ -5,6 +5,8 @@
 #include <thread>
 #include <vector>
 
+#include <opencv2/core.hpp>
+
 #include "drive_interface.h" // for position_t
 #include "vision/ArucoLocalizer.hpp"
 
@@ -71,6 +73,10 @@ public:
     // This is the camera's pose; use cameraToRobot() for the robot's.
     bool getLocalisation(position_t& cameraPose) const;
 
+    // JPEG-encoded copy of the latest captured frame. Returns false when no
+    // frame has been captured yet.
+    bool getPreview(std::vector<uchar>& jpeg) const;
+
     // Game elements seen in the latest frame, placed on the table from the
     // given camera pose.
     std::vector<GameElement> getGameElements(const position_t& cameraPose) const;
@@ -99,6 +105,7 @@ private:
 
     mutable std::mutex mutex_;
     std::vector<vision::DetectionResult> detections_;
+    cv::Mat frame_;
     bool hasLocalisation_ = false;
     position_t localisation_ = {0.0, 0.0, 0.0};
     std::vector<GameElement> gameElements_;

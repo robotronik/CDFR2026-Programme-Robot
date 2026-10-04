@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include <opencv2/calib3d.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 #include "utils/logger.hpp"
 
@@ -100,6 +101,7 @@ void ArucoCam::start() {
         std::lock_guard<std::mutex> lock(mutex_);
         detections_.clear();
         hasLocalisation_ = false;
+        frame_.release();
     }
 
     running_.store(true);
@@ -129,6 +131,7 @@ void ArucoCam::workerLoop() {
 
         std::lock_guard<std::mutex> lock(mutex_);
         detections_ = std::move(detections);
+        frame_ = frame;
 
         // Localisation comes from the first landmark tag in the frame. A frame
         // without a usable tag invalidates the previous fix.
@@ -164,6 +167,14 @@ bool ArucoCam::getLocalisation(position_t& cameraPose) const {
     }
     cameraPose = localisation_;
     return true;
+}
+
+bool ArucoCam::getPreview(std::vector<uchar>& jpeg) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (frame_.empty()) {
+        return false;
+    }
+    return cv::imencode(".jpg", frame_, jpeg);
 }
 
 bool ArucoCam::gameElementFromTag(const vision::DetectionResult& detection,

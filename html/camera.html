@@ -30,9 +30,6 @@
                 <button type="button" class="btn btn-danger w-100" onclick="apiStop()">Stop</button>
             </div>
             <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="apiResetTracking()">Reset Tracking</button>
-            </div>
-            <div class="col">
                 <button type="button" class="btn btn-success w-100" onclick="fetchPosition()">Fetch Position</button>
             </div>
             <div class="col">
@@ -60,8 +57,7 @@
     <div id="alertPlaceholder"></div>
 
     <script>
-        const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000`;
-        const API_BASE_ROBOT = `${window.location.protocol}//${window.location.hostname}`;
+        const API_BASE = `${window.location.protocol}//${window.location.hostname}`;
         document.getElementById("apiBaseLabel").textContent = API_BASE;
 
         const statusLabel = document.getElementById("status-label");
@@ -91,17 +87,6 @@
             return payload;
         }
 
-        async function getJson_robot(path) {
-            const response = await fetch(`${API_BASE_ROBOT}${path}`, { method: "GET" });
-            const contentType = response.headers.get("content-type") || "";
-            const payload = contentType.includes("application/json") ? await response.json() : { message: await response.text() };
-
-            if (!response.ok) {
-                throw new Error(payload.message || `HTTP ${response.status}`);
-            }
-            return payload;
-        }
-
         async function apiStart() {
             try {
                 const data = await getJson("/start");
@@ -122,19 +107,9 @@
             }
         }
 
-        async function apiResetTracking() {
-            try {
-                const data = await getJson("/reset_tracking");
-                setStatus(data.message || "Camera Reset Tracking", "warning");
-            } catch (error) {
-                appendAlert(error.message, "danger");
-                setStatus(error.message, "danger");
-            }
-        }
-
         async function fetchPosition() {
             try {
-                const data = await getJson_robot("/position");
+                const data = await getJson("/position");
                 positionOutput.textContent = jsonPretty(data);
                 setStatus("Position fetched", "success");
             } catch (error) {
@@ -145,7 +120,7 @@
 
         async function fetchObjects() {
             try {
-                const data = await getJson_robot("/get_blockPosition");
+                const data = await getJson("/objects");
                 objectsOutput.textContent = jsonPretty(data);
                 setStatus("Objects fetched", "success");
             } catch (error) {
