@@ -5,7 +5,7 @@
 #include <thread>
 #include <vector>
 
-#include "defs/structs.hpp" // for position_t
+#include "drive_interface.h" // for position_t
 #include "vision/ArucoLocalizer.hpp"
 
 // The camera is mounted on the robot at this offset, in millimetres and degrees.
