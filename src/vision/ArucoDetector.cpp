@@ -122,18 +122,36 @@ bool ArucoDetector::initCamera(int deviceIndex, int width, int height) {
         capture_.release();
     }
 
+    // On Linux the default backend is GStreamer, whose pipeline fails to start
+    // for plain UVC webcams (including the OV9281 and laptop cameras), so
+    // capture never produces a frame. V4L2 talks to the device directly; fall
+    // back to the default backend when it is unavailable.
+#ifdef __linux__
+    capture_.open(deviceIndex, cv::CAP_V4L2);
+    if (!capture_.isOpened()) {
+        capture_.open(deviceIndex);
+    }
+#else
     capture_.open(deviceIndex);
+#endif
     if (!capture_.isOpened()) {
         LOG_ERROR("ArucoDetector - failed to open camera device ", deviceIndex);
         return false;
     }
 
+    // A device only supports a fixed set of modes: the driver picks the closest
+    // one, so the resolution read back is authoritative, not the request.
     capture_.set(cv::CAP_PROP_FRAME_WIDTH, width);
     capture_.set(cv::CAP_PROP_FRAME_HEIGHT, height);
 
+    const int actualWidth = static_cast<int>(capture_.get(cv::CAP_PROP_FRAME_WIDTH));
+    const int actualHeight = static_cast<int>(capture_.get(cv::CAP_PROP_FRAME_HEIGHT));
+    if (actualWidth != width || actualHeight != height) {
+        LOG_WARNING("ArucoDetector - camera ", deviceIndex, " does not support ",
+                    width, "x", height, ", using ", actualWidth, "x", actualHeight);
+    }
     LOG_GREEN_INFO("ArucoDetector - camera ", deviceIndex, " opened at ",
-                   static_cast<int>(capture_.get(cv::CAP_PROP_FRAME_WIDTH)), "x",
-                   static_cast<int>(capture_.get(cv::CAP_PROP_FRAME_HEIGHT)));
+                   actualWidth, "x", actualHeight);
     return true;
 }
 
