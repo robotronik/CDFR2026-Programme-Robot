@@ -73,8 +73,8 @@ public:
     // This is the camera's pose; use cameraToRobot() for the robot's.
     bool getLocalisation(position_t& cameraPose) const;
 
-    // JPEG-encoded copy of the latest captured frame. Returns false when no
-    // frame has been captured yet.
+    // JPEG-encoded copy of the latest captured frame, with the detected markers
+    // outlined and labelled. Returns false when no frame has been captured yet.
     bool getPreview(std::vector<uchar>& jpeg) const;
 
     // Game elements seen in the latest frame, placed on the table from the

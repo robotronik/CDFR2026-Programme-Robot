@@ -5,6 +5,7 @@
 
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include "utils/logger.hpp"
 
@@ -42,6 +43,31 @@ cv::Matx33d cameraToTableRotation(double headingDeg, double pitchDeg) {
          sa, -sp * ca, cp * ca,
         -ca, -sp * sa, cp * sa,
           0,      -cp,     -sp);
+}
+
+// Draws the detected markers on `image`, colour-coded by role, so that
+// /preview shows what detection actually found.
+void drawDetections(cv::Mat& image, const std::vector<vision::DetectionResult>& detections) {
+    for (const vision::DetectionResult& detection : detections) {
+        if (detection.corners.size() < 4) {
+            continue;
+        }
+
+        cv::Scalar color(160, 160, 160);
+        if (detection.id == kGameElementId) {
+            color = cv::Scalar(0, 165, 255); // game element, orange
+        } else if (vision::ArucoLocalizer::fieldPosition(detection.id) != nullptr) {
+            color = cv::Scalar(0, 255, 0); // landmark tag, green
+        }
+
+        const std::vector<cv::Point> outline(detection.corners.begin(), detection.corners.end());
+        cv::polylines(image, std::vector<std::vector<cv::Point>>{outline}, true, color, 2, cv::LINE_AA);
+
+        // Label the marker above its first corner (top-left by convention).
+        const cv::Point labelAt = outline[0] + cv::Point(0, -10);
+        cv::putText(image, std::to_string(detection.id), labelAt,
+                    cv::FONT_HERSHEY_SIMPLEX, 0.8, color, 2, cv::LINE_AA);
+    }
 }
 
 } // namespace
@@ -174,7 +200,10 @@ bool ArucoCam::getPreview(std::vector<uchar>& jpeg) const {
     if (frame_.empty()) {
         return false;
     }
-    return cv::imencode(".jpg", frame_, jpeg);
+
+    cv::Mat annotated = frame_.clone();
+    drawDetections(annotated, detections_);
+    return cv::imencode(".jpg", annotated, jpeg);
 }
 
 bool ArucoCam::gameElementFromTag(const vision::DetectionResult& detection,
