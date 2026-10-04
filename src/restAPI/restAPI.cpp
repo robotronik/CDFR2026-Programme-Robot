@@ -16,7 +16,7 @@
 #include "navigation/navigation.h"
 #include "navigation/astar.h" //for static variable
 #include "actions/VirtualStrategy.hpp" // for the strategy list
-#include "vision/ArucoCam.hpp" //for vision fuction
+#include "vision/Cam.hpp" //for vision fuction
 #include "restAPI/manual_mode.h" // for manual mode functions
 
 #include <crow.h>
@@ -31,7 +31,7 @@ RestAPI::RestAPI(main_State_t* currentState,
                  TableState* tableStatus,
                  Arduino* arduino,
                  Lidar* lidar,
-                 ArucoCam* arucoCam,
+                 Cam* cam,
                  std::vector<VirtualStrategy*>* strategies)
     : currentState(currentState),
       nextState(nextState),
@@ -39,7 +39,7 @@ RestAPI::RestAPI(main_State_t* currentState,
       tableStatus(tableStatus),
       arduino(arduino),
       lidar(lidar),
-      arucoCam(arucoCam),
+      cam(cam),
       strategies(strategies){
 }
 
@@ -300,10 +300,10 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/objects")
     ([this](){
         position_t camera_pos = {0.0, 0.0, 0.0};
-        if (!arucoCam->getLocalisation(camera_pos)){
+        if (!cam->getLocalisation(camera_pos)){
             camera_pos = robotToCamera(drive->position);
         }
-        const std::vector<GameElement> elements = arucoCam->getGameElements(camera_pos);
+        const std::vector<GameElement> elements = cam->getGameElements(camera_pos);
         json objects = json::array();
         for (const GameElement& element : elements){
             objects.push_back(json{{"x", element.x}, {"y", element.y}, {"z", element.z},
@@ -321,7 +321,7 @@ void RestAPI::start(){
     ([this](){
         position_t camera_pos = {0.0, 0.0, 0.0};
         json response;
-        if (arucoCam->getLocalisation(camera_pos)){
+        if (cam->getLocalisation(camera_pos)){
             const position_t robot_pos = cameraToRobot(camera_pos);
             response["object"] = json{{"x", robot_pos.x}, {"y", robot_pos.y}, {"a", robot_pos.a}};
         }
@@ -336,7 +336,7 @@ void RestAPI::start(){
     // Starts/stops the camera capture thread.
     CROW_ROUTE(app, "/start")
     ([this](){
-        arucoCam->start();
+        cam->start();
         json response;
         response["message"] = "Camera started";
         return crow::response(response.dump());
@@ -344,7 +344,7 @@ void RestAPI::start(){
 
     CROW_ROUTE(app, "/stop")
     ([this](){
-        arucoCam->stop();
+        cam->stop();
         json response;
         response["message"] = "Camera stopped";
         return crow::response(response.dump());
@@ -354,7 +354,7 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/preview")
     ([this](){
         std::vector<uchar> jpeg;
-        if (!arucoCam->getPreview(jpeg)){
+        if (!cam->getPreview(jpeg)){
             json response;
             response["message"] = "No preview available";
             return crow::response(503, response.dump());

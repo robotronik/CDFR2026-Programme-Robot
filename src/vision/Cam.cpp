@@ -1,4 +1,4 @@
-#include "vision/ArucoCam.hpp"
+#include "vision/Cam.hpp"
 
 #include <chrono>
 #include <cmath>
@@ -20,6 +20,9 @@ constexpr int kCameraHeight = 800;
 constexpr int kGameElementId = 13;
 constexpr double kGameElementTagMm = GAME_ELEMENT_TAG_MM;
 constexpr double kGameElementSideMm = GAME_ELEMENT_SIDE_MM;
+
+// The field landmark tags (ids 20..23) are 100 mm squares.
+constexpr double kLandmarkTagMm = 100.0;
 
 constexpr double kDegToRad = M_PI / 180.0;
 
@@ -97,29 +100,46 @@ position_t robotToCamera(const position_t& robotPose) {
     return cameraPose;
 }
 
-ArucoCam::ArucoCam(int camNumber, const char* calibrationFilePath) {
+Cam::Cam(int camNumber, const char* calibrationFilePath, const char* mapFilePath) {
     id_ = camNumber;
     if (id_ < 0) {
-        LOG_INFO("Emulating ArucoCam");
+        LOG_INFO("Emulating Cam");
         return;
     }
 
-    if (!localizer_.loadCalibration(calibrationFilePath)) {
-        LOG_ERROR("ArucoCam ", id_, " failed to load calibration from ", calibrationFilePath);
+    if (!detector_.loadCalibration(calibrationFilePath)) {
+        LOG_ERROR("Cam ", id_, " failed to load calibration from ", calibrationFilePath);
     }
-    localizer_.detector().setMarkerSize(kGameElementId, kGameElementTagMm);
+    detector_.setMarkerSize(kGameElementId, kGameElementTagMm);
+    for (int tagId : {20, 21, 22, 23}) {
+        detector_.setMarkerSize(tagId, kLandmarkTagMm);
+    }
+
+#if USE_ARUCO_LOCALISATION
+    (void)mapFilePath; // only the feature localiser needs a map
+    if (!localizer_.loadCalibration(calibrationFilePath)) {
+        LOG_ERROR("Cam ", id_, " failed to load the landmark localiser calibration");
+    }
+#else
+    if (!localizer_.loadCalibration(calibrationFilePath)) {
+        LOG_ERROR("Cam ", id_, " failed to load the feature localiser calibration");
+    }
+    if (!localizer_.loadMap(mapFilePath)) {
+        LOG_ERROR("Cam ", id_, " failed to load the feature map from ", mapFilePath);
+    }
+#endif
 }
 
-ArucoCam::~ArucoCam() {
+Cam::~Cam() {
     stop();
 }
 
-void ArucoCam::start() {
+void Cam::start() {
     if (id_ < 0 || running_.load()) {
         return;
     }
-    if (!localizer_.isCameraOpen() && !localizer_.initCamera(id_, kCameraWidth, kCameraHeight)) {
-        LOG_ERROR("ArucoCam ", id_, " failed to open camera");
+    if (!detector_.isCameraOpen() && !detector_.initCamera(id_, kCameraWidth, kCameraHeight)) {
+        LOG_ERROR("Cam ", id_, " failed to open camera");
         return;
     }
 
@@ -131,56 +151,74 @@ void ArucoCam::start() {
     }
 
     running_.store(true);
-    worker_ = std::thread(&ArucoCam::workerLoop, this);
-    LOG_GREEN_INFO("ArucoCam ", id_, " started");
+    worker_ = std::thread(&Cam::workerLoop, this);
+    LOG_GREEN_INFO("Cam ", id_, " started");
 }
 
-void ArucoCam::stop() {
+void Cam::stop() {
     running_.store(false);
     if (worker_.joinable()) {
         worker_.join();
     }
     if (id_ >= 0) {
-        localizer_.releaseCamera();
+        detector_.releaseCamera();
     }
 }
 
-void ArucoCam::workerLoop() {
+void Cam::setPrior(const position_t& robotPose) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    priorRobot_ = robotPose;
+    hasPrior_ = true;
+}
+
+void Cam::workerLoop() {
     while (running_.load()) {
         cv::Mat frame;
-        if (!localizer_.detector().captureFrame(frame)) {
+        if (!detector_.captureFrame(frame)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
             continue;
         }
 
-        std::vector<vision::DetectionResult> detections = localizer_.detector().detect(frame);
+        const std::vector<vision::DetectionResult> detections = detector_.detect(frame);
+
+        vision::CameraPosition position;
+        bool localised = false;
+
+#if USE_ARUCO_LOCALISATION
+        // The markers were detected above for the game elements and preview, so
+        // the localiser only has to turn them into a pose.
+        localised = localizer_.locate(detections, position);
+#else
+        // Snapshot the odometry prior so setPrior() from another thread cannot
+        // race the localiser.
+        position_t priorRobot;
+        bool hasPrior;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            priorRobot = priorRobot_;
+            hasPrior = hasPrior_;
+        }
+        if (hasPrior) {
+            const position_t cameraPrior = robotToCamera(priorRobot);
+            localizer_.setPrior({cameraPrior.x, cameraPrior.y, CAMERA_HEIGHT_MM,
+                                 cameraPrior.a});
+        }
+        localised = localizer_.locate(frame, position);
+#endif
 
         std::lock_guard<std::mutex> lock(mutex_);
-        detections_ = std::move(detections);
+        detections_ = detections;
         frame_ = frame;
-
-        // Localisation comes from the first landmark tag in the frame. A frame
-        // without a usable tag invalidates the previous fix.
-        hasLocalisation_ = false;
-        for (const vision::DetectionResult& detection : detections_) {
-            const cv::Point2d* field = vision::ArucoLocalizer::fieldPosition(detection.id);
-            if (field == nullptr) {
-                continue;
-            }
-            vision::CameraPosition position;
-            if (!vision::ArucoLocalizer::cameraPositionForTag(detection, field->x, field->y, position)) {
-                continue;
-            }
+        hasLocalisation_ = localised;
+        if (localised) {
             localisation_.x = position.x;
             localisation_.y = position.y;
             localisation_.a = position.heading;
-            hasLocalisation_ = true;
-            break;
         }
     }
 }
 
-bool ArucoCam::getLocalisation(position_t& cameraPose) const {
+bool Cam::getLocalisation(position_t& cameraPose) const {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!hasLocalisation_) {
         return false;
@@ -189,7 +227,7 @@ bool ArucoCam::getLocalisation(position_t& cameraPose) const {
     return true;
 }
 
-bool ArucoCam::getPreview(std::vector<uchar>& jpeg) const {
+bool Cam::getPreview(std::vector<uchar>& jpeg) const {
     std::lock_guard<std::mutex> lock(mutex_);
     if (frame_.empty()) {
         return false;
@@ -200,9 +238,9 @@ bool ArucoCam::getPreview(std::vector<uchar>& jpeg) const {
     return cv::imencode(".jpg", annotated, jpeg);
 }
 
-bool ArucoCam::gameElementFromTag(const vision::DetectionResult& detection,
-                                  const position_t& cameraPose,
-                                  GameElement& element) {
+bool Cam::gameElementFromTag(const vision::DetectionResult& detection,
+                             const position_t& cameraPose,
+                             GameElement& element) {
     if (detection.id != kGameElementId || !detection.hasPose) {
         return false;
     }
@@ -235,7 +273,7 @@ bool ArucoCam::gameElementFromTag(const vision::DetectionResult& detection,
     return true;
 }
 
-std::vector<GameElement> ArucoCam::getGameElements(const position_t& cameraPose) const {
+std::vector<GameElement> Cam::getGameElements(const position_t& cameraPose) const {
     std::vector<GameElement> elements;
 
     std::lock_guard<std::mutex> lock(mutex_);

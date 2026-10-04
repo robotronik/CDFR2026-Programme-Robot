@@ -1,35 +1,23 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include <opencv2/core.hpp>
 
 #include "vision/ArucoDetector.hpp"
+#include "vision/CamLocalizer.hpp"
 
 namespace vision {
 
 /**
- * Where the camera is, in field millimetres, and which way it looks.
+ * Localises the robot from the four fixed landmark tags (ids 20..23) at the
+ * table corners, which are 100 mm squares.
  *
- * `z` is the camera's height above the ground. `heading` is in degrees,
- * normalized to ]-180, 180].
+ * A single visible tag is enough to fix the camera. When several are visible at
+ * once their estimates are averaged, the heading circularly.
  */
-struct CameraPosition {
-    double x = 0.0;
-    double y = 0.0;
-    double z = 0.0;
-    double heading = 0.0;
-};
-
-/**
- * Wraps an ArucoDetector and turns a detected landmark into the camera's
- * position on the field.
- *
- * The four field tags (ids 20..23) are fixed landmarks at the table corners and
- * are 100 mm squares, so a single tag is enough to fix the camera. When several
- * are visible at once their estimates are averaged, the heading circularly.
- */
-class ArucoLocalizer {
+class ArucoLocalizer : public CamLocalizer {
 public:
     explicit ArucoLocalizer(double tagSideMm = 100.0);
 
@@ -42,6 +30,11 @@ public:
     // Detects the landmark tags on `frame`. Returns true and fills `position`
     // when at least one of them yields a usable pose, false otherwise.
     bool locate(const cv::Mat& frame, CameraPosition& position);
+
+    // Position from already-computed detections; lets a caller that also needs
+    // the markers (role tagging, game elements) detect only once.
+    bool locate(const std::vector<DetectionResult>& detections,
+                CameraPosition& position) const;
 
     // Field position (mm) of a known tag, or nullptr when the id is unknown.
     static const cv::Point2d* fieldPosition(int tagId);

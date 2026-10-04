@@ -7,7 +7,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 
-#include "vision/ArucoCam.hpp"
+#include "vision/Cam.hpp"
 #include "vision/ArucoDetector.hpp"
 #include "vision/ArucoLocalizer.hpp"
 #include "utils/logger.hpp"
@@ -363,7 +363,7 @@ bool test_game_element_cube_center() {
         std::vector<GameElement> elements;
         for (const vision::DetectionResult& detection : detections) {
             GameElement element;
-            if (ArucoCam::gameElementFromTag(detection, cameraPose, element)) {
+            if (Cam::gameElementFromTag(detection, cameraPose, element)) {
                 elements.push_back(element);
             }
         }

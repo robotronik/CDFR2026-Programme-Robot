@@ -4,10 +4,10 @@
 #include "navigation/pathfind.h"
 #include "navigation/driveControl.h"
 #include "defs/tableState.hpp"
-#include "vision/ArucoCam.hpp"
+#include "vision/Cam.hpp"
 
-Navigation::Navigation(DriveControl* drive, TableState* tableStatus, ArucoCam* arucoCam)
-    : drive(drive), tableStatus(tableStatus), arucoCam(arucoCam){
+Navigation::Navigation(DriveControl* drive, TableState* tableStatus, Cam* cam)
+    : drive(drive), tableStatus(tableStatus), cam(cam){
 }
 
 nav_return_t Navigation::driveStep(){
@@ -79,7 +79,7 @@ nav_return_t Navigation::go(){
         // Calibrate using camera. An emulated camera has no fix, so skip.
         position_t camera_pos = {0.0, 0.0, 0.0};
         // If position found, update the robot position and reset the calibration age
-        if (arucoCam->getLocalisation(camera_pos)){
+        if (cam->getLocalisation(camera_pos)){
             // The camera is not the robot: convert to the robot's frame.
             const position_t robot_pos = cameraToRobot(camera_pos);
             prev_final_pos_cam = robot_pos;

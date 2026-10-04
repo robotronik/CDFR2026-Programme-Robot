@@ -85,8 +85,11 @@ bool ArucoLocalizer::cameraPositionForTag(const DetectionResult& detection,
 }
 
 bool ArucoLocalizer::locate(const cv::Mat& frame, CameraPosition& position) {
-    const std::vector<DetectionResult> detections = detector_.detect(frame);
+    return locate(detector_.detect(frame), position);
+}
 
+bool ArucoLocalizer::locate(const std::vector<DetectionResult>& detections,
+                            CameraPosition& position) const {
     double sumX = 0.0, sumY = 0.0, sumZ = 0.0;
     double sumCos = 0.0, sumSin = 0.0;
     int count = 0;

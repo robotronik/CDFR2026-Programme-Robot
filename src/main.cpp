@@ -22,7 +22,7 @@
 #include "utils/utils.h"
 #include "restAPI/restAPI.hpp"
 #include "restAPI/manual_mode.h"
-#include "vision/ArucoCam.hpp"
+#include "vision/Cam.hpp"
 #include "mat/mat.hpp"
 
 //brain include
@@ -61,13 +61,13 @@ std::vector<VirtualStrategy*> strategies = { currentStrategy };
 ActionFSM action(currentStrategy, &drive, &tableStatus);
 
 #ifndef EMULATE_CAM
-ArucoCam arucoCam1 = ArucoCam(0, "data/OV9281_1280_800.yaml");
+Cam cam1 = Cam(0, "data/OV9281_1280_800.yaml", "data/FieldBW.png");
 #else
-ArucoCam arucoCam1(-1, "");
+Cam cam1(-1, "", "");
 #endif
 
 // Navigation
-Navigation navigation(&drive, &tableStatus, &arucoCam1);
+Navigation navigation(&drive, &tableStatus, &cam1);
 
 main_State_t currentState;
 main_State_t nextState;
@@ -77,7 +77,7 @@ bool motorUpFirst = true;
 std::thread api_server_thread;
 
 // REST API
-RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &lidar, &arucoCam1, &strategies);
+RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &lidar, &cam1, &strategies);
 
 // Prototypes
 int StartSequence();
@@ -113,6 +113,9 @@ int main(int argc, char *argv[])
         // Get Sensor Data
         {
             drive.update();
+            // The odometry prior helps the feature localiser; the marker
+            // localiser ignores it.
+            cam1.setPrior(drive.position);
             //LOG_INFO("x: ", drive.position.x, " y: ", drive.position.y, " a: ", drive.position.a);
 
             if (currentState != INIT && currentState != FIN)
@@ -176,7 +179,7 @@ int main(int argc, char *argv[])
                 actuators.enableActuators();
                 actuators.homeActuators();
                 lidar.startSpin();
-                arucoCam1.start();
+                cam1.start();
                 arduino.moveMotorDC(80, false);
 
                 if (tableStatus.colorTeam == NONE)
@@ -387,7 +390,7 @@ void EndSequence()
     
     // Stop the lidar
     lidar.Stop();
-    arucoCam1.stop();
+    cam1.stop();
 
 #ifndef EMULATE_I2C
     drive.disable();

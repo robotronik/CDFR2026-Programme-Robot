@@ -7,6 +7,8 @@ bool test_aruco_sim_camera();
 bool test_aruco_localizer();
 bool test_camera_robot_conversion();
 bool test_game_element_cube_center();
+bool test_features_localizer();
+bool test_features_localizer_without_prior();
 bool test_mat_parse();
 
 int runAllTests();
@@ -36,6 +38,11 @@ int runAllTests() {
     UNIT_TEST(test_aruco_localizer());
     UNIT_TEST(test_camera_robot_conversion());
     UNIT_TEST(test_game_element_cube_center());
+
+    //Runs the feature localisation tests
+    LOG_INFO("Running feature tests");
+    UNIT_TEST(test_features_localizer());
+    UNIT_TEST(test_features_localizer_without_prior());
 
     //Runs the mat client tests
     LOG_INFO("Running mat client tests");

@@ -3,7 +3,7 @@
 #include "utils/logger.hpp"
 #include "navigation/pathfind.h"
 #include "defs/constante.h"
-#include "vision/ArucoCam.hpp" // for OFFSET_CAM_A
+#include "vision/Cam.hpp" // for OFFSET_CAM_A
 
 CalibrationAction::CalibrationAction(DriveControl* drive, TableState* tableState){
     nom = "Calibration";

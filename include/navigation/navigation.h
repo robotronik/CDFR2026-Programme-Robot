@@ -6,7 +6,7 @@ using json = nlohmann::json;
 
 class DriveControl;
 class TableState;
-class ArucoCam;
+class Cam;
 
 // Navigation return type
 typedef enum {
@@ -18,7 +18,7 @@ typedef enum {
 
 class Navigation {
     public:
-        Navigation(DriveControl* drive, TableState* tableStatus, ArucoCam* arucoCam);
+        Navigation(DriveControl* drive, TableState* tableStatus, Cam* cam);
         ~Navigation() = default;
 
         // Positions recorded during the last camera calibration
@@ -38,7 +38,7 @@ class Navigation {
 
         DriveControl* drive;
         TableState* tableStatus;
-        ArucoCam* arucoCam;
+        Cam* cam;
 
         bool is_robot_stalled = false;  // Because of opponent in direction of movement
         unsigned long robot_stall_start_time = 0;
