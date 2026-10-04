@@ -18,9 +18,7 @@
             <span class="status-dot ms-3" id="statusDot"></span>
         </div>
 
-        <div id="status-label" class="label-section mt-2">
-            Camera API base: <code id="apiBaseLabel"></code>
-        </div>
+        <div id="status-label" class="label-section mt-2"></div>
 
         <div class="row mb-3 mt-2">
             <div class="col">
@@ -58,7 +56,6 @@
 
     <script>
         const API_BASE = `${window.location.protocol}//${window.location.hostname}`;
-        document.getElementById("apiBaseLabel").textContent = API_BASE;
 
         const statusLabel = document.getElementById("status-label");
         const statusDot = document.getElementById("statusDot");
@@ -68,7 +65,7 @@
         const previewPlaceholder = document.getElementById("previewPlaceholder");
 
         function setStatus(text, type = "secondary") {
-            statusLabel.innerHTML = `${text} | Camera API base: <code>${API_BASE}</code>`;
+            statusLabel.innerHTML = text;
             statusDot.className = `status-dot ms-3 bg-${type}`;
         }
 
