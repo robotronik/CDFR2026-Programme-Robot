@@ -295,14 +295,15 @@ void RestAPI::start(){
     // --------------------------- Camera Routes ---------------------------
 
     // Game elements (ArUco id 13 markers) seen by the camera, as full poses on
-    // the table. Empty when the camera has no localisation yet.
+    // the table. Placed from the camera's own localisation when it has one,
+    // otherwise from the robot's known position.
     CROW_ROUTE(app, "/objects")
     ([this](){
-        std::vector<GameElement> elements;
         position_t camera_pos = {0.0, 0.0, 0.0};
-        if (arucoCam->getLocalisation(camera_pos)){
-            elements = arucoCam->getGameElements(camera_pos);
+        if (!arucoCam->getLocalisation(camera_pos)){
+            camera_pos = robotToCamera(drive->position);
         }
+        const std::vector<GameElement> elements = arucoCam->getGameElements(camera_pos);
         json objects = json::array();
         for (const GameElement& element : elements){
             objects.push_back(json{{"x", element.x}, {"y", element.y}, {"z", element.z},
