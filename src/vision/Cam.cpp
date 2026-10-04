@@ -115,19 +115,15 @@ Cam::Cam(int camNumber, const char* calibrationFilePath, const char* mapFilePath
         detector_.setMarkerSize(tagId, kLandmarkTagMm);
     }
 
-#if USE_ARUCO_LOCALISATION
-    (void)mapFilePath; // only the feature localiser needs a map
-    if (!localizer_.loadCalibration(calibrationFilePath)) {
+    if (!arucoLocalizer_.loadCalibration(calibrationFilePath)) {
         LOG_ERROR("Cam ", id_, " failed to load the landmark localiser calibration");
     }
-#else
-    if (!localizer_.loadCalibration(calibrationFilePath)) {
+    if (!featuresLocalizer_.loadCalibration(calibrationFilePath)) {
         LOG_ERROR("Cam ", id_, " failed to load the feature localiser calibration");
     }
-    if (!localizer_.loadMap(mapFilePath)) {
+    if (!featuresLocalizer_.loadMap(mapFilePath)) {
         LOG_ERROR("Cam ", id_, " failed to load the feature map from ", mapFilePath);
     }
-#endif
 }
 
 Cam::~Cam() {
@@ -181,16 +177,8 @@ void Cam::workerLoop() {
 
         const std::vector<vision::DetectionResult> detections = detector_.detect(frame);
 
-        vision::CameraPosition position;
-        bool localised = false;
-
-#if USE_ARUCO_LOCALISATION
-        // The markers were detected above for the game elements and preview, so
-        // the localiser only has to turn them into a pose.
-        localised = localizer_.locate(detections, position);
-#else
         // Snapshot the odometry prior so setPrior() from another thread cannot
-        // race the localiser.
+        // race the feature localiser.
         position_t priorRobot;
         bool hasPrior;
         {
@@ -198,13 +186,30 @@ void Cam::workerLoop() {
             priorRobot = priorRobot_;
             hasPrior = hasPrior_;
         }
+
+        // Both localisers run on every frame; only the selected one is
+        // reported. The marker localiser reuses the detections computed above.
+        vision::CameraPosition arucoPosition;
+        const bool hasAruco = arucoLocalizer_.locate(detections, arucoPosition);
+
         if (hasPrior) {
             const position_t cameraPrior = robotToCamera(priorRobot);
-            localizer_.setPrior({cameraPrior.x, cameraPrior.y, CAMERA_HEIGHT_MM,
-                                 cameraPrior.a});
+            featuresLocalizer_.setPrior({cameraPrior.x, cameraPrior.y, CAMERA_HEIGHT_MM,
+                                         cameraPrior.a});
         }
-        localised = localizer_.locate(frame, position);
+        vision::CameraPosition featurePosition;
+        const bool hasFeature = featuresLocalizer_.locate(frame, featurePosition);
+
+#if USE_ARUCO_LOCALISATION
+        const bool localised = hasAruco;
+        const vision::CameraPosition& position = arucoPosition;
+#else
+        const bool localised = hasFeature;
+        const vision::CameraPosition& position = featurePosition;
 #endif
+        // Both are always computed; the switch just decides which is reported.
+        (void)hasAruco;
+        (void)hasFeature;
 
         std::lock_guard<std::mutex> lock(mutex_);
         detections_ = detections;

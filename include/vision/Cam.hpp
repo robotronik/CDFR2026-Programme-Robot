@@ -46,22 +46,11 @@ struct GameElement {
 position_t cameraToRobot(const position_t& cameraPose);
 position_t robotToCamera(const position_t& robotPose);
 
-namespace vision {
-
-// The localiser Cam runs, chosen at compile time by USE_ARUCO_LOCALISATION.
-// Both expose the same locate() shape, so the call site does not change.
-#if USE_ARUCO_LOCALISATION
-using LocalizerType = ArucoLocalizer;
-#else
-using LocalizerType = FeaturesLocalizer;
-#endif
-
-} // namespace vision
-
-// Captures frames on its own thread, detects ArUco markers (for game elements
-// and the preview) and localises the camera on the field. The localisation
-// itself comes from `vision::LocalizerType`: the landmark tags or the mapped
-// ground features, switched by USE_ARUCO_LOCALISATION.
+// Captures frames on its own thread and localises the camera on the field.
+// Both localisers run on every frame - ArUco landmark tags and mapped ground
+// features - so their results are always available; USE_ARUCO_LOCALISATION only
+// selects which one getLocalisation() reports. ArUco detection also feeds the
+// game elements and the preview.
 class Cam {
 public:
     Cam(int camNumber, const char* calibrationFilePath, const char* mapFilePath);
@@ -79,8 +68,9 @@ public:
     // restrict its search. Ignored by the marker localiser.
     void setPrior(const position_t& robotPose);
 
-    // Latest camera localisation on the table. Returns true when one is known.
-    // This is the camera's pose; use cameraToRobot() for the robot's.
+    // Latest camera localisation on the table, from the localiser selected by
+    // USE_ARUCO_LOCALISATION. Returns true when one is known. This is the
+    // camera's pose; use cameraToRobot() for the robot's.
     bool getLocalisation(position_t& cameraPose) const;
 
     // JPEG-encoded copy of the latest captured frame, with the detected markers
@@ -106,9 +96,12 @@ private:
     std::thread worker_;
 
     // Owns the capture device and detects the markers for the preview and the
-    // game elements, whatever localiser is selected.
+    // game elements.
     vision::ArucoDetector detector_;
-    vision::LocalizerType localizer_;
+    // Both localisers run on every frame; USE_ARUCO_LOCALISATION picks which
+    // one getLocalisation() reports.
+    vision::ArucoLocalizer arucoLocalizer_;
+    vision::FeaturesLocalizer featuresLocalizer_;
 
     mutable std::mutex mutex_;
     std::vector<vision::DetectionResult> detections_;
