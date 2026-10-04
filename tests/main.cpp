@@ -7,6 +7,7 @@ bool test_aruco_sim_camera();
 bool test_aruco_localizer();
 bool test_camera_robot_conversion();
 bool test_game_element_cube_center();
+bool test_mat_parse();
 
 int runAllTests();
 
@@ -35,6 +36,10 @@ int runAllTests() {
     UNIT_TEST(test_aruco_localizer());
     UNIT_TEST(test_camera_robot_conversion());
     UNIT_TEST(test_game_element_cube_center());
+
+    //Runs the mat client tests
+    LOG_INFO("Running mat client tests");
+    UNIT_TEST(test_mat_parse());
 
     LOG_INFO("There has been ", numPassed, "/", numTests, " tests passed");
     //return (numTests == numPassed) ? 0 : 1;

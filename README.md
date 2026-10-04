@@ -208,6 +208,21 @@ Ensure that both the robot and the program are running and that you are on the s
 http://raspitronik.local
 ```
 
+## 🛰️ Mat de vision
+
+The robot drives the vision mat over **HTTP (TCP)** through its REST API
+(`src/mat/mat.cpp`, using cpp-httplib). The mat is expected at `mat.local:5000`
+(override at compile time with `-DMAT_HOST=… -DMAT_PORT=…`).
+
+| Call | Mat route | Purpose |
+|---|---|---|
+| `StartMat()` | `GET /start` | start detection (retries for 5 s) |
+| `StopMat()` | `GET /stop` | stop detection |
+| `getMapStatus()` | `GET /fleet/live` | opponent position + game elements; applied by `TableState::updateMapStatus()` |
+
+The last payload received is available via `getMatTableData()`. The raw parsing
+is covered by `tests/MatTest.cpp`.
+
 ## 📺 Touchscreen on the Robot
 
 To set up the touchscreen kiosk mode on the Raspberry Pi, first disable NTP and set the date to avoid SSL issues:

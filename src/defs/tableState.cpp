@@ -1,4 +1,5 @@
 #include "defs/tableState.hpp"
+#include "mat/mat.hpp"
 
 TableState::TableState(DriveControl* drive){
     this->drive = drive;
@@ -55,6 +56,14 @@ void to_json(json& j, const TableState& ts) {
 }
 
 void TableState::updateMapStatus(){
-    // TODO use data from mast to update tableStatus
-
+    // Le mat voit le robot adverse (tag de couleur opposée) : sa position fait
+    // foi. Les éléments de jeu restent disponibles via getMatTableData() pour
+    // les stratégies.
+    const MatTableData data = getMatTableData();
+    if (!data.opponentVisible) {
+        return; // on conserve la dernière position connue
+    }
+    pos_opponent.x = data.opponentX;
+    pos_opponent.y = data.opponentY;
+    pos_opponent.a = data.opponentA;
 }
