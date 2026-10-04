@@ -12,10 +12,12 @@ namespace {
 constexpr int kCameraWidth = 1280;
 constexpr int kCameraHeight = 800;
 
-// The game elements carry ArUco id 13. `kGameElementSideMm` is the physical
-// side of that marker, which sets the scale of its estimated pose.
+// The game elements carry ArUco id 13. `kGameElementTagMm` is the tag's physical
+// side, which sets the scale of its estimated pose; `kGameElementSideMm` is the
+// cube's side, which places the tag above the cube's centre.
 constexpr int kGameElementId = 13;
-constexpr double kGameElementSideMm = 80.0;
+constexpr double kGameElementTagMm = GAME_ELEMENT_TAG_MM;
+constexpr double kGameElementSideMm = GAME_ELEMENT_SIDE_MM;
 
 constexpr double kDegToRad = M_PI / 180.0;
 
@@ -78,7 +80,7 @@ ArucoCam::ArucoCam(int camNumber, const char* calibrationFilePath) {
     if (!localizer_.loadCalibration(calibrationFilePath)) {
         LOG_ERROR("ArucoCam ", id_, " failed to load calibration from ", calibrationFilePath);
     }
-    localizer_.detector().setMarkerSize(kGameElementId, kGameElementSideMm);
+    localizer_.detector().setMarkerSize(kGameElementId, kGameElementTagMm);
 }
 
 ArucoCam::~ArucoCam() {
@@ -131,6 +133,7 @@ void ArucoCam::workerLoop() {
         // Localisation comes from the first landmark tag in the frame. A frame
         // without a usable tag invalidates the previous fix.
         hasLocalisation_ = false;
+        gameElements_.clear();
         for (const vision::DetectionResult& detection : detections_) {
             const cv::Point2d* field = vision::ArucoLocalizer::fieldPosition(detection.id);
             if (field == nullptr) {
@@ -146,6 +149,11 @@ void ArucoCam::workerLoop() {
             hasLocalisation_ = true;
             break;
         }
+
+        // Elements are placed on the table from the latest known camera pose.
+        if (hasLocalisation_) {
+            updateGameElements(localisation_);
+        }
     }
 }
 
@@ -158,37 +166,66 @@ bool ArucoCam::getLocalisation(position_t& cameraPose) const {
     return true;
 }
 
-std::vector<GameElement> ArucoCam::getGameElements(const position_t& robotPose) const {
-    const position_t cameraPose = robotToCamera(robotPose);
+bool ArucoCam::gameElementFromTag(const vision::DetectionResult& detection,
+                                  const position_t& cameraPose,
+                                  GameElement& element) {
+    if (detection.id != kGameElementId || !detection.hasPose) {
+        return false;
+    }
+
     const cv::Matx33d cameraToTable = cameraToTableRotation(cameraPose.a, CAMERA_PITCH_DEG);
     const cv::Vec3d cameraPosition{cameraPose.x, cameraPose.y, CAMERA_HEIGHT_MM};
 
+    cv::Matx33d elementToCamera;
+    cv::Rodrigues(detection.rvec, elementToCamera);
+    const cv::Matx33d elementToTable = cameraToTable * elementToCamera;
+
+    // The detected marker pose is in the camera's optical frame; lift it into
+    // the table frame through the camera's mounting.
+    const cv::Vec3d tagPosition = cameraPosition + cameraToTable * detection.tvec;
+
+    // The tag sits on a face of the cube, so the cube's centre is half a side
+    // inwards along the tag's outward normal (its own +z axis in the table).
+    const cv::Vec3d normal = elementToTable * cv::Vec3d(0.0, 0.0, 1.0);
+    const cv::Vec3d cubePosition = tagPosition - (kGameElementSideMm / 2.0) * normal;
+
+    cv::Mat rqR, rqQ;
+    const cv::Vec3d euler = cv::RQDecomp3x3(elementToTable, rqR, rqQ);
+
+    element.x = cubePosition[0];
+    element.y = cubePosition[1];
+    element.z = cubePosition[2];
+    element.roll = euler[0];
+    element.pitch = euler[1];
+    element.yaw = euler[2];
+    return true;
+}
+
+std::vector<GameElement> ArucoCam::getGameElements(const position_t& cameraPose) const {
     std::vector<GameElement> elements;
 
     std::lock_guard<std::mutex> lock(mutex_);
     for (const vision::DetectionResult& detection : detections_) {
-        if (detection.id != kGameElementId || !detection.hasPose) {
-            continue;
-        }
-
-        cv::Matx33d elementToCamera;
-        cv::Rodrigues(detection.rvec, elementToCamera);
-
-        // The detected marker pose is in the camera's optical frame; lift it
-        // into the table frame through the camera's mounting.
-        const cv::Vec3d position = cameraPosition + cameraToTable * detection.tvec;
-        cv::Mat rqR, rqQ;
-        const cv::Vec3d euler = cv::RQDecomp3x3(cameraToTable * elementToCamera, rqR, rqQ);
-
         GameElement element;
-        element.x = position[0];
-        element.y = position[1];
-        element.z = position[2];
-        element.roll = euler[0];
-        element.pitch = euler[1];
-        element.yaw = euler[2];
-        elements.push_back(element);
+        if (gameElementFromTag(detection, cameraPose, element)) {
+            elements.push_back(element);
+        }
     }
 
     return elements;
+}
+
+std::vector<GameElement> ArucoCam::getGameElements() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return gameElements_;
+}
+
+void ArucoCam::updateGameElements(const position_t& cameraPose) {
+    gameElements_.clear();
+    for (const vision::DetectionResult& detection : detections_) {
+        GameElement element;
+        if (gameElementFromTag(detection, cameraPose, element)) {
+            gameElements_.push_back(element);
+        }
+    }
 }

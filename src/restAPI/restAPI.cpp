@@ -294,13 +294,13 @@ void RestAPI::start(){
 
     CROW_ROUTE(app, "/get_blockPosition")
     ([this](){
-        position_t robot_pos = drive->position;
         position_t camera_pos = {0.0, 0.0, 0.0};
+        std::vector<GameElement> elements;
         if (arucoCam->getLocalisation(camera_pos)){
-            robot_pos = cameraToRobot(camera_pos);
+            elements = arucoCam->getGameElements(camera_pos);
         }
         json objects = json::array();
-        for (const GameElement& element : arucoCam->getGameElements(robot_pos)){
+        for (const GameElement& element : elements){
             objects.push_back(json{{"x", element.x}, {"y", element.y}, {"z", element.z},
                                    {"roll", element.roll}, {"pitch", element.pitch}, {"yaw", element.yaw}});
         }

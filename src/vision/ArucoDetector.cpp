@@ -40,7 +40,9 @@ void configureParameters(cv::aruco::DetectorParameters& p) {
     p.minOtsuStdDev = 5.0;
     p.errorCorrectionRate = 0.6;
 
-    p.detectInvertedMarker = false;
+    // The game element tags are rendered inverted (white on black) in the
+    // simulator, so the detector must accept inverted markers.
+    p.detectInvertedMarker = true;
     p.useAruco3Detection = true;
 }
 

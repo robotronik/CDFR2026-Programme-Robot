@@ -275,3 +275,89 @@ bool test_camera_robot_conversion() {
 
     return true;
 }
+
+// A game element is a tagged cube. getGameElements() must report the cube's
+// centre, not the centre of the tag on its visible face. The cube sits at
+// (0, 0, 55) with no rotation in both captures; only the camera moves, so both
+// visible tags must yield the same cube centre whatever the camera pose.
+bool test_game_element_cube_center() {
+    struct SampleCase {
+        const char* image;
+        double cameraX; // camera field pose, from the filename
+        double cameraY;
+        double cameraA;
+    };
+    static const SampleCase kCases[] = {
+        {"capture_1_x-304.6_y0.0_yaw0.0_pitch45.0_vfov70.0_hfov96.5.png", -304.6, 0.0, 0.0},
+        {"capture_105_x-271.5_y160.5_yaw-20.0_pitch45.0_vfov70.0_hfov96.5.png", -271.5, 160.5, -20.0},
+    };
+
+    const std::string calibrationPath = findCalibrationPath("SIM_VFOV70_1280_800.yaml");
+    if (calibrationPath.empty()) {
+        LOG_ERROR("Game element test - missing virtual camera calibration");
+        return false;
+    }
+
+    vision::ArucoDetector detector;
+    if (!detector.loadCalibration(calibrationPath)) {
+        LOG_ERROR("Game element test - failed to load ", calibrationPath);
+        return false;
+    }
+    detector.setMarkerSize(13, GAME_ELEMENT_TAG_MM);
+
+    const double expectedX = 0.0, expectedY = 0.0, expectedZ = 55.0;
+
+    for (const SampleCase& testCase : kCases) {
+        const std::string imagePath = findImagePath(testCase.image);
+        if (imagePath.empty()) {
+            LOG_ERROR("Game element test - missing capture ", testCase.image);
+            return false;
+        }
+
+        const cv::Mat image = cv::imread(imagePath, cv::IMREAD_COLOR);
+        const std::vector<vision::DetectionResult> detections = detector.detect(image);
+
+        // The cube shows on two faces; a field landmark tag may also be present
+        // but is not a game element.
+        const position_t cameraPose = {testCase.cameraX, testCase.cameraY, testCase.cameraA};
+        std::vector<GameElement> elements;
+        for (const vision::DetectionResult& detection : detections) {
+            GameElement element;
+            if (ArucoCam::gameElementFromTag(detection, cameraPose, element)) {
+                elements.push_back(element);
+            }
+        }
+
+        if (elements.size() < 2) {
+            LOG_ERROR("Game element test - ", testCase.image, ": expected two game elements, found ",
+                      elements.size());
+            return false;
+        }
+
+        // Both visible faces must place the cube at the same point.
+        const GameElement& a = elements[0];
+        const GameElement& b = elements[1];
+        const double spread = std::sqrt(std::pow(a.x - b.x, 2) +
+                                        std::pow(a.y - b.y, 2) +
+                                        std::pow(a.z - b.z, 2));
+        if (spread > 15.0) {
+            LOG_ERROR("Game element test - ", testCase.image,
+                      ": the two visible tags disagree on the cube centre: ", spread, " mm");
+            return false;
+        }
+
+        const double error = std::sqrt(std::pow(a.x - expectedX, 2) +
+                                       std::pow(a.y - expectedY, 2) +
+                                       std::pow(a.z - expectedZ, 2));
+        LOG_INFO("Game element test - ", testCase.image, ": cube centre (", a.x, ", ", a.y, ", ",
+                 a.z, ") mm, expected (", expectedX, ", ", expectedY, ", ", expectedZ,
+                 ") mm, error = ", error, " mm, spread = ", spread, " mm");
+        if (error > 15.0) {
+            LOG_ERROR("Game element test - ", testCase.image,
+                      ": cube centre error too large: ", error, " mm");
+            return false;
+        }
+    }
+
+    return true;
+}

@@ -19,6 +19,13 @@
 #define CAMERA_HEIGHT_MM 233.2
 #define CAMERA_PITCH_DEG 45.0
 
+// Game elements are 110 mm cubes carrying a 100 mm ArUco id 13 tag on each
+// face. `GAME_ELEMENT_SIDE_MM` is the cube's physical side, used to move from a
+// tag's centre to the cube's centre; `GAME_ELEMENT_TAG_MM` is the tag's side,
+// which sets the scale of the tag's estimated pose.
+#define GAME_ELEMENT_SIDE_MM 110.0
+#define GAME_ELEMENT_TAG_MM 100.0
+
 // A game element is a marker with ArUco id 13. Its pose is on the table, in
 // millimetres, with its Euler angles in degrees. The yaw reference follows the
 // marker's own axes (a marker lying flat, oriented like the field tags, reads
@@ -63,11 +70,25 @@ public:
     bool getLocalisation(position_t& cameraPose) const;
 
     // Game elements seen in the latest frame, placed on the table from the
-    // given robot pose.
-    std::vector<GameElement> getGameElements(const position_t& robotPose) const;
+    // given camera pose.
+    std::vector<GameElement> getGameElements(const position_t& cameraPose) const;
+
+    // Game elements of the latest frame, placed on the table from the latest
+    // known camera pose.
+    std::vector<GameElement> getGameElements() const;
+
+    // Places one detection on the table as the centre of its game element cube,
+    // from the given camera pose. Returns false when the detection is not a
+    // game element carrying a usable pose.
+    static bool gameElementFromTag(const vision::DetectionResult& detection,
+                                   const position_t& cameraPose,
+                                   GameElement& element);
 
 private:
     void workerLoop();
+    // Lifts the game elements of the latest frame into the table frame using
+    // the given camera pose. Called by the worker thread with mutex_ held.
+    void updateGameElements(const position_t& cameraPose);
 
     int id_ = -1;
     std::atomic<bool> running_{false};
@@ -78,4 +99,5 @@ private:
     std::vector<vision::DetectionResult> detections_;
     bool hasLocalisation_ = false;
     position_t localisation_ = {0.0, 0.0, 0.0};
+    std::vector<GameElement> gameElements_;
 };
