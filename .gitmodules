@@ -1,5 +1,5 @@
 # RPLidar Submodule
 
 [Submodule "rplidar_sdk"]
-    path = rplidar_sdk
+    path = dependencies/rplidar_sdk
     url = git@github.com:Slamtec/rplidar_sdk.git
