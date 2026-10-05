@@ -221,7 +221,6 @@ int main(int argc, char *argv[])
                 tableStatus.reset();
                 tableStatus.startTime = _millis();
                 action.Reset();
-                arduino.keepMotorDCup();
 
             }
             bool finished = action.RunFSM();
@@ -266,7 +265,6 @@ int main(int argc, char *argv[])
                 drive.disable();
                 actuators.disableActuators();
                 lidar.stopSpin();
-                arduino.keepMotorDCup();
                 StopMat();
             }
 

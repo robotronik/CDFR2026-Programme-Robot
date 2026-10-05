@@ -219,9 +219,3 @@ void Arduino::stopMotorDC(){
     WriteUInt8(&ptr, 1);
     I2cSendData(i2cFile, CMD_STOP_DC_MOTOR, message, 1);
 }
-
-void Arduino::keepMotorDCup(){
-    moveMotorDC(40,false);
-    //LOG_DEBUG("DC Motor keep Position UP");
-
-}

@@ -20,16 +20,11 @@ ReturnFSM_t GoToPositionAction::run(){
             break;
         case NAV_ERROR:
             errorManagement();
-            reset();
-            done = true; // après reset(), qui vient de la réarmer
             return FSM_RETURN_ERROR;
         case NAV_DONE:
             successManagement();
-            moving = false;
-            done = true;
             return FSM_RETURN_DONE;
         case NAV_IN_PROCESS:
-        default:
             moving = true;
             break;
     }
@@ -38,11 +33,15 @@ ReturnFSM_t GoToPositionAction::run(){
 
 bool GoToPositionAction::errorManagement(){
     LOG_ERROR("GoToPositionAction: erreur de navigation vers ", nom.c_str());
+    reset();
+    done = true; // après reset(), qui vient de la réarmer
     return true;
 }
 
 bool GoToPositionAction::successManagement(){
     LOG_GREEN_INFO("GoToPositionAction: arrivé à ", nom.c_str());
+    moving = false;
+    done = true;
     return true;
 }
 
@@ -56,7 +55,6 @@ bool GoToPositionAction::stop(){
 
 void GoToPositionAction::reset(){
     stop();
-    target = drive->getPosition(); // Reset target to current position
     done = false;                  // l'action redevient candidate
 }
 

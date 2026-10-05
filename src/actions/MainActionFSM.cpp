@@ -35,7 +35,6 @@ void ActionFSM::Reset(){
         currentStrategy->resume();
     }
 
-    // On démarre par une calibration forcée
     currentAction = nullptr;
 }
 
