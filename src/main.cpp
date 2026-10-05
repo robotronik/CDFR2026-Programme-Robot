@@ -134,17 +134,6 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Apply the requests received through the REST API
-        {
-            colorTeam_t requestedColor;
-            if (api.consumeColorRequest(requestedColor))
-                switchTeamSide(requestedColor);
-
-            std::string requestedStrategy;
-            if (api.consumeStrategyRequest(requestedStrategy))
-                switchStrategy(requestedStrategy);
-        }
-
         // State machine
         switch (currentState)
         {
@@ -167,6 +156,9 @@ int main(int argc, char *argv[])
                     LOG_GREEN_INFO("MAT is ready");
                 } 
             }
+
+            update_team_strat();
+            
             if (sensor.readButtonSensor() && !sensor.readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = WAITSTART;
             break;
@@ -187,8 +179,7 @@ int main(int argc, char *argv[])
                 tableStatus.calibrationAge = -1;
             }
             
-            // colorTeam_t color = readColorSensorSwitch();
-            // switchTeamSide(color);
+            update_team_strat();
 
             if (sensor.readLimitSwitchTop() && motorUpFirst){ 
                 arduino.moveMotorDC(20,false);
@@ -494,4 +485,14 @@ void switchStrategy(std::string strategy){ // TODO moove to tableState
         position_t pos = action.getStrategy()->StratStartingPos();
         drive.setCoordinates(pos);
     }
+}
+
+void update_team_strat(){
+    colorTeam_t requestedColor;
+    if (api.consumeColorRequest(requestedColor))
+        switchTeamSide(requestedColor);
+
+    std::string requestedStrategy;
+    if (api.consumeStrategyRequest(requestedStrategy))
+        switchStrategy(requestedStrategy);
 }

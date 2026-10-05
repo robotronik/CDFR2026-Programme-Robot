@@ -34,3 +34,10 @@ bool test_mat_parse() {
 
     return true;
 }
+
+bool test_start_mat(){
+    // Is it useful ?
+    bool sucess;
+    while(!StartMat(sucess));
+    return sucess;
+}

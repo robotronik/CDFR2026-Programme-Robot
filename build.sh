@@ -3,6 +3,9 @@
 # --- Config Raspi ---
 PI_USER="robotronik"; PI_HOST="172.27.123.146"; PI_DIR="/home/$PI_USER/CDFR"; PI_DEST="arm_bin"
 
+# --- Config Mat ---
+MAT_HOST='0.0.0.0'; MAT_PORT='5000'; # TODO modify to correct IP and port
+
 # --- Config build ---
 GEN=""; OPT=""
 LIDAR_LIB="rplidar_sdk/output/Linux/Release/libsl_lidar_sdk.a"
