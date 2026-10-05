@@ -34,7 +34,6 @@ ReturnFSM_t GoToPositionAction::run(){
 bool GoToPositionAction::errorManagement(){
     LOG_ERROR("GoToPositionAction: erreur de navigation vers ", nom.c_str());
     reset();
-    done = true; // après reset(), qui vient de la réarmer
     return true;
 }
 
