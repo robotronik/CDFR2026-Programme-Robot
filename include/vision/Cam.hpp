@@ -35,6 +35,7 @@ struct GameElement {
     // TODO
     // Change to have a position_t
     // and height as steps, 1,2,3 and a vertical bool
+    // make it a general struct in structs.hpp to use as well in mat logic
     double x = 0.0;
     double y = 0.0;
     double z = 0.0;
