@@ -53,7 +53,7 @@ ActuatorsControl actuators(&arduino, &drive);
 TableState tableStatus(&drive);
 
 // Brain Init
-VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus); //TODO create logic for strategy change
+VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus);
 
 // Strategies selectable through the REST API
 std::vector<VirtualStrategy*> strategies = { currentStrategy };
@@ -72,7 +72,6 @@ Navigation navigation(&drive, &tableStatus, &cam1);
 main_State_t currentState;
 main_State_t nextState;
 bool initState;
-bool motorUpFirst = true;
 
 std::thread api_server_thread;
 
@@ -123,7 +122,7 @@ int main(int argc, char *argv[])
 #ifndef DISABLE_LIDAR
                 GetLidar();
 #endif
-                if (tableStatus.mastStatus) {
+                if (tableStatus.mastStatus) {// TODO make request async to reduce delay issue in case of deconnection
                     if(getMapStatus()){ // Getting data from mast
                         tableStatus.updateMapStatus();
                     }else{
@@ -156,8 +155,6 @@ int main(int argc, char *argv[])
                     LOG_GREEN_INFO("MAT is ready");
                 } 
             }
-
-            update_team_strat();
             
             if (sensor.readButtonSensor() && !sensor.readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = WAITSTART;
@@ -172,7 +169,6 @@ int main(int argc, char *argv[])
                 actuators.homeActuators();
                 lidar.startSpin();
                 cam1.start();
-                arduino.moveMotorDC(80, false);
 
                 if (tableStatus.colorTeam == NONE)
                     arduino.RGB_Blinking(255, 0, 0); // Red Blinking
@@ -181,10 +177,6 @@ int main(int argc, char *argv[])
             
             update_team_strat();
 
-            if (sensor.readLimitSwitchTop() && motorUpFirst){ 
-                arduino.moveMotorDC(20,false);
-                motorUpFirst = false;
-            }
             if (tableStatus.calibrationAge == -1){
                 navigation.go();
             } else{
@@ -205,7 +197,7 @@ int main(int argc, char *argv[])
             }
             tableStatus.pos_opponent.x = 3000.0f;
             tableStatus.pos_opponent.y = 0;
-            opponentInAction(tableStatus.pos_opponent);     
+
             tableStatus.startTime = _millis();
             static bool has_calib = false;
             if (!has_calib){
@@ -482,6 +474,7 @@ void switchStrategy(std::string strategy){ // TODO moove to tableState
         check(color, strategy);
         LOG_INFO("Strategy switch detected");
         tableStatus.strategy = strategy;
+        // action.setStrategy(&strategy) TODO fix the strategy change mecanic at the moment does not work
         position_t pos = action.getStrategy()->StratStartingPos();
         drive.setCoordinates(pos);
     }
