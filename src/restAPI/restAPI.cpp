@@ -364,6 +364,20 @@ void RestAPI::start(){
         return res;
     });
 
+    // Latest captured frame as a JPEG, without the marker overlay.
+    CROW_ROUTE(app, "/preview_raw")
+    ([this](){
+        std::vector<uchar> jpeg;
+        if (!cam->getRawPreview(jpeg)){
+            json response;
+            response["message"] = "No preview available";
+            return crow::response(503, response.dump());
+        }
+        crow::response res(200, std::string(jpeg.begin(), jpeg.end()));
+        res.set_header("Content-Type", "image/jpeg");
+        return res;
+    });
+
     // ------------------------------- POST Routes -------------------------------
 
     // Define a route for a POST request that accepts JSON data and responds with a message

@@ -52,9 +52,9 @@ position_t robotToCamera(const position_t& robotPose);
 
 // Captures frames on its own thread and localises the camera on the field.
 // Both localisers run on every frame - ArUco landmark tags and mapped ground
-// features - so their results are always available; USE_ARUCO_LOCALISATION only
-// selects which one getLocalisation() reports. ArUco detection also feeds the
-// game elements and the preview.
+// features - so their results are always available; when both localise, the
+// feature result is the one reported. ArUco detection also feeds the game
+// elements and the preview.
 class Cam {
 public:
     Cam(int camNumber, const char* calibrationFilePath, const char* mapFilePath);
@@ -72,14 +72,18 @@ public:
     // restrict its search. Ignored by the marker localiser.
     void setPrior(const position_t& robotPose);
 
-    // Latest camera localisation on the table, from the localiser selected by
-    // USE_ARUCO_LOCALISATION. Returns true when one is known. This is the
-    // camera's pose; use cameraToRobot() for the robot's.
+    // Latest camera localisation on the table, preferring the feature result
+    // when both localisers report one. Returns true when one is known. This is
+    // the camera's pose; use cameraToRobot() for the robot's.
     bool getLocalisation(position_t& cameraPose) const;
 
     // JPEG-encoded copy of the latest captured frame, with the detected markers
     // outlined and labelled. Returns false when no frame has been captured yet.
     bool getPreview(std::vector<uchar>& jpeg) const;
+
+    // JPEG-encoded copy of the latest captured frame, without any overlay.
+    // Returns false when no frame has been captured yet.
+    bool getRawPreview(std::vector<uchar>& jpeg) const;
 
     // Game elements seen in the latest frame, placed on the table from the
     // given camera pose.
@@ -102,8 +106,8 @@ private:
     // Owns the capture device and detects the markers for the preview and the
     // game elements.
     vision::ArucoDetector detector_;
-    // Both localisers run on every frame; USE_ARUCO_LOCALISATION picks which
-    // one getLocalisation() reports.
+    // Both localisers run on every frame; when both localise, the feature
+    // result is reported.
     vision::ArucoLocalizer arucoLocalizer_;
     vision::FeaturesLocalizer featuresLocalizer_;
 

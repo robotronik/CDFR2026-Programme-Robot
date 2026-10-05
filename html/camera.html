@@ -36,6 +36,9 @@
             <div class="col">
                 <button type="button" class="btn btn-success w-100" onclick="fetchPreview()">Fetch Preview</button>
             </div>
+            <div class="col">
+                <button type="button" class="btn btn-success w-100" onclick="fetchRawPreview()">Fetch Raw Preview</button>
+            </div>
         </div>
 
         <div class="label-section">Position response</div>
@@ -126,26 +129,43 @@
             }
         }
 
+        async function fetchImage(path, imageEl, placeholderEl, successMessage) {
+            const response = await fetch(`${API_BASE}${path}`, { method: "GET" });
+            if (!response.ok) {
+                let message = `HTTP ${response.status}`;
+                try {
+                    const errJson = await response.json();
+                    if (errJson.message) message = errJson.message;
+                } catch (_) {}
+                throw new Error(message);
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+
+            if (imageEl.dataset.objectUrl) {
+                URL.revokeObjectURL(imageEl.dataset.objectUrl);
+            }
+            imageEl.dataset.objectUrl = url;
+            imageEl.src = url;
+            imageEl.classList.remove("d-none");
+            placeholderEl.classList.add("d-none");
+
+            setStatus(successMessage, "success");
+        }
+
         async function fetchPreview() {
             try {
-                const response = await fetch(`${API_BASE}/preview`, { method: "GET" });
-                if (!response.ok) {
-                    let message = `HTTP ${response.status}`;
-                    try {
-                        const errJson = await response.json();
-                        if (errJson.message) message = errJson.message;
-                    } catch (_) {}
-                    throw new Error(message);
-                }
+                await fetchImage("/preview", previewImage, previewPlaceholder, "Preview fetched");
+            } catch (error) {
+                appendAlert(error.message, "danger");
+                setStatus(error.message, "danger");
+            }
+        }
 
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-
-                previewImage.src = url;
-                previewImage.classList.remove("d-none");
-                previewPlaceholder.classList.add("d-none");
-
-                setStatus("Preview fetched", "success");
+        async function fetchRawPreview() {
+            try {
+                await fetchImage("/preview_raw", previewImage, previewPlaceholder, "Raw preview fetched");
             } catch (error) {
                 appendAlert(error.message, "danger");
                 setStatus(error.message, "danger");

@@ -187,8 +187,8 @@ void Cam::workerLoop() {
             hasPrior = hasPrior_;
         }
 
-        // Both localisers run on every frame; only the selected one is
-        // reported. The marker localiser reuses the detections computed above.
+        // Both localisers run on every frame. The marker localiser reuses the
+        // detections computed above.
         vision::CameraPosition arucoPosition;
         const bool hasAruco = arucoLocalizer_.locate(detections, arucoPosition);
 
@@ -200,16 +200,10 @@ void Cam::workerLoop() {
         vision::CameraPosition featurePosition;
         const bool hasFeature = featuresLocalizer_.locate(frame, featurePosition);
 
-#if USE_ARUCO_LOCALISATION
-        const bool localised = hasAruco;
-        const vision::CameraPosition& position = arucoPosition;
-#else
-        const bool localised = hasFeature;
-        const vision::CameraPosition& position = featurePosition;
-#endif
-        // Both are always computed; the switch just decides which is reported.
-        (void)hasAruco;
-        (void)hasFeature;
+        // Prefer the feature result when both localisers found a pose; fall
+        // back to the markers when only they did.
+        const bool localised = hasFeature || hasAruco;
+        const vision::CameraPosition& position = hasFeature ? featurePosition : arucoPosition;
 
         std::lock_guard<std::mutex> lock(mutex_);
         detections_ = detections;
@@ -241,6 +235,15 @@ bool Cam::getPreview(std::vector<uchar>& jpeg) const {
     cv::Mat annotated = frame_.clone();
     drawDetections(annotated, detections_);
     return cv::imencode(".jpg", annotated, jpeg);
+}
+
+bool Cam::getRawPreview(std::vector<uchar>& jpeg) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (frame_.empty()) {
+        return false;
+    }
+
+    return cv::imencode(".jpg", frame_, jpeg);
 }
 
 bool Cam::gameElementFromTag(const vision::DetectionResult& detection,
