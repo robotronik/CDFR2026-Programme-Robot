@@ -1,5 +1,5 @@
 #pragma once
-#include "navigation/drive_interface.h"
+#include "drive_interface.h"
 #include <utils/json.hpp>
 using json = nlohmann::json;
 
