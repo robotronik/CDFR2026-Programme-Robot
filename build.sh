@@ -1,164 +1,15 @@
 #!/bin/bash
 
-# --- Config Raspi ---
-PI_USER="robotronik"; PI_HOST="172.27.123.146"; PI_DIR="/home/$PI_USER/CDFR"; PI_DEST="arm_bin"
-
-# --- Config Mat ---
-MAT_HOST='0.0.0.0'; MAT_PORT='5000'; # TODO modify to correct IP and port
-
-# --- Config build ---
-GEN=""; OPT=""
-LIDAR_LIB="rplidar_sdk/output/Linux/Release/libsl_lidar_sdk.a"
-# Sysroot arm64 (OpenCV + SQLite) pour la cross-compilation, cf.
-# scripts/fetch_arm64_sysroot.sh.
-ARM64_SYSROOT="${ARM64_SYSROOT:-$HOME/aarch64-sysroot/root}"
-
-# --- Palette ---
+# Palette de couleurs
 export CLICOLOR_FORCE=1
 export FORCE_COLOR=1
 ESC=$'\033'
 NC="${ESC}[0m"; BOLD="${ESC}[1m"; WHT="${ESC}[37m"
-F_GRN="${ESC}[38;5;107m"; BG_GRN="${ESC}[30;48;5;107m" # Succès / Zéro erreur
-F_RED="${ESC}[38;5;124m"; BG_RED="${ESC}[30;48;5;124m" # Erreur
-F_ORG="${ESC}[38;5;172m"; BG_ORG="${ESC}[30;48;5;172m" # Warning
-F_BLU="${ESC}[38;5;72m";  BG_BLU="${ESC}[30;48;5;72m"  # Info / Exec / Build
+F_GRN="${ESC}[38;5;107m"; BG_GRN="${ESC}[30;48;5;107m"
+F_RED="${ESC}[38;5;124m"; BG_RED="${ESC}[30;48;5;124m"
+F_BLU="${ESC}[38;5;72m";  BG_BLU="${ESC}[30;48;5;72m"
 
-export NINJA_STATUS="${F_GRN}[%p]${NC} ${F_BLU}[%es]${NC} "
-
-# --- Fonctions de Build ---
-
-# Helper d'affichage compact [BG_COLOR] [FG_COLOR] [LABEL] [MESSAGE]
-# Format [BADGE = BG_COLOR + LABEL] [MESSAGE = FG_COLOR + TEXT]
- 
 step() { printf "${1}${BOLD} %-10s ${NC} ${2}%s${NC}\n" "$3" "$4"; }
-
-# La configuration CMake doit se faire sans NINJA_STATUS : les codes ANSI qu'il
-# contient se retrouvent préfixés devant la ligne de commande du linker, que
-# CMake parse pour détecter les bibliothèques liées implicitement. Avec un
-# NINJA_STATUS coloré, CMAKE_<LANG>_IMPLICIT_LINK_DIRECTORIES ressort vide, donc
-# CMAKE_LIBRARY_ARCHITECTURE aussi, et les bibliothèques multiarch
-# (lib/<triplet> : libsqlite3, OpenCV...) ne sont plus trouvées. On le neutralise
-# pour la configuration et on le garde pour la compilation ninja.
-cmake_configure() { env -u NINJA_STATUS cmake "$@"; }
-
-# Helpers de build
-
-setup_generator() {
-    if command -v ninja >/dev/null 2>&1; then
-        step "$BG_BLU" "$F_BLU" "CONFIG" "Ninja détecté."
-        GEN="-GNinja"
-        OPT=""
-    else
-        step "$BG_ORG" "$F_ORG" "WARN" "Make utilisé (Ninja absent)."
-        GEN="-GUnix Makefiles"
-        OPT="-- -j$(nproc)"
-    fi
-}
-
-check_lidar_arch() {
-    local target=$(echo "$1" | tr '[:lower:]' '[:upper:]')
-    if [ ! -f "$LIDAR_LIB" ]; then return 1; fi
-    local machine_line=$(readelf -h "$LIDAR_LIB" 2>/dev/null | grep "Machine:" | head -n 1 | tr '[:lower:]' '[:upper:]')
-    if [[ "$machine_line" == *"$target"* ]]; then
-        return 0
-    fi
-    return 1
-}
-
-# Compilation complète (génération cmake + build)
-
-build_lidar() { 
-    if check_lidar_arch "X86-64"; then
-        step "$BG_GRN" "$F_GRN" "SKIP" "SDK RPLidar (x86_64) déjà à jour."
-    else
-        step "$BG_BLU" "$F_BLU" "INFO" "Compilation SDK RPLidar (x86_64)..."
-        (cd rplidar_sdk && make clean >/dev/null 2>&1 && make -s >/dev/null)
-        step "$BG_GRN" "$F_GRN" "DONE" "SDK RPLidar (Local) prêt."
-    fi
-}
-
-build_lidar_arm() {  
-    if check_lidar_arch "AArch64"; then
-        step "$BG_GRN" "$F_GRN" "SKIP" "SDK RPLidar (ARM64) déjà à jour."
-    else
-        step "$BG_BLU" "$F_BLU" "INFO" "Compilation SDK RPLidar (ARM)..."
-        (cd rplidar_sdk && make clean >/dev/null 2>&1 && \
-         make CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ AR=aarch64-linux-gnu-ar -s >/dev/null)
-        step "$BG_GRN" "$F_GRN" "DONE" "SDK RPLidar (ARM) prêt."
-    fi
-}
-
-build_local() {
-    setup_generator
-    build_lidar
-    step "$BG_BLU" "$F_BLU" "BUILD" "Compilation locale (x86_64)..."
-    cmake_configure $GEN -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-fdiagnostics-color=always" >/dev/null
-    if [ $? -ne 0 ]; then
-        echo "Error: cmake configuration failed for local build."
-        exit 1
-    fi
-    cmake --build build $OPT
-    if [ $? -ne 0 ]; then
-        echo "Error: cmake build failed for local build."
-        exit 1
-    fi
-    step "$BG_GRN" "$F_GRN" "DONE" "Binaire compilé."
-}
-
-build_arm() {
-    setup_generator
-    if [ ! -d "$ARM64_SYSROOT" ]; then
-        step "$BG_RED" "$F_RED" "ERR" "Sysroot ARM64 introuvable : $ARM64_SYSROOT"
-        echo "        Exécutez ./scripts/fetch_arm64_sysroot.sh"
-        exit 1
-    fi
-    export ARM64_SYSROOT
-    build_lidar_arm 
-    step "$BG_BLU" "$F_BLU" "BUILD" "Cross-compilation ARM64..."
-    cmake_configure $GEN -B build_arm -DCMAKE_TOOLCHAIN_FILE=pi_toolchain.cmake >/dev/null
-    if [ $? -ne 0 ]; then
-        echo "Error: cmake configuration failed for ARM build."
-        exit 1
-    fi
-    cmake --build build_arm $OPT
-    if [ $? -ne 0 ]; then
-        echo "Error: cmake build failed for ARM build."
-        exit 1
-    fi
-    step "$BG_GRN" "$F_GRN" "DONE" "Binaire ARM compilé."
-}
-
-# Fonction pour setup LSP (compile_commands.json et link)
-setup_lsp() {
-    step "$BG_BLU" "$F_BLU" "SETUP" "Génération LSP..."
-    cmake_configure -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null
-    [ -f "build/compile_commands.json" ] && { ln -sf build/compile_commands.json .; step "$BG_GRN" "$F_GRN" "DONE" "Lien créé."; } \
-                                         || step "$BG_RED" "$F_RED" "ERROR" "Échec LSP."
-}
-
-# Sync sur la pi
-deploy_pi() {
-    run_timed "Build ARM" build_arm
-
-    step "$BG_BLU" "$F_BLU" "SYNC" "Transfert vers le robot ($PI_HOST)..."
-    ssh $PI_USER@$PI_HOST "mkdir -p $PI_DIR/$PI_DEST"
-    rsync -az --progress --delete ./build_arm/data ./build_arm/html autoRunInstaller.sh ./build_arm/programCDFR $PI_USER@$PI_HOST:$PI_DIR/$PI_DEST | grep -v "/$"
-    rsync_status=${PIPESTATUS[0]}
-    if [ "$rsync_status" -ne 0 ]; then
-        step "$BG_RED" "$F_RED" "ERROR" "Échec du transfert (rsync)."
-        return "$rsync_status"
-    fi    
-    scp -q autoRunInstaller.sh $PI_USER@$PI_HOST:$PI_DIR/$PI_DEST
-
-    step "$BG_BLU" "$F_BLU" "SERVICE" "Installation et démarrage auto..."
-    ssh -t $PI_USER@$PI_HOST "cd $PI_DIR/$PI_DEST && chmod +x autoRunInstaller.sh && \
-        sudo ./autoRunInstaller.sh --uninstall $PI_DIR/$PI_DEST/programCDFR && \
-        sudo ./autoRunInstaller.sh --install $PI_DIR/$PI_DEST/programCDFR"
-    
-    step "$BG_GRN" "$F_GRN" "DONE" "Robot flashé et programme lancé !"
-}
-
-# --- Wrapper de Temps & Analyseur ---
 
 run_timed() {
     local task="$1"; shift
@@ -167,60 +18,148 @@ run_timed() {
     step "$BG_BLU" "$F_BLU" "EXEC" "${BOLD}$task"
     echo "--------------------------------------------------------"
 
-    # Execute the command and capture its exit status
-    "$@" 2>&1
+    "$@"
     local st=$?
 
-    local dur=$(LC_NUMERIC=C printf "%.2f" $(echo "$(date +%s.%N) - $t0" | bc))
+    local t1=$(date +%s.%N)
+    local dur=$(awk -v t0="$t0" -v t1="$t1" 'BEGIN {printf "%.2f", t1 - t0}')
     echo "--------------------------------------------------------"
 
     if [ $st -eq 0 ]; then
         step "$BG_GRN" "$F_GRN" "SUCCESS" "$task completed in ${dur}s"
     else
         step "$BG_RED" "$F_RED" "FAIL" "$task failed in ${dur}s"
-        exit 1  # Exit with a non-zero status to propagate the failure
+        exit 1
     fi
 }
 
-clean() {
-    if [ -d "build" ]; then
-        cmake --build build --target clean
-        step "$BG_GRN" "$F_GRN" "DONE" "Build local nettoyé."
-    else
-        step "$BG_BLU" "$F_BLU" "INFO" "Pas de build local."
-    fi
-    
-    if [ -d "build_arm" ]; then
-        cmake --build build_arm --target clean
-        step "$BG_GRN" "$F_GRN" "DONE" "Build ARM nettoyé." 
-    else
-        step "$BG_BLU" "$F_BLU" "INFO" "Pas de build ARM."
+docker_run() {
+    local img="cdfr-builder:latest"
+
+    # Vérification ou construction de l'image
+    if ! docker image inspect "$img" >/dev/null 2>&1; then
+        step "$BG_BLU" "$F_BLU" "DOCKER" "Construction de l'image Docker ($img)..."
+        docker build -t "$img" -f docker/Dockerfile .
+        if [ $? -ne 0 ]; then
+            step "$BG_RED" "$F_RED" "ERROR" "Échec de la construction Docker."
+            exit 1
+        fi
     fi
 
-    step "$BG_GRN" "$F_GRN" "CLEAN" "Fichiers de build nettoyés."
+    local ws_root="$(realpath ..)"
+    local ccache_host="$HOME/.cache/cdfr-docker-ccache"
+    mkdir -p "$ccache_host"
+
+    local extra_args=()
+    if [ -t 0 ]; then
+        extra_args+=(-it)
+    fi
+
+    # Forwarding de l'agent SSH pour deploy si présent
+    if [ -n "$SSH_AUTH_SOCK" ] && [ -S "$SSH_AUTH_SOCK" ]; then
+        extra_args+=(-v "$SSH_AUTH_SOCK:/ssh-agent" -e "SSH_AUTH_SOCK=/ssh-agent")
+    fi
+    if [ -d "$HOME/.ssh" ]; then
+        extra_args+=(-v "$HOME/.ssh:/home/builder/.ssh:ro")
+    fi
+
+    # Détection conteneur vs hôte pour isoler les dossiers de build
+    local is_container_arg=()
+    is_container_arg+=(-e "IS_CONTAINER=1")
+
+    step "$BG_BLU" "$F_BLU" "DOCKER" "Exécution dans le conteneur: $*"
+    docker run --rm \
+        "${extra_args[@]}" \
+        "${is_container_arg[@]}" \
+        --network host \
+        --user "$(id -u):$(id -g)" \
+        -v "$ws_root:$ws_root" \
+        -v "$ws_root:/workspace" \
+        -v "$ccache_host:/home/builder/.cache/ccache" \
+        -w "$PWD" \
+        -e "CCACHE_DIR=/home/builder/.cache/ccache" \
+        -e "HOME=/home/builder" \
+        "$img" \
+        "$@"
 }
 
-# --- Menu ---
+# Détection de l'environnement d'exécution (Docker vs Hôte)
+if [ -n "$IS_CONTAINER" ] || [ -f /.dockerenv ]; then
+    PRESET_LOCAL="docker-local"
+    PRESET_ARM="docker-arm"
+    BUILD_DIR_LOCAL="build-docker"
+    BUILD_DIR_ARM="build_arm-docker"
+else
+    PRESET_LOCAL="local"
+    PRESET_ARM="arm"
+    BUILD_DIR_LOCAL="build"
+    BUILD_DIR_ARM="build_arm"
+fi
 
 case "$1" in
-    build)        run_timed "Build Local" build_local ;;
-    build_arm)    run_timed "Build ARM" build_arm ;;
-    deploy)    
-               run_timed "Déploiement Complet" deploy_pi 
-               echo -e "${WHT}--------------------------------------------------------${NC}"
-               step "$BG_BLU" "$F_BLU" "LOGS" "En direct du robot (Ctrl+C pour quitter l'affichage)..." 
-               ssh -t $PI_USER@$PI_HOST "journalctl -u programCDFR -f --output=cat"
-               ;;
-    setup-lsp)    run_timed "Setup LSP" setup_lsp ;;
-    tests)        run_timed "Build local" build_local; \
-                   if [ -f "build/robot_tests" ]; then \
-                        [ -e "lidar" ] || ln -s "tests/lidar" "lidar"; \
-                        run_timed "Tests" ./build/robot_tests; \
-                        rm "lidar"; \
-                   else \
-                       step "$BG_RED" "$F_RED" "ERROR" "Test introuvable"; \
-                   fi ;;
-    clean-all)    rm -rf build build_arm compile_commands.json; step "$BG_GRN" "$F_GRN" "CLEAN ALL" "Dossiers supprimés." ;;
-    clean)        clean ;; 
-    *)            echo -e "${BOLD}Usage:${NC} $0 {build|build_arm|deploy|setup-lsp|tests|clean|clean-all}"; exit 1 ;;
+    build)
+        [ -f "$BUILD_DIR_LOCAL/build.ninja" ] || run_timed "Config Local" cmake --preset "$PRESET_LOCAL"
+        run_timed "Build Local (x86_64)" cmake --build --preset "$PRESET_LOCAL"
+        ;;
+    build_arm)
+        [ -f "$BUILD_DIR_ARM/build.ninja" ] || run_timed "Config ARM" cmake --preset "$PRESET_ARM"
+        run_timed "Build ARM (AArch64)" cmake --build --preset "$PRESET_ARM"
+        ;;
+    tests)
+        [ -f "$BUILD_DIR_LOCAL/build.ninja" ] || run_timed "Config Local" cmake --preset "$PRESET_LOCAL"
+        run_timed "Build Local" cmake --build --preset "$PRESET_LOCAL"
+        run_timed "Tests (CTest)" ctest --preset "$PRESET_LOCAL"
+        ;;
+    deploy)
+        [ -f "$BUILD_DIR_ARM/build.ninja" ] || run_timed "Config ARM" cmake --preset "$PRESET_ARM"
+        run_timed "Déploiement Robot" cmake --build --preset "$PRESET_ARM" --target deploy
+        ;;
+    logs)
+        step "$BG_BLU" "$F_BLU" "LOGS" "Journalctl en direct (Ctrl+C pour quitter)..."
+        cmake --build --preset "$PRESET_ARM" --target logs
+        ;;
+    setup-lsp)
+        run_timed "Setup LSP" cmake --preset "$PRESET_LOCAL"
+        ;;
+    clean)
+        [ -d "$BUILD_DIR_LOCAL" ] && cmake --build --preset "$PRESET_LOCAL" --target clean
+        [ -d "$BUILD_DIR_ARM" ] && cmake --build --preset "$PRESET_ARM" --target clean
+        step "$BG_GRN" "$F_GRN" "DONE" "Artefacts nettoyés."
+        ;;
+    clean-all)
+        rm -rf build build_arm build-docker build_arm-docker compile_commands.json
+        step "$BG_GRN" "$F_GRN" "CLEAN ALL" "Dossiers de build supprimés."
+        ;;
+    docker)
+        shift
+        if [ $# -eq 0 ]; then
+            echo -e "${BOLD}Usage:${NC} $0 docker {build|build_arm|tests|deploy|logs|clean|clean-all|build-image|shell}"
+            exit 1
+        fi
+        if [ "$1" = "build-image" ]; then
+            step "$BG_BLU" "$F_BLU" "DOCKER" "Reconstruction de l'image Docker..."
+            docker build -t "cdfr-builder:latest" -f docker/Dockerfile .
+        elif [ "$1" = "shell" ]; then
+            shift
+            docker_run bash "$@"
+        else
+            docker_run ./build.sh "$@"
+        fi
+        ;;
+    *)
+        echo -e "${BOLD}Usage:${NC} $0 {build|build_arm|tests|deploy|logs|setup-lsp|clean|clean-all|docker}"
+        echo -e "Commandes Docker :"
+        echo -e "  $0 docker build        # Compile en local dans Docker"
+        echo -e "  $0 docker build_arm    # Cross-compile pour ARM dans Docker"
+        echo -e "  $0 docker tests        # Lance les tests CTest dans Docker"
+        echo -e "  $0 docker shell        # Ouvre un shell interactif dans le conteneur"
+        echo -e ""
+        echo -e "Ou directement avec CMake sur l'hôte :"
+        echo -e "  cmake --build --preset local"
+        echo -e "  cmake --build --preset arm"
+        echo -e "  ctest --preset local"
+        echo -e "  cmake --build --preset arm --target deploy"
+        echo -e "  cmake --build --preset arm --target logs"
+        exit 1
+        ;;
 esac

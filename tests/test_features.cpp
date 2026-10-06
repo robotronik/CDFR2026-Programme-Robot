@@ -51,7 +51,13 @@ std::vector<std::string> featureCaptures() {
                                     "data/features/"};
     for (const std::string& prefix : prefixes) {
         std::vector<std::string> names;
-        cv::glob(prefix + "capture_*.png", names, false);
+        try {
+            cv::glob(prefix + "capture_*.png", names, false);
+        } catch (const cv::Exception&) {
+            // Directory absent for this prefix (e.g. running from tests/):
+            // try the next one instead of aborting.
+            continue;
+        }
         if (!names.empty()) {
             std::sort(names.begin(), names.end());
             return names;

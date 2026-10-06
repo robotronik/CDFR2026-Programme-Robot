@@ -6,11 +6,11 @@
 # pas Multi-Arch: same : dpkg refuserait d'installer la variante arm64 à côté de
 # la variante amd64, qui elle est indispensable au build local. On se contente
 # donc de télécharger les .deb arm64 et de les extraire dans un sysroot local,
-# que pi_toolchain.cmake ajoute à CMAKE_FIND_ROOT_PATH via ARM64_SYSROOT.
+# que cmake/aarch64_toolchain.cmake ajoute à CMAKE_FIND_ROOT_PATH via ARM64_SYSROOT.
 #
 # libcamera est la bibliothèque de capture native de la Raspberry Pi 5 (le
 # backend V4L2 n'expose que du Bayer brut derrière l'ISP PiSP). Elle est
-# requise par src/vision/LibcameraCamera.cpp pour le build ARM.
+# requise par src/modules/vision/src/LibcameraCamera.cpp pour le build ARM.
 set -e
 
 DEST="${1:-$HOME/aarch64-sysroot}"

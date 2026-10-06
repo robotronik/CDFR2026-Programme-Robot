@@ -5,8 +5,7 @@
 *.out
 
 
-/build/
-/build_arm/
+/build*/
 /bin/
 /obj/
 /arm_bin/

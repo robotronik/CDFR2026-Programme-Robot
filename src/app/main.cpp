@@ -1,12 +1,12 @@
-#pragma once
-#include "main.hpp"
-
 #include <stdlib.h>
 #include <signal.h>
 #include <string>
 #include <thread>
 #include <vector>
 #include <unistd.h>  // for usleep
+
+#include "drive_interface.h"
+#include "defs/structs.hpp"
 
 #include "utils/logger.hpp" // logger 
 
@@ -83,6 +83,10 @@ int StartSequence();
 void GetLidar();
 void EndSequence();
 void tests();
+void opponentInAction(position_t position);
+void switchTeamSide(colorTeam_t color);
+void switchStrategy(std::string strategy);
+void update_team_strat();
 
 // Signal Management
 bool exit_requested = false;
