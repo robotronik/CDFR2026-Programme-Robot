@@ -61,6 +61,12 @@ add_compile_options("-fmacro-prefix-map=${CMAKE_SOURCE_DIR}/=")
 file(GLOB_RECURSE CORE_SOURCES "src/*.cpp")
 list(REMOVE_ITEM CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 
+# Le backend libcamera n'est compilé que pour ARM : le build local (x86_64) n'a
+# pas libcamera et utilise V4L2 (cf. le bloc libcamera plus bas).
+if(NOT CMAKE_CROSSCOMPILING)
+    list(REMOVE_ITEM CORE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/vision/LibcameraCamera.cpp")
+endif()
+
 # Création de la librairie contenant tout le code
 add_library(robot_core STATIC ${CORE_SOURCES})
 
@@ -124,6 +130,50 @@ endif()
 find_package(OpenCV REQUIRED CONFIG)
 target_include_directories(robot_core PUBLIC ${OpenCV_INCLUDE_DIRS})
 
+# libcamera : capture native sur Raspberry Pi 5. Le pipeline V4L2 n'expose que
+# des trames Bayer brutes (l'ISP PiSP est en amont), que le détecteur ArUco ne
+# sait pas décoder ; libcamera pilote capteur -> ISP -> trames utilisables.
+# Sélectionné automatiquement pour la compilation croisée ARM, le backend V4L2
+# restant utilisé en local (x86_64) pour que les tests tournent sans libcamera
+# installée (cf. pi_toolchain.cmake).
+if(CMAKE_CROSSCOMPILING)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(LIBCAMERA IMPORTED_TARGET libcamera)
+    if(NOT TARGET PkgConfig::LIBCAMERA)
+        message(FATAL_ERROR
+            "libcamera introuvable en compilation croisée. Exécutez "
+            "./scripts/fetch_arm64_sysroot.sh pour l'ajouter au sysroot ARM64, "
+            "puis relancez ./build.sh build_arm.")
+    endif()
+    target_link_libraries(robot_core PUBLIC PkgConfig::LIBCAMERA)
+    target_compile_definitions(robot_core PUBLIC CAMERA_USE_LIBCAMERA)
+
+    # Debian/Ubuntu et Raspberry Pi OS ne livrent pas base/event_dispatcher.h ni
+    # base/thread.h dans libcamera-dev, alors que le code de capture en a besoin
+    # pour faire tourner la boucle d'événements. On ajoute des en-têtes de
+    # compatibilité maison uniquement lorsque les officiels manquent.
+    find_path(LIBCAMERA_EVENT_DISPATCHER_HEADER
+        NAMES libcamera/base/event_dispatcher.h
+        PATHS ${LIBCAMERA_INCLUDE_DIRS}
+        NO_DEFAULT_PATH)
+    if(NOT LIBCAMERA_EVENT_DISPATCHER_HEADER)
+        target_include_directories(robot_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/compat)
+        message(STATUS
+            "libcamera/base/event_dispatcher.h absent : ajout des en-têtes de compatibilité maison")
+    endif()
+
+    # libcamera 0.2+ regroupe les formats XRGB/ARGB dans le type PixelFormat à
+    # la place des anciennes classes ; les tests de format du convertisseur
+    # utilisent ce garde.
+    if(LIBCAMERA_VERSION VERSION_GREATER_EQUAL "0.2")
+        target_compile_definitions(robot_core PUBLIC CAMERA_LIBCAMERA_HAVE_XRGB8888)
+    endif()
+    # Les formats 24 bits RGB/BGR ont été renommés RGB24/BGR24 en libcamera 0.3
+    # (RGB888/BGR888 en 0.2) : le convertisseur s'adapte via ce garde.
+    if(LIBCAMERA_VERSION VERSION_GREATER_EQUAL "0.3")
+        target_compile_definitions(robot_core PUBLIC CAMERA_LIBCAMERA_FORMAT_RGB24)
+    endif()
+endif()
 target_link_directories(robot_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/rplidar_sdk/output/Linux/Release)
 
 if(CMAKE_CROSSCOMPILING)

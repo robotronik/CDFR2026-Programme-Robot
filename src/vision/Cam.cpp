@@ -134,10 +134,6 @@ void Cam::start() {
     if (id_ < 0 || running_.load()) {
         return;
     }
-    if (!detector_.isCameraOpen() && !detector_.initCamera(id_, kCameraWidth, kCameraHeight)) {
-        LOG_ERROR("Cam ", id_, " failed to open camera");
-        return;
-    }
 
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -153,11 +149,10 @@ void Cam::start() {
 
 void Cam::stop() {
     running_.store(false);
+    // The worker thread releases the camera itself (see workerLoop): libcamera
+    // requires the device to be closed on the same thread that opened it.
     if (worker_.joinable()) {
         worker_.join();
-    }
-    if (id_ >= 0) {
-        detector_.releaseCamera();
     }
 }
 
@@ -168,6 +163,16 @@ void Cam::setPrior(const position_t& robotPose) {
 }
 
 void Cam::workerLoop() {
+    // The camera is opened here, on the capture thread, rather than in start():
+    // libcamera requires every camera operation (open, configure, start and
+    // event dispatch) to run on the same thread. On other backends this is
+    // simply where the device is opened first.
+    if (!detector_.isCameraOpen() && !detector_.initCamera(id_, kCameraWidth, kCameraHeight)) {
+        LOG_ERROR("Cam ", id_, " failed to open camera");
+        running_.store(false);
+        return;
+    }
+
     while (running_.load()) {
         cv::Mat frame;
         if (!detector_.captureFrame(frame)) {
@@ -215,6 +220,9 @@ void Cam::workerLoop() {
             localisation_.a = position.heading;
         }
     }
+
+    // Released here, on the thread that opened it (see the note above).
+    detector_.releaseCamera();
 }
 
 bool Cam::getLocalisation(position_t& cameraPose) const {

@@ -13,7 +13,7 @@ This program enables the robot to perform various tasks such as navigation, data
 - **Navigation**: The robot can move through its environment using dedicated algorithms.
 - **Data Collection**: The robot gathers and stores data from onboard sensors.
 - **Communication**: The program supports communication with other systems or devices.
-- **Vision**: Native C++ ArUco marker detection using OpenCV, running in-process (no external Python/REST service).
+- **Vision**: Native C++ ArUco marker detection using OpenCV, running in-process (no external Python/REST service). Camera capture uses libcamera on the Raspberry Pi 5 (OV9281 behind the PiSP ISP) and OpenCV/V4L2 elsewhere.
 
 ## 🔧 Prerequisites
 
@@ -35,11 +35,11 @@ For ARM (Raspberry Pi) compilation, install:
 sudo apt-get install g++-aarch64-linux-gnu sqlite3
 ```
 
-Cross-compiling for ARM also needs the `arm64` OpenCV and SQLite libraries.
-They cannot be installed with `apt` next to the `amd64` ones: `libopencv-dev` is
-not `Multi-Arch: same`, so dpkg refuses to install `libopencv-dev:arm64`
-alongside the version required by the local build. They are instead downloaded
-and extracted into a local sysroot:
+Cross-compiling for ARM also needs the `arm64` OpenCV, SQLite **and libcamera**
+libraries. They cannot be installed with `apt` next to the `amd64` ones:
+`libopencv-dev` is not `Multi-Arch: same`, so dpkg refuses to install
+`libopencv-dev:arm64` alongside the version required by the local build. They
+are instead downloaded and extracted into a local sysroot:
 
 ```bash
 ./scripts/fetch_arm64_sysroot.sh          # -> ~/aarch64-sysroot
@@ -137,6 +137,24 @@ sudo raspi-config
 ```
 
 ## 📷 Camera Setup (Raspi with OV9281)
+
+On Raspberry Pi 5 the OV9281 is behind the PiSP ISP, so the camera is captured
+through **libcamera** rather than the plain V4L2 node (which only exposes raw
+Bayer frames OpenCV cannot decode). The ARM build links libcamera automatically
+when cross-compiling; the local build keeps using V4L2 so the tests run without
+libcamera installed.
+
+On the Pi itself (if building natively), install the runtime and headers:
+
+```bash
+sudo apt install libcamera-dev   # pulls libcamera0.2 on Ubuntu Noble, libcamera0.3 on Pi OS
+```
+
+The capture code also needs `libcamera/base/event_dispatcher.h` and
+`libcamera/base/thread.h`, which Debian/Ubuntu and Raspberry Pi OS omit from
+`libcamera-dev` despite them being part of the upstream API. When they are
+missing the ARM build falls back to the minimal declarations under
+`include/compat/`, so no extra package is required.
 
 On Raspberry Pi 5, automatic camera detection must be disabled for the OV9281.
 Run:

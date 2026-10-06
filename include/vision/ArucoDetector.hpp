@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -8,6 +9,12 @@
 #include <opencv2/core.hpp>
 #include <opencv2/core/version.hpp>
 #include <opencv2/videoio.hpp>
+
+#include "vision/RawFrame.hpp"
+
+#ifdef CAMERA_USE_LIBCAMERA
+#  include "vision/LibcameraCamera.hpp"
+#endif
 
 // OpenCV moved the ArUco module into `objdetect` and introduced the
 // cv::aruco::ArucoDetector class in 4.7. Older releases (including the one
@@ -86,7 +93,14 @@ private:
 
     std::map<int, double> markerSizes_;
 
+#ifdef CAMERA_USE_LIBCAMERA
+    // On the Raspberry Pi 5 the OV9281 is behind the PiSP ISP, so the V4L2 node
+    // only yields raw Bayer frames. libcamera drives the sensor -> ISP pipeline
+    // and delivers frames OpenCV can decode.
+    std::unique_ptr<LibcameraCamera> libcamera_;
+#else
     cv::VideoCapture capture_;
+#endif
     mutable std::mutex captureMutex_;
     // Consecutive failed frame reads, used to report a camera that opened but
     // never delivers frames. Guarded by captureMutex_.

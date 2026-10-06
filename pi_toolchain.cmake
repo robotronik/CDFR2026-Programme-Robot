@@ -19,6 +19,20 @@ if(DEFINED ENV{ARM64_SYSROOT})
     set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} $ENV{ARM64_SYSROOT})
 endif()
 
+# libcamera (Raspberry Pi 5 native capture, cf. src/vision/LibcameraCamera.cpp)
+# is located through pkg-config, which looks in the host directories by default
+# and would miss the ARM64 sysroot. Point it at the sysroot's .pc files and have
+# it prefix the emitted -I/-L paths with the sysroot, since the .pc files use
+# the absolute prefix=/usr of the target filesystem.
+if(DEFINED ENV{ARM64_SYSROOT})
+    set(_arm_pc_dirs "$ENV{ARM64_SYSROOT}/usr/lib/aarch64-linux-gnu/pkgconfig"
+                     "$ENV{ARM64_SYSROOT}/usr/share/pkgconfig")
+    string(REPLACE ";" ":" _arm_pc_path "${_arm_pc_dirs}")
+    set(ENV{PKG_CONFIG_PATH} "${_arm_pc_path}")
+    set(ENV{PKG_CONFIG_LIBDIR} "${_arm_pc_path}")
+    set(ENV{PKG_CONFIG_SYSROOT_DIR} "$ENV{ARM64_SYSROOT}")
+endif()
+
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)

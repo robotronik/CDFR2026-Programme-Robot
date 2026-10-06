@@ -3,6 +3,10 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
 
+#ifdef CAMERA_USE_LIBCAMERA
+#  include <libcamera/formats.h>
+#endif
+
 #include "utils/logger.hpp"
 
 namespace vision {
@@ -58,6 +62,96 @@ std::vector<cv::Point3f> markerObjectPoints(double markerLength) {
     };
 }
 
+#ifdef CAMERA_USE_LIBCAMERA
+// The 24-bit packed RGB/BGR format constants were renamed in libcamera 0.3:
+// RGB888/BGR888 became RGB24/BGR24.
+#ifdef CAMERA_LIBCAMERA_FORMAT_RGB24
+#  define CAMERA_FORMAT_RGB24 libcamera::formats::RGB24
+#  define CAMERA_FORMAT_BGR24 libcamera::formats::BGR24
+#else
+#  define CAMERA_FORMAT_RGB24 libcamera::formats::RGB888
+#  define CAMERA_FORMAT_BGR24 libcamera::formats::BGR888
+#endif
+
+// Converts one libcamera frame into a BGR cv::Mat. Returns false for formats
+// the detector does not know how to unpack.
+bool convertRawFrame(const RawFrame& raw, cv::Mat& out) {
+    if (raw.data == nullptr || raw.width <= 0 || raw.height <= 0) {
+        return false;
+    }
+
+    switch (raw.format) {
+    case libcamera::formats::BGRA8888:
+    case libcamera::formats::RGBA8888:
+#ifdef CAMERA_LIBCAMERA_HAVE_XRGB8888
+    case libcamera::formats::ARGB8888:
+    case libcamera::formats::ABGR8888:
+    case libcamera::formats::XRGB8888:
+    case libcamera::formats::XBGR8888:
+#endif
+    {
+        const cv::Mat bgra(raw.height, raw.width, CV_8UC4, const_cast<uint8_t*>(raw.data), raw.stride);
+        // libcamera's "RGBA" is stored R,G,B,A in memory, i.e. BGRA byte order;
+        // the XRGB/ARGB groups use the opposite order.
+        if (raw.format == libcamera::formats::RGBA8888 ||
+            raw.format == libcamera::formats::BGRA8888) {
+            cv::cvtColor(bgra, out, cv::COLOR_BGRA2BGR);
+        } else {
+            cv::cvtColor(bgra, out, cv::COLOR_RGBA2BGR);
+        }
+        return true;
+    }
+    case CAMERA_FORMAT_BGR24: {
+        const cv::Mat bgr(raw.height, raw.width, CV_8UC3, const_cast<uint8_t*>(raw.data), raw.stride);
+        out = bgr.clone();
+        return true;
+    }
+    case CAMERA_FORMAT_RGB24: {
+        const cv::Mat rgb(raw.height, raw.width, CV_8UC3, const_cast<uint8_t*>(raw.data), raw.stride);
+        cv::cvtColor(rgb, out, cv::COLOR_RGB2BGR);
+        return true;
+    }
+    case libcamera::formats::YUYV: {
+        const cv::Mat yuyv(raw.height, raw.width, CV_8UC2, const_cast<uint8_t*>(raw.data), raw.stride);
+        cv::cvtColor(yuyv, out, cv::COLOR_YUV2BGR_YUYV);
+        return true;
+    }
+    case libcamera::formats::UYVY: {
+        const cv::Mat uyvy(raw.height, raw.width, CV_8UC2, const_cast<uint8_t*>(raw.data), raw.stride);
+        cv::cvtColor(uyvy, out, cv::COLOR_YUV2BGR_UYVY);
+        return true;
+    }
+    case libcamera::formats::NV12: {
+        const cv::Mat nv12(raw.height * 3 / 2, raw.width, CV_8UC1,
+                           const_cast<uint8_t*>(raw.data), raw.stride);
+        cv::cvtColor(nv12, out, cv::COLOR_YUV2BGR_NV12);
+        return true;
+    }
+    case libcamera::formats::NV21: {
+        const cv::Mat nv21(raw.height * 3 / 2, raw.width, CV_8UC1,
+                           const_cast<uint8_t*>(raw.data), raw.stride);
+        cv::cvtColor(nv21, out, cv::COLOR_YUV2BGR_NV21);
+        return true;
+    }
+    case libcamera::formats::YUV420: {
+        const int chromaStride = (raw.stride + 1) / 2;
+        const cv::Mat y(raw.height, raw.width, CV_8UC1, const_cast<uint8_t*>(raw.data), raw.stride);
+        const uint8_t* uData = raw.data + static_cast<std::size_t>(raw.stride) * raw.height;
+        const uint8_t* vData = uData + static_cast<std::size_t>(chromaStride) * (raw.height / 2);
+        const cv::Mat u(raw.height / 2, raw.width / 2, CV_8UC1, const_cast<uint8_t*>(uData), chromaStride);
+        const cv::Mat v(raw.height / 2, raw.width / 2, CV_8UC1, const_cast<uint8_t*>(vData), chromaStride);
+        cv::Mat i420;
+        cv::vconcat(y, u, i420);
+        cv::vconcat(i420, v, i420);
+        cv::cvtColor(i420, out, cv::COLOR_YUV2BGR_I420);
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+#endif
+
 } // namespace
 
 ArucoDetector::ArucoDetector() {
@@ -108,6 +202,20 @@ void ArucoDetector::setMarkerSize(int id, double size) {
 
 bool ArucoDetector::initCamera(int deviceIndex, int width, int height) {
     std::lock_guard<std::mutex> lock(captureMutex_);
+
+#ifdef CAMERA_USE_LIBCAMERA
+    if (libcamera_ && libcamera_->isOpen()) {
+        libcamera_->close();
+    }
+    libcamera_ = std::make_unique<LibcameraCamera>();
+    if (!libcamera_->open(deviceIndex, width, height)) {
+        LOG_ERROR("ArucoDetector - failed to open libcamera device ", deviceIndex);
+        libcamera_.reset();
+        return false;
+    }
+    captureFailCount_ = 0;
+    return true;
+#else
     if (capture_.isOpened()) {
         capture_.release();
     }
@@ -152,22 +260,53 @@ bool ArucoDetector::initCamera(int deviceIndex, int width, int height) {
     LOG_GREEN_INFO("ArucoDetector - camera ", deviceIndex, " opened at ",
                    actualWidth, "x", actualHeight, " (", fourccText, ")");
     return true;
+#endif
 }
 
 bool ArucoDetector::isCameraOpen() const {
     std::lock_guard<std::mutex> lock(captureMutex_);
+#ifdef CAMERA_USE_LIBCAMERA
+    return libcamera_ && libcamera_->isOpen();
+#else
     return capture_.isOpened();
+#endif
 }
 
 void ArucoDetector::releaseCamera() {
     std::lock_guard<std::mutex> lock(captureMutex_);
+#ifdef CAMERA_USE_LIBCAMERA
+    if (libcamera_) {
+        libcamera_->close();
+        libcamera_.reset();
+    }
+#else
     if (capture_.isOpened()) {
         capture_.release();
     }
+#endif
 }
 
 bool ArucoDetector::captureFrame(cv::Mat& outFrame) {
     std::lock_guard<std::mutex> lock(captureMutex_);
+
+#ifdef CAMERA_USE_LIBCAMERA
+    if (!libcamera_ || !libcamera_->isOpen()) {
+        return false;
+    }
+
+    RawFrame raw;
+    if (!libcamera_->captureFrame(raw) || !convertRawFrame(raw, outFrame)) {
+        outFrame.release();
+        // An open device that never delivers a frame is the usual cause of a
+        // missing preview, so report it instead of failing silently.
+        if (captureFailCount_ == 0 || captureFailCount_ % 400 == 0) {
+            LOG_WARNING("ArucoDetector - camera returned no frame (",
+                        captureFailCount_ + 1, " failures)");
+        }
+        ++captureFailCount_;
+        return false;
+    }
+#else
     if (!capture_.isOpened()) {
         return false;
     }
@@ -184,6 +323,7 @@ bool ArucoDetector::captureFrame(cv::Mat& outFrame) {
         ++captureFailCount_;
         return false;
     }
+#endif
 
     if (captureFailCount_ > 0) {
         LOG_GREEN_INFO("ArucoDetector - camera delivered a frame after ",
