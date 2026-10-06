@@ -20,7 +20,7 @@ This program enables the robot to perform various tasks such as navigation, data
 Before running the program, make sure you have installed the following dependencies:
 
 ```bash
-sudo apt-get install cmake make gcc g++ ninja-build libopencv-dev libsqlite3-dev
+sudo apt-get install cmake make gcc g++ ninja-build pkg-config libopencv-dev libsqlite3-dev
 ```
 
 To speed up compilation times massively, you can install CCache and MOLD:
@@ -42,10 +42,11 @@ libraries. They cannot be installed with `apt` next to the `amd64` ones:
 are instead downloaded and extracted into a local sysroot:
 
 ```bash
-./scripts/fetch_arm64_sysroot.sh          # -> ~/aarch64-sysroot
+./scripts/fetch_arm64_sysroot.sh          # -> ~/aarch64-sysroot/root
 ```
 
-`build.sh build_arm` uses it automatically. Set `ARM64_SYSROOT` to point at a
+`build.sh build_arm` picks it up automatically when it lives at
+`~/aarch64-sysroot/root`. Set `ARM64_SYSROOT` (or `SYSROOT`) to point at a
 sysroot extracted somewhere else.
 
 For debugging, install:
@@ -76,7 +77,13 @@ sudo apt install gdbserver
    git pull
    ```
 
-4. (Optional) You may want to setup the LSP Server (clangd) if you are not on VSCode. To do so, run:
+4. Make sure the Git submodules are present (Crow, Asio and the RPLidar SDK):
+
+   ```bash
+   git submodule update --init --recursive
+   ```
+
+5. (Optional) You may want to setup the LSP Server (clangd) if you are not on VSCode. To do so, run:
    
    ```bash
    bash build.sh setup-lsp
@@ -86,48 +93,53 @@ sudo apt install gdbserver
 
 ### Direct Host Build
 
-To compile the program on your machine, simply run:
+The build is driven by `CMakePresets.json`; `./build.sh` wraps it:
 
 ```bash
-./build.sh build
-# Or with native CMake:
-cmake --build --preset local
+./build.sh build        # Configure + build for x86_64 (preset local)
+./build.sh build_arm    # Configure + cross-compile for ARM/AArch64 (preset arm)
+./build.sh tests        # Build + run the unit tests
+./build.sh clean        # Clean target objects
+./build.sh clean-all    # Remove every build directory
 ```
 
-To compile for ARM (Raspberry Pi / AArch64):
+Equivalent raw CMake / CTest commands:
 
 ```bash
-./build.sh build_arm
-# Or with native CMake:
-cmake --build --preset arm
+cmake --preset local            # configure x86_64  -> build/
+cmake --build --preset local    # build
+ctest --preset local            # run the tests
+
+cmake --preset arm              # configure ARM     -> build_arm/
+cmake --build --preset arm      # cross-compile
+
+cmake --build --preset arm --target deploy   # copy + restart on the robot
+cmake --build --preset arm --target logs     # follow the robot's journalctl
 ```
 
-To run unit tests:
-
-```bash
-./build.sh tests
-# Or with CTest:
-ctest --preset local
-```
-
-To clean build files:
-
-```bash
-./build.sh clean       # Cleans target objects
-./build.sh clean-all   # Deletes build directories
-```
+Cross-compiling for ARM needs the ARM64 sysroot (OpenCV, SQLite, libcamera); see
+[Prerequisites](#-prerequisites) and `./scripts/fetch_arm64_sysroot.sh`. The
+container image already ships it (see below).
 
 ### 🐳 Dockerized Build (Zero Setup)
 
-If you don't have the compilers or ARM cross-toolchains installed locally, you can build inside a standardized Docker container. The image ships both the native (x86_64) toolchain and the AArch64 cross-toolchain, **plus an ARM64 sysroot** (OpenCV, SQLite, libcamera extracted from the Ubuntu ports), so both targets compile without touching the host:
+If you don't have the compilers or ARM cross-toolchains installed locally, build inside a standardized container (Docker, or podman as a drop-in). The image ships both the native (x86_64) toolchain and the AArch64 cross-toolchain, **plus an ARM64 sysroot** (OpenCV, SQLite, libcamera extracted from the Ubuntu ports), so both targets compile without touching the host:
 
 ```bash
 git submodule update --init --recursive   # Crow, Asio and RPLidar are submodules
-./build.sh docker build        # Compile locally (x86_64) in Docker
-./build.sh docker build_arm    # Cross-compile for ARM (AArch64) in Docker
-./build.sh docker tests        # Run CTest in Docker
+
+./build.sh docker build-image  # Build/refresh the cdfr-builder:latest image
+./build.sh docker build        # Compile locally (x86_64) in the container
+./build.sh docker build_arm    # Cross-compile for ARM (AArch64) in the container
+./build.sh docker tests        # Run CTest in the container
+./build.sh docker deploy       # Compile + deploy to the robot
+./build.sh docker logs         # Stream the robot's journalctl
+./build.sh docker clean        # Clean target objects
+./build.sh docker clean-all    # Remove build directories
 ./build.sh docker shell        # Interactive shell inside the container
 ```
+
+Any `./build.sh <cmd>` can be prefixed with `docker` to run it in the container.
 
 - Uses `docker`, or falls back to `podman` automatically when `docker` is not installed (rootless podman is handled via `--userns=keep-id`).
 - Builds happen directly in your workspace tree without modifying file ownership (preserves host `UID:GID`).
@@ -147,7 +159,7 @@ ssh-copy-id pi@192.168.1.47
 Then compile and deploy with:
 
 ```bash
-./build.sh deploy
+./build.sh deploy              # or: ./build.sh docker deploy
 # Or via CMake directly:
 cmake --build --preset arm --target deploy
 ```
@@ -155,7 +167,7 @@ cmake --build --preset arm --target deploy
 To follow live logs:
 
 ```bash
-./build.sh logs
+./build.sh logs                # or: ./build.sh docker logs
 # Or via CMake:
 cmake --build --preset arm --target logs
 ```

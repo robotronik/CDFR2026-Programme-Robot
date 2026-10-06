@@ -11,14 +11,15 @@ F_BLU="${ESC}[38;5;72m";  BG_BLU="${ESC}[30;48;5;72m"
 
 step() { printf "${1}${BOLD} %-10s ${NC} ${2}%s${NC}\n" "$3" "$4"; }
 
-# Docker n'est pas forcément installé sur la machine hôte ; podman expose la même
-# interface en ligne de commande. On l'utilise comme repli pour toutes les
-# commandes `docker` (build, run, image inspect).
+# Choix du moteur de conteneurs : `docker` si son démon répond, sinon `podman`
+# (interface CLI compatible). Cela couvre le cas où le client docker est
+# installé mais que le démon ne tourne pas.
 # Deux ajustements pour `run` sous podman rootless :
 #   --userns=keep-id  : le conteneur doit pouvoir écrire dans les sources
 #                       montées avec l'uid de l'hôte (cf. --user dans docker_run) ;
 #   label=disable     : les montages de l'hôte restent lisibles sous SELinux.
-if ! command -v docker >/dev/null 2>&1 && command -v podman >/dev/null 2>&1; then
+if ! { command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; } \
+   && command -v podman >/dev/null 2>&1; then
     docker() {
         if [ "$1" = "run" ]; then
             shift
@@ -114,6 +115,14 @@ else
     BUILD_DIR_ARM="build_arm"
 fi
 
+# Sysroot ARM64 pour la cross-compilation sur l'hôte (cf.
+# scripts/fetch_arm64_sysroot.sh). Dans le conteneur, l'image fournit déjà
+# SYSROOT (/opt/arm64-sysroot) : on n'exporte rien pour ne pas l'écraser.
+if [ -z "${IS_CONTAINER:-}" ] && [ ! -f /.dockerenv ] && [ -z "${ARM64_SYSROOT:-}" ]; then
+    _default_arm_sysroot="$HOME/aarch64-sysroot/root"
+    [ -d "$_default_arm_sysroot" ] && export ARM64_SYSROOT="$_default_arm_sysroot"
+fi
+
 case "$1" in
     build)
         [ -f "$BUILD_DIR_LOCAL/build.ninja" ] || run_timed "Config Local" cmake --preset "$PRESET_LOCAL"
@@ -167,9 +176,14 @@ case "$1" in
     *)
         echo -e "${BOLD}Usage:${NC} $0 {build|build_arm|tests|deploy|logs|setup-lsp|clean|clean-all|docker}"
         echo -e "Commandes Docker :"
-        echo -e "  $0 docker build        # Compile en local dans Docker"
-        echo -e "  $0 docker build_arm    # Cross-compile pour ARM dans Docker"
-        echo -e "  $0 docker tests        # Lance les tests CTest dans Docker"
+        echo -e "  $0 docker build-image  # Construit/rafraîchit l'image cdfr-builder:latest"
+        echo -e "  $0 docker build        # Compile en local (x86_64) dans le conteneur"
+        echo -e "  $0 docker build_arm    # Cross-compile pour ARM (AArch64) dans le conteneur"
+        echo -e "  $0 docker tests        # Lance les tests CTest dans le conteneur"
+        echo -e "  $0 docker deploy       # Compile et déploie sur le robot"
+        echo -e "  $0 docker logs         # Suit les logs journalctl du robot"
+        echo -e "  $0 docker clean        # Nettoie les objets cibles"
+        echo -e "  $0 docker clean-all    # Supprime les dossiers de build"
         echo -e "  $0 docker shell        # Ouvre un shell interactif dans le conteneur"
         echo -e ""
         echo -e "Ou directement avec CMake sur l'hôte :"
