@@ -27,7 +27,7 @@ std::string jsonString(const json& object, const char* key) {
     return (it != object.end() && it->is_string()) ? it->get<std::string>() : std::string();
 }
 
-void setMatTableData(const MatTableData& data) {
+[[maybe_unused]] void setMatTableData(const MatTableData& data) {
     std::lock_guard<std::mutex> lock(g_matMutex);
     g_matTableData = data;
 }
@@ -104,6 +104,8 @@ MatTableData parseMatTableData(const json& response) {
     return data;
 }
 
+#ifndef DISABLE_MAT
+
 // Demande au mat de démarrer la détection ; renvoie false tant que le mat n'a
 // pas répondu, avec un abandon au bout de 5 s.
 bool StartMat(bool& connectionOk) {
@@ -157,3 +159,22 @@ bool getMapStatus() {
     setMatTableData(parseMatTableData(response));
     return true;
 }
+
+#else  // DISABLE_MAT
+
+// Local builds have no MAT (vision server) available, so the integration is
+// stubbed out and the program never tries to reach it. StartMat reports
+// "handled" so callers stop retrying, and the table keeps its locally computed
+// state.
+bool StartMat(bool& connectionOk) {
+    connectionOk = false;
+    return true;
+}
+
+void StopMat() {}
+
+bool getMapStatus() {
+    return false;
+}
+
+#endif  // DISABLE_MAT

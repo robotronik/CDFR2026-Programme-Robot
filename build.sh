@@ -64,6 +64,7 @@ Usage: ./build.sh <command> [arch]
 
 Commands:
   build [x86_64|arm64]   Build the given target, or both when omitted
+  run [args...]          Build x86_64 and run the program locally (needs sudo)
   test                   Build x86_64 and run the CTest suite
   deploy                 Build arm64 and deploy it to the robot
   shell [x86_64|arm64]   Interactive shell in the target image (default: x86_64)
@@ -85,6 +86,12 @@ case "${1:-build}" in
         build_arch x86_64
         log "Running tests"
         docker_run "$IMAGE_X86" ctest --preset x86_64
+        ;;
+    run)
+        build_arch x86_64
+        shift
+        log "Running programCDFR from build/x86_64 (sudo is required for port 80)"
+        (cd "$REPO_ROOT/build/x86_64" && sudo ./programCDFR "$@")
         ;;
     deploy)
         ensure_image "$IMAGE_ARM" docker/Dockerfile.arm64

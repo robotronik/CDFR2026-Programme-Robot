@@ -58,6 +58,7 @@ Everything runs inside Docker; the host compiler is never used.
 ./build.sh build          # Build both x86_64 and arm64
 ./build.sh build x86_64   # Build a single target
 ./build.sh build arm64
+./build.sh run            # Build x86_64 and run it locally (needs sudo)
 ./build.sh test           # Build x86_64 and run the CTest suite
 ./build.sh deploy         # Build arm64 and deploy it to the robot
 ./build.sh shell          # Interactive shell in the x86_64 image
@@ -65,6 +66,13 @@ Everything runs inside Docker; the host compiler is never used.
 ./build.sh images         # (Re)build the Docker images
 ./build.sh clean          # Remove the build/ directory
 ```
+
+`./build.sh run` executes the x86_64 binary from `build/x86_64` (so it finds its
+`html/` and `data/` assets) and needs `sudo` because the REST server binds port 80.
+Local x86_64 builds have no hardware, so they use the emulated I2C, disable the
+lidar, and run the API in test mode; the **MAT is disabled** as well (it is the
+robot's vision server) — the ARM build keeps it enabled. Override with
+`-DCDFR_ENABLE_MAT=ON` when needed.
 
 Artifacts are written to `build/x86_64/programCDFR` and
 `build/arm64/programCDFR`. Each build directory also contains the runtime bundle
