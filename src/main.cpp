@@ -156,6 +156,8 @@ int main(int argc, char *argv[])
                 } 
             }
             
+            update_team_strat();
+
             if (sensor.readButtonSensor() && !sensor.readLatchSensor() && tableStatus.colorTeam != NONE)
                 nextState = WAITSTART;
             break;
@@ -475,12 +477,18 @@ void switchStrategy(std::string strategy){ // TODO moove to tableState
     if (currentState == RUN) return;
 
     if (strategy != action.getStrategy()->getNom()){
+        VirtualStrategy* selectedStrategy = nullptr;
+        for (VirtualStrategy* candidate : strategies)
+            if (candidate && candidate->getNom() == strategy)
+                selectedStrategy = candidate;
+        if (!selectedStrategy) return;
+
         colorTeam_t color = tableStatus.colorTeam;
 
         check(color, strategy);
         LOG_INFO("Strategy switch detected");
         tableStatus.strategy = strategy;
-        // action.setStrategy(&strategy) TODO fix the strategy change mecanic at the moment does not work
+        action.setStrategy(selectedStrategy);
         position_t pos = action.getStrategy()->StratStartingPos();
         drive.setCoordinates(pos);
     }
