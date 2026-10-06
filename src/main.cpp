@@ -235,7 +235,15 @@ int main(int argc, char *argv[])
             if (initState){
                 LOG_GREEN_INFO("TEST");
             }
-            // Run tests
+
+            if(!tableStatus.mastStatus){
+                bool sucess;
+                StartMat(sucess);
+                if(sucess){
+                    tableStatus.mastStatus = true;
+                    LOG_GREEN_INFO("MAT is ready");
+                } 
+            }
             tests();
             break;
         }

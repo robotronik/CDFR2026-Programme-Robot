@@ -6,11 +6,8 @@
 
 using json = nlohmann::json;
 
-// Adresse de l'API du mat de vision (port 5000 par défaut).
-// Surchargeable à la compilation, par exemple :
-//   -DMAT_HOST=192.168.1.50 -DMAT_PORT=5000
 #ifndef MAT_HOST
-#define MAT_HOST "mat.local"
+#define MAT_HOST "0.0.0.0"
 #endif
 #ifndef MAT_PORT
 #define MAT_PORT 5000
