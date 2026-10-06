@@ -14,9 +14,6 @@ cd "$REPO_ROOT"
 IMAGE_X86="cdfr-builder-x86_64"
 IMAGE_ARM="cdfr-builder-arm64"
 
-CCACHE_HOST="${XDG_CACHE_HOME:-$HOME/.cache}/cdfr-ccache"
-mkdir -p "$CCACHE_HOST"
-
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 
 build_image() {
@@ -43,9 +40,7 @@ docker_run() {
         --network host \
         --user "$(id -u):$(id -g)" \
         -v "$REPO_ROOT:$REPO_ROOT" \
-        -v "$CCACHE_HOST:/ccache" \
         -w "$REPO_ROOT" \
-        -e CCACHE_DIR=/ccache \
         "$image" "$@"
 }
 

@@ -35,10 +35,8 @@ RUN dpkg --add-architecture arm64 \
         > /etc/apt/sources.list.d/ubuntu.sources
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
         cmake \
         ninja-build \
-        ccache \
         git \
         ca-certificates \
         gcc-aarch64-linux-gnu \
@@ -70,6 +68,5 @@ RUN mkdir -p /opt/cdfr \
 # in the mounted workspace stay user-owned. Dev Containers remaps its uid to the
 # host user, and build.sh runs with --user "$(id -u):$(id -g)".
 ENV HOME=/home/ubuntu
-ENV CCACHE_DIR=/ccache
 
 WORKDIR /workspace

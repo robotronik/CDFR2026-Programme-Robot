@@ -21,16 +21,27 @@ jobs:
       - name: Run tests (x86_64)
         run: ./build.sh test
 
-      - name: Upload x86_64 executable
+      - name: Package runtime bundles
+        run: |
+          for arch in x86_64 arm64; do
+            dir="build/$arch"
+            files="programCDFR html data tests/lidar autoRunInstaller.sh"
+            if [ -f "$dir/pi_detect_aruco.py" ]; then
+              files="$files pi_detect_aruco.py"
+            fi
+            (cd "$dir" && zip -r "../../programCDFR-$arch.zip" $files)
+          done
+
+      - name: Upload x86_64 bundle
         uses: actions/upload-artifact@v4
         with:
           name: programCDFR-x86_64
-          path: build/x86_64/programCDFR
+          path: programCDFR-x86_64.zip
           if-no-files-found: error
 
-      - name: Upload arm64 executable
+      - name: Upload arm64 bundle
         uses: actions/upload-artifact@v4
         with:
           name: programCDFR-arm64
-          path: build/arm64/programCDFR
+          path: programCDFR-arm64.zip
           if-no-files-found: error
