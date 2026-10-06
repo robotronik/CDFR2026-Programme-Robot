@@ -44,7 +44,8 @@
       "name": "x86_64",
       "configurePreset": "x86_64",
       "output": {
-        "outputOnFailure": true
+        "outputOnFailure": true,
+        "verbosity": "verbose"
       }
     }
   ]

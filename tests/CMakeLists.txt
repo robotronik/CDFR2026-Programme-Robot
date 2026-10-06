@@ -12,9 +12,11 @@ target_link_libraries(robot_tests PRIVATE
     project_compiler_options
 )
 
-# Register test with CTest, running from the project root so the shared relative
+# One test per group. Tests run from the project root so the shared relative
 # test-data paths (tests/data, data, tests/lidar) resolve.
-add_test(NAME robot_tests COMMAND robot_tests)
-set_tests_properties(robot_tests PROPERTIES
-    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-)
+foreach(group log lidar mat aruco features)
+    add_test(NAME ${group} COMMAND robot_tests ${group})
+    set_tests_properties(${group} PROPERTIES
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    )
+endforeach()
