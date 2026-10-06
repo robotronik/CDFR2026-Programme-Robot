@@ -36,8 +36,12 @@ docker_run() {
         ssh+=(-v "${SSH_AUTH_SOCK}:/ssh-agent" -e SSH_AUTH_SOCK=/ssh-agent)
     fi
     [ -d "$HOME/.ssh" ] && ssh+=(-v "$HOME/.ssh:/home/ubuntu/.ssh:ro")
+    # --security-opt label=disable: on SELinux hosts (Fedora/RHEL) the bind mounts
+    # are otherwise denied ("Permission denied"), which cmake reports as a missing
+    # CMakePresets.json. It is a no-op on hosts without SELinux.
     docker run --rm "${tty[@]}" "${ssh[@]}" \
         --network host \
+        --security-opt label=disable \
         --user "$(id -u):$(id -g)" \
         -v "$REPO_ROOT:$REPO_ROOT" \
         -w "$REPO_ROOT" \
