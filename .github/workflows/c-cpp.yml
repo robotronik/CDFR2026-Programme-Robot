@@ -1,41 +1,36 @@
-name: C/C++ CI
+name: CI
 
 on: [push, pull_request]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout with submodules
-      uses: actions/checkout@v3
-      with:
-        submodules: recursive
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    # Cache and install APT Packages
-    - name: Cache and Install APT Packages
-      uses: awalsh128/cache-apt-pkgs-action@v1.4.3
-      with:
-        packages: make gcc g++ cmake
+      - name: Build Docker images
+        run: ./build.sh images
 
-    # Installed on its own rather than through the cache action: the CMake
-    # config it ships is what find_package(OpenCV) needs, so its presence is
-    # verified here instead of failing opaquely at configure time.
-    - name: Install OpenCV
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libopencv-dev
-        test -f /usr/lib/*/cmake/opencv4/OpenCVConfig.cmake \
-          || { echo "OpenCVConfig.cmake not found after install"; exit 1; }
-        echo "cmake binaries:"; which -a cmake
-        cmake --version
-        echo "opencv config dirs:"; ls -d /usr/lib/*/cmake/opencv4
+      - name: Build x86_64 and arm64
+        run: ./build.sh build
 
-    - name: Clone CDFR2026-Program-DriveControl
-      run: git clone https://github.com/robotronik/CDFR2026-Program-DriveControl.git ../CDFR2026-Program-DriveControl
-    - name: Clone Arduino
-      run: git clone https://github.com/robotronik/cdfr2024-programme-Actionneur ../cdfr2024-programme-Actionneur
+      - name: Run tests (x86_64)
+        run: ./build.sh test
 
-    - name: Build and run tests
-      run: |
-        bash build.sh tests
+      - name: Upload x86_64 executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: programCDFR-x86_64
+          path: build/x86_64/programCDFR
+          if-no-files-found: error
+
+      - name: Upload arm64 executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: programCDFR-arm64
+          path: build/arm64/programCDFR
+          if-no-files-found: error

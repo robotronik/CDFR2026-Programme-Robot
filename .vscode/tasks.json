@@ -4,7 +4,7 @@
     {
       "label": "deploy",
       "type": "shell",
-      "command": "make deploy",
+      "command": "./build.sh deploy",
       "group": {
         "kind": "build",
         "isDefault": true

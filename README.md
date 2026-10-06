@@ -11,108 +11,79 @@ This program enables the robot to perform various tasks such as navigation, data
 ## 🚀 Features
 
 - **Navigation**: The robot can move through its environment using dedicated algorithms.
+- **Vision**: Native C++ ArUco marker detection and feature-based localisation using
+  OpenCV, running in-process (no external Python service). Camera capture uses
+  libcamera on the Raspberry Pi 5 and OpenCV/V4L2 elsewhere.
 - **Data Collection**: The robot gathers and stores data from onboard sensors.
 - **Communication**: The program supports communication with other systems or devices.
-- **Vision**: Native C++ ArUco marker detection using OpenCV, running in-process (no external Python/REST service). Camera capture uses libcamera on the Raspberry Pi 5 (OV9281 behind the PiSP ISP) and OpenCV/V4L2 elsewhere.
 
 ## 🔧 Prerequisites
 
-Before running the program, make sure you have installed the following dependencies:
-
-```bash
-sudo apt-get install cmake make gcc g++ ninja-build libopencv-dev libsqlite3-dev
-```
-
-To speed up compilation times massively, you can install CCache and MOLD:
-
-```bash
-sudo apt-get install ccache mold
-```
-
-For ARM (Raspberry Pi) compilation, install:
-
-```bash
-sudo apt-get install g++-aarch64-linux-gnu sqlite3
-```
-
-Cross-compiling for ARM also needs the `arm64` OpenCV, SQLite **and libcamera**
-libraries. They cannot be installed with `apt` next to the `amd64` ones:
-`libopencv-dev` is not `Multi-Arch: same`, so dpkg refuses to install
-`libopencv-dev:arm64` alongside the version required by the local build. They
-are instead downloaded and extracted into a local sysroot:
-
-```bash
-./scripts/fetch_arm64_sysroot.sh          # -> ~/aarch64-sysroot
-```
-
-`build.sh build_arm` uses it automatically. Set `ARM64_SYSROOT` to point at a
-sysroot extracted somewhere else.
-
-For debugging, install:
-
-```bash
-sudo apt install gdbserver
-```
+- **Docker** (daemon running) — all compilation happens inside containers, so no
+  compiler, CMake, or library needs to be installed on your machine.
+- SSH access to the robot, only if you want to deploy.
 
 ## 📥 Installation
 
 1. **Do not clone this repository by itself!**  
-   Instead, clone the main CDFR repository with the `--recursive` flag to include all submodules:
+   Instead, clone the main CDFR repository with the `--recursive` flag so the
+   `rplidar_sdk` submodule is checked out:
 
    ```bash
    git clone git@github.com:robotronik/CDFR.git --recursive
    ```
 
-2. Navigate to the CDFR-Programme-Robot directory:
+   If you already cloned it without `--recursive`, initialize the submodule:
 
    ```bash
-   cd informatique/CDFR-Programme-Robot/
+   git submodule update --init --recursive
    ```
 
-3. Switch to the `main` branch and update the project:
+2. Navigate to the project directory:
 
    ```bash
-   git checkout main
-   git pull
+   cd informatique/CDFR2026-Programme-Robot/
    ```
 
-4. (Optional) You may want to setup the LSP Server (clangd) if you are not on VSCode. To do so, run:
-   
-   ```bash
-   bash build.sh setup-lsp
-   ```
+The `drive_interface.h` / `protocol.h` headers are fetched automatically into the
+build images, and OpenCV, SQLite and (on ARM) libcamera are installed there too,
+so nothing needs to be installed on the host. The camera calibration files used
+at runtime live in [`data/`](data).
 
 ## 💻 Compilation
 
-To compile the program on your machine, simply run:
+Everything runs inside Docker; the host compiler is never used.
 
 ```bash
-bash build.sh build
+./build.sh build          # Build both x86_64 and arm64
+./build.sh build x86_64   # Build a single target
+./build.sh build arm64
+./build.sh test           # Build x86_64 and run the CTest suite
+./build.sh deploy         # Build arm64 and deploy it to the robot
+./build.sh shell          # Interactive shell in the x86_64 image
+./build.sh shell arm64    # Interactive shell in the arm64 image
+./build.sh images         # (Re)build the Docker images
+./build.sh clean          # Remove the build/ directory
 ```
 
-To compile for ARM (Raspberry Pi) :
+Artifacts are written to `build/x86_64/programCDFR` and
+`build/arm64/programCDFR`.
 
-```bash
-bash build.sh build_arm
-```
-
-To run tests:
-
-```bash
-bash build.sh tests
-```
-
-To clean the build files:
-
-```bash
-bash build.sh clean
-```
+- The workspace is mounted at its own path, so build outputs appear directly on
+  the host and file ownership is preserved.
+- A persistent CCache (`~/.cache/cdfr-ccache`) speeds up rebuilds.
+- The two images are defined in [`docker/Dockerfile.x86_64`](docker/Dockerfile.x86_64)
+  and [`docker/Dockerfile.arm64`](docker/Dockerfile.arm64); rebuild them with
+  `./build.sh images` after changing their contents.
+- VS Code / CLion Dev Container support is available via
+  [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json).
 
 ## 🛠️ Compilation for Raspberry Pi
 
-Ensure you have the necessary dependencies for ARM compilation.
+The ARM binary is cross-compiled by `./build.sh build arm64`; no cross-toolchain or
+sysroot is needed on the host.
 
-To compile and deploy the program on your Raspberry Pi, first set up SSH key authentication. To copy your SSH key to the Raspberry Pi (replace `pi@192.168.1.47` with your Raspberry Pi’s address):
+To deploy it to your Raspberry Pi, first set up SSH key authentication. To copy your SSH key to the Raspberry Pi (replace `pi@192.168.1.47` with your Raspberry Pi’s address):
 
 ```bash
 ssh-copy-id pi@192.168.1.47
@@ -121,61 +92,13 @@ ssh-copy-id pi@192.168.1.47
 Then compile and deploy with:
 
 ```bash
-bash build.sh deploy
-```
-
-To clean up, run:
-
-```bash
-bash build.sh clean
+./build.sh deploy
 ```
 
 On a new Raspberry Pi, configure I2C and serial communication via:
 
 ```bash
 sudo raspi-config
-```
-
-## 📷 Camera Setup (Raspi with OV9281)
-
-On Raspberry Pi 5 the OV9281 is behind the PiSP ISP, so the camera is captured
-through **libcamera** rather than the plain V4L2 node (which only exposes raw
-Bayer frames OpenCV cannot decode). The ARM build links libcamera automatically
-when cross-compiling; the local build keeps using V4L2 so the tests run without
-libcamera installed.
-
-On the Pi itself (if building natively), install the runtime and headers:
-
-```bash
-sudo apt install libcamera-dev   # pulls libcamera0.2 on Ubuntu Noble, libcamera0.3 on Pi OS
-```
-
-The capture code also needs `libcamera/base/event_dispatcher.h` and
-`libcamera/base/thread.h`, which Debian/Ubuntu and Raspberry Pi OS omit from
-`libcamera-dev` despite them being part of the upstream API. When they are
-missing the ARM build falls back to the minimal declarations under
-`include/compat/`, so no extra package is required.
-
-On Raspberry Pi 5, automatic camera detection must be disabled for the OV9281.
-Run:
-
-```bash
-sudo nano /boot/firmware/config.txt
-```
-
-Add (or edit) the following lines near the top:
-
-```bash
-camera_auto_detect=0
-dtoverlay=ov9281,cam0
-```
-
-If you plugged into the other CSI connector (CAM1), use `,cam1` instead.
-
-Then save and exit (Ctrl+O, Enter, Ctrl+X) and reboot:
-
-```bash
-sudo reboot
 ```
 
 ## 🔍 Service Monitoring and Restart
@@ -225,21 +148,6 @@ Ensure that both the robot and the program are running and that you are on the s
 ```url
 http://raspitronik.local
 ```
-
-## 🛰️ Mat de vision
-
-The robot drives the vision mat over **HTTP (TCP)** through its REST API
-(`src/mat/mat.cpp`, using cpp-httplib). The mat is expected at `mat.local:5000`
-(override at compile time with `-DMAT_HOST=… -DMAT_PORT=…`).
-
-| Call | Mat route | Purpose |
-|---|---|---|
-| `StartMat()` | `GET /start` | start detection (retries for 5 s) |
-| `StopMat()` | `GET /stop` | stop detection |
-| `getMapStatus()` | `GET /fleet/live` | opponent position + game elements; applied by `TableState::updateMapStatus()` |
-
-The last payload received is available via `getMatTableData()`. The raw parsing
-is covered by `tests/MatTest.cpp`.
 
 ## 📺 Touchscreen on the Robot
 
