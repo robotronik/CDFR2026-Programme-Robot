@@ -57,13 +57,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopencv-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root builder user
+# Create the non-root builder user. Ubuntu already maps uid 1000 to 'ubuntu',
+# and ssh resolves ~/.ssh from the passwd home (not $HOME): the uid must have
+# /home/builder as its home for the mounted ~/.ssh and ~/.cache to be found.
 ARG USER_ID=1000
 ARG GROUP_ID=1000
-RUN groupadd -g ${GROUP_ID} builder 2>/dev/null || true && \
-    useradd -u ${USER_ID} -g ${GROUP_ID} -m -s /bin/bash builder 2>/dev/null || true && \
-    mkdir -p /home/builder/.cache/ccache && \
-    chown -R ${USER_ID}:${GROUP_ID} /home/builder
+RUN set -eux; \
+    mkdir -p /home/builder/.cache/ccache; \
+    getent group "${GROUP_ID}" >/dev/null || groupadd -g "${GROUP_ID}" builder; \
+    getent passwd "${USER_ID}" >/dev/null || \
+        useradd -u "${USER_ID}" -g "${GROUP_ID}" -d /home/builder -s /bin/bash builder; \
+    usermod -d /home/builder "$(getent passwd "${USER_ID}" | cut -d: -f1)"; \
+    chown -R "${USER_ID}:${GROUP_ID}" /home/builder
 
 ENV CCACHE_DIR=/home/builder/.cache/ccache
 ENV HOME=/home/builder

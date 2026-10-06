@@ -172,6 +172,12 @@ To follow live logs:
 cmake --build --preset arm --target logs
 ```
 
+> `deploy` connects over SSH with your key and runs `sudo` on the robot. The
+> container gets your `~/.ssh` through the workspace mount. To avoid the `sudo`
+> password prompt, allow it once with a sudoers drop-in, e.g.
+> `/etc/sudoers.d/010-robotronik-nopasswd` containing
+> `robotronik ALL=(ALL) NOPASSWD:ALL` (`chmod 0440`, check with `visudo -cf`).
+
 On a new Raspberry Pi, configure I2C and serial communication via:
 
 ```bash
