@@ -1,4 +1,3 @@
-#pragma once
 #include <stdlib.h>
 #include <signal.h>
 #include <string>
@@ -85,6 +84,9 @@ int StartSequence();
 void GetLidar();
 void EndSequence();
 void tests();
+void opponentInAction(position_t position);
+void switchTeamSide(colorTeam_t color);
+void switchStrategy(std::string strategy);
 
 // Signal Management
 bool exit_requested = false;

@@ -13,6 +13,7 @@ target_include_directories(mat
 target_link_libraries(mat
     PUBLIC
         utils
+        project_compiler_options
 )
 
 add_library(ProgramCDFR::mat ALIAS mat)

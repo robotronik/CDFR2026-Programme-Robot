@@ -13,6 +13,8 @@ target_include_directories(db
 target_link_libraries(db
     PUBLIC
         utils
+        SQLite3::SQLite3
+        project_compiler_options
 )
 
 add_library(ProgramCDFR::db ALIAS db)

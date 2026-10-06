@@ -4,9 +4,9 @@ target_sources(actions
     PRIVATE
         src/ElementalAction/CalibrationAction.cpp
         src/ElementalAction/GoToPositionAction.cpp
-        src/Strategy/ExampleStrategy.cpp
-        src/NavHomeAction.cpp
-        src/WaitAction.cpp
+        src/ElementalAction/NavHomeAction.cpp
+        src/ElementalAction/WaitAction.cpp
+        src/Strategy/ExempleStrategy.cpp
         src/ActuatorsControl.cpp
         src/MainActionFSM.cpp
         src/SensorControl.cpp
@@ -23,6 +23,11 @@ target_link_libraries(actions
         navigation
         db
         defs
+        i2c
+        vision
+        utils
+        external_robot_interfaces
+        project_compiler_options
 )
 
 add_library(ProgramCDFR::actions ALIAS actions)

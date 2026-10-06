@@ -13,10 +13,11 @@ target_include_directories(lidar
 
 target_link_libraries(lidar
     PUBLIC
-        rplidar
         defs
         i2c
         utils
+        rplidar_sdk
+        project_compiler_options
 )
 
 add_library(ProgramCDFR::lidar ALIAS lidar)

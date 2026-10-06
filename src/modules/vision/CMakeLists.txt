@@ -11,4 +11,10 @@ target_include_directories(vision
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+target_link_libraries(vision
+    PUBLIC
+        utils
+        project_compiler_options
+)
+
 add_library(ProgramCDFR::vision ALIAS vision)

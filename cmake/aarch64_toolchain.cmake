@@ -1,16 +1,26 @@
 set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_PROCESSOR aarch64)
+
 set(CROSS_COMPILE_PREFIX aarch64-linux-gnu)
 
 set(CMAKE_C_COMPILER ${CROSS_COMPILE_PREFIX}-gcc)
 set(CMAKE_CXX_COMPILER ${CROSS_COMPILE_PREFIX}-g++)
-set(CMAKE_LINKER aarch64-linux-gnu-ld)
 
+# Optional custom sysroot via environment variable SYSROOT
+if(DEFINED ENV{SYSROOT} AND NOT CMAKE_SYSROOT)
+    set(CMAKE_SYSROOT "$ENV{SYSROOT}")
+endif()
+
+# Sysroot and search path configuration
 set(CMAKE_FIND_ROOT_PATH /usr/${CROSS_COMPILE_PREFIX})
+if(CMAKE_SYSROOT)
+    list(PREPEND CMAKE_FIND_ROOT_PATH "${CMAKE_SYSROOT}")
+endif()
 
+# Strictly isolate target searches from host filesystem
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
-add_definitions(-D__CROSS_COMPILE_ARM__)
+add_compile_definitions(__CROSS_COMPILE_ARM__)

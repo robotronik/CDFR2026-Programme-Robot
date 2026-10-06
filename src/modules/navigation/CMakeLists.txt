@@ -15,9 +15,12 @@ target_include_directories(navigation
 
 target_link_libraries(navigation
     PUBLIC
-        utils
         defs
         lidar
+        vision
+        utils
+        external_robot_interfaces
+        project_compiler_options
 )
 
 add_library(ProgramCDFR::navigation ALIAS navigation)

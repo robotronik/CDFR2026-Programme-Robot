@@ -10,4 +10,9 @@ target_include_directories(utils
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+target_link_libraries(utils
+    PUBLIC
+        project_compiler_options
+)
+
 add_library(ProgramCDFR::utils ALIAS utils)

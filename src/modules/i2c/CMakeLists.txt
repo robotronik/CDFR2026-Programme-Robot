@@ -12,9 +12,12 @@ target_include_directories(i2c
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(PUBLIC
-    utils
-    navigation
+target_link_libraries(i2c
+    PUBLIC
+        utils
+        i2c_lib
+        external_robot_interfaces
+        project_compiler_options
 )
 
 add_library(ProgramCDFR::i2c ALIAS i2c)

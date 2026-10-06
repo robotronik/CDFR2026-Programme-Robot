@@ -11,4 +11,17 @@ target_include_directories(restAPI
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-add_library(ProgramCDFR::restAPI ALIAS mat)
+target_link_libraries(restAPI
+    PUBLIC
+        defs
+        i2c
+        lidar
+        navigation
+        actions
+        vision
+        utils
+        Crow::Crow
+        project_compiler_options
+)
+
+add_library(ProgramCDFR::restAPI ALIAS restAPI)

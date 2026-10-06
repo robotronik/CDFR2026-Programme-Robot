@@ -71,33 +71,57 @@ sudo apt install gdbserver
 
 ## 💻 Compilation
 
+### Direct Host Build
+
 To compile the program on your machine, simply run:
 
 ```bash
-bash build.sh build
+./build.sh build
+# Or with native CMake:
+cmake --build --preset local
 ```
 
-To compile for ARM (Raspberry Pi) :
+To compile for ARM (Raspberry Pi / AArch64):
 
 ```bash
-bash build.sh build_arm
+./build.sh build_arm
+# Or with native CMake:
+cmake --build --preset arm
 ```
 
-To run tests:
+To run unit tests:
 
 ```bash
-bash build.sh tests
+./build.sh tests
+# Or with CTest:
+ctest --preset local
 ```
 
-To clean the build files:
+To clean build files:
 
 ```bash
-bash build.sh clean
+./build.sh clean       # Cleans target objects
+./build.sh clean-all   # Deletes build directories
 ```
+
+### 🐳 Dockerized Build (Zero Setup)
+
+If you don't have the compilers or ARM cross-toolchains installed locally, you can build inside a standardized Docker container:
+
+```bash
+./build.sh docker build        # Compile locally in Docker
+./build.sh docker build_arm    # Cross-compile for ARM in Docker
+./build.sh docker tests        # Run CTest in Docker
+./build.sh docker shell        # Interactive shell inside the container
+```
+
+- Builds happen directly in your workspace tree without modifying file ownership (preserves host `UID:GID`).
+- Uses persistent CCache (`~/.cache/cdfr-docker-ccache`) for fast rebuilds.
+- Includes full Dev Container support for VS Code and CLion ([`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json)).
 
 ## 🛠️ Compilation for Raspberry Pi
 
-Ensure you have the necessary dependencies for ARM compilation.
+Ensure you have the necessary dependencies for ARM compilation (or use the Docker build above).
 
 To compile and deploy the program on your Raspberry Pi, first set up SSH key authentication. To copy your SSH key to the Raspberry Pi (replace `pi@192.168.1.47` with your Raspberry Pi’s address):
 
@@ -108,13 +132,17 @@ ssh-copy-id pi@192.168.1.47
 Then compile and deploy with:
 
 ```bash
-bash build.sh deploy
+./build.sh deploy
+# Or via CMake directly:
+cmake --build --preset arm --target deploy
 ```
 
-To clean up, run:
+To follow live logs:
 
 ```bash
-bash build.sh clean
+./build.sh logs
+# Or via CMake:
+cmake --build --preset arm --target logs
 ```
 
 On a new Raspberry Pi, configure I2C and serial communication via:
