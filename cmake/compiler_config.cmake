@@ -16,23 +16,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}" CACHE PATH "Runtime out
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib" CACHE PATH "Library output directory")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib" CACHE PATH "Archive output directory")
 
-if(NOT CMAKE_CROSSCOMPILING)
-    find_program(MOLD_PATH NAMES mold)
-    find_program(LLD_PATH NAMES ld.lld)
-
-    if(MOLD_PATH)
-        target_link_options(project_compiler_options INTERFACE "-fuse-ld=mold")
-    elseif(LLD_PATH)
-        target_link_options(project_compiler_options INTERFACE "-fuse-ld=lld")
-    endif()
-endif()
-
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
-    set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
-endif()
-
 # Automatically link compile_commands.json into the project root for LSP servers (clangd, etc.)
 if(CMAKE_EXPORT_COMPILE_COMMANDS AND NOT CMAKE_CROSSCOMPILING)
     if(EXISTS "${CMAKE_SOURCE_DIR}/compile_commands.json" OR IS_SYMLINK "${CMAKE_SOURCE_DIR}/compile_commands.json")

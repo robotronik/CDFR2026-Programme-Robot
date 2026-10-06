@@ -8,8 +8,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         cmake \
         ninja-build \
-        ccache \
-        mold \
         git \
         ca-certificates \
         libsqlite3-dev \
@@ -34,6 +32,5 @@ RUN mkdir -p /opt/cdfr \
 # in the mounted workspace stay user-owned. Dev Containers remaps its uid to the
 # host user, and build.sh runs with --user "$(id -u):$(id -g)".
 ENV HOME=/home/ubuntu
-ENV CCACHE_DIR=/ccache
 
 WORKDIR /workspace
