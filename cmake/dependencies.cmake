@@ -1,29 +1,38 @@
 #-----------------------------------------
-# Dependency fetcher
+# Dependency fetcher (header-only)
 #-----------------------------------------
 
 include(FetchContent)
 
-# Asio
+# Asio is the networking backend of Crow, the HTTP/WebSocket framework behind the
+# REST API. Both are header-only, so they are wired up as INTERFACE targets
+# directly: this skips Crow's CMakeLists (and with it its optional Python3
+# probe) and keeps the build free of any Python dependency.
 FetchContent_Declare(
     asio
     GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
     GIT_TAG asio-1-30-2
     GIT_SHALLOW TRUE
+    SOURCE_SUBDIR unused
 )
-FetchContent_MakeAvailable(asio)
-
-set(ASIO_INCLUDE_DIR ${asio_SOURCE_DIR}/asio/include CACHE PATH "Asio include dir" FORCE)
-
-# Crow C++ Framework
 FetchContent_Declare(
     Crow
     GIT_REPOSITORY https://github.com/CrowCpp/Crow.git
     GIT_TAG v1.2.0
     GIT_SHALLOW TRUE
     GIT_SUBMODULES ""
+    SOURCE_SUBDIR unused
 )
-FetchContent_MakeAvailable(Crow)
+FetchContent_MakeAvailable(asio Crow)
+
+add_library(asio INTERFACE)
+target_include_directories(asio INTERFACE "${asio_SOURCE_DIR}/asio/include")
+add_library(asio::asio ALIAS asio)
+
+add_library(Crow INTERFACE)
+target_include_directories(Crow INTERFACE "${crow_SOURCE_DIR}/include")
+target_link_libraries(Crow INTERFACE asio::asio)
+add_library(Crow::Crow ALIAS Crow)
 
 #-----------------------------------------
 # System dependencies

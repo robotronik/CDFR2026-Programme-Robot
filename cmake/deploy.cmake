@@ -14,7 +14,6 @@ if(TARGET programCDFR AND SSH_CMD AND RSYNC_CMD)
                 ${CMAKE_BINARY_DIR}/programCDFR
                 ${CMAKE_BINARY_DIR}/html
                 ${CMAKE_BINARY_DIR}/data
-                ${CMAKE_BINARY_DIR}/pi_detect_aruco.py
                 ${CMAKE_SOURCE_DIR}/autoRunInstaller.sh
                 ${PI_USER}@${PI_HOST}:${PI_DIR}/${PI_DEST}/
         COMMAND ${SSH_CMD} -t ${PI_USER}@${PI_HOST}

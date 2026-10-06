@@ -68,8 +68,8 @@ Everything runs inside Docker; the host compiler is never used.
 
 Artifacts are written to `build/x86_64/programCDFR` and
 `build/arm64/programCDFR`. Each build directory also contains the runtime bundle
-shipped alongside the executable (`html/`, `data/`, `tests/`, `pi_detect_aruco.py`
-and `autoRunInstaller.sh`); CI zips these into the `programCDFR-<arch>` artifacts.
+shipped alongside the executable (`html/`, `data/`, `tests/lidar` and
+`autoRunInstaller.sh`); CI zips these into the `programCDFR-<arch>` artifacts.
 
 - The workspace is mounted at its own path, so build outputs appear directly on
   the host and file ownership is preserved.
