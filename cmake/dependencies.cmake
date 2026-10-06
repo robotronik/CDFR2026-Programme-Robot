@@ -1,29 +1,19 @@
 #-----------------------------------------
-# Dependency fetcher
+# Submodule dependencies
 #-----------------------------------------
+# Asio et Crow sont récupérés comme sous-modules Git (cf. .gitmodules) plutôt
+# que via FetchContent : ils sont fournis avec le dépôt
+# (git submodule update --init --recursive), ce qui rend la configuration
+# hors-ligne et reproductible.
 
-include(FetchContent)
+# Asio (header-only) : Crow le localise via ASIO_INCLUDE_DIR (cf. son
+# Findasio.cmake).
+set(ASIO_INCLUDE_DIR
+    "${CMAKE_SOURCE_DIR}/dependencies/asio/asio/include"
+    CACHE PATH "Asio include dir" FORCE)
 
-# Asio
-FetchContent_Declare(
-    asio
-    GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
-    GIT_TAG asio-1-30-2
-    GIT_SHALLOW TRUE
-)
-FetchContent_MakeAvailable(asio)
-
-set(ASIO_INCLUDE_DIR ${asio_SOURCE_DIR}/asio/include CACHE PATH "Asio include dir" FORCE)
-
-# Crow C++ Framework
-FetchContent_Declare(
-    Crow
-    GIT_REPOSITORY https://github.com/CrowCpp/Crow.git
-    GIT_TAG v1.2.0
-    GIT_SHALLOW TRUE
-    GIT_SUBMODULES ""
-)
-FetchContent_MakeAvailable(Crow)
+# Crow C++ Framework (s'appuie sur ASIO_INCLUDE_DIR ci-dessus).
+add_subdirectory("${CMAKE_SOURCE_DIR}/dependencies/crow")
 
 #-----------------------------------------
 # System dependencies

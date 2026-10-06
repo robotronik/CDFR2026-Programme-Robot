@@ -119,15 +119,17 @@ To clean build files:
 
 ### 🐳 Dockerized Build (Zero Setup)
 
-If you don't have the compilers or ARM cross-toolchains installed locally, you can build inside a standardized Docker container:
+If you don't have the compilers or ARM cross-toolchains installed locally, you can build inside a standardized Docker container. The image ships both the native (x86_64) toolchain and the AArch64 cross-toolchain, **plus an ARM64 sysroot** (OpenCV, SQLite, libcamera extracted from the Ubuntu ports), so both targets compile without touching the host:
 
 ```bash
-./build.sh docker build        # Compile locally in Docker
-./build.sh docker build_arm    # Cross-compile for ARM in Docker
+git submodule update --init --recursive   # Crow, Asio and RPLidar are submodules
+./build.sh docker build        # Compile locally (x86_64) in Docker
+./build.sh docker build_arm    # Cross-compile for ARM (AArch64) in Docker
 ./build.sh docker tests        # Run CTest in Docker
 ./build.sh docker shell        # Interactive shell inside the container
 ```
 
+- Uses `docker`, or falls back to `podman` automatically when `docker` is not installed (rootless podman is handled via `--userns=keep-id`).
 - Builds happen directly in your workspace tree without modifying file ownership (preserves host `UID:GID`).
 - Uses persistent CCache (`~/.cache/cdfr-docker-ccache`) for fast rebuilds.
 - Includes full Dev Container support for VS Code and CLion ([`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json)).

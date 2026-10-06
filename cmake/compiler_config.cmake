@@ -25,6 +25,14 @@ if(NOT CMAKE_CROSSCOMPILING)
     elseif(LLD_PATH)
         target_link_options(project_compiler_options INTERFACE "-fuse-ld=lld")
     endif()
+else()
+    # Le sysroot ARM64 (cf. scripts/fetch_arm64_sysroot.sh) ne contient que les
+    # paquets que l'on y extrait explicitement (OpenCV, SQLite, libcamera), pas
+    # leurs dépendances transitives (libpng, libtiff, ...). À l'édition de liens
+    # ces symboles seront résolus sur la Raspberry Pi ; sans cette option
+    # l'éditeur de liens échoue en déclarant introuvables les bibliothèques
+    # NEEDED des .so du sysroot.
+    target_link_options(project_compiler_options INTERFACE "-Wl,--allow-shlib-undefined")
 endif()
 
 find_program(CCACHE_PROGRAM ccache)

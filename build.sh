@@ -11,6 +11,24 @@ F_BLU="${ESC}[38;5;72m";  BG_BLU="${ESC}[30;48;5;72m"
 
 step() { printf "${1}${BOLD} %-10s ${NC} ${2}%s${NC}\n" "$3" "$4"; }
 
+# Docker n'est pas forcément installé sur la machine hôte ; podman expose la même
+# interface en ligne de commande. On l'utilise comme repli pour toutes les
+# commandes `docker` (build, run, image inspect).
+# Deux ajustements pour `run` sous podman rootless :
+#   --userns=keep-id  : le conteneur doit pouvoir écrire dans les sources
+#                       montées avec l'uid de l'hôte (cf. --user dans docker_run) ;
+#   label=disable     : les montages de l'hôte restent lisibles sous SELinux.
+if ! command -v docker >/dev/null 2>&1 && command -v podman >/dev/null 2>&1; then
+    docker() {
+        if [ "$1" = "run" ]; then
+            shift
+            podman run --userns=keep-id --security-opt label=disable "$@"
+        else
+            podman "$@"
+        fi
+    }
+fi
+
 run_timed() {
     local task="$1"; shift
     local t0=$(date +%s.%N)

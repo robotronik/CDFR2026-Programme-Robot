@@ -1,3 +1,9 @@
 [submodule "dependencies/rplidar_sdk"]
 	path = dependencies/rplidar_sdk
 	url = https://github.com/slamtec/rplidar_sdk
+[submodule "dependencies/asio"]
+	path = dependencies/asio
+	url = https://github.com/chriskohlhoff/asio.git
+[submodule "dependencies/crow"]
+	path = dependencies/crow
+	url = https://github.com/CrowCpp/Crow.git
