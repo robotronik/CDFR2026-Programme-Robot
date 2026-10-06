@@ -15,5 +15,3 @@ target_link_libraries(mat
         utils
         project_compiler_options
 )
-
-add_library(ProgramCDFR::mat ALIAS mat)

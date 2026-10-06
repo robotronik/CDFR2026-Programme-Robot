@@ -1,165 +1,122 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# Docker-only build wrapper.
+#
+# Every compilation happens inside the per-architecture images; no compiler is
+# needed on the host. The workspace is mounted at its own path so build
+# artifacts (build/x86_64, build/arm64) appear directly on the host.
 
-# Palette de couleurs
-export CLICOLOR_FORCE=1
-export FORCE_COLOR=1
-ESC=$'\033'
-NC="${ESC}[0m"; BOLD="${ESC}[1m"; WHT="${ESC}[37m"
-F_GRN="${ESC}[38;5;107m"; BG_GRN="${ESC}[30;48;5;107m"
-F_RED="${ESC}[38;5;124m"; BG_RED="${ESC}[30;48;5;124m"
-F_BLU="${ESC}[38;5;72m";  BG_BLU="${ESC}[30;48;5;72m"
+set -euo pipefail
 
-step() { printf "${1}${BOLD} %-10s ${NC} ${2}%s${NC}\n" "$3" "$4"; }
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$REPO_ROOT"
 
-run_timed() {
-    local task="$1"; shift
-    local t0=$(date +%s.%N)
+IMAGE_X86="cdfr-builder-x86_64"
+IMAGE_ARM="cdfr-builder-arm64"
 
-    step "$BG_BLU" "$F_BLU" "EXEC" "${BOLD}$task"
-    echo "--------------------------------------------------------"
+CCACHE_HOST="${XDG_CACHE_HOME:-$HOME/.cache}/cdfr-ccache"
+mkdir -p "$CCACHE_HOST"
 
-    "$@"
-    local st=$?
+log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 
-    local t1=$(date +%s.%N)
-    local dur=$(awk -v t0="$t0" -v t1="$t1" 'BEGIN {printf "%.2f", t1 - t0}')
-    echo "--------------------------------------------------------"
-
-    if [ $st -eq 0 ]; then
-        step "$BG_GRN" "$F_GRN" "SUCCESS" "$task completed in ${dur}s"
-    else
-        step "$BG_RED" "$F_RED" "FAIL" "$task failed in ${dur}s"
-        exit 1
-    fi
+build_image() {
+    local image="$1" dockerfile="$2"
+    log "Building image $image"
+    docker build -t "$image" -f "$dockerfile" .
 }
 
+ensure_image() {
+    local image="$1" dockerfile="$2"
+    docker image inspect "$image" >/dev/null 2>&1 || build_image "$image" "$dockerfile"
+}
+
+# docker_run <image> <command...>
 docker_run() {
-    local img="cdfr-builder:latest"
-
-    # Vérification ou construction de l'image
-    if ! docker image inspect "$img" >/dev/null 2>&1; then
-        step "$BG_BLU" "$F_BLU" "DOCKER" "Construction de l'image Docker ($img)..."
-        docker build -t "$img" -f docker/Dockerfile .
-        if [ $? -ne 0 ]; then
-            step "$BG_RED" "$F_RED" "ERROR" "Échec de la construction Docker."
-            exit 1
-        fi
+    local image="$1"; shift
+    local tty=() ssh=()
+    [ -t 0 ] && tty+=(-it)
+    if [ -n "${SSH_AUTH_SOCK:-}" ] && [ -S "${SSH_AUTH_SOCK}" ]; then
+        ssh+=(-v "${SSH_AUTH_SOCK}:/ssh-agent" -e SSH_AUTH_SOCK=/ssh-agent)
     fi
-
-    local ws_root="$(realpath ..)"
-    local ccache_host="$HOME/.cache/cdfr-docker-ccache"
-    mkdir -p "$ccache_host"
-
-    local extra_args=()
-    if [ -t 0 ]; then
-        extra_args+=(-it)
-    fi
-
-    # Forwarding de l'agent SSH pour deploy si présent
-    if [ -n "$SSH_AUTH_SOCK" ] && [ -S "$SSH_AUTH_SOCK" ]; then
-        extra_args+=(-v "$SSH_AUTH_SOCK:/ssh-agent" -e "SSH_AUTH_SOCK=/ssh-agent")
-    fi
-    if [ -d "$HOME/.ssh" ]; then
-        extra_args+=(-v "$HOME/.ssh:/home/builder/.ssh:ro")
-    fi
-
-    # Détection conteneur vs hôte pour isoler les dossiers de build
-    local is_container_arg=()
-    is_container_arg+=(-e "IS_CONTAINER=1")
-
-    step "$BG_BLU" "$F_BLU" "DOCKER" "Exécution dans le conteneur: $*"
-    docker run --rm \
-        "${extra_args[@]}" \
-        "${is_container_arg[@]}" \
+    [ -d "$HOME/.ssh" ] && ssh+=(-v "$HOME/.ssh:/home/ubuntu/.ssh:ro")
+    docker run --rm "${tty[@]}" "${ssh[@]}" \
         --network host \
         --user "$(id -u):$(id -g)" \
-        -v "$ws_root:$ws_root" \
-        -v "$ws_root:/workspace" \
-        -v "$ccache_host:/home/builder/.cache/ccache" \
-        -w "$PWD" \
-        -e "CCACHE_DIR=/home/builder/.cache/ccache" \
-        -e "HOME=/home/builder" \
-        "$img" \
-        "$@"
+        -v "$REPO_ROOT:$REPO_ROOT" \
+        -v "$CCACHE_HOST:/ccache" \
+        -w "$REPO_ROOT" \
+        -e CCACHE_DIR=/ccache \
+        "$image" "$@"
 }
 
-# Détection de l'environnement d'exécution (Docker vs Hôte)
-if [ -n "$IS_CONTAINER" ] || [ -f /.dockerenv ]; then
-    PRESET_LOCAL="docker-local"
-    PRESET_ARM="docker-arm"
-    BUILD_DIR_LOCAL="build-docker"
-    BUILD_DIR_ARM="build_arm-docker"
-else
-    PRESET_LOCAL="local"
-    PRESET_ARM="arm"
-    BUILD_DIR_LOCAL="build"
-    BUILD_DIR_ARM="build_arm"
-fi
+# build_arch <x86_64|arm64>
+build_arch() {
+    local arch="$1" image dockerfile
+    case "$arch" in
+        x86_64) image="$IMAGE_X86"; dockerfile="docker/Dockerfile.x86_64" ;;
+        arm64)  image="$IMAGE_ARM"; dockerfile="docker/Dockerfile.arm64" ;;
+        *) echo "Unknown architecture: $arch (expected x86_64 or arm64)" >&2; exit 1 ;;
+    esac
+    ensure_image "$image" "$dockerfile"
+    log "Building $arch"
+    docker_run "$image" cmake --preset "$arch"
+    docker_run "$image" cmake --build --preset "$arch"
+}
 
-case "$1" in
+usage() {
+    cat <<EOF
+Usage: ./build.sh <command> [arch]
+
+Commands:
+  build [x86_64|arm64]   Build the given target, or both when omitted
+  test                   Build x86_64 and run the CTest suite
+  deploy                 Build arm64 and deploy it to the robot
+  shell [x86_64|arm64]   Interactive shell in the target image (default: x86_64)
+  images                 (Re)build both Docker images
+  clean                  Remove the build/ directory
+EOF
+}
+
+case "${1:-build}" in
     build)
-        [ -f "$BUILD_DIR_LOCAL/build.ninja" ] || run_timed "Config Local" cmake --preset "$PRESET_LOCAL"
-        run_timed "Build Local (x86_64)" cmake --build --preset "$PRESET_LOCAL"
+        if [ -n "${2:-}" ]; then
+            build_arch "$2"
+        else
+            build_arch x86_64
+            build_arch arm64
+        fi
         ;;
-    build_arm)
-        [ -f "$BUILD_DIR_ARM/build.ninja" ] || run_timed "Config ARM" cmake --preset "$PRESET_ARM"
-        run_timed "Build ARM (AArch64)" cmake --build --preset "$PRESET_ARM"
-        ;;
-    tests)
-        [ -f "$BUILD_DIR_LOCAL/build.ninja" ] || run_timed "Config Local" cmake --preset "$PRESET_LOCAL"
-        run_timed "Build Local" cmake --build --preset "$PRESET_LOCAL"
-        run_timed "Tests (CTest)" ctest --preset "$PRESET_LOCAL"
+    test)
+        build_arch x86_64
+        log "Running tests"
+        docker_run "$IMAGE_X86" ctest --preset x86_64
         ;;
     deploy)
-        [ -f "$BUILD_DIR_ARM/build.ninja" ] || run_timed "Config ARM" cmake --preset "$PRESET_ARM"
-        run_timed "Déploiement Robot" cmake --build --preset "$PRESET_ARM" --target deploy
+        ensure_image "$IMAGE_ARM" docker/Dockerfile.arm64
+        log "Deploying to robot"
+        docker_run "$IMAGE_ARM" cmake --preset arm64
+        docker_run "$IMAGE_ARM" cmake --build --preset arm64 --target deploy
         ;;
-    logs)
-        step "$BG_BLU" "$F_BLU" "LOGS" "Journalctl en direct (Ctrl+C pour quitter)..."
-        cmake --build --preset "$PRESET_ARM" --target logs
+    shell)
+        case "${2:-x86_64}" in
+            x86_64) ensure_image "$IMAGE_X86" docker/Dockerfile.x86_64; docker_run "$IMAGE_X86" bash ;;
+            arm64)  ensure_image "$IMAGE_ARM" docker/Dockerfile.arm64; docker_run "$IMAGE_ARM" bash ;;
+            *) echo "Unknown architecture: $2" >&2; exit 1 ;;
+        esac
         ;;
-    setup-lsp)
-        run_timed "Setup LSP" cmake --preset "$PRESET_LOCAL"
+    images)
+        build_image "$IMAGE_X86" docker/Dockerfile.x86_64
+        build_image "$IMAGE_ARM" docker/Dockerfile.arm64
         ;;
     clean)
-        [ -d "$BUILD_DIR_LOCAL" ] && cmake --build --preset "$PRESET_LOCAL" --target clean
-        [ -d "$BUILD_DIR_ARM" ] && cmake --build --preset "$PRESET_ARM" --target clean
-        step "$BG_GRN" "$F_GRN" "DONE" "Artefacts nettoyés."
+        rm -rf build compile_commands.json
+        log "Build artifacts removed"
         ;;
-    clean-all)
-        rm -rf build build_arm build-docker build_arm-docker compile_commands.json
-        step "$BG_GRN" "$F_GRN" "CLEAN ALL" "Dossiers de build supprimés."
-        ;;
-    docker)
-        shift
-        if [ $# -eq 0 ]; then
-            echo -e "${BOLD}Usage:${NC} $0 docker {build|build_arm|tests|deploy|logs|clean|clean-all|build-image|shell}"
-            exit 1
-        fi
-        if [ "$1" = "build-image" ]; then
-            step "$BG_BLU" "$F_BLU" "DOCKER" "Reconstruction de l'image Docker..."
-            docker build -t "cdfr-builder:latest" -f docker/Dockerfile .
-        elif [ "$1" = "shell" ]; then
-            shift
-            docker_run bash "$@"
-        else
-            docker_run ./build.sh "$@"
-        fi
+    -h|--help|help)
+        usage
         ;;
     *)
-        echo -e "${BOLD}Usage:${NC} $0 {build|build_arm|tests|deploy|logs|setup-lsp|clean|clean-all|docker}"
-        echo -e "Commandes Docker :"
-        echo -e "  $0 docker build        # Compile en local dans Docker"
-        echo -e "  $0 docker build_arm    # Cross-compile pour ARM dans Docker"
-        echo -e "  $0 docker tests        # Lance les tests CTest dans Docker"
-        echo -e "  $0 docker shell        # Ouvre un shell interactif dans le conteneur"
-        echo -e ""
-        echo -e "Ou directement avec CMake sur l'hôte :"
-        echo -e "  cmake --build --preset local"
-        echo -e "  cmake --build --preset arm"
-        echo -e "  ctest --preset local"
-        echo -e "  cmake --build --preset arm --target deploy"
-        echo -e "  cmake --build --preset arm --target logs"
+        usage
         exit 1
         ;;
 esac

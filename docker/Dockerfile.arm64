@@ -1,0 +1,75 @@
+# Build image for the aarch64 (Raspberry Pi) target.
+# Compiles on amd64 using the aarch64-linux-gnu cross toolchain; target
+# libraries (e.g. sqlite3) come from arm64 multiarch packages.
+
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Enable arm64 packages in addition to the amd64 host packages.
+# amd64 packages stay on archive/security.ubuntu.com, arm64 packages come from
+# ports.ubuntu.com (which hosts the non-amd64 architectures).
+RUN dpkg --add-architecture arm64 \
+    && rm -f /etc/apt/sources.list.d/ubuntu.sources \
+    && printf '%s\n' \
+        'Types: deb' \
+        'Architectures: amd64' \
+        'URIs: http://archive.ubuntu.com/ubuntu/' \
+        'Suites: noble noble-updates noble-backports' \
+        'Components: main restricted universe multiverse' \
+        'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' \
+        '' \
+        'Types: deb' \
+        'Architectures: amd64' \
+        'URIs: http://security.ubuntu.com/ubuntu/' \
+        'Suites: noble-security' \
+        'Components: main restricted universe multiverse' \
+        'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' \
+        '' \
+        'Types: deb' \
+        'Architectures: arm64' \
+        'URIs: http://ports.ubuntu.com/ubuntu-ports/' \
+        'Suites: noble noble-updates' \
+        'Components: main restricted universe multiverse' \
+        'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' \
+        > /etc/apt/sources.list.d/ubuntu.sources
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        cmake \
+        ninja-build \
+        ccache \
+        git \
+        ca-certificates \
+        gcc-aarch64-linux-gnu \
+        g++-aarch64-linux-gnu \
+        libsqlite3-dev:arm64 \
+        rsync \
+        openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# External robot repositories: headers used at compile time and runtime data
+# (aruco assets/scripts) copied next to the executable. Baked into the image so
+# the build is self-contained.
+ARG DRIVE_CONTROL_REF=main
+ARG ACTIONNEUR_REF=master
+ARG ARUCO_REF=main
+RUN mkdir -p /opt/cdfr \
+    && git clone --depth 1 --branch "${DRIVE_CONTROL_REF}" \
+        https://github.com/robotronik/CDFR2026-Program-DriveControl.git \
+        /opt/cdfr/CDFR2026-Program-DriveControl \
+    && git clone --depth 1 --branch "${ACTIONNEUR_REF}" \
+        https://github.com/robotronik/cdfr2024-programme-Actionneur.git \
+        /opt/cdfr/cdfr2024-programme-Actionneur \
+    && git clone --depth 1 --branch "${ARUCO_REF}" \
+        https://github.com/robotronik/PythonArucoOpenCV.git \
+        /opt/cdfr/PythonArucoOpenCV \
+    && rm -rf /opt/cdfr/*/.git
+
+# Reuse the base image's non-root `ubuntu` user (uid/gid 1000) so files created
+# in the mounted workspace stay user-owned. Dev Containers remaps its uid to the
+# host user, and build.sh runs with --user "$(id -u):$(id -g)".
+ENV HOME=/home/ubuntu
+ENV CCACHE_DIR=/ccache
+
+WORKDIR /workspace

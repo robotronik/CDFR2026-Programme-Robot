@@ -19,5 +19,3 @@ target_link_libraries(i2c
         external_robot_interfaces
         project_compiler_options
 )
-
-add_library(ProgramCDFR::i2c ALIAS i2c)

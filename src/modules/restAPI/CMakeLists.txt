@@ -23,5 +23,3 @@ target_link_libraries(restAPI
         Crow::Crow
         project_compiler_options
 )
-
-add_library(ProgramCDFR::restAPI ALIAS restAPI)

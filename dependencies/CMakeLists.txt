@@ -37,14 +37,11 @@ target_include_directories(rplidar_sdk PRIVATE
 target_link_libraries(rplidar_sdk PUBLIC Threads::Threads)
 target_compile_definitions(rplidar_sdk PRIVATE _CPU_ENDIAN_LITTLE)
 
-add_library(rplidar ALIAS rplidar_sdk)
-add_library(dependencies::rplidar_sdk ALIAS rplidar_sdk)
-
 #-----------------------------------------
-# libi2c (prebuilt static library)
+# libi2c (prebuilt static library, per architecture)
 #-----------------------------------------
 add_library(i2c_lib STATIC IMPORTED GLOBAL)
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_CROSSCOMPILING)
+if(CMAKE_CROSSCOMPILING)
     set_target_properties(i2c_lib PROPERTIES
         IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/aarch64-linux-gnu/libi2c.a"
     )
@@ -53,4 +50,3 @@ else()
         IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/x86_64-linux-gnu/libi2c.a"
     )
 endif()
-add_library(dependencies::i2c ALIAS i2c_lib)

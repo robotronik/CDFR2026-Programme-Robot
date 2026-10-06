@@ -26,10 +26,4 @@ if(TARGET programCDFR AND SSH_CMD AND RSYNC_CMD)
         USES_TERMINAL
         COMMENT "Deploying and restarting programCDFR on ${PI_USER}@${PI_HOST}..."
     )
-
-    add_custom_target(logs
-        COMMAND ${SSH_CMD} -t ${PI_USER}@${PI_HOST} "journalctl -u programCDFR -f --output=cat"
-        USES_TERMINAL
-        COMMENT "Streaming robot journalctl logs from ${PI_USER}@${PI_HOST}..."
-    )
 endif()

@@ -32,16 +32,15 @@ FetchContent_MakeAvailable(Crow)
 find_package(Threads REQUIRED)
 
 find_package(SQLite3 REQUIRED)
-# For legacy build systems
-if(NOT TARGET SQLite3::SQLite3)
-    add_library(SQLite3::SQLite3 ALIAS SQLite::SQLite3)
-endif()
 
 #-----------------------------------------
 # External robot interfaces
 #-----------------------------------------
+# Provided by the build images (docker/Dockerfile.*); overridable for custom setups.
+set(CDFR_EXTERNAL_DIR "/opt/cdfr" CACHE PATH "Location of the external CDFR robot repositories")
+
 add_library(external_robot_interfaces INTERFACE)
 target_include_directories(external_robot_interfaces INTERFACE
-    ${CMAKE_SOURCE_DIR}/../CDFR2026-Program-DriveControl/include/interface
-    ${CMAKE_SOURCE_DIR}/../cdfr2024-programme-Actionneur/include/common
+    ${CDFR_EXTERNAL_DIR}/CDFR2026-Program-DriveControl/include/interface
+    ${CDFR_EXTERNAL_DIR}/cdfr2024-programme-Actionneur/include/common
 )

@@ -7,77 +7,42 @@
   },
   "configurePresets": [
     {
-      "name": "local",
-      "displayName": "Local x86_64",
-      "description": "Local build for host architecture with Ninja",
+      "name": "x86_64",
+      "displayName": "x86_64",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
+      "binaryDir": "${sourceDir}/build/x86_64",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CDFR_EXTERNAL_DIR": "/opt/cdfr"
       }
     },
     {
-      "name": "docker-local",
-      "displayName": "Docker Local x86_64",
-      "description": "Docker build for host architecture with Ninja",
-      "inherits": "local",
-      "binaryDir": "${sourceDir}/build-docker"
-    },
-    {
-      "name": "arm",
-      "displayName": "ARM64 Cross-compilation",
-      "description": "Cross-compilation targeting AArch64 Linux with Ninja",
+      "name": "arm64",
+      "displayName": "arm64 (aarch64 cross-compilation)",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build_arm",
+      "binaryDir": "${sourceDir}/build/arm64",
       "toolchainFile": "${sourceDir}/cmake/aarch64_toolchain.cmake",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "CDFR_EXTERNAL_DIR": "/opt/cdfr"
       }
-    },
-    {
-      "name": "docker-arm",
-      "displayName": "Docker ARM64 Cross-compilation",
-      "description": "Docker cross-compilation targeting AArch64 Linux with Ninja",
-      "inherits": "arm",
-      "binaryDir": "${sourceDir}/build_arm-docker"
     }
   ],
   "buildPresets": [
     {
-      "name": "local",
-      "displayName": "Build Local",
-      "configurePreset": "local"
+      "name": "x86_64",
+      "configurePreset": "x86_64"
     },
     {
-      "name": "docker-local",
-      "displayName": "Build Docker Local",
-      "configurePreset": "docker-local"
-    },
-    {
-      "name": "arm",
-      "displayName": "Build ARM",
-      "configurePreset": "arm"
-    },
-    {
-      "name": "docker-arm",
-      "displayName": "Build Docker ARM",
-      "configurePreset": "docker-arm"
+      "name": "arm64",
+      "configurePreset": "arm64"
     }
   ],
   "testPresets": [
     {
-      "name": "local",
-      "displayName": "Test Local",
-      "configurePreset": "local",
-      "output": {
-        "outputOnFailure": true
-      }
-    },
-    {
-      "name": "docker-local",
-      "displayName": "Test Docker Local",
-      "configurePreset": "docker-local",
+      "name": "x86_64",
+      "configurePreset": "x86_64",
       "output": {
         "outputOnFailure": true
       }

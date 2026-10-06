@@ -1,30 +1,36 @@
-name: C/C++ CI
+name: CI
 
 on: [push, pull_request]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout with submodules
-      uses: actions/checkout@v3
-      with:
-        submodules: recursive
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-    # Cache and install APT Packages
-    - name: Cache and Install APT Packages
-      uses: awalsh128/cache-apt-pkgs-action@v1.4.3
-      with:
-        packages: make gcc g++ cmake
+      - name: Build Docker images
+        run: ./build.sh images
 
-    - name: Clone CDFR2026-Program-DriveControl
-      run: git clone https://github.com/robotronik/CDFR2026-Program-DriveControl.git ../CDFR2026-Program-DriveControl
-    - name: Clone Aruco OpenCV
-      run: git clone https://github.com/robotronik/PythonArucoOpenCV.git ../PythonArucoOpenCV
-    - name: Clone Arduino
-      run: git clone https://github.com/robotronik/cdfr2024-programme-Actionneur ../cdfr2024-programme-Actionneur
+      - name: Build x86_64 and arm64
+        run: ./build.sh build
 
-    - name: Build and run tests
-      run: |
-        bash build.sh tests
+      - name: Run tests (x86_64)
+        run: ./build.sh test
+
+      - name: Upload x86_64 executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: programCDFR-x86_64
+          path: build/x86_64/programCDFR
+          if-no-files-found: error
+
+      - name: Upload arm64 executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: programCDFR-arm64
+          path: build/arm64/programCDFR
+          if-no-files-found: error

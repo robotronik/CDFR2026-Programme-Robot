@@ -18,5 +18,3 @@ target_link_libraries(defs
         external_robot_interfaces
         project_compiler_options
 )
-
-add_library(ProgramCDFR::defs ALIAS defs)

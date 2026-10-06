@@ -19,5 +19,3 @@ target_link_libraries(lidar
         rplidar_sdk
         project_compiler_options
 )
-
-add_library(ProgramCDFR::lidar ALIAS lidar)

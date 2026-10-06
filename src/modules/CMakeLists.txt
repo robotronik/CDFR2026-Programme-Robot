@@ -36,5 +36,3 @@ target_link_libraries(robot_core PUBLIC
     restAPI
     project_compiler_options
 )
-
-add_library(ProgramCDFR::core ALIAS robot_core)

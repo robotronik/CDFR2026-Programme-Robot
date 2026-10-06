@@ -16,5 +16,3 @@ target_link_libraries(vision
         utils
         project_compiler_options
 )
-
-add_library(ProgramCDFR::vision ALIAS vision)

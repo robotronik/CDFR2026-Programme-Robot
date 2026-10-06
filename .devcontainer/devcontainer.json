@@ -1,13 +1,13 @@
 {
   "name": "CDFR2026 Robot Development",
   "build": {
-    "dockerfile": "../docker/Dockerfile",
+    "dockerfile": "../docker/Dockerfile.x86_64",
     "context": ".."
   },
-  "workspaceFolder": "/workspace/CDFR2026-Programme-Robot",
-  "workspaceMount": "source=${localWorkspaceFolder}/..,target=/workspace,type=bind,consistency=cached",
+  "workspaceFolder": "/workspaces/CDFR2026-Programme-Robot",
+  "remoteUser": "ubuntu",
   "mounts": [
-    "source=cdfr-devcontainer-ccache,target=/home/builder/.cache/ccache,type=volume"
+    "source=cdfr-devcontainer-ccache,target=/ccache,type=volume"
   ],
   "customizations": {
     "vscode": {
@@ -20,6 +20,5 @@
         "llvm-vs-code-extensions.vscode-clangd"
       ]
     }
-  },
-  "remoteUser": "builder"
+  }
 }

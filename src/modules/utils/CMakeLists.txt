@@ -14,5 +14,3 @@ target_link_libraries(utils
     PUBLIC
         project_compiler_options
 )
-
-add_library(ProgramCDFR::utils ALIAS utils)

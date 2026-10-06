@@ -1,26 +1,14 @@
+# Toolchain for cross-compiling to AArch64 (Raspberry Pi).
+# The aarch64-linux-gnu cross toolchain and arm64 multiarch packages
+# (e.g. libsqlite3-dev:arm64) are provided by docker/Dockerfile.arm64.
+
 set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_PROCESSOR aarch64)
 
-set(CROSS_COMPILE_PREFIX aarch64-linux-gnu)
+set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
+set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
 
-set(CMAKE_C_COMPILER ${CROSS_COMPILE_PREFIX}-gcc)
-set(CMAKE_CXX_COMPILER ${CROSS_COMPILE_PREFIX}-g++)
-
-# Optional custom sysroot via environment variable SYSROOT
-if(DEFINED ENV{SYSROOT} AND NOT CMAKE_SYSROOT)
-    set(CMAKE_SYSROOT "$ENV{SYSROOT}")
-endif()
-
-# Sysroot and search path configuration
-set(CMAKE_FIND_ROOT_PATH /usr/${CROSS_COMPILE_PREFIX})
-if(CMAKE_SYSROOT)
-    list(PREPEND CMAKE_FIND_ROOT_PATH "${CMAKE_SYSROOT}")
-endif()
-
-# Strictly isolate target searches from host filesystem
-set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+# Target libraries live in the multiarch directory /usr/lib/aarch64-linux-gnu,
+# which the compiler and CMake's default search paths already cover.
 
 add_compile_definitions(__CROSS_COMPILE_ARM__)

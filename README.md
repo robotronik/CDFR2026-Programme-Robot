@@ -16,108 +16,63 @@ This program enables the robot to perform various tasks such as navigation, data
 
 ## 🔧 Prerequisites
 
-Before running the program, make sure you have installed the following dependencies:
-
-```bash
-sudo apt-get install cmake make gcc g++ python3-venv ninja-build
-```
-
-To speed up compilation times massively, you can install CCache and MOLD:
-
-```bash
-sudo apt-get install ccache mold
-```
-
-For ARM (Raspberry Pi) compilation, install:
-
-```bash
-sudo apt-get install g++-aarch64-linux-gnu
-sudo apt install sqlite3
-```
-
-For debugging, install:
-
-```bash
-sudo apt install gdbserver
-```
+- **Docker** (daemon running) — all compilation happens inside containers, so no
+  compiler, CMake, or library needs to be installed on your machine.
+- SSH access to the robot, only if you want to deploy.
 
 ## 📥 Installation
 
 1. **Do not clone this repository by itself!**  
-   Instead, clone the main CDFR repository with the `--recursive` flag to include all submodules:
+   Instead, clone the main CDFR repository with the `--recursive` flag so the
+   `rplidar_sdk` submodule is checked out:
 
    ```bash
    git clone git@github.com:robotronik/CDFR.git --recursive
    ```
 
-2. Navigate to the CDFR-Programme-Robot directory:
+   If you already cloned it without `--recursive`, initialize the submodule:
 
    ```bash
-   cd informatique/CDFR-Programme-Robot/
+   git submodule update --init --recursive
    ```
 
-3. Switch to the `main` branch and update the project:
+2. Navigate to the project directory:
 
    ```bash
-   git checkout main
-   git pull
+   cd informatique/CDFR2026-Programme-Robot/
    ```
 
-4. (Optional) You may want to setup the LSP Server (clangd) if you are not on VSCode. To do so, run:
-   
-   ```bash
-   bash build.sh setup-lsp
-   ```
+The `drive_interface.h` / `protocol.h` headers and the aruco runtime assets are
+fetched automatically into the build images, so no sibling repositories are
+needed on the host.
 
 ## 💻 Compilation
 
-### Direct Host Build
-
-To compile the program on your machine, simply run:
+Everything runs inside Docker; the host compiler is never used.
 
 ```bash
-./build.sh build
-# Or with native CMake:
-cmake --build --preset local
+./build.sh build          # Build both x86_64 and arm64
+./build.sh build x86_64   # Build a single target
+./build.sh build arm64
+./build.sh test           # Build x86_64 and run the CTest suite
+./build.sh deploy         # Build arm64 and deploy it to the robot
+./build.sh shell          # Interactive shell in the x86_64 image
+./build.sh shell arm64    # Interactive shell in the arm64 image
+./build.sh images         # (Re)build the Docker images
+./build.sh clean          # Remove the build/ directory
 ```
 
-To compile for ARM (Raspberry Pi / AArch64):
+Artifacts are written to `build/x86_64/programCDFR` and
+`build/arm64/programCDFR`.
 
-```bash
-./build.sh build_arm
-# Or with native CMake:
-cmake --build --preset arm
-```
-
-To run unit tests:
-
-```bash
-./build.sh tests
-# Or with CTest:
-ctest --preset local
-```
-
-To clean build files:
-
-```bash
-./build.sh clean       # Cleans target objects
-./build.sh clean-all   # Deletes build directories
-```
-
-### 🐳 Dockerized Build (Zero Setup)
-
-If you don't have the compilers or ARM cross-toolchains installed locally, you can build inside a standardized Docker container:
-
-```bash
-./build.sh docker build        # Compile locally in Docker
-./build.sh docker build_arm    # Cross-compile for ARM in Docker
-./build.sh docker tests        # Run CTest in Docker
-./build.sh docker shell        # Interactive shell inside the container
-```
-
-- Builds happen directly in your workspace tree without modifying file ownership (preserves host `UID:GID`).
-- Uses persistent CCache (`~/.cache/cdfr-docker-ccache`) for fast rebuilds.
-- Includes full Dev Container support for VS Code and CLion ([`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json)).
+- The workspace is mounted at its own path, so build outputs appear directly on
+  the host and file ownership is preserved.
+- A persistent CCache (`~/.cache/cdfr-ccache`) speeds up rebuilds.
+- The two images are defined in [`docker/Dockerfile.x86_64`](docker/Dockerfile.x86_64)
+  and [`docker/Dockerfile.arm64`](docker/Dockerfile.arm64); rebuild them with
+  `./build.sh images` after changing their contents.
+- VS Code / CLion Dev Container support is available via
+  [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json).
 
 ## 🛠️ Compilation for Raspberry Pi
 
@@ -133,16 +88,6 @@ Then compile and deploy with:
 
 ```bash
 ./build.sh deploy
-# Or via CMake directly:
-cmake --build --preset arm --target deploy
-```
-
-To follow live logs:
-
-```bash
-./build.sh logs
-# Or via CMake:
-cmake --build --preset arm --target logs
 ```
 
 On a new Raspberry Pi, configure I2C and serial communication via:

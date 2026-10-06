@@ -14,7 +14,5 @@ target_link_libraries(db
     PUBLIC
         utils
         project_compiler_options
-        SQLite3::SQLite3
+        SQLite::SQLite3
 )
-
-add_library(ProgramCDFR::db ALIAS db)

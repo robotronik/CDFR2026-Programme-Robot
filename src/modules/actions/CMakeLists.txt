@@ -29,5 +29,3 @@ target_link_libraries(actions
         external_robot_interfaces
         project_compiler_options
 )
-
-add_library(ProgramCDFR::actions ALIAS actions)
