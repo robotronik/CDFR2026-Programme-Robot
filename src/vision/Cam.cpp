@@ -227,24 +227,38 @@ bool Cam::getLocalisation(position_t& cameraPose) const {
 }
 
 bool Cam::getPreview(std::vector<uchar>& jpeg) const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (frame_.empty()) {
-        LOG_DEBUG("Cam ", id_, " has no frame to preview");
-        return false;
+    cv::Mat annotated;
+    std::vector<vision::DetectionResult> detections;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (frame_.empty()) {
+            LOG_DEBUG("Cam ", id_, " has no frame to preview");
+            return false;
+        }
+        // Copy what is needed under the lock, then encode outside it: holding
+        // the mutex through the JPEG encoding would stall the capture thread
+        // and serialise concurrent preview requests.
+        annotated = frame_.clone();
+        detections = detections_;
     }
 
-    cv::Mat annotated = frame_.clone();
-    drawDetections(annotated, detections_);
+    drawDetections(annotated, detections);
     return cv::imencode(".jpg", annotated, jpeg);
 }
 
 bool Cam::getRawPreview(std::vector<uchar>& jpeg) const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (frame_.empty()) {
-        return false;
+    cv::Mat frame;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (frame_.empty()) {
+            return false;
+        }
+        // Shallow copy: the capture thread rebinds frame_ instead of writing
+        // into the buffer this reference points to.
+        frame = frame_;
     }
 
-    return cv::imencode(".jpg", frame_, jpeg);
+    return cv::imencode(".jpg", frame, jpeg);
 }
 
 bool Cam::gameElementFromTag(const vision::DetectionResult& detection,

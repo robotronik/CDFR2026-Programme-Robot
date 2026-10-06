@@ -88,6 +88,9 @@ private:
 
     cv::VideoCapture capture_;
     mutable std::mutex captureMutex_;
+    // Consecutive failed frame reads, used to report a camera that opened but
+    // never delivers frames. Guarded by captureMutex_.
+    int captureFailCount_ = 0;
 };
 
 } // namespace vision

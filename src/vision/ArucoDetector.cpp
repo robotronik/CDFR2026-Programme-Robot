@@ -128,6 +128,7 @@ bool ArucoDetector::initCamera(int deviceIndex, int width, int height) {
         LOG_ERROR("ArucoDetector - failed to open camera device ", deviceIndex);
         return false;
     }
+    captureFailCount_ = 0;
 
     // A device only supports a fixed set of modes: the driver picks the closest
     // one, so the resolution read back is authoritative, not the request.
@@ -140,8 +141,16 @@ bool ArucoDetector::initCamera(int deviceIndex, int width, int height) {
         LOG_WARNING("ArucoDetector - camera ", deviceIndex, " does not support ",
                     width, "x", height, ", using ", actualWidth, "x", actualHeight);
     }
+
+    // The negotiated pixel format tells whether the backend can decode what the
+    // device emits (a raw Bayer/Y10 node cannot be read as BGR).
+    const int fourcc = static_cast<int>(capture_.get(cv::CAP_PROP_FOURCC));
+    char fourccText[5] = {0};
+    for (int i = 0; i < 4; ++i) {
+        fourccText[i] = static_cast<char>((fourcc >> (8 * i)) & 0xFF);
+    }
     LOG_GREEN_INFO("ArucoDetector - camera ", deviceIndex, " opened at ",
-                   actualWidth, "x", actualHeight);
+                   actualWidth, "x", actualHeight, " (", fourccText, ")");
     return true;
 }
 
@@ -166,7 +175,20 @@ bool ArucoDetector::captureFrame(cv::Mat& outFrame) {
     capture_ >> outFrame;
     if (outFrame.empty()) {
         outFrame.release();
+        // An open device that never delivers a frame is the usual cause of a
+        // missing preview, so report it instead of failing silently.
+        if (captureFailCount_ == 0 || captureFailCount_ % 400 == 0) {
+            LOG_WARNING("ArucoDetector - camera returned no frame (",
+                        captureFailCount_ + 1, " failures)");
+        }
+        ++captureFailCount_;
         return false;
+    }
+
+    if (captureFailCount_ > 0) {
+        LOG_GREEN_INFO("ArucoDetector - camera delivered a frame after ",
+                       captureFailCount_, " empty reads");
+        captureFailCount_ = 0;
     }
     return true;
 }
