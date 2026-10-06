@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
         //****************************************************************
         case INIT:
         {
-            static bool mast = false;
+            static bool mast = true;
             if (initState)
             {
                 LOG_GREEN_INFO("INIT");
@@ -461,6 +461,8 @@ void switchTeamSide(colorTeam_t color){ // TODO moove to tableState
         }
 
         position_t pos = action.getStrategy()->StratStartingPos();
+        LOG_INFO("Stratégie '", action.getStrategy()->getNom(),
+                 "', départ : x=", pos.x, " y=", pos.y, " a=", pos.a);
         drive.setCoordinates(pos);
         navigation.goTo(pos, true, true); // Go to starting pos with A* and slow mode to avoid collisions during the switch
     }
@@ -491,6 +493,9 @@ void switchStrategy(std::string strategy){ // TODO moove to tableState
         action.setStrategy(selectedStrategy);
         position_t pos = action.getStrategy()->StratStartingPos();
         drive.setCoordinates(pos);
+    }
+    else {
+        LOG_INFO("Stratégie '", strategy, "' déjà active");
     }
 }
 

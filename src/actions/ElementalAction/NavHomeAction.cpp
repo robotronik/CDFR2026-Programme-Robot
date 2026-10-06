@@ -25,7 +25,7 @@ ReturnFSM_t NavHomeAction::run(){
 
 bool NavHomeAction::errorManagement(){
     LOG_ERROR("RETURN_TO_HOME: Navigation error");
-    homePos.y += (tableState->colorTeam == BLUE) ? 50 : -50; // recule un peu et retente
+    //homePos.y += (tableState->colorTeam == BLUE) ? 50 : -50; // recule un peu et retente
     return true;
 }
 

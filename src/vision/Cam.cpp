@@ -229,6 +229,7 @@ bool Cam::getLocalisation(position_t& cameraPose) const {
 bool Cam::getPreview(std::vector<uchar>& jpeg) const {
     std::lock_guard<std::mutex> lock(mutex_);
     if (frame_.empty()) {
+        LOG_DEBUG("Cam ", id_, " has no frame to preview");
         return false;
     }
 
