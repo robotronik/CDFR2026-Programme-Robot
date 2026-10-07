@@ -353,14 +353,14 @@ FeaturesLocalizer::FeaturesLocalizer()
 bool FeaturesLocalizer::loadCalibration(const std::string& cameraFilePath) {
     cv::FileStorage fs(cameraFilePath, cv::FileStorage::READ);
     if (!fs.isOpened()) {
-        LOG_ERROR("FeaturesLocalizer - failed to open calibration file ", cameraFilePath);
+        LOG_ERROR("failed to open calibration file ", cameraFilePath);
         return false;
     }
     fs["camera_matrix"] >> camera_matrix_;
     fs.release();
 
     if (camera_matrix_.rows != 3 || camera_matrix_.cols != 3) {
-        LOG_ERROR("FeaturesLocalizer - calibration file ", cameraFilePath,
+        LOG_ERROR("calibration file ", cameraFilePath,
                   " has no usable camera_matrix");
         camera_matrix_.release();
         calibrated_ = false;
@@ -369,14 +369,14 @@ bool FeaturesLocalizer::loadCalibration(const std::string& cameraFilePath) {
     camera_matrix_.convertTo(camera_matrix_, CV_64F);
     calibrated_ = true;
     warper_size_ = cv::Size();
-    LOG_INFO("FeaturesLocalizer - loaded calibration from ", cameraFilePath);
+    LOG_INFO("loaded calibration from ", cameraFilePath);
     return true;
 }
 
 bool FeaturesLocalizer::loadMap(const std::string& mapFilePath) {
     cv::Mat gray = cv::imread(mapFilePath, cv::IMREAD_GRAYSCALE);
     if (gray.empty()) {
-        LOG_ERROR("FeaturesLocalizer - failed to read map ", mapFilePath);
+        LOG_ERROR("failed to read map ", mapFilePath);
         return false;
     }
 
@@ -402,7 +402,7 @@ bool FeaturesLocalizer::loadMap(const std::string& mapFilePath) {
         map_points_px_.push_back(kp.pt);
     }
 
-    LOG_INFO("FeaturesLocalizer - map ", mapFilePath, " ", gray.cols, "x", gray.rows,
+    LOG_INFO("map ", mapFilePath, " ", gray.cols, "x", gray.rows,
              " (", map_mm_per_px_, " mm/px), ", map_points_px_.size(), " keypoints");
     return true;
 }
@@ -444,7 +444,7 @@ bool FeaturesLocalizer::buildWarper(const cv::Size& size) {
     warper_.homography = cv::Mat(S * H).clone();
     warper_size_ = size;
 
-    LOG_INFO("FeaturesLocalizer - warp ", warper_.out_size.width, "x",
+    LOG_INFO("warp ", warper_.out_size.width, "x",
              warper_.out_size.height, " at ", kMmPerPx, " mm/px");
     return true;
 }
@@ -534,7 +534,7 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position) {
 
     position = poseFromTransform(transform, warper_.cameraPatchPx(),
                                  map_origin_px_, map_mm_per_px_);
-    LOG_INFO("FeaturesLocalizer - fix (", position.x, ", ", position.y,
+    LOG_INFO("fix (", position.x, ", ", position.y,
              ") mm, heading ", position.heading, " deg, ", query.size(),
              " matches, ", cv::countNonZero(inlierMask), " inliers");
     return true;

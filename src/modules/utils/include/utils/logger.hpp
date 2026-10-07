@@ -53,6 +53,12 @@ inline void appendMessage(std::ostringstream& oss, const T& value, const Args&..
     appendMessage(oss, args...);
 }
 
+// Returns the file name without any directory components (e.g. "main.cpp" from "src/app/main.cpp").
+inline std::string getFileName(const std::string& file) {
+    const size_t pos = file.find_last_of("/\\");
+    return pos == std::string::npos ? file : file.substr(pos + 1);
+}
+
 inline std::string getLevelString(LogLevel level) {
     switch (level) {
         case LogLevel::EXTENDED_DEBUG: return "EXT_DEBUG";
@@ -81,8 +87,8 @@ inline void log_main(std::optional<Color> color,
 
     std::ostringstream payload;
     payload << currentTimeFormatted() << " "
-            << std::left << std::setw(10) << ("[" + getLevelString(level) + "]")
-            << std::left << std::setw(30) << ("[" + file + ":" + std::to_string(line) + "]") << "  "
+            << std::left << std::setw(8) << ("[" + getLevelString(level) + "]")
+            << std::left << std::setw(18) << ("[" + getFileName(file) + ":" + std::to_string(line) + "]") << "  "
             << oss.str();
 
     log_main(color, payload.str());

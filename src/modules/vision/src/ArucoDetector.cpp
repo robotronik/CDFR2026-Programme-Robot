@@ -174,7 +174,7 @@ ArucoDetector::~ArucoDetector() {
 bool ArucoDetector::loadCalibration(const std::string& calibrationFilePath) {
     cv::FileStorage fs(calibrationFilePath, cv::FileStorage::READ);
     if (!fs.isOpened()) {
-        LOG_ERROR("ArucoDetector - failed to open calibration file ", calibrationFilePath);
+        LOG_ERROR("failed to open calibration file ", calibrationFilePath);
         return false;
     }
 
@@ -183,7 +183,7 @@ bool ArucoDetector::loadCalibration(const std::string& calibrationFilePath) {
     fs.release();
 
     if (cameraMatrix_.empty() || distCoeffs_.empty()) {
-        LOG_ERROR("ArucoDetector - calibration file ", calibrationFilePath,
+        LOG_ERROR("calibration file ", calibrationFilePath,
                   " is missing camera_matrix or dist_coeffs");
         cameraMatrix_.release();
         distCoeffs_.release();
@@ -192,7 +192,7 @@ bool ArucoDetector::loadCalibration(const std::string& calibrationFilePath) {
     }
 
     calibrated_ = true;
-    LOG_INFO("ArucoDetector - loaded calibration from ", calibrationFilePath);
+    LOG_INFO("loaded calibration from ", calibrationFilePath);
     return true;
 }
 
@@ -209,7 +209,7 @@ bool ArucoDetector::initCamera(int deviceIndex, int width, int height) {
     }
     libcamera_ = std::make_unique<LibcameraCamera>();
     if (!libcamera_->open(deviceIndex, width, height)) {
-        LOG_ERROR("ArucoDetector - failed to open libcamera device ", deviceIndex);
+        LOG_ERROR("failed to open libcamera device ", deviceIndex);
         libcamera_.reset();
         return false;
     }
@@ -233,7 +233,7 @@ bool ArucoDetector::initCamera(int deviceIndex, int width, int height) {
     capture_.open(deviceIndex);
 #endif
     if (!capture_.isOpened()) {
-        LOG_ERROR("ArucoDetector - failed to open camera device ", deviceIndex);
+        LOG_ERROR("failed to open camera device ", deviceIndex);
         return false;
     }
     captureFailCount_ = 0;
@@ -246,7 +246,7 @@ bool ArucoDetector::initCamera(int deviceIndex, int width, int height) {
     const int actualWidth = static_cast<int>(capture_.get(cv::CAP_PROP_FRAME_WIDTH));
     const int actualHeight = static_cast<int>(capture_.get(cv::CAP_PROP_FRAME_HEIGHT));
     if (actualWidth != width || actualHeight != height) {
-        LOG_WARNING("ArucoDetector - camera ", deviceIndex, " does not support ",
+        LOG_WARNING("camera ", deviceIndex, " does not support ",
                     width, "x", height, ", using ", actualWidth, "x", actualHeight);
     }
 
@@ -257,7 +257,7 @@ bool ArucoDetector::initCamera(int deviceIndex, int width, int height) {
     for (int i = 0; i < 4; ++i) {
         fourccText[i] = static_cast<char>((fourcc >> (8 * i)) & 0xFF);
     }
-    LOG_GREEN_INFO("ArucoDetector - camera ", deviceIndex, " opened at ",
+    LOG_GREEN_INFO("camera ", deviceIndex, " opened at ",
                    actualWidth, "x", actualHeight, " (", fourccText, ")");
     return true;
 #endif
@@ -300,7 +300,7 @@ bool ArucoDetector::captureFrame(cv::Mat& outFrame) {
         // An open device that never delivers a frame is the usual cause of a
         // missing preview, so report it instead of failing silently.
         if (captureFailCount_ == 0 || captureFailCount_ % 400 == 0) {
-            LOG_WARNING("ArucoDetector - camera returned no frame (",
+            LOG_WARNING("camera returned no frame (",
                         captureFailCount_ + 1, " failures)");
         }
         ++captureFailCount_;
@@ -317,7 +317,7 @@ bool ArucoDetector::captureFrame(cv::Mat& outFrame) {
         // An open device that never delivers a frame is the usual cause of a
         // missing preview, so report it instead of failing silently.
         if (captureFailCount_ == 0 || captureFailCount_ % 400 == 0) {
-            LOG_WARNING("ArucoDetector - camera returned no frame (",
+            LOG_WARNING("camera returned no frame (",
                         captureFailCount_ + 1, " failures)");
         }
         ++captureFailCount_;
@@ -326,7 +326,7 @@ bool ArucoDetector::captureFrame(cv::Mat& outFrame) {
 #endif
 
     if (captureFailCount_ > 0) {
-        LOG_GREEN_INFO("ArucoDetector - camera delivered a frame after ",
+        LOG_GREEN_INFO("camera delivered a frame after ",
                        captureFailCount_, " empty reads");
         captureFailCount_ = 0;
     }
