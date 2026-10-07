@@ -2,10 +2,18 @@
     "configurations": [
         {
             "name": "CDFR2027",
-            "configurationProvider": "ms-vscode.cmake-tools",
-            "compileCommands": "${workspaceFolder}/compile_commands.json",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/../CDFR2026-Program-DriveControl/include/interface",
+                "${workspaceFolder}/../cdfr2024-programme-Actionneur/include/common",
+                "/usr/include/opencv4"
+            ],
+            "defines": [
+                "DISABLE_MAT"
+            ],
+            "compilerPath": "/usr/bin/g++",
             "cStandard": "c17",
-            "cppStandard": "c++17",
+            "cppStandard": "gnu++17",
             "intelliSenseMode": "linux-gcc-x64"
         }
     ],
