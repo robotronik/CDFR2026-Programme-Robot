@@ -25,7 +25,10 @@ if(NOT DEFINED OpenCV_DIR AND NOT CMAKE_CROSSCOMPILING)
         "/usr/lib/*/cmake/opencv4"
         "/usr/lib/cmake/opencv4"
         "/usr/local/lib/cmake/opencv4"
-        "/usr/include/opencv4/")
+        "/usr/include/opencv4/",
+        "/usr/lib64/cmake/opencv4",
+        "/usr/lib64/cmake/OpenCV"
+        )
     if(_opencv_config_dirs)
         list(GET _opencv_config_dirs 0 _opencv_config_dir)
         set(OpenCV_DIR "${_opencv_config_dir}" CACHE PATH "OpenCV CMake config directory")
