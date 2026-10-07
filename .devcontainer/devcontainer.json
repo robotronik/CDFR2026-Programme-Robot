@@ -1,5 +1,5 @@
 {
-  "name": "CDFR2026 Robot Development",
+  "name": "CDFR2027 Robot Development",
   "build": {
     "dockerfile": "../docker/Dockerfile.x86_64",
     "context": ".."

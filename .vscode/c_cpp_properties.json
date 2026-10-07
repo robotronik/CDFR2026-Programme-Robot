@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "name": "CDFR2026",
+            "name": "CDFR2027",
             "configurationProvider": "ms-vscode.cmake-tools",
             "compileCommands": "${workspaceFolder}/compile_commands.json",
             "cStandard": "c17",
