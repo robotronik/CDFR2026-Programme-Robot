@@ -172,7 +172,7 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
                 if (within_variance){
                     float current_scalar = drive->getLinearScalar();
                     float new_scalar = current_scalar * mean;
-                    drive->setLinearScalar(new_scalar);
+                    drive->setLinearScalar(new_scalar); // TODO Bugfix needed, this causes the OTOS to crash
                     LOG_GREEN_INFO("OTOS calibration done with mean = ", new_scalar);
                     scalar_dist_samples.clear();
                     skip_first_scalar = true;
