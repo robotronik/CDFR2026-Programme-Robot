@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ninja-build \
         git \
         ca-certificates \
+        sudo \
         libsqlite3-dev \
         libopencv-dev \
         libopencv-contrib-dev \

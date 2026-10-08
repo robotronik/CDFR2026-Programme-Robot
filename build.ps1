@@ -20,11 +20,31 @@ function Write-Log([string]$Message) {
     Write-Host $Message
 }
 
+function Ensure-Submodules {
+    $submoduleSrc = Join-Path $RepoRoot 'dependencies\rplidar_sdk\sdk\src\sl_lidar_driver.cpp'
+    if (Test-Path $submoduleSrc) { return }
+
+    Write-Log 'Initializing git submodules'
+    git -C $RepoRoot submodule sync --recursive
+    if ($LASTEXITCODE -ne 0) { throw 'git submodule sync failed' }
+    git -C $RepoRoot submodule update --init --recursive
+    if ($LASTEXITCODE -ne 0) { throw 'git submodule update failed' }
+
+    if (-not (Test-Path $submoduleSrc)) {
+        throw 'The RPLIDAR SDK submodule is still missing. Check git submodule status and ensure dependencies/rplidar_sdk is populated.'
+    }
+}
+
 function Assert-Docker {
+    Ensure-Submodules
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
         throw 'docker was not found in PATH. Install Docker Desktop for Windows and reopen the terminal.'
     }
-    docker info *> $null
+    try {
+        & docker info --format '{{.ServerVersion}}' *> $null
+    } catch {
+        throw 'The Docker daemon is not reachable. Start Docker Desktop and try again.'
+    }
     if ($LASTEXITCODE -ne 0) {
         throw 'The Docker daemon is not reachable. Start Docker Desktop and try again.'
     }
@@ -37,8 +57,14 @@ function Build-Image([string]$Image, [string]$Dockerfile) {
 }
 
 function Ensure-Image([string]$Image, [string]$Dockerfile) {
-    docker image inspect $Image *> $null
-    if ($LASTEXITCODE -ne 0) { Build-Image $Image $Dockerfile }
+    $exists = $false
+    try {
+        & docker image inspect $Image *> $null
+        $exists = ($LASTEXITCODE -eq 0)
+    } catch {
+        $exists = $false
+    }
+    if (-not $exists) { Build-Image $Image $Dockerfile }
 }
 
 function Get-ArchSpec([string]$Arch) {
@@ -66,18 +92,27 @@ function Invoke-Container {
     if ($LASTEXITCODE -ne 0) { throw "docker run failed with exit code $LASTEXITCODE" }
 }
 
+function Configure-Arch([string]$Arch) {
+    $spec = Get-ArchSpec $Arch
+    $buildDir = Join-Path $RepoRoot "build\$Arch"
+    $cacheFile = Join-Path $buildDir 'CMakeCache.txt'
+    $needsConfigure = -not (Test-Path $cacheFile)
+
+    if ($needsConfigure) {
+        Write-Log "Configuring $Arch"
+        $configureArgs = @('cmake', '--preset', $Arch)
+        if ($Arch -eq 'x86_64') {
+            $configureArgs += '-DCMAKE_EXPORT_COMPILE_COMMANDS=OFF'
+        }
+        Invoke-Container -Image $spec.Image -CommandArgs $configureArgs
+    }
+}
+
 function Build-Arch([string]$Arch) {
     $spec = Get-ArchSpec $Arch
     Ensure-Image $spec.Image $spec.Dockerfile
+    Configure-Arch $Arch
     Write-Log "Building $Arch"
-    $configureArgs = @('cmake', '--preset', $Arch)
-    if ($Arch -eq 'x86_64') {
-        # The Linux build symlinks compile_commands.json into the source tree;
-        # creating a symlink on the Windows bind mount is unreliable, so it is
-        # disabled here (the ARM preset does not export it while cross-compiling).
-        $configureArgs += '-DCMAKE_EXPORT_COMPILE_COMMANDS=OFF'
-    }
-    Invoke-Container -Image $spec.Image -CommandArgs $configureArgs
     Invoke-Container -Image $spec.Image -CommandArgs @('cmake', '--build', '--preset', $Arch)
 }
 
@@ -97,11 +132,12 @@ function Deploy {
 function Run-Program([string[]]$ProgramArgs) {
     Build-Arch 'x86_64'
     $port = if ($env:CDFR_RUN_PORT) { $env:CDFR_RUN_PORT } else { '80' }
+    $containerArgs = @('sudo', './programCDFR') + $ProgramArgs
     Write-Log "Running programCDFR from build/x86_64 (host port $port -> container 80)"
     Invoke-Container -Image $ImageX86 `
-        -DockerArgs @('-p', "${port}:80") `
+        -DockerArgs @('-p', "${port}:80", '--cap-add=SYS_NICE') `
         -WorkDir "${ContainerWork}/build/x86_64" `
-        -CommandArgs (@('./programCDFR') + $ProgramArgs)
+        -CommandArgs $containerArgs
 }
 
 function Open-Shell([string]$Arch) {
