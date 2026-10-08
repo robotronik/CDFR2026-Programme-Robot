@@ -48,19 +48,19 @@
 #define ADVERSARY_THRESH 300
 
 const position_t ARUCO_POSITIONS_TABLE[] = {
-    position_t{.x = -400, .y = -900, .a = 0}, \
-    position_t{.x = -400, .y = 900, .a = 0}, \
-    position_t{.x = 400, .y = -900, .a = 0}, \
+    position_t{.x = -400, .y = -900, .a = 0},
+    position_t{.x = -400, .y = 900, .a = 0},
+    position_t{.x = 400, .y = -900, .a = 0},
     position_t{.x = 400, .y = 900, .a = 0}};
 
 // Tableau de positions pour la calibration, orientation vers le code le plus proche
 // Valeurs uniquement pour le cote bleu
 const position_t ARUCO_CALIB_POSITIONS[] = {
-    position_t{.x = -125, .y = 350, .a = 0}, \
-    position_t{.x = -125, .y = 675, .a = 0}, \
-    position_t{.x = -100, .y = 1050, .a = 0}, \
-    position_t{.x = 100, .y = 1050, .a = 0}, \
-    position_t{.x = 550, .y = 600, .a = 0}, \
+    position_t{.x = -125, .y = 350, .a = 0},
+    position_t{.x = -125, .y = 675, .a = 0},
+    position_t{.x = -100, .y = 1050, .a = 0},
+    position_t{.x = 100, .y = 1050, .a = 0},
+    position_t{.x = 550, .y = 600, .a = 0},
     position_t{.x = 550, .y = 300, .a = 0}};
     
 const int ARUCO_CALIB_POSITIONS_COUNT = sizeof(ARUCO_CALIB_POSITIONS) / sizeof(position_t);
@@ -70,26 +70,26 @@ const int ARUCO_CALIB_POSITIONS_COUNT = sizeof(ARUCO_CALIB_POSITIONS) / sizeof(p
 const position_t START_POSITION = { .x = 1250, .y = 0, .a = 90 };
 
 const position_t WALL_POSITION[] = {
-    position_t{ .x = 1250, .y = -600, .a = 0 }, \
-    position_t{ .x = 825, .y = -425, .a = 315 }, \
-    position_t{ .x = 650, .y = 0, .a = 270}, \
-    position_t{ .x = 825, .y = 425, .a = 225 }, \
+    position_t{ .x = 1250, .y = -600, .a = 0 },
+    position_t{ .x = 825, .y = -425, .a = 315 },
+    position_t{ .x = 650, .y = 0, .a = 270},
+    position_t{ .x = 825, .y = 425, .a = 225 },
     position_t{ .x = 1250, .y = 600, .a = 180}};
 
 const position_t TOWER_POSITION[] = {
-    position_t{ .x = 650, .y = -250, .a = 0}, \
-    position_t{ .x = 650, .y = 250, .a = 0}, \
+    position_t{ .x = 650, .y = -250, .a = 0},
+    position_t{ .x = 650, .y = 250, .a = 0},
     position_t{ .x = 1000, .y = 600, .a = 0},
     position_t{ .x = 1000, .y = -600, .a = 0}};
 
 const position_t QUARRY_POSITION[] = {
-    position_t{ .x = 800, .y = -950, .a = 0}, \
-    position_t{ .x = 250, .y = -950, .a = 0}, \
-    position_t{ .x  = -250, .y = -950, .a = 0}, \
-    position_t{ .x = 800, .y = -950, .a = 0}, \
-    position_t{ .x = 0, .y = -500, .a  = 270}, \
-    position_t{ .x = 800, .y = 950, .a = 180}, \
-    position_t{ .x = 250, .y = 950, .a = 180}, \
-    position_t{ .x = -250, .y = 950, .a = 180}, \
-    position_t{ .x = -800, .y = 950, .a = 180}, \
+    position_t{ .x = 800, .y = -950, .a = 0},
+    position_t{ .x = 250, .y = -950, .a = 0},
+    position_t{ .x  = -250, .y = -950, .a = 0},
+    position_t{ .x = 800, .y = -950, .a = 0},
+    position_t{ .x = 0, .y = -500, .a  = 270},
+    position_t{ .x = 800, .y = 950, .a = 180},
+    position_t{ .x = 250, .y = 950, .a = 180},
+    position_t{ .x = -250, .y = 950, .a = 180},
+    position_t{ .x = -800, .y = 950, .a = 180},
     position_t{ .x = 0, .y = 500, .a = 270}};
