@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include <libcamera/base/object.h>
 #include <libcamera/libcamera.h>
 
 #include "vision/RawFrame.hpp"
@@ -21,11 +22,19 @@ namespace vision {
  * OpenCV cannot decode; libcamera drives the full sensor -> ISP -> frame
  * pipeline and hands back usable pixels.
  *
+ * Deriving from libcamera::Object is required, not cosmetic: libcamera runs the
+ * CameraManager (and therefore the pipeline that emits
+ * Camera::requestCompleted) on its own internal thread. A plain C++ receiver is
+ * called directly on that thread, so a receiver that blocks in
+ * EventDispatcher::processEvents() on another thread never sees the signal.
+ * As an Object, the connection is marshalled onto the thread that created this
+ * object, which is the capture thread that pumps the dispatcher.
+ *
  * The latest completed frame is copied into an owned buffer that stays valid
  * until the following capture, so callers keep the usual borrow-within-a-frame
  * contract of the capture API.
  */
-class LibcameraCamera {
+class LibcameraCamera : public libcamera::Object {
 public:
     explicit LibcameraCamera(const std::string& cameraId = {});
     ~LibcameraCamera();

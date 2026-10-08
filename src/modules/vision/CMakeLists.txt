@@ -57,24 +57,37 @@ if(CMAKE_CROSSCOMPILING)
     target_link_libraries(vision PUBLIC PkgConfig::LIBCAMERA)
     target_compile_definitions(vision PUBLIC CAMERA_USE_LIBCAMERA)
 
-    # Debian/Ubuntu and Raspberry Pi OS do not ship base/event_dispatcher.h nor
-    # base/thread.h in libcamera-dev; provide local compatibility headers when the
-    # official ones are missing.
-    find_path(LIBCAMERA_EVENT_DISPATCHER_HEADER
-        NAMES libcamera/base/event_dispatcher.h
+    # The libcamera `base/` headers are internal. Some libcamera-dev packages
+    # (Debian/Ubuntu) omit them entirely, while the Raspberry Pi package ships
+    # them but they refuse to compile ("Private headers must not be included in
+    # the libcamera API"). Provide our own ABI-compatible declarations and put
+    # them first so they win over any installed copy.
+    target_include_directories(vision PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/compat)
+
+    # The 24-bit packed RGB/BGR constants (RGB888/BGR888 vs RGB24/BGR24) and the
+    # XRGB/ARGB grouping have moved between libcamera releases, and the Raspberry
+    # Pi fork does not follow every upstream rename (its 0.5.2 still uses
+    # RGB888/BGR888). Probe the installed header instead of trusting the version
+    # string so the frame converter always compiles.
+    find_path(LIBCAMERA_FORMATS_HEADER
+        NAMES libcamera/formats.h
         PATHS ${LIBCAMERA_INCLUDE_DIRS}
         NO_DEFAULT_PATH)
-    if(NOT LIBCAMERA_EVENT_DISPATCHER_HEADER)
-        target_include_directories(vision PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/compat)
-    endif()
-
-    # libcamera 0.2+ groups the XRGB/ARGB formats into PixelFormat; 0.3 renames the
-    # 24-bit RGB/BGR formats to RGB24/BGR24. The frame converter adapts via these.
-    if(LIBCAMERA_VERSION VERSION_GREATER_EQUAL "0.2")
-        target_compile_definitions(vision PUBLIC CAMERA_LIBCAMERA_HAVE_XRGB8888)
-    endif()
-    if(LIBCAMERA_VERSION VERSION_GREATER_EQUAL "0.3")
-        target_compile_definitions(vision PUBLIC CAMERA_LIBCAMERA_FORMAT_RGB24)
+    if(LIBCAMERA_FORMATS_HEADER)
+        file(READ "${LIBCAMERA_FORMATS_HEADER}/libcamera/formats.h" LIBCAMERA_FORMATS_H)
+        if(LIBCAMERA_FORMATS_H MATCHES "PixelFormat[ \t]+RGB24")
+            target_compile_definitions(vision PUBLIC CAMERA_LIBCAMERA_FORMAT_RGB24)
+        endif()
+        if(LIBCAMERA_FORMATS_H MATCHES "PixelFormat[ \t]+XRGB8888")
+            target_compile_definitions(vision PUBLIC CAMERA_LIBCAMERA_HAVE_XRGB8888)
+        endif()
+    else()
+        if(LIBCAMERA_VERSION VERSION_GREATER_EQUAL "0.3")
+            target_compile_definitions(vision PUBLIC CAMERA_LIBCAMERA_FORMAT_RGB24)
+        endif()
+        if(LIBCAMERA_VERSION VERSION_GREATER_EQUAL "0.2")
+            target_compile_definitions(vision PUBLIC CAMERA_LIBCAMERA_HAVE_XRGB8888)
+        endif()
     endif()
 
     # OpenCV/SQLite are the only target libraries in the sysroot; their own
