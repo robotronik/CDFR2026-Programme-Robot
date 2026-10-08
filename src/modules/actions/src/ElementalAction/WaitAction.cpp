@@ -35,9 +35,10 @@ void WaitAction::reset(){
     startTime = 0;
 }
 
-float WaitAction::available(){
+bool WaitAction::available(float &reward){
     // L'attente est toujours disponible, mais son coût est élevé car non rentable
-    return 1000.0f;
+    reward = -duree;
+    return true;
 }
 
 /*Wait is not a full block we could imagine positionning to block/anticipate adversary action*/

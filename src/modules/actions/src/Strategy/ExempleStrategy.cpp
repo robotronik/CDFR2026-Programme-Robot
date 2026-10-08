@@ -94,10 +94,11 @@ VirtualAction* ExempleStrat::bestAction(){
     float bestScore = -1.0f;
 
     for (const auto& [key, weightedAction] : possible_actions){
-        float cost = weightedAction.second->available();
-        if (cost < 0.0f) continue; // action non disponible
+        float reward;
+        bool available = weightedAction.second->available(reward);
+        if (!available) continue; // action non disponible
 
-        float score = weightedAction.first * cost;
+        float score = weightedAction.first * reward;
         if (score > bestScore){
             bestScore = score;
             bestKey = key;

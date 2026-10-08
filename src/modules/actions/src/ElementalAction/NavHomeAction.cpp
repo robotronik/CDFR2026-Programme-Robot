@@ -43,15 +43,16 @@ void NavHomeAction::reset(){
     done = false;
 }
 
-float NavHomeAction::available(){
+bool NavHomeAction::available(float &reward){
     // Retour déjà effectué : plus candidate tant qu'elle n'a pas été réarmée.
-    if (done) return -1.0f;
+    if (done) return false;
     double path_length_mm;
     position_t path[100];
     if(!pathfind(drive->getPosition(), homePos, path, path_length_mm)){
-        return -1.0f;
+        return false;
     }
-    return duree/(float)value;
+    reward = duree/(float)value;
+    return true;
 }
 
 bool NavHomeAction::fullBlock(){

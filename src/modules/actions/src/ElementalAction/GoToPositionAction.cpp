@@ -57,16 +57,17 @@ void GoToPositionAction::reset(){
     done = false;                  // l'action redevient candidate
 }
 
-float GoToPositionAction::available(){
+bool GoToPositionAction::available(float &reward){
     // Déplacement déjà terminé (succès ou échec) : plus candidate tant
     // qu'elle n'a pas été réarmée par reset().
-    if (done) return -1.0f;
+    if (done) return false;
     double path_length_mm;
     position_t path[100]; // Assuming a maximum path length
     if(!pathfind(drive->getPosition(), target, path, path_length_mm)){
-        return -1.0f;
+        return false;
     }
-    return duree;
+    reward = -path_length_mm;
+    return true;
 }
 
 bool GoToPositionAction::fullBlock(){

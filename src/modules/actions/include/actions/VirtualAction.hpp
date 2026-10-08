@@ -34,12 +34,8 @@ public:
     virtual bool stop() = 0;
     /*Reset the action and all its associated resources*/
     virtual void reset() = 0;
-    /* Renvoie le coût de l'action si elle est disponible, -1 sinon.
-    * Tant qu'une action renvoie >= 0 elle reste candidate auprès de la
-    * stratégie : une action qui continue de le faire après avoir rendu
-    * FSM_RETURN_DONE est donc rejouée en boucle. Une action à usage unique
-    * doit renvoyer -1 une fois terminée, et se réarmer dans reset(). */
-    virtual float available() = 0;
+    /* Renvoie si elle est disponible*/
+    virtual bool available(float &reward) = 0;
     /*Return true if the action blocks the execution of all other actions, false otherwise*/
     virtual bool fullBlock() = 0;
     /*Return true if the action blocks the execution of movement actions, false otherwise*/

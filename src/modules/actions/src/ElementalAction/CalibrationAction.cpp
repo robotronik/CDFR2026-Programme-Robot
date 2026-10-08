@@ -7,7 +7,7 @@
 
 CalibrationAction::CalibrationAction(DriveControl* drive, TableState* tableState){
     nom = "Calibration";
-    duree = 0;
+    duree = 1000;
     calibrationState = FSM_CALCULATION;
     this->drive = drive;
     this->tableState = tableState;
@@ -66,8 +66,9 @@ bool CalibrationAction::successManagement(){
     return true;
 }
 
-float CalibrationAction::available(){
-    return duree;
+bool CalibrationAction::available(float &reward){
+    reward = duree;
+    return true;
 }
 
 bool CalibrationAction::fullBlock(){

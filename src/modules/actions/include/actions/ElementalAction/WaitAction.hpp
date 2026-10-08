@@ -14,7 +14,7 @@ class WaitAction : public VirtualAction {
         ReturnFSM_t run() override;
         bool stop() override;
         void reset() override;
-        float available() override;
+        bool available(float &reward) override;
         bool fullBlock() override;
         bool mouvementBlock() override;
 
