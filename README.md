@@ -23,6 +23,11 @@ This program enables the robot to perform various tasks such as navigation, data
   compiler, CMake, or library needs to be installed on your machine.
 - SSH access to the robot, only if you want to deploy.
 
+Nothing else is needed for `build`, `test`, `deploy`, `shell` or `run-docker`.
+Only `run`, which executes the binary directly on the host instead of inside the
+image, needs the runtime libraries listed in
+[Running on the host](#-running-on-the-host).
+
 ## 📥 Installation
 
 1. **Do not clone this repository by itself!**  
@@ -58,7 +63,8 @@ Everything runs inside Docker; the host compiler is never used.
 ./build.sh build          # Build both x86_64 and arm64
 ./build.sh build x86_64   # Build a single target
 ./build.sh build arm64
-./build.sh run            # Build x86_64 and run it locally (needs sudo)
+./build.sh run            # Build x86_64 and run it on the host (needs sudo + OpenCV 4.6)
+./build.sh run-docker     # Build x86_64 and run it inside the Docker image (no host deps)
 ./build.sh test           # Build x86_64 and run the CTest suite
 ./build.sh deploy         # Build arm64 and deploy it to the robot
 ./build.sh shell          # Interactive shell in the x86_64 image
@@ -68,11 +74,46 @@ Everything runs inside Docker; the host compiler is never used.
 ```
 
 `./build.sh run` executes the x86_64 binary from `build/x86_64` (so it finds its
-`html/` and `data/` assets) and needs `sudo` because the REST server binds port 80.
+`html/` and `data/` assets) and needs `sudo` because the REST server binds port 80,
+on top of the host libraries listed below.
+
+`./build.sh run-docker` runs the very same binary inside the `cdfr-builder-x86_64`
+image instead. It needs neither `sudo` nor any host library, and it is the
+portable way to run the program when the host's OpenCV version differs from the
+one used to build (the binary is linked against OpenCV 4.6 and will fail with
+`libopencv_aruco.so.406: cannot open shared object file` on a host that ships a
+different version). Internally the container runs as root — needed so that
+`--cap-add=SYS_NICE` can raise the program's real-time priority, the same thing
+`sudo` does for `run` — and binds port 80 through `--network host`. As a result
+the files it writes (the `log/` directory) are owned by root on the host.
+
 Local x86_64 builds have no hardware, so they use the emulated I2C, disable the
 lidar, and run the API in test mode; the **MAT is disabled** as well (it is the
 robot's vision server) — the ARM build keeps it enabled. Override with
 `-DCDFR_ENABLE_MAT=ON` when needed.
+
+### 🏃 Running on the host
+
+`./build.sh run` executes the binary outside Docker, so the host must provide the
+same shared libraries the binary was linked against. Those come from the image's
+OpenCV 4.6 (Ubuntu 24.04 packaging), plus `sudo`/`CAP_SYS_NICE` for the real-time
+scheduler and port 80.
+
+On **Ubuntu 24.04**:
+
+```bash
+sudo apt install libopencv-contrib406t64 libopencv-videoio406t64
+```
+
+`libopencv-contrib406t64` brings the contrib module set (`libopencv_aruco.so.406`)
+and its core dependencies; `libopencv-videoio406t64` provides the camera/video
+I/O module. Both are needed — a plain `libopencv-dev` install of a *different*
+OpenCV version is not enough, since the loader matches the exact `406` ABI.
+
+On a host whose OpenCV is a different version (for example 25.04 ships OpenCV
+4.10 as `libopencv_*410`), these libraries cannot be installed from the
+distribution repositories. Use `./build.sh run-docker` there instead of installing
+OpenCV by hand.
 
 Artifacts are written to `build/x86_64/programCDFR` and
 `build/arm64/programCDFR`. Each build directory also contains the runtime bundle
@@ -90,7 +131,38 @@ shipped alongside the executable (`html/`, `data/`, `tests/lidar` and
 ## 🛠️ Compilation for Raspberry Pi
 
 The ARM binary is cross-compiled by `./build.sh build arm64`; no cross-toolchain or
-sysroot is needed on the host.
+sysroot is needed on the host. It targets **Raspberry Pi OS Trixie (64-bit)**: the
+build image is Debian 13, so the binary is linked against the same libraries the Pi
+ships — GCC 14 / glibc 2.41, OpenCV 4.10 (`libopencv_*.so.410`) and the Raspberry Pi
+libcamera fork (`libcamera.so.0.7`).
+
+### Runtime dependencies on the Pi
+
+The deployed bundle only contains the executable (`programCDFR`), `html/`, `data/`
+and `autoRunInstaller.sh`; the shared libraries come from the OS. On a 64-bit
+Raspberry Pi OS Trixie, install them once with:
+
+```bash
+sudo apt update
+sudo apt install -y \
+  libsqlite3-0 \
+  libopencv-objdetect410 libopencv-imgcodecs410 libopencv-calib3d410 \
+  libopencv-features2d410 libopencv-imgproc410 libopencv-core410 \
+  libcamera0.7 libcamera-ipa libpisp1
+```
+
+ArUco lives in the core OpenCV `objdetect` module from 4.7 onwards, hence
+`libopencv-objdetect410` (which pulls the remaining OpenCV libraries);
+`libcamera0.7` (from `archive.raspberrypi.com`) is the camera stack the binary was
+linked against and pulls `libcamera-ipa`/`libpisp1`.
+
+Then enable the I2C bus and the UART (used by the actuators and the lidar) via:
+
+```bash
+sudo raspi-config
+```
+
+(The ARM binary is `aarch64` and cannot run on a 32-bit OS.)
 
 To deploy it to your Raspberry Pi, first set up SSH key authentication. To copy your SSH key to the Raspberry Pi (replace `pi@192.168.1.47` with your Raspberry Pi’s address):
 
@@ -102,12 +174,6 @@ Then compile and deploy with:
 
 ```bash
 ./build.sh deploy
-```
-
-On a new Raspberry Pi, configure I2C and serial communication via:
-
-```bash
-sudo raspi-config
 ```
 
 ## 🔍 Service Monitoring and Restart

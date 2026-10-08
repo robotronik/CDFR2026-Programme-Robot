@@ -14,6 +14,13 @@ cd "$REPO_ROOT"
 IMAGE_X86="cdfr-builder-x86_64"
 IMAGE_ARM="cdfr-builder-arm64"
 
+# Extra `docker run` flags, container user and working directory applied to the
+# next `docker_run` call. Callers that need a tweaked container override these
+# before invoking docker_run (see the run-docker command).
+DOCKER_RUN_EXTRA=()
+DOCKER_RUN_USER="$(id -u):$(id -g)"
+DOCKER_RUN_WORKDIR="$REPO_ROOT"
+
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 
 build_image() {
@@ -30,8 +37,13 @@ ensure_image() {
 # docker_run <image> <command...>
 docker_run() {
     local image="$1"; shift
-    local tty=() ssh=()
+    local tty=() ssh=() user=()
     [ -t 0 ] && tty+=(-it)
+    # An empty DOCKER_RUN_USER keeps the image's default user (root), which is
+    # required to actually exercise added capabilities (see run-docker).
+    if [ -n "$DOCKER_RUN_USER" ]; then
+        user=(--user "$DOCKER_RUN_USER")
+    fi
     if [ -n "${SSH_AUTH_SOCK:-}" ] && [ -S "${SSH_AUTH_SOCK}" ]; then
         ssh+=(-v "${SSH_AUTH_SOCK}:/ssh-agent" -e SSH_AUTH_SOCK=/ssh-agent)
     fi
@@ -40,11 +52,12 @@ docker_run() {
     # are otherwise denied ("Permission denied"), which cmake reports as a missing
     # CMakePresets.json. It is a no-op on hosts without SELinux.
     docker run --rm "${tty[@]}" "${ssh[@]}" \
+        "${DOCKER_RUN_EXTRA[@]}" \
         --network host \
         --security-opt label=disable \
-        --user "$(id -u):$(id -g)" \
+        "${user[@]}" \
         -v "$REPO_ROOT:$REPO_ROOT" \
-        -w "$REPO_ROOT" \
+        -w "$DOCKER_RUN_WORKDIR" \
         "$image" "$@"
 }
 
@@ -68,7 +81,8 @@ Usage: ./build.sh <command> [arch]
 
 Commands:
   build [x86_64|arm64]   Build the given target, or both when omitted
-  run [args...]          Build x86_64 and run the program locally (needs sudo)
+  run [args...]          Build x86_64 and run on the host (needs sudo + OpenCV 4.6)
+  run-docker [args...]   Build x86_64 and run inside the x86_64 image (no host deps)
   test                   Build x86_64 and run the CTest suite
   deploy                 Build arm64 and deploy it to the robot
   shell [x86_64|arm64]   Interactive shell in the target image (default: x86_64)
@@ -96,6 +110,22 @@ case "${1:-build}" in
         shift
         log "Running programCDFR from build/x86_64 (sudo is required for port 80)"
         (cd "$REPO_ROOT/build/x86_64" && sudo ./programCDFR "$@")
+        ;;
+    run-docker)
+        build_arch x86_64
+        shift
+        log "Running programCDFR in the x86_64 image (no host libraries needed)"
+        # setProgramPriority() requests SCHED_FIFO, which needs CAP_SYS_NICE; Docker
+        # drops it by default. The capability is only effective for uid 0, so the
+        # container runs as root (no --user) instead of the host user, exactly as
+        # `sudo ./programCDFR` does. Files written by the run (log/) are therefore
+        # root-owned on the host. Running inside the image also matches the OpenCV
+        # 4.6 the binary was linked against, and --network host gives the REST
+        # server port 80 directly, with no NAT overhead.
+        DOCKER_RUN_EXTRA=(--cap-add=SYS_NICE)
+        DOCKER_RUN_USER=""
+        DOCKER_RUN_WORKDIR="$REPO_ROOT/build/x86_64"
+        docker_run "$IMAGE_X86" ./programCDFR "$@"
         ;;
     deploy)
         ensure_image "$IMAGE_ARM" docker/Dockerfile.arm64

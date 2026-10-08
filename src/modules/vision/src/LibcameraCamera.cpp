@@ -275,7 +275,9 @@ void LibcameraCamera::fillRawFrame(RawFrame& out) const {
     out.format = pixelFormat_;
     out.data = nullptr;
 
-    const std::vector<libcamera::FrameBuffer::Plane>& planes = ready_->planes();
+    // libcamera returned a std::vector<Plane> up to 0.6 and a Span<const Plane>
+    // from 0.7; `auto` keeps both working.
+    const auto& planes = ready_->planes();
     if (planes.empty()) {
         return;
     }
