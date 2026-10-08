@@ -5,6 +5,9 @@
       "label": "deploy",
       "type": "shell",
       "command": "./build.sh deploy",
+      "windows": {
+        "command": "${workspaceFolder}\\build.bat deploy"
+      },
       "group": {
         "kind": "build",
         "isDefault": true

@@ -87,6 +87,39 @@ shipped alongside the executable (`html/`, `data/`, `tests/lidar` and
 - VS Code / CLion Dev Container support is available via
   [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json).
 
+### 🪟 Windows (Docker Desktop)
+
+On Windows, use `build.bat` (a thin launcher for `build.ps1`). It drives the same
+Docker images as `build.sh`, so no compiler, CMake or library is needed on the
+host — only Docker Desktop, which must be running.
+
+```bat
+build.bat build          REM Build both x86_64 and arm64
+build.bat build arm64
+build.bat run            REM Build x86_64 and run it locally (REST API on http://localhost)
+build.bat test           REM Build x86_64 and run the CTest suite
+build.bat deploy         REM Build arm64 and deploy it to the robot
+build.bat shell          REM Interactive shell in the x86_64 image
+build.bat images         REM (Re)build the Docker images
+build.bat clean          REM Remove the build\ directory
+```
+
+Windows-specific notes:
+
+- The repository is mounted at `/work` inside the container (Windows paths cannot
+  be reused as Linux paths as in `build.sh`); build outputs still appear on the
+  host under `build\<arch>`.
+- `build.bat run` publishes container port 80 on `http://localhost`. Override the
+  host port with the `CDFR_RUN_PORT` environment variable
+  (e.g. `set CDFR_RUN_PORT=8080`).
+- `build.bat deploy` authenticates with the SSH keys in `%USERPROFILE%\.ssh`,
+  mounted read-only into the container. Set them up for the robot first (the
+  Windows OpenSSH client ships with `ssh-keygen`/`ssh`; `ssh-copy-id` is not
+  available, so append your public key to the robot's `~/.ssh/authorized_keys`).
+  A passphrase-protected key needs an SSH agent (`ssh-agent` + `ssh-add`).
+- The x86_64 build disables `compile_commands.json` export on Windows because the
+  symlink it creates cannot be written reliably on a Windows bind mount.
+
 ## 🛠️ Compilation for Raspberry Pi
 
 The ARM binary is cross-compiled by `./build.sh build arm64`; no cross-toolchain or
