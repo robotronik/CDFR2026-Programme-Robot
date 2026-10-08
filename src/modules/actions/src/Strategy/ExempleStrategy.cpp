@@ -3,6 +3,7 @@
 #include "navigation/driveControl.h"
 #include "utils/logger.hpp"
 #include "navigation/pathfind.h"
+#include "defs/constante.h"
 #include "actions/ElementalAction/WaitAction.hpp"
 #include "actions/ElementalAction/CalibrationAction.hpp"
 #include "actions/ElementalAction/NavHomeAction.hpp"
@@ -28,7 +29,7 @@ ExempleStrat::ExempleStrat(DriveControl* dc, TableState* ts){
 
 position_t ExempleStrat::StratStartingPos(){
     // Returns the starting position of the robot
-    position_t pos = {-675, 1125, 120};
+    position_t pos = START_POSITION;
 
     if (tableStatus->colorTeam == YELLOW)
         position_robot_flip(pos);

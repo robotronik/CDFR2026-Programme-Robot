@@ -66,3 +66,30 @@ const position_t ARUCO_CALIB_POSITIONS[] = {
 const int ARUCO_CALIB_POSITIONS_COUNT = sizeof(ARUCO_CALIB_POSITIONS) / sizeof(position_t);
 
 /******* CONSTANT FOR THE LEGEND OF CAMELOT *******/
+
+const position_t START_POSITION = { .x = 1250, .y = 0, .a = 90 };
+
+const position_t WALL_POSITION[] = {
+    position_t{ .x = 1250, .y = -600, .a = 0 }, \
+    position_t{ .x = 825, .y = -425, .a = 315 }, \
+    position_t{ .x = 650, .y = 0, .a = 270}, \
+    position_t{ .x = 825, .y = 425, .a = 225 }, \
+    position_t{ .x = 1250, .y = 600, .a = 180}};
+
+const position_t TOWER_POSITION[] = {
+    position_t{ .x = 650, .y = -250, .a = 0}, \
+    position_t{ .x = 650, .y = 250, .a = 0}, \
+    position_t{ .x = 1000, .y = 600, .a = 0},
+    position_t{ .x = 1000, .y = -600, .a = 0}};
+
+const position_t QUARRY_POSITION[] = {
+    position_t{ .x = 800, .y = -950, .a = 0}, \
+    position_t{ .x = 250, .y = -950, .a = 0}, \
+    position_t{ .x  = -250, .y = -950, .a = 0}, \
+    position_t{ .x = 800, .y = -950, .a = 0}, \
+    position_t{ .x = 0, .y = -500, .a  = 270}, \
+    position_t{ .x = 800, .y = 950, .a = 180}, \
+    position_t{ .x = 250, .y = 950, .a = 180}, \
+    position_t{ .x = -250, .y = 950, .a = 180}, \
+    position_t{ .x = -800, .y = 950, .a = 180}, \
+    position_t{ .x = 0, .y = 500, .a = 270}};
