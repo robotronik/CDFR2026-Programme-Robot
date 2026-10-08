@@ -81,10 +81,11 @@ uninstall_service() {
     # Chemin du fichier de service
     service_file="/etc/systemd/system/${program_name}.service"
 
-    # Vérifie si le service existe
+    # Vérifie si le service existe : rien à faire (succès) s'il est déjà absent,
+    # pour que le déploiement reste fonctionnel sur un robot neuf.
     if [ ! -f "$service_file" ]; then
-        echo "Le service n'existe pas : $service_file"
-        exit 1
+        echo "Le service n'existe pas : $service_file (rien à désinstaller)"
+        exit 0
     fi
 
     # Désactive et supprime le service
