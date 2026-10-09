@@ -19,10 +19,6 @@ public:
 
     bool loadCalibration(const std::string& calibrationFilePath);
 
-    bool initCamera(int deviceIndex = 0, int width = 1280, int height = 800);
-    void releaseCamera();
-    bool isCameraOpen() const { return detector_.isCameraOpen(); }
-
     // Detects the landmark tags on `frame`. Returns true and fills `position`
     // when at least one tag yields a usable pose.
     bool locate(const cv::Mat& frame, CameraPosition& position);

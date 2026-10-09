@@ -10,7 +10,6 @@
 #include "drive_interface.h" // for position_t
 #include "vision/ArucoDetector.hpp"
 #include "vision/ArucoLocalizer.hpp"
-#include "vision/CamLocalizer.hpp"
 #include "vision/FeaturesLocalizer.hpp"
 
 // Camera offset in the robot frame, in millimetres and degrees.

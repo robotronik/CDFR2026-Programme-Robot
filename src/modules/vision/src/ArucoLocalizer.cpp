@@ -43,14 +43,6 @@ bool ArucoLocalizer::loadCalibration(const std::string& calibrationFilePath) {
     return detector_.loadCalibration(calibrationFilePath);
 }
 
-bool ArucoLocalizer::initCamera(int deviceIndex, int width, int height) {
-    return detector_.initCamera(deviceIndex, width, height);
-}
-
-void ArucoLocalizer::releaseCamera() {
-    detector_.releaseCamera();
-}
-
 const cv::Point2d* ArucoLocalizer::fieldPosition(int tagId) {
     const std::map<int, cv::Point2d>& positions = tagFieldPositions();
     const auto it = positions.find(tagId);
