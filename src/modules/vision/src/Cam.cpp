@@ -51,6 +51,10 @@ cv::Matx33d cameraToTableRotation(double headingDeg, double pitchDeg) {
 // Draws the detected markers on `image`, colour-coded by role, so that
 // /preview shows what detection actually found.
 void drawDetections(cv::Mat& image, const std::vector<vision::DetectionResult>& detections) {
+    if (image.channels() == 1) {
+        cv::cvtColor(image, image, cv::COLOR_GRAY2BGR);
+    }
+
     for (const vision::DetectionResult& detection : detections) {
         if (detection.corners.size() < 4) {
             continue;

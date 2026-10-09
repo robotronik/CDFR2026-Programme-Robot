@@ -85,7 +85,7 @@ private:
     int width_ = 0;
     int height_ = 0;
     int stride_ = 0;
-    int pixelFormat_ = 0;
+    libcamera::PixelFormat pixelFormat_;
     // True when the format is stored as several planes and has to be flattened
     // before conversion.
     bool multiPlanar_ = false;

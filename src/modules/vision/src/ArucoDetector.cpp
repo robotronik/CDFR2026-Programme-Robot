@@ -81,6 +81,20 @@ bool convertRawFrame(const RawFrame& raw, cv::Mat& out) {
     }
 
     switch (raw.format) {
+    case libcamera::formats::R8: {
+        const cv::Mat gray(raw.height, raw.width, CV_8UC1, const_cast<uint8_t*>(raw.data), raw.stride);
+        cv::cvtColor(gray, out, cv::COLOR_GRAY2BGR);
+        return true;
+    }
+    case libcamera::formats::R10:
+    case libcamera::formats::R12:
+    case libcamera::formats::R16: {
+        const cv::Mat gray16(raw.height, raw.width, CV_16UC1, const_cast<uint8_t*>(raw.data), raw.stride);
+        cv::Mat gray8;
+        gray16.convertTo(gray8, CV_8U, 1.0 / 256.0);
+        cv::cvtColor(gray8, out, cv::COLOR_GRAY2BGR);
+        return true;
+    }
     case libcamera::formats::BGRA8888:
     case libcamera::formats::RGBA8888:
 #ifdef CAMERA_LIBCAMERA_HAVE_XRGB8888
@@ -322,6 +336,10 @@ bool ArucoDetector::captureFrame(cv::Mat& outFrame) {
         }
         ++captureFailCount_;
         return false;
+    }
+
+    if (outFrame.channels() == 1) {
+        cv::cvtColor(outFrame, outFrame, cv::COLOR_GRAY2BGR);
     }
 #endif
 

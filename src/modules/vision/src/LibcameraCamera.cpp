@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include <sys/mman.h>
+#include <unistd.h>
 
 #include <libcamera/base/event_dispatcher.h>
 #include <libcamera/base/thread.h>
@@ -31,9 +32,13 @@ namespace {
 // the capture thread forever.
 constexpr int kAcquireTimeoutMs = 1000;
 
-// True when the format stores its three components as separate planes.
-bool isPlanarPixelFormat(int format) {
+// True when the format stores its components as separate planes.
+bool isPlanarPixelFormat(const libcamera::PixelFormat& format) {
     switch (format) {
+    case libcamera::formats::R8:
+    case libcamera::formats::R10:
+    case libcamera::formats::R12:
+    case libcamera::formats::R16:
     case libcamera::formats::YUYV:
     case libcamera::formats::UYVY:
     case libcamera::formats::RGB565:
@@ -47,7 +52,7 @@ bool isPlanarPixelFormat(int format) {
     case libcamera::formats::BGRA8888:
         return false;
     default:
-        // NV12, YUV420, YUV422 (planar variants), YUV444, R8, Y10...
+        // NV12, YUV420, YUV422 (planar variants), YUV444...
         return true;
     }
 }
@@ -131,7 +136,8 @@ bool LibcameraCamera::open(int deviceIndex, int width, int height) {
     started_ = false;
     captureFailCount_ = 0;
     open_ = true;
-    LOG_GREEN_INFO("Libcamera - camera '", selected, "' opened at ", width_, "x", height_);
+    LOG_GREEN_INFO("Libcamera - camera '", selected, "' opened at ", width_, "x", height_,
+                   " (", pixelFormat_.toString(), ")");
     return true;
 }
 
@@ -144,19 +150,34 @@ bool LibcameraCamera::configure(int width, int height) {
     }
 
     libcamera::StreamConfiguration& streamConfig = config->at(0);
-    streamConfig.pixelFormat = libcamera::formats::NV12;
+    // Request 8-bit monochrome (R8) by default: the robot camera (OV9281) is a
+    // monochrome sensor. Requesting color formats like NV12 causes the ISP to run
+    // unwanted demosaicing and color processing, resulting in color artifacts.
+    streamConfig.pixelFormat = libcamera::formats::R8;
     streamConfig.size.width = static_cast<unsigned int>(width);
     streamConfig.size.height = static_cast<unsigned int>(height);
 
-    const libcamera::CameraConfiguration::Status status = config->validate();
+    libcamera::CameraConfiguration::Status status = config->validate();
     if (status == libcamera::CameraConfiguration::Invalid) {
-        LOG_ERROR("Libcamera - camera configuration is invalid");
-        return false;
+        LOG_WARNING("Libcamera - R8 format invalid for camera, falling back to default configuration");
+        config = camera_->generateConfiguration({libcamera::StreamRole::Viewfinder});
+        if (!config) {
+            LOG_ERROR("Libcamera - failed to generate a fallback camera configuration");
+            return false;
+        }
+        libcamera::StreamConfiguration& fallbackStreamConfig = config->at(0);
+        fallbackStreamConfig.size.width = static_cast<unsigned int>(width);
+        fallbackStreamConfig.size.height = static_cast<unsigned int>(height);
+        status = config->validate();
+        if (status == libcamera::CameraConfiguration::Invalid) {
+            LOG_ERROR("Libcamera - camera configuration is invalid");
+            return false;
+        }
     }
     if (status == libcamera::CameraConfiguration::Adjusted) {
         LOG_WARNING("Libcamera - requested ", width, "x", height, " adjusted to ",
-                    streamConfig.size.width, "x", streamConfig.size.height, " (",
-                    streamConfig.pixelFormat.toString(), ")");
+                    config->at(0).size.width, "x", config->at(0).size.height, " (",
+                    config->at(0).pixelFormat.toString(), ")");
     }
 
     if (camera_->configure(config.get()) < 0) {
@@ -283,7 +304,7 @@ void LibcameraCamera::fillRawFrame(RawFrame& out) const {
     }
 
     if (!multiPlanar_) {
-        // Packed and semi-planar formats expose all their bytes in the first
+        // Packed and single-plane formats expose all their bytes in the first
         // plane.
         const libcamera::FrameBuffer::Plane& plane = planes.front();
         const std::size_t length = static_cast<std::size_t>(plane.length);
@@ -301,20 +322,32 @@ void LibcameraCamera::fillRawFrame(RawFrame& out) const {
 
     // Planar formats are not contiguous in one camera buffer: pack the planes
     // back-to-back so the decoder can read them as a single image.
-    buffer_.resize(static_cast<std::size_t>(stride_) * height_ * 3 / 2);
+    std::size_t totalLength = 0;
+    for (const auto& plane : planes) {
+        totalLength += static_cast<std::size_t>(plane.length);
+    }
+    buffer_.resize(totalLength);
     std::size_t offset = 0;
+    const long pageSize = sysconf(_SC_PAGE_SIZE);
     for (const libcamera::FrameBuffer::Plane& plane : planes) {
         const std::size_t length = static_cast<std::size_t>(plane.length);
         if (offset + length > buffer_.size()) {
             return;
         }
-        void* mapped = mmap(nullptr, length, PROT_READ, MAP_SHARED, plane.fd.get(), 0);
+        const off_t pageOffset = (plane.offset != libcamera::FrameBuffer::Plane::kInvalidOffset)
+                                     ? (plane.offset & ~(pageSize - 1))
+                                     : 0;
+        const std::size_t offsetDiff = (plane.offset != libcamera::FrameBuffer::Plane::kInvalidOffset)
+                                           ? (plane.offset - pageOffset)
+                                           : 0;
+        const std::size_t mapLength = length + offsetDiff;
+        void* mapped = mmap(nullptr, mapLength, PROT_READ, MAP_SHARED, plane.fd.get(), pageOffset);
         if (mapped == MAP_FAILED) {
             LOG_WARNING("Libcamera - failed to map a frame buffer plane");
             return;
         }
-        std::memcpy(buffer_.data() + offset, mapped, length);
-        munmap(mapped, length);
+        std::memcpy(buffer_.data() + offset, static_cast<const uint8_t*>(mapped) + offsetDiff, length);
+        munmap(mapped, mapLength);
         offset += length;
     }
     out.data = buffer_.data();
@@ -341,6 +374,7 @@ void LibcameraCamera::close() {
     stream_ = nullptr;
     config_.reset();
     buffer_.clear();
+    pixelFormat_ = libcamera::PixelFormat();
 
     if (camera_) {
         camera_->release();
