@@ -10,8 +10,9 @@
 // How high the camera sits above the table and how far it tilts down. The
 // height and pitch are what lift a capture onto the ground plane; the field of
 // view comes from the camera calibration instead, so it works for any lens.
-#define CAMERA_HEIGHT_MM 233.2
-#define CAMERA_PITCH_DEG 45.0
+// Measured on the real robot from the landmark-tag poses (tests/data/aruco_loc).
+#define CAMERA_HEIGHT_MM 218.0
+#define CAMERA_PITCH_DEG 44.5
 
 namespace vision {
 

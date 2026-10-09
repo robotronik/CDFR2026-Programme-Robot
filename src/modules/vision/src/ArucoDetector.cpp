@@ -23,11 +23,13 @@ void configureParameters(cv::aruco::DetectorParameters& p) {
     p.adaptiveThreshWinSizeMin = 3;
     p.adaptiveThreshWinSizeMax = 23;
     p.adaptiveThreshWinSizeStep = 10;
-    // A game element tag is drawn with a white margin around its marker. At the
-    // default constant the detector locks onto that outer margin instead of the
-    // marker itself, which flips its polarity; a higher constant makes it lock
-    // onto the marker's own border.
-    p.adaptiveThreshConstant = 20;
+    // The competition tags are printed with low contrast under uneven lighting,
+    // so the marker and its background sit close together and the adaptive
+    // threshold needs a small constant to separate them. A larger constant such
+    // as 20 (chosen for the game element tags' white margin) missed every
+    // low-contrast capture; 13 still detects all the real OV9281 captures in
+    // tests/data/aruco_loc.
+    p.adaptiveThreshConstant = 13;
 
     p.minMarkerPerimeterRate = 0.03;
     p.maxMarkerPerimeterRate = 4.0;
