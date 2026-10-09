@@ -1,4 +1,4 @@
-# Target Device Configuration (customizable via -DPI_HOST=... or cache variables)
+# Target device, overridable via -DPI_HOST=... or the cache variables below.
 set(PI_USER "robotronik" CACHE STRING "Target device SSH username")
 set(PI_HOST "192.168.8.108" CACHE STRING "Target device IP or hostname")
 set(PI_DIR  "/home/${PI_USER}/CDFR" CACHE STRING "Target installation base directory")
@@ -8,11 +8,10 @@ find_program(SSH_CMD ssh)
 find_program(RSYNC_CMD rsync)
 
 if(TARGET programCDFR AND SSH_CMD AND RSYNC_CMD)
-    # Each ssh COMMAND below is a single argument with no shell metacharacters:
-    # CMake joins COMMANDs with '&&' and runs the rule through the local shell,
-    # so a remote string such as "cd dir && ./script" would be split and its
-    # parts executed locally. Sequencing is therefore expressed as separate
-    # COMMANDs, and the installer is invoked via an absolute path (rsync -a
+    # Each ssh COMMAND is a single argument with no shell metacharacters: CMake
+    # joins COMMANDs with '&&' and runs the rule through the local shell, so a
+    # remote "cd dir && ./script" would execute locally. Sequencing is therefore
+    # separate COMMANDs, and the installer is invoked by absolute path (rsync -a
     # preserves its executable bit) so no remote chmod is needed.
     add_custom_target(deploy
         COMMAND ${SSH_CMD} ${PI_USER}@${PI_HOST} "mkdir -p ${PI_DIR}/${PI_DEST}"

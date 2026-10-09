@@ -57,18 +57,14 @@ if(CMAKE_CROSSCOMPILING)
     target_link_libraries(vision PUBLIC PkgConfig::LIBCAMERA)
     target_compile_definitions(vision PUBLIC CAMERA_USE_LIBCAMERA)
 
-    # The libcamera `base/` headers are internal. Some libcamera-dev packages
-    # (Debian/Ubuntu) omit them entirely, while the Raspberry Pi package ships
-    # them but they refuse to compile ("Private headers must not be included in
-    # the libcamera API"). Provide our own ABI-compatible declarations and put
-    # them first so they win over any installed copy.
+    # The libcamera `base/` headers are internal: some packages omit them, the Pi
+    # package ships ones that refuse to compile. Provide our own ABI-compatible
+    # declarations, include-dir first so they win over any installed copy.
     target_include_directories(vision PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/compat)
 
-    # The 24-bit packed RGB/BGR constants (RGB888/BGR888 vs RGB24/BGR24) and the
-    # XRGB/ARGB grouping have moved between libcamera releases, and the Raspberry
-    # Pi fork does not follow every upstream rename (its 0.5.2 still uses
-    # RGB888/BGR888). Probe the installed header instead of trusting the version
-    # string so the frame converter always compiles.
+    # The packed RGB/BGR and XRGB/ARGB format names moved between libcamera
+    # releases (the Pi fork lags upstream). Probe the installed header instead of
+    # trusting the version string, so the frame converter always compiles.
     find_path(LIBCAMERA_FORMATS_HEADER
         NAMES libcamera/formats.h
         PATHS ${LIBCAMERA_INCLUDE_DIRS}
@@ -90,8 +86,8 @@ if(CMAKE_CROSSCOMPILING)
         endif()
     endif()
 
-    # OpenCV/SQLite are the only target libraries in the sysroot; their own
-    # dependencies are resolved at runtime on the Pi, so allow unresolved symbols
-    # in linked shared objects (unresolved symbols in our own objects stay errors).
+    # Allow unresolved symbols in linked shared objects (target libraries resolve
+    # theirs at runtime on the Pi); unresolved symbols in our own objects remain
+    # errors.
     target_link_options(vision INTERFACE -Wl,--allow-shlib-undefined)
 endif()

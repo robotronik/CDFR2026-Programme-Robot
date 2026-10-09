@@ -16,9 +16,8 @@ target_link_libraries(mat
         project_compiler_options
 )
 
-# The MAT is the vision server, which only runs on the robot. It is enabled for
-# the ARM cross-build and disabled for local x86_64 builds (override either way
-# with -DCDFR_ENABLE_MAT=ON/OFF).
+# The MAT (robot vision server) is enabled for the ARM cross-build and disabled
+# for local x86_64 builds; override with -DCDFR_ENABLE_MAT=ON/OFF.
 if(CMAKE_CROSSCOMPILING)
     set(_mat_default ON)
 else()

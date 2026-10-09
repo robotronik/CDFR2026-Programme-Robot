@@ -19,9 +19,7 @@ jobs:
         run: ./build.sh build
 
       - name: Run tests (x86_64)
-        # TODO : Fix Lidar test so it passes so we can remove continue-on-error.
-        # Tests report their real result (ctest fails when a test fails), but a
-        # failing test must not fail the whole workflow.
+        # TODO: fix the Lidar test so continue-on-error can be removed.
         continue-on-error: true
         run: ./build.sh test
 
