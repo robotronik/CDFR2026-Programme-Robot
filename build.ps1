@@ -1,12 +1,9 @@
 #!/usr/bin/env pwsh
 #
-# Windows wrapper around the Docker-only build (mirrors ./build.sh).
-#
-# Every compilation still happens inside the per-architecture images; Docker
-# Desktop for Windows is required and no compiler is needed on the host.
-# Unlike build.sh, the repository is mounted at /work inside the container:
-# Windows paths (C:\...) cannot be reused as Linux paths, and the program only
-# uses paths relative to its working directory, so the mount point is free.
+# Windows wrapper around the Docker-only build (mirrors ./build.sh). Requires
+# Docker Desktop; no compiler or CMake is needed on the host. Unlike build.sh, the
+# repo is mounted at /work (Windows paths cannot be reused as Linux paths, and the
+# program only uses relative paths, so the mount point is free).
 
 $ErrorActionPreference = 'Stop'
 
