@@ -1,0 +1,118 @@
+#include "actions/Strategy/ExempleStrat.hpp"
+#include "actions/VirtualAction.hpp"
+#include "navigation/driveControl.h"
+#include "utils/logger.hpp"
+#include "navigation/pathfind.h"
+#include "defs/constante.h"
+#include "actions/ElementalAction/WaitAction.hpp"
+//#include "actions/ElementalAction/CalibrationAction.hpp"
+#include "actions/ElementalAction/NavHomeAction.hpp"
+#include "actions/ElementalAction/GoToPositionAction.hpp"
+
+/*
+    ============================================================
+    Actions élémentaires de la stratégie d'exemple
+    ============================================================
+    Plutôt qu'une seule action "à états" qui enchaîne les étapes en dur, chaque étape de la stratégie
+    devient ici sa propre VirtualAction, réutilisable et indépendamment
+    pondérable dans possible_actions. C'est ExempleStrat::bestAction()
+    qui décide de l'ordre en les proposant une par une au fur et à
+    mesure qu'elles deviennent la plus prioritaire.
+*/
+
+ExempleStrat::ExempleStrat(DriveControl* dc, TableState* ts){
+    nom = "ExempleStrat";
+    drive = dc;
+    tableStatus = ts;
+    reset();
+}
+
+position_t ExempleStrat::StratStartingPos(){
+    // Returns the starting position of the robot
+    position_t pos = START_POSITION;
+
+    if (tableStatus->colorTeam == YELLOW)
+        position_robot_flip(pos);
+    return pos;
+}
+
+void ExempleStrat::reset(){
+    possible_actions.clear();
+    running_actions.clear();
+    buildPossibleActions();
+    // L'attente n'est pas une action candidate : on la réserve hors du pool
+    // pour que bestAction() ne puisse pas la consommer. extractAction() la
+    // fait passer du pool au membre waitAction, elle reste donc la propriété
+    // de la stratégie ; le FSM n'en verra jamais qu'un pointeur.
+    waitAction = extractAction("Wait");
+    resume(); // la stratégie démarre active (status = true)
+}
+
+/*
+    Construit le pool d'actions possibles de la stratégie, avec leur
+    pondération respective. Plus la pondération est grande, plus
+    l'action a de chances d'être choisie par bestAction() lorsqu'elle
+    est disponible (cf. calcul du score plus bas).
+
+*/
+void ExempleStrat::buildPossibleActions(){
+
+    auto addAction = [this](float weight, std::unique_ptr<VirtualAction> action){
+        std::string key = action->getNom();
+        auto result = possible_actions.emplace(key, std::make_pair(weight, std::move(action)));
+        if (!result.second){
+            // emplace() ne remplace pas si la clé existe déjà : deux
+            // actions avec le même nom écraseraient silencieusement l'une
+            // l'autre sinon.
+            LOG_WARNING("ExempleStrat: action '", key.c_str(), "' déjà présente dans le pool, ignorée");
+        }
+    };
+
+    addAction(1.0f, std::make_unique<WaitAction>(400));
+    //addAction(1.0f, std::make_unique<CalibrationAction>(drive, tableStatus));
+    addAction(1.0f, std::make_unique<NavHomeAction>(tableStatus, drive));
+    // Cible dynamique : l'élément de jeu le plus proche connu de tableStatus,
+    // fixé au démarrage de l'action (cf. GoToPositionAction::getClosestElement()).
+    addAction(1.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, drive));
+}
+
+VirtualAction* ExempleStrat::tempAction(){
+    return waitAction.get();
+}
+
+VirtualAction* ExempleStrat::bestAction(){
+    if (!status){
+        return nullptr;
+    }
+
+    if (possible_actions.empty()){
+        LOG_WARNING("ExempleStrat: plus d'action disponible dans le pool");
+        return nullptr;
+    }
+
+    std::string bestKey;
+    float bestScore = -1.0f;
+
+    for (const auto& [key, weightedAction] : possible_actions){
+        float reward;
+        bool available = weightedAction.second->available(reward);
+        if (!available) continue; // action non disponible
+
+        float score = weightedAction.first * reward;
+        if (score > bestScore){
+            bestScore = score;
+            bestKey = key;
+        }
+    }
+
+    if (bestKey.empty()){
+        return nullptr;
+    }
+
+    LOG_GREEN_INFO("ExempleStrat: sélection de l'action ", bestKey.c_str());
+
+    // L'action n'est pas retirée du pool : la stratégie en garde la
+    // propriété, le FSM n'en reçoit qu'un pointeur et pourra la rejouer
+    // tant qu'elle reste disponible.
+    return findAction(bestKey);
+}

@@ -11,95 +11,193 @@ This program enables the robot to perform various tasks such as navigation, data
 ## 🚀 Features
 
 - **Navigation**: The robot can move through its environment using dedicated algorithms.
+- **Vision**: Native C++ ArUco marker detection and feature-based localisation using
+  OpenCV, running in-process (no external Python service). Camera capture uses
+  libcamera on the Raspberry Pi 5 and OpenCV/V4L2 elsewhere.
 - **Data Collection**: The robot gathers and stores data from onboard sensors.
 - **Communication**: The program supports communication with other systems or devices.
 
 ## 🔧 Prerequisites
 
-Before running the program, make sure you have installed the following dependencies:
+- **Docker** (daemon running) — all compilation happens inside containers, so no
+  compiler, CMake, or library needs to be installed on your machine.
+- SSH access to the robot, only if you want to deploy.
 
-```bash
-sudo apt-get install cmake make gcc g++ python3-venv ninja-build
-```
-
-To speed up compilation times massively, you can install CCache and MOLD:
-
-```bash
-sudo apt-get install ccache mold
-```
-
-For ARM (Raspberry Pi) compilation, install:
-
-```bash
-sudo apt-get install g++-aarch64-linux-gnu
-sudo apt install sqlite3
-```
-
-For debugging, install:
-
-```bash
-sudo apt install gdbserver
-```
+Nothing else is needed for `build`, `test`, `deploy`, `shell` or `run-docker`.
+Only `run`, which executes the binary directly on the host instead of inside the
+image, needs the runtime libraries listed in
+[Running on the host](#-running-on-the-host).
 
 ## 📥 Installation
 
 1. **Do not clone this repository by itself!**  
-   Instead, clone the main CDFR repository with the `--recursive` flag to include all submodules:
+   Instead, clone the main CDFR repository with the `--recursive` flag so the
+   `rplidar_sdk` submodule is checked out:
 
    ```bash
    git clone git@github.com:robotronik/CDFR.git --recursive
    ```
 
-2. Navigate to the CDFR-Programme-Robot directory:
+   If you already cloned it without `--recursive`, initialize the submodule:
 
    ```bash
-   cd informatique/CDFR-Programme-Robot/
+   git submodule update --init --recursive
    ```
 
-3. Switch to the `main` branch and update the project:
+2. Navigate to the project directory:
 
    ```bash
-   git checkout main
-   git pull
+   cd informatique/CDFR2026-Programme-Robot/
    ```
 
-4. (Optional) You may want to setup the LSP Server (clangd) if you are not on VSCode. To do so, run:
-   
-   ```bash
-   bash build.sh setup-lsp
-   ```
+The `drive_interface.h` / `protocol.h` headers are fetched automatically into the
+build images, and OpenCV, SQLite and (on ARM) libcamera are installed there too,
+so nothing needs to be installed on the host. The camera calibration files used
+at runtime live in [`data/`](data).
 
 ## 💻 Compilation
 
-To compile the program on your machine, simply run:
+Everything runs inside Docker; the host compiler is never used.
 
 ```bash
-bash build.sh build
+./build.sh build          # Build both x86_64 and arm64
+./build.sh build x86_64   # Build a single target
+./build.sh build arm64
+./build.sh run            # Build x86_64 and run it on the host (needs sudo + OpenCV 4.6)
+./build.sh run-docker     # Build x86_64 and run it inside the Docker image (no host deps)
+./build.sh test           # Build x86_64 and run the CTest suite
+./build.sh deploy         # Build arm64 and deploy it to the robot
+./build.sh shell          # Interactive shell in the x86_64 image
+./build.sh shell arm64    # Interactive shell in the arm64 image
+./build.sh images         # (Re)build the Docker images
+./build.sh clean          # Remove the build/ directory
 ```
 
-To compile for ARM (Raspberry Pi) :
+`./build.sh run` executes the x86_64 binary from `build/x86_64` (so it finds its
+`html/` and `data/` assets) and needs `sudo` because the REST server binds port 80,
+on top of the host libraries listed below.
+
+`./build.sh run-docker` runs the very same binary inside the `cdfr-builder-x86_64`
+image instead. It needs neither `sudo` nor any host library, and it is the
+portable way to run the program when the host's OpenCV version differs from the
+one used to build (the binary is linked against OpenCV 4.6 and will fail with
+`libopencv_aruco.so.406: cannot open shared object file` on a host that ships a
+different version). Internally the container runs as root — needed so that
+`--cap-add=SYS_NICE` can raise the program's real-time priority, the same thing
+`sudo` does for `run` — and binds port 80 through `--network host`. As a result
+the files it writes (the `log/` directory) are owned by root on the host.
+
+Local x86_64 builds have no hardware, so they use the emulated I2C, disable the
+lidar, and run the API in test mode; the **MAT is disabled** as well (it is the
+robot's vision server) — the ARM build keeps it enabled. Override with
+`-DCDFR_ENABLE_MAT=ON` when needed.
+
+### 🏃 Running on the host
+
+`./build.sh run` executes the binary outside Docker, so the host must provide the
+same shared libraries the binary was linked against. Those come from the image's
+OpenCV 4.6 (Ubuntu 24.04 packaging), plus `sudo`/`CAP_SYS_NICE` for the real-time
+scheduler and port 80.
+
+On **Ubuntu 24.04**:
 
 ```bash
-bash build.sh build_arm
+sudo apt install libopencv-contrib406t64 libopencv-videoio406t64
 ```
 
-To run tests:
+`libopencv-contrib406t64` brings the contrib module set (`libopencv_aruco.so.406`)
+and its core dependencies; `libopencv-videoio406t64` provides the camera/video
+I/O module. Both are needed — a plain `libopencv-dev` install of a *different*
+OpenCV version is not enough, since the loader matches the exact `406` ABI.
 
-```bash
-bash build.sh tests
+On a host whose OpenCV is a different version (for example 25.04 ships OpenCV
+4.10 as `libopencv_*410`), these libraries cannot be installed from the
+distribution repositories. Use `./build.sh run-docker` there instead of installing
+OpenCV by hand.
+
+Artifacts are written to `build/x86_64/programCDFR` and
+`build/arm64/programCDFR`. Each build directory also contains the runtime bundle
+shipped alongside the executable (`html/`, `data/`, `tests/lidar` and
+`autoRunInstaller.sh`); CI zips these into the `programCDFR-<arch>` artifacts.
+
+- The workspace is mounted at its own path, so build outputs appear directly on
+  the host and file ownership is preserved.
+- The two images are defined in [`docker/Dockerfile.x86_64`](docker/Dockerfile.x86_64)
+  and [`docker/Dockerfile.arm64`](docker/Dockerfile.arm64); rebuild them with
+  `./build.sh images` after changing their contents.
+- VS Code / CLion Dev Container support is available via
+  [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json).
+
+### 🪟 Windows (Docker Desktop)
+
+On Windows, use `build.bat` (a thin launcher for `build.ps1`). It drives the same
+Docker images as `build.sh`, so no compiler, CMake or library is needed on the
+host — only Docker Desktop, which must be running.
+
+```bat
+build.bat build          REM Build both x86_64 and arm64
+build.bat build arm64
+build.bat run            REM Build x86_64 and run it locally (REST API on http://localhost)
+build.bat test           REM Build x86_64 and run the CTest suite
+build.bat deploy         REM Build arm64 and deploy it to the robot
+build.bat shell          REM Interactive shell in the x86_64 image
+build.bat images         REM (Re)build the Docker images
+build.bat clean          REM Remove the build\ directory
 ```
 
-To clean the build files:
+Windows-specific notes:
 
-```bash
-bash build.sh clean
-```
+- The repository is mounted at `/work` inside the container (Windows paths cannot
+  be reused as Linux paths as in `build.sh`); build outputs still appear on the
+  host under `build\<arch>`.
+- `build.bat run` publishes container port 80 on `http://localhost`. Override the
+  host port with the `CDFR_RUN_PORT` environment variable
+  (e.g. `set CDFR_RUN_PORT=8080`).
+- `build.bat deploy` authenticates with the SSH keys in `%USERPROFILE%\.ssh`,
+  mounted read-only into the container. Set them up for the robot first (the
+  Windows OpenSSH client ships with `ssh-keygen`/`ssh`; `ssh-copy-id` is not
+  available, so append your public key to the robot's `~/.ssh/authorized_keys`).
+  A passphrase-protected key needs an SSH agent (`ssh-agent` + `ssh-add`).
+- The x86_64 build disables `compile_commands.json` export on Windows because the
+  symlink it creates cannot be written reliably on a Windows bind mount.
 
 ## 🛠️ Compilation for Raspberry Pi
 
-Ensure you have the necessary dependencies for ARM compilation.
+The ARM binary is cross-compiled by `./build.sh build arm64`; no cross-toolchain or
+sysroot is needed on the host. It targets **Raspberry Pi OS Trixie (64-bit)**: the
+build image is Debian 13, so the binary is linked against the same libraries the Pi
+ships — GCC 14 / glibc 2.41, OpenCV 4.10 (`libopencv_*.so.410`) and the Raspberry Pi
+libcamera fork (`libcamera.so.0.7`).
 
-To compile and deploy the program on your Raspberry Pi, first set up SSH key authentication. To copy your SSH key to the Raspberry Pi (replace `pi@192.168.1.47` with your Raspberry Pi’s address):
+### Runtime dependencies on the Pi
+
+The deployed bundle only contains the executable (`programCDFR`), `html/`, `data/`
+and `autoRunInstaller.sh`; the shared libraries come from the OS. On a 64-bit
+Raspberry Pi OS Trixie, install them once with:
+
+```bash
+sudo apt update
+sudo apt install -y \
+  libsqlite3-0 \
+  libopencv-objdetect410 libopencv-imgcodecs410 libopencv-calib3d410 \
+  libopencv-features2d410 libopencv-imgproc410 libopencv-core410 \
+  libcamera0.7 libcamera-ipa libpisp1
+```
+
+ArUco lives in the core OpenCV `objdetect` module from 4.7 onwards, hence
+`libopencv-objdetect410` (which pulls the remaining OpenCV libraries);
+`libcamera0.7` (from `archive.raspberrypi.com`) is the camera stack the binary was
+linked against and pulls `libcamera-ipa`/`libpisp1`.
+
+Then enable the I2C bus and the UART (used by the actuators and the lidar) via:
+
+```bash
+sudo raspi-config
+```
+
+(The ARM binary is `aarch64` and cannot run on a 32-bit OS.)
+
+To deploy it to your Raspberry Pi, first set up SSH key authentication. To copy your SSH key to the Raspberry Pi (replace `pi@192.168.1.47` with your Raspberry Pi’s address):
 
 ```bash
 ssh-copy-id pi@192.168.1.47
@@ -108,19 +206,7 @@ ssh-copy-id pi@192.168.1.47
 Then compile and deploy with:
 
 ```bash
-bash build.sh deploy
-```
-
-To clean up, run:
-
-```bash
-bash build.sh clean
-```
-
-On a new Raspberry Pi, configure I2C and serial communication via:
-
-```bash
-sudo raspi-config
+./build.sh deploy
 ```
 
 ## 🔍 Service Monitoring and Restart

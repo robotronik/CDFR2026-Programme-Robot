@@ -1,0 +1,24 @@
+{
+  "name": "CDFR2027 Robot Development",
+  "build": {
+    "dockerfile": "../docker/Dockerfile.x86_64",
+    "context": ".."
+  },
+  "workspaceFolder": "/workspaces/CDFR2026-Programme-Robot",
+  "remoteUser": "ubuntu",
+  "mounts": [
+    "source=cdfr-devcontainer-ccache,target=/ccache,type=volume"
+  ],
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "cmake.configureOnOpen": true
+      },
+      "extensions": [
+        "ms-vscode.cmake-tools",
+        "twxs.cmake",
+        "llvm-vs-code-extensions.vscode-clangd"
+      ]
+    }
+  }
+}

@@ -24,7 +24,7 @@ bool test_lidar_opponent() {
         robot_pos.a = 0;
         expected_opponent_pos.x = 340;
         expected_opponent_pos.y = 340;    
-        LIDAR_UNIT_TEST(run_lidar_opponent_test("Lidar Opponent Case 1", "lidar/opponent42cm45degLeft.json", robot_pos, expected_opponent_pos, true))
+        LIDAR_UNIT_TEST(run_lidar_opponent_test("Lidar Opponent Case 1", "tests/lidar/opponent42cm45degLeft.json", robot_pos, expected_opponent_pos, true))
     }
 
     // Test 2
@@ -34,7 +34,7 @@ bool test_lidar_opponent() {
         robot_pos.a = 0;
         expected_opponent_pos.x = 300;
         expected_opponent_pos.y = 0;  
-        LIDAR_UNIT_TEST(run_lidar_opponent_test("Lidar Opponent Case 2", "lidar/opponent30cmFront.json", robot_pos, expected_opponent_pos, true))
+        LIDAR_UNIT_TEST(run_lidar_opponent_test("Lidar Opponent Case 2", "tests/lidar/opponent30cmFront.json", robot_pos, expected_opponent_pos, true))
     }
 
     // Test 3
@@ -43,7 +43,7 @@ bool test_lidar_opponent() {
         robot_pos.x = 0;
         robot_pos.y = 0;
         robot_pos.a = 0;    
-        LIDAR_UNIT_TEST(run_lidar_opponent_test("Lidar Opponent Case 3", "lidar/opponentNone.json", robot_pos, expected_opponent_pos, false))
+        LIDAR_UNIT_TEST(run_lidar_opponent_test("Lidar Opponent Case 3", "tests/lidar/opponentNone.json", robot_pos, expected_opponent_pos, false))
     }
 
     // Test 4
@@ -53,7 +53,7 @@ bool test_lidar_opponent() {
         robot_pos.a = 90;
         expected_opponent_pos.x = 200;
         expected_opponent_pos.y = 1350;
-        LIDAR_UNIT_TEST(run_lidar_opponent_test("Lidar Opponent Case 4", "lidar/opponent190cmFront.json", robot_pos, expected_opponent_pos, true))
+        LIDAR_UNIT_TEST(run_lidar_opponent_test("Lidar Opponent Case 4", "tests/lidar/opponent190cmFront.json", robot_pos, expected_opponent_pos, true))
     }
 
     // Test 5
@@ -63,7 +63,7 @@ bool test_lidar_opponent() {
         robot_pos.a = 0;
         expected_opponent_pos.x = 0;
         expected_opponent_pos.y = -1500;
-        LIDAR_UNIT_TEST(run_lidar_opponent_test("Lidar Opponent Case 5", "lidar/opponent190cm90degRight.json", robot_pos, expected_opponent_pos, true))
+        LIDAR_UNIT_TEST(run_lidar_opponent_test("Lidar Opponent Case 5", "tests/lidar/opponent190cm90degRight.json", robot_pos, expected_opponent_pos, true))
     }
     return numPassed == numTests;
 }

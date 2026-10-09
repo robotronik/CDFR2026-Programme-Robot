@@ -1,0 +1,84 @@
+# Build image for the aarch64 (Raspberry Pi) target.
+# Compiles on amd64 using the aarch64-linux-gnu cross toolchain; target
+# libraries (e.g. sqlite3) come from arm64 multiarch packages.
+#
+# The base is Debian 13 (trixie) so the produced binary matches Raspberry Pi OS
+# Trixie: GCC 14 / glibc 2.41 and OpenCV 4.10 (libopencv_*.so.410) come from
+# Debian, while libcamera (libcamera.so.0.7) comes from the Raspberry Pi fork on
+# archive.raspberrypi.com, mirroring the camera stack the Pi itself ships.
+
+FROM debian:trixie
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Enable arm64 packages in addition to the amd64 host packages. Unlike Ubuntu,
+# deb.debian.org serves every architecture from the same suites, so the default
+# trixie sources already cover arm64. The Raspberry Pi archive is then added for
+# the libcamera fork that drives the Pi 5 camera.
+#
+# Its InRelease is still signed with a SHA1-bound key, which trixie's `sqv`
+# verifier refuses ("SHA1 is not considered secure"), so the archive is marked
+# trusted rather than verified with a signed-by keyring. Both architectures are
+# enabled: its packages are Multi-Arch: same, so the amd64 twin has to be
+# installable alongside the arm64 one.
+RUN dpkg --add-architecture arm64 \
+    && printf '%s\n' \
+        'deb [trusted=yes] http://archive.raspberrypi.com/debian/ trixie main' \
+        > /etc/apt/sources.list.d/raspberrypi.list
+
+# The Pi archive rebuilds many base libraries with a `+rpt` suffix. Those are
+# Multi-Arch: same, so pulling them for arm64 would clash with the amd64
+# counterparts (which only exist in Debian). Keep the Pi archive at a low
+# priority so Debian wins everywhere, and only prefer it for the libcamera stack.
+# The specific record must name the foreign architecture explicitly (pkg:arm64),
+# otherwise it does not match; libpisp1 is Multi-Arch: same and also exists in
+# Debian, so both architectures must be pinned to the Pi version or apt cannot
+# pair the arm64 libcamera0.7 with a matching libpisp1.
+RUN printf '%s\n' \
+        'Package: libcamera-dev:arm64 libcamera0.7:arm64 libcamera-ipa:arm64 libpisp1:arm64 libpisp1:amd64 libpisp-common' \
+        'Pin: origin "archive.raspberrypi.com"' \
+        'Pin-Priority: 1000' \
+        '' \
+        'Package: *' \
+        'Pin: origin "archive.raspberrypi.com"' \
+        'Pin-Priority: 100' \
+        > /etc/apt/preferences.d/raspberrypi.pref
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        cmake \
+        ninja-build \
+        git \
+        ca-certificates \
+        pkg-config \
+        gcc-aarch64-linux-gnu \
+        g++-aarch64-linux-gnu \
+        libsqlite3-dev:arm64 \
+        libopencv-dev:arm64 \
+        libopencv-contrib-dev:arm64 \
+        libcamera-dev:arm64 \
+        rsync \
+        openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# External robot repositories: drive/protocol headers used at compile time.
+# Baked into the image so the build is self-contained.
+ARG DRIVE_CONTROL_REF=main
+ARG ACTIONNEUR_REF=master
+RUN mkdir -p /opt/cdfr \
+    && git clone --depth 1 --branch "${DRIVE_CONTROL_REF}" \
+        https://github.com/robotronik/CDFR2026-Program-DriveControl.git \
+        /opt/cdfr/CDFR2026-Program-DriveControl \
+    && git clone --depth 1 --branch "${ACTIONNEUR_REF}" \
+        https://github.com/robotronik/cdfr2024-programme-Actionneur.git \
+        /opt/cdfr/cdfr2024-programme-Actionneur \
+    && rm -rf /opt/cdfr/*/.git
+
+# Debian has no non-root user, so create `ubuntu` (uid/gid 1000) like the old
+# Ubuntu base did: files created in the mounted workspace stay user-owned, and
+# build.sh's --user "$(id -u):$(id -g)" and the $HOME/.ssh bind mount have a
+# home to land in.
+RUN groupadd -g 1000 ubuntu \
+    && useradd -m -u 1000 -g 1000 -s /bin/bash ubuntu
+ENV HOME=/home/ubuntu
+
+WORKDIR /workspace

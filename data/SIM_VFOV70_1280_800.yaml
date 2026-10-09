@@ -1,0 +1,16 @@
+%YAML:1.0
+---
+# Virtual camera used by Robotronik_CDFR_Sim_2027.
+# 1280x800, no lens distortion, vertical field of view 70 deg.
+# focal_px = (height / 2) / tan(vfov / 2) = (800 / 2) / tan(35 deg)
+camera_matrix: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 5.7125920269684580e+02, 0., 6.4000000000000000e+02, 0.,
+       5.7125920269684580e+02, 4.0000000000000000e+02, 0., 0., 1. ]
+dist_coeffs: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data: [ 0., 0., 0., 0., 0. ]

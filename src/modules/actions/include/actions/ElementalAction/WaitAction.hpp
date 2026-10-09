@@ -1,0 +1,31 @@
+#pragma once
+#include "actions/VirtualAction.hpp"
+
+/*
+    Action d'attente simple : temporise pendant WAIT_DURATION_MS
+    puis rend la main (FSM_RETURN_DONE) pour permettre au FSM
+    de recalculer la meilleure action à effectuer.
+*/
+class WaitAction : public VirtualAction {
+    public:
+        WaitAction(unsigned long wait = WAIT_DURATION_MS);
+        ~WaitAction() override = default;
+
+        ReturnFSM_t run() override;
+        bool stop() override;
+        void reset() override;
+        bool available(float &reward) override;
+        bool fullBlock() override;
+        bool mouvementBlock() override;
+
+    protected:
+        /*
+            Error management and sucess management not used but still implemented for exemple
+        */
+        bool errorManagement();
+        bool successManagement();
+    private:
+        static constexpr unsigned long WAIT_DURATION_MS = 500;
+        unsigned long wait = WAIT_DURATION_MS;
+        unsigned long startTime;
+};

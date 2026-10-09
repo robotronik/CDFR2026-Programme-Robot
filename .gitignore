@@ -5,8 +5,7 @@
 *.out
 
 
-/build/
-/build_arm/
+/build*/
 /bin/
 /obj/
 /arm_bin/
@@ -33,5 +32,5 @@ Thumbs.db
 !.vscode/launch.json
 !.vscode/c_cpp_properties.json
 
-/compile_commands.json
 .cache/*
+/compile_commands.json

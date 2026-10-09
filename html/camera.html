@@ -18,9 +18,7 @@
             <span class="status-dot ms-3" id="statusDot"></span>
         </div>
 
-        <div id="status-label" class="label-section mt-2">
-            Camera API base: <code id="apiBaseLabel"></code>
-        </div>
+        <div id="status-label" class="label-section mt-2"></div>
 
         <div class="row mb-3 mt-2">
             <div class="col">
@@ -28,9 +26,6 @@
             </div>
             <div class="col">
                 <button type="button" class="btn btn-danger w-100" onclick="apiStop()">Stop</button>
-            </div>
-            <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="apiResetTracking()">Reset Tracking</button>
             </div>
             <div class="col">
                 <button type="button" class="btn btn-success w-100" onclick="fetchPosition()">Fetch Position</button>
@@ -42,7 +37,7 @@
                 <button type="button" class="btn btn-success w-100" onclick="fetchPreview()">Fetch Preview</button>
             </div>
             <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="fetchIsolated()">Fetch Isolated</button>
+                <button type="button" class="btn btn-success w-100" onclick="fetchRawPreview()">Fetch Raw Preview</button>
             </div>
         </div>
 
@@ -51,6 +46,37 @@
 
         <div class="label-section">Objects response</div>
         <pre id="objectsOutput" class="p-3 rounded border bg-body-tertiary mb-3">{}</pre>
+
+        <div class="label-section">Tuning (Exposure & Contrast)</div>
+        <div class="p-3 rounded border bg-body-tertiary mb-3">
+            <div class="row g-3 align-items-center mb-2">
+                <div class="col-sm-4">
+                    <label for="evSlider" class="form-label mb-0">Exposure Value (EV): <span id="evVal" class="fw-bold">0.0</span></label>
+                </div>
+                <div class="col-sm-8">
+                    <input type="range" class="form-range" id="evSlider" min="-2.0" max="3.0" step="0.1" value="0.0" oninput="document.getElementById('evVal').innerText=this.value" onchange="applyCameraSettings()">
+                </div>
+            </div>
+            <div class="row g-3 align-items-center mb-2">
+                <div class="col-sm-4">
+                    <label for="contrastSlider" class="form-label mb-0">Contrast: <span id="contrastVal" class="fw-bold">1.2</span></label>
+                </div>
+                <div class="col-sm-8">
+                    <input type="range" class="form-range" id="contrastSlider" min="0.5" max="3.0" step="0.1" value="1.2" oninput="document.getElementById('contrastVal').innerText=this.value" onchange="applyCameraSettings()">
+                </div>
+            </div>
+            <div class="row g-3 align-items-center mb-2">
+                <div class="col-sm-4">
+                    <label for="brightnessSlider" class="form-label mb-0">Brightness: <span id="brightnessVal" class="fw-bold">0.0</span></label>
+                </div>
+                <div class="col-sm-8">
+                    <input type="range" class="form-range" id="brightnessSlider" min="-0.5" max="0.5" step="0.05" value="0.0" oninput="document.getElementById('brightnessVal').innerText=this.value" onchange="applyCameraSettings()">
+                </div>
+            </div>
+            <div class="text-end">
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="applyCameraSettings()">Apply & Refresh</button>
+            </div>
+        </div>
 
         <div class="label-section">Preview</div>
         <div class="p-3 rounded border bg-body-tertiary mb-3 text-center">
@@ -63,9 +89,7 @@
     <div id="alertPlaceholder"></div>
 
     <script>
-        const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000`;
-        const API_BASE_ROBOT = `${window.location.protocol}//${window.location.hostname}`;
-        document.getElementById("apiBaseLabel").textContent = API_BASE;
+        const API_BASE = window.location.origin;
 
         const statusLabel = document.getElementById("status-label");
         const statusDot = document.getElementById("statusDot");
@@ -75,7 +99,7 @@
         const previewPlaceholder = document.getElementById("previewPlaceholder");
 
         function setStatus(text, type = "secondary") {
-            statusLabel.innerHTML = `${text} | Camera API base: <code>${API_BASE}</code>`;
+            statusLabel.innerHTML = text;
             statusDot.className = `status-dot ms-3 bg-${type}`;
         }
 
@@ -85,17 +109,6 @@
 
         async function getJson(path) {
             const response = await fetch(`${API_BASE}${path}`, { method: "GET" });
-            const contentType = response.headers.get("content-type") || "";
-            const payload = contentType.includes("application/json") ? await response.json() : { message: await response.text() };
-
-            if (!response.ok) {
-                throw new Error(payload.message || `HTTP ${response.status}`);
-            }
-            return payload;
-        }
-
-        async function getJson_robot(path) {
-            const response = await fetch(`${API_BASE_ROBOT}${path}`, { method: "GET" });
             const contentType = response.headers.get("content-type") || "";
             const payload = contentType.includes("application/json") ? await response.json() : { message: await response.text() };
 
@@ -125,19 +138,9 @@
             }
         }
 
-        async function apiResetTracking() {
-            try {
-                const data = await getJson("/reset_tracking");
-                setStatus(data.message || "Camera Reset Tracking", "warning");
-            } catch (error) {
-                appendAlert(error.message, "danger");
-                setStatus(error.message, "danger");
-            }
-        }
-
         async function fetchPosition() {
             try {
-                const data = await getJson_robot("/position");
+                const data = await getJson("/position");
                 positionOutput.textContent = jsonPretty(data);
                 setStatus("Position fetched", "success");
             } catch (error) {
@@ -148,7 +151,7 @@
 
         async function fetchObjects() {
             try {
-                const data = await getJson_robot("/get_blockPosition");
+                const data = await getJson("/objects");
                 objectsOutput.textContent = jsonPretty(data);
                 setStatus("Objects fetched", "success");
             } catch (error) {
@@ -157,37 +160,99 @@
             }
         }
 
-        async function fetchIsolated() {
+        async function fetchImage(path, imageEl, placeholderEl, successMessage) {
+            const response = await fetch(`${API_BASE}${path}`, { method: "GET" });
+            if (!response.ok) {
+                let message = `HTTP ${response.status}`;
+                try {
+                    const errJson = await response.json();
+                    if (errJson.message) message = errJson.message;
+                } catch (_) {}
+                throw new Error(message);
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+
+            if (imageEl.dataset.objectUrl) {
+                URL.revokeObjectURL(imageEl.dataset.objectUrl);
+            }
+            imageEl.dataset.objectUrl = url;
+            imageEl.src = url;
+            imageEl.classList.remove("d-none");
+            placeholderEl.classList.add("d-none");
+
+            setStatus(successMessage, "success");
+        }
+
+        async function fetchPreview() {
             try {
-                const data = await getJson_robot("/get_isolated");
-                objectsOutput.textContent = jsonPretty(data);
-                setStatus("Isolated objects fetched", "success");
+                await fetchImage("/preview", previewImage, previewPlaceholder, "Preview fetched");
             } catch (error) {
                 appendAlert(error.message, "danger");
                 setStatus(error.message, "danger");
             }
         }
 
-        async function fetchPreview() {
+        async function fetchRawPreview() {
             try {
-                const response = await fetch(`${API_BASE}/preview`, { method: "GET" });
+                await fetchImage("/preview_raw", previewImage, previewPlaceholder, "Raw preview fetched");
+            } catch (error) {
+                appendAlert(error.message, "danger");
+                setStatus(error.message, "danger");
+            }
+        }
+
+        async function fetchCameraSettings() {
+            try {
+                const data = await getJson("/camera_settings");
+                if (data.exposure_value !== undefined) {
+                    const ev = parseFloat(data.exposure_value).toFixed(1);
+                    document.getElementById("evSlider").value = ev;
+                    document.getElementById("evVal").innerText = ev;
+                }
+                if (data.contrast !== undefined) {
+                    const ct = parseFloat(data.contrast).toFixed(1);
+                    document.getElementById("contrastSlider").value = ct;
+                    document.getElementById("contrastVal").innerText = ct;
+                }
+                if (data.brightness !== undefined) {
+                    const br = parseFloat(data.brightness).toFixed(2);
+                    document.getElementById("brightnessSlider").value = br;
+                    document.getElementById("brightnessVal").innerText = br;
+                }
+            } catch (error) {
+                console.warn("Could not fetch camera settings:", error);
+            }
+        }
+
+        async function applyCameraSettings() {
+            try {
+                const ev = parseFloat(document.getElementById("evSlider").value);
+                const contrast = parseFloat(document.getElementById("contrastSlider").value);
+                const brightness = parseFloat(document.getElementById("brightnessSlider").value);
+
+                const response = await fetch(`${API_BASE}/camera_settings`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        exposure_value: ev,
+                        contrast: contrast,
+                        brightness: brightness
+                    })
+                });
+
                 if (!response.ok) {
-                    let message = `HTTP ${response.status}`;
+                    let msg = `HTTP ${response.status}`;
                     try {
-                        const errJson = await response.json();
-                        if (errJson.message) message = errJson.message;
+                        const err = await response.json();
+                        if (err.message) msg = err.message;
                     } catch (_) {}
-                    throw new Error(message);
+                    throw new Error(msg);
                 }
 
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-
-                previewImage.src = url;
-                previewImage.classList.remove("d-none");
-                previewPlaceholder.classList.add("d-none");
-
-                setStatus("Preview fetched", "success");
+                setStatus("Camera settings applied", "success");
+                await fetchPreview();
             } catch (error) {
                 appendAlert(error.message, "danger");
                 setStatus(error.message, "danger");
@@ -213,6 +278,7 @@
             alertPlaceholder.append(wrapper);
         }
 
+        fetchCameraSettings();
         setStatus("Ready", "secondary");
     </script>
 

@@ -1,0 +1,52 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "x86_64",
+      "displayName": "x86_64",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/x86_64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CDFR_EXTERNAL_DIR": "/opt/cdfr"
+      }
+    },
+    {
+      "name": "arm64",
+      "displayName": "arm64 (aarch64 cross-compilation)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/arm64",
+      "toolchainFile": "${sourceDir}/cmake/aarch64_toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CDFR_EXTERNAL_DIR": "/opt/cdfr"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "x86_64",
+      "configurePreset": "x86_64"
+    },
+    {
+      "name": "arm64",
+      "configurePreset": "arm64"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "x86_64",
+      "configurePreset": "x86_64",
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "verbose"
+      }
+    }
+  ]
+}

@@ -1,19 +1,20 @@
 {
     "configurations": [
         {
-            "name": "CDFR25",
+            "name": "CDFR2027",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/include",
+                "${workspaceFolder}/../CDFR2026-Program-DriveControl/include/interface",
                 "${workspaceFolder}/../cdfr2024-programme-Actionneur/include/common",
-                "${workspaceFolder}/../CDFR2026-Program-DriveControl/include/interface"
+                "/usr/include/opencv4"
             ],
-            "defines": [],
-            "compilerPath": "/usr/bin/gcc",
+            "defines": [
+                "DISABLE_MAT"
+            ],
+            "compilerPath": "/usr/bin/g++",
             "cStandard": "c17",
             "cppStandard": "gnu++17",
-            "intelliSenseMode": "linux-gcc-x64",
-            "configurationProvider": "ms-vscode.makefile-tools"
+            "intelliSenseMode": "linux-gcc-x64"
         }
     ],
     "version": 4

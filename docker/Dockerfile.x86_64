@@ -1,0 +1,37 @@
+# Build image for the x86_64 target (native compilation inside the container).
+
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        cmake \
+        ninja-build \
+        git \
+        ca-certificates \
+        sudo \
+        libsqlite3-dev \
+        libopencv-dev \
+        libopencv-contrib-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# External robot repositories: drive/protocol headers used at compile time.
+# Baked into the image so the build is self-contained.
+ARG DRIVE_CONTROL_REF=main
+ARG ACTIONNEUR_REF=master
+RUN mkdir -p /opt/cdfr \
+    && git clone --depth 1 --branch "${DRIVE_CONTROL_REF}" \
+        https://github.com/robotronik/CDFR2026-Program-DriveControl.git \
+        /opt/cdfr/CDFR2026-Program-DriveControl \
+    && git clone --depth 1 --branch "${ACTIONNEUR_REF}" \
+        https://github.com/robotronik/cdfr2024-programme-Actionneur.git \
+        /opt/cdfr/cdfr2024-programme-Actionneur \
+    && rm -rf /opt/cdfr/*/.git
+
+# Reuse the base image's non-root `ubuntu` user (uid/gid 1000) so files created
+# in the mounted workspace stay user-owned. Dev Containers remaps its uid to the
+# host user, and build.sh runs with --user "$(id -u):$(id -g)".
+ENV HOME=/home/ubuntu
+
+WORKDIR /workspace
