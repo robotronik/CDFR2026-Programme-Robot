@@ -50,14 +50,15 @@ std::string findCalibrationPath(const std::string& name) {
     return {};
 }
 
-// Lists the game element captures, whose filenames encode the camera pose:
+// Lists the game element (object detection) captures in tests/data/aruco_blocs,
+// whose filenames encode the camera pose:
 // capture_<n>_x<X>_y<Y>_yaw<A>_pitch<P>_vfov<V>_hfov<H>.png. A leading path
 // prefix is tried so the tests run from either the build or the source tree.
 std::vector<std::string> captureNames() {
     const std::string prefixes[] = {"tests/data/", "../tests/data/", ""};
     for (const std::string& prefix : prefixes) {
         std::vector<std::string> names;
-        cv::glob(prefix + "capture_*.png", names, false);
+        cv::glob(prefix + "aruco_blocs/capture_*.png", names, false);
         if (!names.empty()) {
             std::vector<std::string> basenames;
             for (const std::string& path : names) {
@@ -95,6 +96,20 @@ std::string findLocatorImage(const std::string& name) {
     const std::string candidates[] = {
         "tests/data/aruco_loc/" + name,
         "../tests/data/aruco_loc/" + name,
+    };
+    for (const std::string& path : candidates) {
+        if (!cv::imread(path, cv::IMREAD_GRAYSCALE).empty()) {
+            return path;
+        }
+    }
+    return {};
+}
+
+// Resolves one game element capture in tests/data/aruco_blocs.
+std::string findBlocsImage(const std::string& name) {
+    const std::string candidates[] = {
+        "tests/data/aruco_blocs/" + name,
+        "../tests/data/aruco_blocs/" + name,
     };
     for (const std::string& path : candidates) {
         if (!cv::imread(path, cv::IMREAD_GRAYSCALE).empty()) {
@@ -401,7 +416,7 @@ bool test_game_element_cube_center() {
 
     const std::vector<std::string> captures = captureNames();
     if (captures.empty()) {
-        LOG_ERROR("Game element test - no capture found in tests/data");
+        LOG_ERROR("Game element test - no capture found in tests/data/aruco_blocs");
         return false;
     }
 
@@ -421,7 +436,7 @@ bool test_game_element_cube_center() {
             return false;
         }
 
-        const std::string imagePath = findImagePath(name);
+        const std::string imagePath = findBlocsImage(name);
         if (imagePath.empty()) {
             LOG_ERROR("Game element test - missing capture ", name);
             return false;
