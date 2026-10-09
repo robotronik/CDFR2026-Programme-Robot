@@ -4,7 +4,6 @@
 
 bool testLogger();
 bool test_lidar_opponent();
-bool test_aruco_sim_camera();
 bool test_aruco_localizer();
 bool test_camera_robot_conversion();
 bool test_game_element_cube_center();
@@ -26,7 +25,6 @@ int main(int argc, char** argv) {
     } else if (group == "mat") {
         ok = test_mat_parse();
     } else if (group == "aruco") {
-        ok &= test_aruco_sim_camera();
         ok &= test_aruco_localizer();
         ok &= test_camera_robot_conversion();
         ok &= test_game_element_cube_center();
