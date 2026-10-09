@@ -70,6 +70,40 @@ std::vector<std::string> captureNames() {
     return {};
 }
 
+// Lists the real localisation captures, tests/data/aruco_loc/<n>.jpg, hosting
+// every frame the detector must be able to localise from. A leading path prefix
+// is tried so the tests run from either the build or the source tree.
+std::vector<std::string> locatorCaptureNames() {
+    const std::string prefixes[] = {"tests/data/", "../tests/data/", ""};
+    for (const std::string& prefix : prefixes) {
+        std::vector<std::string> names;
+        cv::glob(prefix + "aruco_loc/*.jpg", names, false);
+        if (!names.empty()) {
+            std::vector<std::string> basenames;
+            for (const std::string& path : names) {
+                basenames.push_back(path.substr(path.find_last_of('/') + 1));
+            }
+            std::sort(basenames.begin(), basenames.end());
+            return basenames;
+        }
+    }
+    return {};
+}
+
+// Resolves one real localisation capture in tests/data/aruco_loc.
+std::string findLocatorImage(const std::string& name) {
+    const std::string candidates[] = {
+        "tests/data/aruco_loc/" + name,
+        "../tests/data/aruco_loc/" + name,
+    };
+    for (const std::string& path : candidates) {
+        if (!cv::imread(path, cv::IMREAD_GRAYSCALE).empty()) {
+            return path;
+        }
+    }
+    return {};
+}
+
 // Reads the camera pose from a capture filename. Returns false when the name
 // does not carry the expected fields.
 bool parseCapturePose(const std::string& name, position_t& cameraPose) {
@@ -207,22 +241,25 @@ bool test_aruco_sim_camera() {
 }
 
 // ArucoLocalizer wraps the detector and reports the camera's field position from
-// the known landmark tags, or says it could not find one.
+// the known landmark tags, or says it could not find one. The captures in
+// tests/data/aruco_loc come from the robot's real OV9281 camera (1280x800) and
+// are printed with very low contrast, so every one of them must still yield a
+// landmark tag and a camera fix.
+//
+// The camera is bolted to the robot, so the height it reports from the tag poses
+// is the same in every capture. A frame whose fix falls outside the accepted
+// band is a wrong pose (a tag seen at a very oblique angle is the usual cause),
+// not a different mounting, so it fails the test.
 bool test_aruco_localizer() {
-    struct SampleCase {
-        const char* image;
-        double cameraFieldX;
-        double cameraFieldY;
-        double headingDeg;
-    };
-    static const SampleCase kCases[] = {
-        {"sim_capture_22_tag22.png", 586.6, -810.1, -109.2},
-        {"sim_capture_82_tag21.png", -310.9, 706.4, -236.9},
-    };
-
-    const std::string calibrationPath = findCalibrationPath("SIM_VFOV70_1280_800.yaml");
+    const std::string calibrationPath = findCalibrationPath("OV9281_1280_800.yaml");
     if (calibrationPath.empty()) {
-        LOG_ERROR("ArUco localizer test - missing virtual camera calibration");
+        LOG_ERROR("ArUco localizer test - missing OV9281 calibration");
+        return false;
+    }
+
+    const std::vector<std::string> captures = locatorCaptureNames();
+    if (captures.empty()) {
+        LOG_ERROR("ArUco localizer test - no capture found in tests/data/aruco_loc");
         return false;
     }
 
@@ -232,39 +269,73 @@ bool test_aruco_localizer() {
         return false;
     }
 
-    for (const SampleCase& testCase : kCases) {
-        const std::string imagePath = findImagePath(testCase.image);
+    // The height the tag poses report must match the camera mounting constant,
+    // so the accepted band is centred on it.
+    constexpr double kCameraHeightToleranceMm = 20.0;
+
+    int located = 0;
+    bool heightOk = true;
+    for (const std::string& name : captures) {
+        const std::string imagePath = findLocatorImage(name);
         if (imagePath.empty()) {
-            LOG_ERROR("ArUco localizer test - missing capture ", testCase.image);
+            LOG_ERROR("ArUco localizer test - missing capture ", name);
             return false;
         }
 
         const cv::Mat image = cv::imread(imagePath, cv::IMREAD_COLOR);
+        const std::vector<vision::DetectionResult> detections = localizer.detector().detect(image);
+
+        // The landmark tags (ids 20..23) are the ones the localizer can use.
+        const vision::DetectionResult* landmark = nullptr;
+        for (const vision::DetectionResult& detection : detections) {
+            if (vision::ArucoLocalizer::fieldPosition(detection.id) != nullptr) {
+                landmark = &detection;
+                break;
+            }
+        }
+        if (landmark == nullptr) {
+            LOG_ERROR("ArUco localizer test - no landmark tag detected in ", imagePath);
+            return false;
+        }
+
         vision::CameraPosition position;
-        if (!localizer.locate(image, position)) {
+        if (!localizer.locate(detections, position)) {
             LOG_ERROR("ArUco localizer test - no position found in ", imagePath);
             return false;
         }
-
-        const double positionError = std::hypot(position.x - testCase.cameraFieldX,
-                                                position.y - testCase.cameraFieldY);
-        const double headingError =
-            std::fabs(std::remainder(position.heading - testCase.headingDeg, 360.0));
-
-        LOG_INFO("ArUco localizer test - ", testCase.image, ": camera (",
-                 position.x, ", ", position.y, ") mm, heading ", position.heading,
-                 " deg | expected (", testCase.cameraFieldX, ", ", testCase.cameraFieldY,
-                 ") mm, heading ", testCase.headingDeg, " deg | error ", positionError,
-                 " mm, ", headingError, " deg");
-
-        if (positionError > 15.0) {
-            LOG_ERROR("ArUco localizer test - position error too large: ", positionError, " mm");
+        if (!std::isfinite(position.z) || position.z <= 0.0) {
+            LOG_ERROR("ArUco localizer test - invalid camera height in ", imagePath);
             return false;
         }
-        if (headingError > 5.0) {
-            LOG_ERROR("ArUco localizer test - heading error too large: ", headingError, " deg");
-            return false;
+
+        // Pitch is the angle of the camera's optical axis below the horizon: the
+        // marker-frame height of its forward axis, negated.
+        cv::Matx33d rotation;
+        cv::Rodrigues(landmark->rvec, rotation);
+        const cv::Vec3d viewAxis = rotation.t() * cv::Vec3d(0.0, 0.0, 1.0);
+        const double pitchDeg = std::asin(std::clamp(-viewAxis[2], -1.0, 1.0)) * 180.0 / M_PI;
+
+        LOG_INFO("ArUco localizer test - ", name, ": tag ", landmark->id,
+                 ", camera (", position.x, ", ", position.y, ") mm, height ", position.z,
+                 " mm, pitch ", pitchDeg, " deg, heading ", position.heading, " deg");
+
+        if (std::fabs(position.z - CAMERA_HEIGHT_MM) > kCameraHeightToleranceMm) {
+            LOG_ERROR("ArUco localizer test - ", name, ": camera height ", position.z,
+                      " mm is outside [", CAMERA_HEIGHT_MM - kCameraHeightToleranceMm, ", ",
+                      CAMERA_HEIGHT_MM + kCameraHeightToleranceMm, "] mm");
+            heightOk = false;
         }
+        ++located;
+    }
+
+    if (located != static_cast<int>(captures.size())) {
+        LOG_ERROR("ArUco localizer test - only ", located, " of ", captures.size(),
+                  " captures located");
+        return false;
+    }
+    if (!heightOk) {
+        LOG_ERROR("ArUco localizer test - the camera height is not fixed across all captures");
+        return false;
     }
 
     // A frame with no known tag must report that no position was found.
