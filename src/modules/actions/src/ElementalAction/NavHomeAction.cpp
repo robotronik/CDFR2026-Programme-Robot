@@ -51,7 +51,7 @@ bool NavHomeAction::available(float &reward){
     if(!pathfind(drive->getPosition(), homePos, path, path_length_mm)){
         return false;
     }
-    reward = duree/(float)value;
+    reward = (float)value/(float)path_length_mm;
     return true;
 }
 

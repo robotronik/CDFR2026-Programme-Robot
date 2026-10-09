@@ -5,7 +5,7 @@
 #include "navigation/pathfind.h"
 #include "defs/constante.h"
 #include "actions/ElementalAction/WaitAction.hpp"
-#include "actions/ElementalAction/CalibrationAction.hpp"
+//#include "actions/ElementalAction/CalibrationAction.hpp"
 #include "actions/ElementalAction/NavHomeAction.hpp"
 #include "actions/ElementalAction/GoToPositionAction.hpp"
 
@@ -57,8 +57,6 @@ void ExempleStrat::reset(){
 */
 void ExempleStrat::buildPossibleActions(){
 
-    position_t objective = {0, 0, 0}; // exemple smple on va au centre de la table
-
     auto addAction = [this](float weight, std::unique_ptr<VirtualAction> action){
         std::string key = action->getNom();
         auto result = possible_actions.emplace(key, std::make_pair(weight, std::move(action)));
@@ -71,9 +69,11 @@ void ExempleStrat::buildPossibleActions(){
     };
 
     addAction(1.0f, std::make_unique<WaitAction>(400));
-    addAction(1.0f, std::make_unique<CalibrationAction>(drive, tableStatus));
+    //addAction(1.0f, std::make_unique<CalibrationAction>(drive, tableStatus));
     addAction(1.0f, std::make_unique<NavHomeAction>(tableStatus, drive));
-    addAction(1.0f, std::make_unique<GoToPositionAction>("MoveAction", objective, drive));
+    // Cible dynamique : l'élément de jeu le plus proche connu de tableStatus,
+    // fixé au démarrage de l'action (cf. GoToPositionAction::getClosestElement()).
+    addAction(1.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, drive));
 }
 
 VirtualAction* ExempleStrat::tempAction(){

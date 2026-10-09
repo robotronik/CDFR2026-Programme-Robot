@@ -16,7 +16,7 @@ TableState::~TableState(){}
 void TableState::reset(){
     resetCalibrationAge();
     /* reset of specific The legend of Camelot */
-
+    elements.clear();
 }
 
 // Function to check if a point (px, py) lies inside the rectangle
@@ -56,10 +56,12 @@ void to_json(json& j, const TableState& ts) {
 }
 
 void TableState::updateMapStatus(){
-    // Le mat voit le robot adverse (tag de couleur opposée) : sa position fait
-    // foi. Les éléments de jeu restent disponibles via getMatTableData() pour
-    // les stratégies.
     const MatTableData data = getMatTableData();
+
+    elements = data.elements;
+
+    // Le mat voit le robot adverse (tag de couleur opposée) : sa position fait
+    // foi.
     if (!data.opponentVisible) {
         return; // on conserve la dernière position connue
     }

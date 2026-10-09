@@ -1,7 +1,9 @@
 #pragma once
 #include "defs/structs.hpp"
+#include "mat/mat.hpp"
 #include "navigation/driveControl.h"
 #include <utils/json.hpp>
+#include <vector>
 
 using json = nlohmann::json;
 
@@ -32,6 +34,10 @@ class TableState
         bool isRobotInArrivalZone(position_t position);
 
         /* data the Legend of Camelot */
+        // Objets de jeu vus par le mat, mémorisés par updateMapStatus().
+        // Les stratégies (ex: GoToPositionAction) les utilisent pour viser
+        // l'élément le plus proche du robot.
+        std::vector<MatGameElement> elements;
 
     private:
         DriveControl* drive;
