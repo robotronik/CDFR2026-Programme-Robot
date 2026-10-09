@@ -8,8 +8,6 @@
 #include <opencv2/imgcodecs.hpp>
 
 #include "vision/Cam.hpp"
-#include "vision/ArucoDetector.hpp"
-#include "vision/ArucoLocalizer.hpp"
 #include "utils/logger.hpp"
 
 namespace {
@@ -189,12 +187,7 @@ bool test_aruco_localizer() {
 // The camera is mounted off the robot's centre, so the two frames differ;
 // robotToCamera() and cameraToRobot() must be inverses of each other.
 bool test_camera_robot_conversion() {
-    struct SampleCase {
-        double robotX;
-        double robotY;
-        double robotA;
-    };
-    static const SampleCase kCases[] = {
+    static const position_t kCases[] = {
         {0.0, 0.0, 0.0},
         {500.0, -300.0, 90.0},
         {-250.0, 780.0, -135.0},
@@ -202,8 +195,7 @@ bool test_camera_robot_conversion() {
 
     const double mountingDistance = std::hypot(OFFSET_CAM_X, OFFSET_CAM_Y);
 
-    for (const SampleCase& testCase : kCases) {
-        const position_t robot = {testCase.robotX, testCase.robotY, testCase.robotA};
+    for (const position_t& robot : kCases) {
         position_t camera = robotToCamera(robot);
 
         const double offset = std::hypot(camera.x - robot.x, camera.y - robot.y);

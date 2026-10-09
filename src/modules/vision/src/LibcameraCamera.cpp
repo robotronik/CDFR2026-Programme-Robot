@@ -1,6 +1,5 @@
 #include "vision/LibcameraCamera.hpp"
 
-#include <algorithm>
 #include <chrono>
 #include <cstring>
 

@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <cmath>
 #include <string>
 #include <vector>
 
@@ -7,7 +6,6 @@
 #include <opencv2/imgcodecs.hpp>
 
 #include "utils/logger.hpp"
-#include "vision/CamLocalizer.hpp"
 #include "vision/FeaturesLocalizer.hpp"
 
 namespace {

@@ -389,12 +389,11 @@ std::vector<DetectionResult> ArucoDetector::detect(const cv::Mat& frame) {
 
     std::vector<std::vector<cv::Point2f>> markerCorners;
     std::vector<int> ids;
-    std::vector<std::vector<cv::Point2f>> rejected;
 
 #if ARUCO_OPENCV_NEW_API
-    detector_->detectMarkers(gray, markerCorners, ids, rejected);
+    detector_->detectMarkers(gray, markerCorners, ids);
 #else
-    cv::aruco::detectMarkers(gray, dictionary_, markerCorners, ids, parameters_, rejected);
+    cv::aruco::detectMarkers(gray, dictionary_, markerCorners, ids, parameters_);
 #endif
 
     results.reserve(ids.size());
