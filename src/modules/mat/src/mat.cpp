@@ -7,6 +7,8 @@
 // API REST du mat de vision (HTTP/TCP), port 5000 par défaut.
 const std::string MAT_URL = std::string(MAT_HOST) + ":" + std::to_string(MAT_PORT);
 
+const std::string MAT_LIVE_PATH = "/fleet/live";
+
 namespace {
 
 // Le mat répond en quelques millisecondes sur le réseau local ; les délais
@@ -151,7 +153,10 @@ void StopMat() {
 bool getMapStatus() {
     json response;
 
-    if (!restAPI_GET_(MAT_URL, "/objects", response) || !response.is_object()) {
+    // /fleet/live est la route de l'API du mat qui expose l'adversaire et les
+    // objets de jeu dans le repère table ; /objects renvoie tous les tags
+    // (robots compris) et n'a pas de champ "opponents".
+    if (!restAPI_GET_(MAT_URL, MAT_LIVE_PATH, response) || !response.is_object()) {
         LOG_ERROR("Failed to fetch map status from MAT");
         return false;
     }

@@ -15,6 +15,9 @@ using json = nlohmann::json;
 
 extern const std::string MAT_URL;
 
+// Route de l'API du mat exposant l'adversaire et les objets de jeu.
+extern const std::string MAT_LIVE_PATH;
+
 // Un élément de jeu vu par le mat (repère table : mm et degrés).
 struct MatGameElement {
     int id = 0;
@@ -33,12 +36,14 @@ struct MatTableData {
     std::vector<MatGameElement> elements;
 };
 
-// Convertit une réponse de /fleet/live en données exploitables (testable sans réseau).
+// Convertit une réponse GET /fleet/live en données exploitables (testable sans réseau).
 MatTableData parseMatTableData(const json& response);
 
 // Dernier état reçu du mat (lu par TableState::updateMapStatus()).
 MatTableData getMatTableData();
 
+// Interroge le mat (GET /fleet/live) et mémorise l'état reçu.
 bool getMapStatus();
+// Démarre (GET /start) puis arrête (GET /stop) la détection du mat.
 bool StartMat(bool& connectionOk);
 void StopMat();

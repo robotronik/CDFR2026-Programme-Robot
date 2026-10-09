@@ -1,17 +1,24 @@
 #include "mat/mat.hpp"
 
-// Vérifie la lecture d'une réponse /fleet/live du mat : position de l'adversaire
-// et objets de jeu, y compris les champs manquants ou nuls.
+// Vérifie la lecture d'une réponse GET /fleet/live du mat : position de
+// l'adversaire et objets de jeu, y compris les champs manquants ou nuls.
 bool test_mat_parse() {
+    // La route interrogée par getMapStatus() doit rester celle de l'API du mat.
+    if (MAT_LIVE_PATH != "/fleet/live") return false;
+
     const json payload = json::parse(R"JSON({
         "our_color": "blue",
         "opponent_color": "yellow",
+        "table": {"width_mm": 3000.0, "height_mm": 2000.0},
         "objects": [
             {"id": 13, "label": "element", "x": 705.2, "y": -410.9, "a": 45.3},
             {"id": 13, "label": "element", "x": 710.1, "y": -398.2, "a": -44.6}
         ],
-        "opponents": [{"id": 6, "x": -250.0, "y": -400.0, "a": -75.0}],
-        "robots": [{"key": "main", "x": 300.0, "y": 250.0, "a": 30.0}]
+        "opponents": [{"id": 6, "label": "yellow", "x": -250.0, "y": -400.0, "a": -75.0,
+                       "path": [{"x": -250.0, "y": -400.0, "a": -75.0, "t": 12.5}]}],
+        "robots": [{"key": "main", "role": "main", "name": "Principal", "color": "blue",
+                    "source": "camera", "online": true, "x": 300.0, "y": 250.0, "a": 30.0,
+                    "path": []}]
     })JSON");
 
     const MatTableData data = parseMatTableData(payload);
