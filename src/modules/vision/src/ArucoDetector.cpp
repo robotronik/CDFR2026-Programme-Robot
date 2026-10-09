@@ -17,18 +17,13 @@ namespace {
 constexpr int kPredefinedDictionary = cv::aruco::DICT_4X4_50;
 
 // Detection parameters, mirroring the previous Python service
-// (pi_detect_aruco.py). The corner refinement window is left at its default
-// (0.01) which matches the value previously set explicitly in Python.
+// (pi_detect_aruco.py).
 void configureParameters(cv::aruco::DetectorParameters& p) {
     p.adaptiveThreshWinSizeMin = 3;
     p.adaptiveThreshWinSizeMax = 23;
     p.adaptiveThreshWinSizeStep = 10;
-    // The competition tags are printed with low contrast under uneven lighting,
-    // so the marker and its background sit close together and the adaptive
-    // threshold needs a small constant to separate them. A larger constant such
-    // as 20 (chosen for the game element tags' white margin) missed every
-    // low-contrast capture; 13 still detects all the real OV9281 captures in
-    // tests/data/aruco_loc.
+    // Low-contrast tags need a small adaptive-threshold constant (13); larger
+    // values missed the real captures in tests/data/aruco_loc.
     p.adaptiveThreshConstant = 13;
 
     p.minMarkerPerimeterRate = 0.03;
@@ -140,13 +135,8 @@ bool convertRawFrame(const RawFrame& raw, cv::Mat& out) {
     case libcamera::formats::NV12:
     case libcamera::formats::NV21:
     case libcamera::formats::YUV420: {
-        // Plane 0 is the pure grayscale Luminance (Y) channel processed by the ISP.
-        // For a monochrome sensor like the OV9281, the chroma planes (UV) contain
-        // only noise and uncalibrated chroma that produce false green/magenta colors
-        // if converted via YUV2BGR.
-        // Extracting only the Y plane gives 100% pure black & white with zero color
-        // artifacts, while fully leveraging the ISP's hardware contrast, brightness,
-        // and exposure compensation!
+        // Use only the ISP's grayscale Y plane: the chroma planes of the
+        // monochrome OV9281 are pure noise and would add colour artifacts.
         const cv::Mat gray(raw.height, raw.width, CV_8UC1, const_cast<uint8_t*>(raw.data), raw.stride);
         cv::cvtColor(gray, out, cv::COLOR_GRAY2BGR);
         return true;
@@ -269,9 +259,8 @@ bool ArucoDetector::initCamera(int deviceIndex, int width, int height) {
     }
 
     // On Linux the default backend is GStreamer, whose pipeline fails to start
-    // for plain UVC webcams (including the OV9281 and laptop cameras), so
-    // capture never produces a frame. V4L2 talks to the device directly; fall
-    // back to the default backend when it is unavailable.
+    // for plain UVC webcams, so talk to the device through V4L2 and fall back to
+    // the default backend when it is unavailable.
 #ifdef __linux__
     capture_.open(deviceIndex, cv::CAP_V4L2);
     if (!capture_.isOpened()) {
@@ -345,8 +334,7 @@ bool ArucoDetector::captureFrame(cv::Mat& outFrame) {
     RawFrame raw;
     if (!libcamera_->captureFrame(raw) || !convertRawFrame(raw, outFrame)) {
         outFrame.release();
-        // An open device that never delivers a frame is the usual cause of a
-        // missing preview, so report it instead of failing silently.
+        // Report a device that opened but never delivers frames.
         if (captureFailCount_ == 0 || captureFailCount_ % 400 == 0) {
             LOG_WARNING("camera returned no frame (",
                         captureFailCount_ + 1, " failures)");
@@ -362,8 +350,7 @@ bool ArucoDetector::captureFrame(cv::Mat& outFrame) {
     capture_ >> outFrame;
     if (outFrame.empty()) {
         outFrame.release();
-        // An open device that never delivers a frame is the usual cause of a
-        // missing preview, so report it instead of failing silently.
+        // Report a device that opened but never delivers frames.
         if (captureFailCount_ == 0 || captureFailCount_ % 400 == 0) {
             LOG_WARNING("camera returned no frame (",
                         captureFailCount_ + 1, " failures)");

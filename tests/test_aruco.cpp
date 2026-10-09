@@ -29,52 +29,32 @@ std::string findCalibrationPath(const std::string& name) {
     return {};
 }
 
-// Lists the game element (object detection) captures in tests/data/aruco_blocs,
-// whose filenames encode the camera pose:
-// capture_<n>_x<X>_y<Y>_yaw<A>_pitch<P>_vfov<V>_hfov<H>.png. A leading path
-// prefix is tried so the tests run from either the build or the source tree.
-std::vector<std::string> captureNames() {
+// Lists the capture basenames matching `name` under tests/data/<subdir>. A
+// leading path prefix is tried so the tests run from either the build or source
+// tree.
+std::vector<std::string> captureBasenames(const std::string& subdir, const std::string& name) {
     const std::string prefixes[] = {"tests/data/", "../tests/data/", ""};
     for (const std::string& prefix : prefixes) {
-        std::vector<std::string> names;
-        cv::glob(prefix + "aruco_blocs/capture_*.png", names, false);
-        if (!names.empty()) {
-            std::vector<std::string> basenames;
-            for (const std::string& path : names) {
-                basenames.push_back(path.substr(path.find_last_of('/') + 1));
-            }
-            std::sort(basenames.begin(), basenames.end());
-            return basenames;
+        std::vector<std::string> paths;
+        cv::glob(prefix + subdir + name, paths, false);
+        if (paths.empty()) {
+            continue;
         }
+        std::vector<std::string> basenames;
+        for (const std::string& path : paths) {
+            basenames.push_back(path.substr(path.find_last_of('/') + 1));
+        }
+        std::sort(basenames.begin(), basenames.end());
+        return basenames;
     }
     return {};
 }
 
-// Lists the real localisation captures, tests/data/aruco_loc/<n>.jpg, hosting
-// every frame the detector must be able to localise from. A leading path prefix
-// is tried so the tests run from either the build or the source tree.
-std::vector<std::string> locatorCaptureNames() {
-    const std::string prefixes[] = {"tests/data/", "../tests/data/", ""};
-    for (const std::string& prefix : prefixes) {
-        std::vector<std::string> names;
-        cv::glob(prefix + "aruco_loc/*.jpg", names, false);
-        if (!names.empty()) {
-            std::vector<std::string> basenames;
-            for (const std::string& path : names) {
-                basenames.push_back(path.substr(path.find_last_of('/') + 1));
-            }
-            std::sort(basenames.begin(), basenames.end());
-            return basenames;
-        }
-    }
-    return {};
-}
-
-// Resolves one real localisation capture in tests/data/aruco_loc.
-std::string findLocatorImage(const std::string& name) {
+// Resolves one capture named `name` in tests/data/<subdir>.
+std::string findCapture(const std::string& subdir, const std::string& name) {
     const std::string candidates[] = {
-        "tests/data/aruco_loc/" + name,
-        "../tests/data/aruco_loc/" + name,
+        "tests/data/" + subdir + name,
+        "../tests/data/" + subdir + name,
     };
     for (const std::string& path : candidates) {
         if (!cv::imread(path, cv::IMREAD_GRAYSCALE).empty()) {
@@ -84,22 +64,7 @@ std::string findLocatorImage(const std::string& name) {
     return {};
 }
 
-// Resolves one game element capture in tests/data/aruco_blocs.
-std::string findBlocsImage(const std::string& name) {
-    const std::string candidates[] = {
-        "tests/data/aruco_blocs/" + name,
-        "../tests/data/aruco_blocs/" + name,
-    };
-    for (const std::string& path : candidates) {
-        if (!cv::imread(path, cv::IMREAD_GRAYSCALE).empty()) {
-            return path;
-        }
-    }
-    return {};
-}
-
-// Reads the camera pose from a capture filename. Returns false when the name
-// does not carry the expected fields.
+// Reads the camera pose from a capture filename; false when a field is missing.
 bool parseCapturePose(const std::string& name, position_t& cameraPose) {
     const auto field = [&](const std::string& key) -> const char* {
         const size_t at = name.find(key);
@@ -119,16 +84,10 @@ bool parseCapturePose(const std::string& name, position_t& cameraPose) {
 
 } // namespace
 
-// ArucoLocalizer wraps the detector and reports the camera's field position from
-// the known landmark tags, or says it could not find one. The captures in
-// tests/data/aruco_loc come from the robot's real OV9281 camera (1280x800) and
-// are printed with very low contrast, so every one of them must still yield a
-// landmark tag and a camera fix.
-//
-// The camera is bolted to the robot, so the height it reports from the tag poses
-// is the same in every capture. A frame whose fix falls outside the accepted
-// band is a wrong pose (a tag seen at a very oblique angle is the usual cause),
-// not a different mounting, so it fails the test.
+// The real captures in tests/data/aruco_loc (OV9281, 1280x800) are low contrast,
+// so every one must still yield a landmark tag and a camera fix. The camera is
+// bolted to the robot, so the reported height is the same every frame; a fix
+// outside the accepted band is a wrong pose, not a different mounting.
 bool test_aruco_localizer() {
     const std::string calibrationPath = findCalibrationPath("OV9281_1280_800.yaml");
     if (calibrationPath.empty()) {
@@ -136,7 +95,7 @@ bool test_aruco_localizer() {
         return false;
     }
 
-    const std::vector<std::string> captures = locatorCaptureNames();
+    const std::vector<std::string> captures = captureBasenames("aruco_loc/", "*.jpg");
     if (captures.empty()) {
         LOG_ERROR("ArUco localizer test - no capture found in tests/data/aruco_loc");
         return false;
@@ -148,14 +107,13 @@ bool test_aruco_localizer() {
         return false;
     }
 
-    // The height the tag poses report must match the camera mounting constant,
-    // so the accepted band is centred on it.
+    // The accepted band is centred on the camera mounting height.
     constexpr double kCameraHeightToleranceMm = 20.0;
 
     int located = 0;
     bool heightOk = true;
     for (const std::string& name : captures) {
-        const std::string imagePath = findLocatorImage(name);
+        const std::string imagePath = findCapture("aruco_loc/", name);
         if (imagePath.empty()) {
             LOG_ERROR("ArUco localizer test - missing capture ", name);
             return false;
@@ -228,7 +186,7 @@ bool test_aruco_localizer() {
     return true;
 }
 
-// The camera is mounted off the robot's centre, so the two frames differ.
+// The camera is mounted off the robot's centre, so the two frames differ;
 // robotToCamera() and cameraToRobot() must be inverses of each other.
 bool test_camera_robot_conversion() {
     struct SampleCase {
@@ -266,11 +224,9 @@ bool test_camera_robot_conversion() {
     return true;
 }
 
-// A game element is a tagged cube. gameElementFromTag() must report the cube's
-// centre, not the centre of the marker on its visible face. The cube sits at
-// (0, 0, 55) with no rotation in every capture; only the camera moves, so each
-// visible marker must yield the same cube centre whatever the camera pose. Each
-// capture records its camera pose in the filename.
+// gameElementFromTag() must report the cube's centre, not the marker's. The cube
+// sits at (0, 0, 55) with no rotation in every capture, so each visible marker
+// must yield the same centre whatever the camera pose (encoded in the filename).
 bool test_game_element_cube_center() {
     const std::string calibrationPath = findCalibrationPath("SIM_VFOV70_1280_800.yaml");
     if (calibrationPath.empty()) {
@@ -278,7 +234,7 @@ bool test_game_element_cube_center() {
         return false;
     }
 
-    const std::vector<std::string> captures = captureNames();
+    const std::vector<std::string> captures = captureBasenames("aruco_blocs/", "capture_*.png");
     if (captures.empty()) {
         LOG_ERROR("Game element test - no capture found in tests/data/aruco_blocs");
         return false;
@@ -300,7 +256,7 @@ bool test_game_element_cube_center() {
             return false;
         }
 
-        const std::string imagePath = findBlocsImage(name);
+        const std::string imagePath = findCapture("aruco_blocs/", name);
         if (imagePath.empty()) {
             LOG_ERROR("Game element test - missing capture ", name);
             return false;
