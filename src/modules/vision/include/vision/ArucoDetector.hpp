@@ -76,6 +76,14 @@ public:
     // the camera is closed or the frame cannot be read, without throwing.
     bool captureFrame(cv::Mat& outFrame);
 
+    // Controls
+    void setExposureValue(float ev);
+    void setContrast(float contrast);
+    void setBrightness(float brightness);
+    float getExposureValue() const { return exposureValue_; }
+    float getContrast() const { return contrast_; }
+    float getBrightness() const { return brightness_; }
+
     // Detects markers on an already acquired frame (BGR, BGRA or grayscale).
     std::vector<DetectionResult> detect(const cv::Mat& frame);
 
@@ -101,6 +109,10 @@ private:
 #else
     cv::VideoCapture capture_;
 #endif
+    float exposureValue_ = 1.5f;
+    float contrast_ = 1.3f;
+    float brightness_ = 0.0f;
+
     mutable std::mutex captureMutex_;
     // Consecutive failed frame reads, used to report a camera that opened but
     // never delivers frames. Guarded by captureMutex_.

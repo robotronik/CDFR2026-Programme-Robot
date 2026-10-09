@@ -85,6 +85,14 @@ public:
     // Returns false when no frame has been captured yet.
     bool getRawPreview(std::vector<uchar>& jpeg) const;
 
+    // Controls
+    void setExposureValue(float ev) { detector_.setExposureValue(ev); }
+    void setContrast(float contrast) { detector_.setContrast(contrast); }
+    void setBrightness(float brightness) { detector_.setBrightness(brightness); }
+    float getExposureValue() const { return detector_.getExposureValue(); }
+    float getContrast() const { return detector_.getContrast(); }
+    float getBrightness() const { return detector_.getBrightness(); }
+
     // Game elements seen in the latest frame, placed on the table from the
     // given camera pose.
     std::vector<GameElement> getGameElements(const position_t& cameraPose) const;

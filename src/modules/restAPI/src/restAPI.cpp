@@ -378,6 +378,41 @@ void RestAPI::start(){
         return res;
     });
 
+    // Camera settings (exposure compensation, contrast, brightness)
+    CROW_ROUTE(app, "/camera_settings").methods(crow::HTTPMethod::GET)
+    ([this](){
+        json response;
+        response["exposure_value"] = cam->getExposureValue();
+        response["contrast"] = cam->getContrast();
+        response["brightness"] = cam->getBrightness();
+        return crow::response(200, response.dump());
+    });
+
+    CROW_ROUTE(app, "/camera_settings").methods(crow::HTTPMethod::POST)
+    ([this](const crow::request& req){
+        auto req_data = json::parse(req.body, nullptr, false);
+        if (req_data.is_discarded()) {
+            json err;
+            err["message"] = "Invalid JSON";
+            return crow::response(400, err.dump());
+        }
+        if (req_data.contains("exposure_value") && req_data["exposure_value"].is_number()) {
+            cam->setExposureValue(req_data["exposure_value"].get<float>());
+        }
+        if (req_data.contains("contrast") && req_data["contrast"].is_number()) {
+            cam->setContrast(req_data["contrast"].get<float>());
+        }
+        if (req_data.contains("brightness") && req_data["brightness"].is_number()) {
+            cam->setBrightness(req_data["brightness"].get<float>());
+        }
+        json response;
+        response["message"] = "Camera settings updated";
+        response["exposure_value"] = cam->getExposureValue();
+        response["contrast"] = cam->getContrast();
+        response["brightness"] = cam->getBrightness();
+        return crow::response(200, response.dump());
+    });
+
     // ------------------------------- POST Routes -------------------------------
 
     // Define a route for a POST request that accepts JSON data and responds with a message

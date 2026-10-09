@@ -135,29 +135,18 @@ bool convertRawFrame(const RawFrame& raw, cv::Mat& out) {
         cv::cvtColor(uyvy, out, cv::COLOR_YUV2BGR_UYVY);
         return true;
     }
-    case libcamera::formats::NV12: {
-        const cv::Mat nv12(raw.height * 3 / 2, raw.width, CV_8UC1,
-                           const_cast<uint8_t*>(raw.data), raw.stride);
-        cv::cvtColor(nv12, out, cv::COLOR_YUV2BGR_NV12);
-        return true;
-    }
-    case libcamera::formats::NV21: {
-        const cv::Mat nv21(raw.height * 3 / 2, raw.width, CV_8UC1,
-                           const_cast<uint8_t*>(raw.data), raw.stride);
-        cv::cvtColor(nv21, out, cv::COLOR_YUV2BGR_NV21);
-        return true;
-    }
+    case libcamera::formats::NV12:
+    case libcamera::formats::NV21:
     case libcamera::formats::YUV420: {
-        const int chromaStride = (raw.stride + 1) / 2;
-        const cv::Mat y(raw.height, raw.width, CV_8UC1, const_cast<uint8_t*>(raw.data), raw.stride);
-        const uint8_t* uData = raw.data + static_cast<std::size_t>(raw.stride) * raw.height;
-        const uint8_t* vData = uData + static_cast<std::size_t>(chromaStride) * (raw.height / 2);
-        const cv::Mat u(raw.height / 2, raw.width / 2, CV_8UC1, const_cast<uint8_t*>(uData), chromaStride);
-        const cv::Mat v(raw.height / 2, raw.width / 2, CV_8UC1, const_cast<uint8_t*>(vData), chromaStride);
-        cv::Mat i420;
-        cv::vconcat(y, u, i420);
-        cv::vconcat(i420, v, i420);
-        cv::cvtColor(i420, out, cv::COLOR_YUV2BGR_I420);
+        // Plane 0 is the pure grayscale Luminance (Y) channel processed by the ISP.
+        // For a monochrome sensor like the OV9281, the chroma planes (UV) contain
+        // only noise and uncalibrated chroma that produce false green/magenta colors
+        // if converted via YUV2BGR.
+        // Extracting only the Y plane gives 100% pure black & white with zero color
+        // artifacts, while fully leveraging the ISP's hardware contrast, brightness,
+        // and exposure compensation!
+        const cv::Mat gray(raw.height, raw.width, CV_8UC1, const_cast<uint8_t*>(raw.data), raw.stride);
+        cv::cvtColor(gray, out, cv::COLOR_GRAY2BGR);
         return true;
     }
     default:
@@ -194,6 +183,15 @@ bool ArucoDetector::loadCalibration(const std::string& calibrationFilePath) {
 
     fs["camera_matrix"] >> cameraMatrix_;
     fs["dist_coeffs"] >> distCoeffs_;
+    if (!fs["exposure_value"].empty()) {
+        fs["exposure_value"] >> exposureValue_;
+    }
+    if (!fs["contrast"].empty()) {
+        fs["contrast"] >> contrast_;
+    }
+    if (!fs["brightness"].empty()) {
+        fs["brightness"] >> brightness_;
+    }
     fs.release();
 
     if (cameraMatrix_.empty() || distCoeffs_.empty()) {
@@ -206,12 +204,43 @@ bool ArucoDetector::loadCalibration(const std::string& calibrationFilePath) {
     }
 
     calibrated_ = true;
-    LOG_INFO("loaded calibration from ", calibrationFilePath);
+    LOG_INFO("loaded calibration from ", calibrationFilePath,
+             " (EV: ", exposureValue_, ", contrast: ", contrast_, ", brightness: ", brightness_, ")");
     return true;
 }
 
 void ArucoDetector::setMarkerSize(int id, double size) {
     markerSizes_[id] = size;
+}
+
+void ArucoDetector::setExposureValue(float ev) {
+    std::lock_guard<std::mutex> lock(captureMutex_);
+    exposureValue_ = ev;
+#ifdef CAMERA_USE_LIBCAMERA
+    if (libcamera_) {
+        libcamera_->setExposureValue(ev);
+    }
+#endif
+}
+
+void ArucoDetector::setContrast(float contrast) {
+    std::lock_guard<std::mutex> lock(captureMutex_);
+    contrast_ = contrast;
+#ifdef CAMERA_USE_LIBCAMERA
+    if (libcamera_) {
+        libcamera_->setContrast(contrast);
+    }
+#endif
+}
+
+void ArucoDetector::setBrightness(float brightness) {
+    std::lock_guard<std::mutex> lock(captureMutex_);
+    brightness_ = brightness;
+#ifdef CAMERA_USE_LIBCAMERA
+    if (libcamera_) {
+        libcamera_->setBrightness(brightness);
+    }
+#endif
 }
 
 bool ArucoDetector::initCamera(int deviceIndex, int width, int height) {
@@ -222,6 +251,9 @@ bool ArucoDetector::initCamera(int deviceIndex, int width, int height) {
         libcamera_->close();
     }
     libcamera_ = std::make_unique<LibcameraCamera>();
+    libcamera_->setExposureValue(exposureValue_);
+    libcamera_->setContrast(contrast_);
+    libcamera_->setBrightness(brightness_);
     if (!libcamera_->open(deviceIndex, width, height)) {
         LOG_ERROR("failed to open libcamera device ", deviceIndex);
         libcamera_.reset();

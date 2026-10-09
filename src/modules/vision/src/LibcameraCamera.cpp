@@ -9,6 +9,7 @@
 
 #include <libcamera/base/event_dispatcher.h>
 #include <libcamera/base/thread.h>
+#include <libcamera/control_ids.h>
 #include <libcamera/formats.h>
 
 #include "utils/logger.hpp"
@@ -74,6 +75,7 @@ void LibcameraCamera::onRequestCompleted(libcamera::Request* request) {
     // frame. The first available buffer is published to captureFrame().
     if (started_) {
         request->reuse(libcamera::Request::ReuseBuffers);
+        applyControls(request);
         if (camera_->queueRequest(request) == 0) {
             ++pending_;
         }
@@ -150,16 +152,18 @@ bool LibcameraCamera::configure(int width, int height) {
     }
 
     libcamera::StreamConfiguration& streamConfig = config->at(0);
-    // Request 8-bit monochrome (R8) by default: the robot camera (OV9281) is a
-    // monochrome sensor. Requesting color formats like NV12 causes the ISP to run
-    // unwanted demosaicing and color processing, resulting in color artifacts.
-    streamConfig.pixelFormat = libcamera::formats::R8;
+    // Request YUV420 by default: on Raspberry Pi 5 (PiSP), YUV420 passes through
+    // the hardware ISP pipeline, enabling full hardware-accelerated Contrast,
+    // Brightness, and Exposure compensation controls.
+    // By extracting only the Y (luminance) plane in convertRawFrame, we obtain pure
+    // monochrome images without chroma noise or color artifacts.
+    streamConfig.pixelFormat = libcamera::formats::YUV420;
     streamConfig.size.width = static_cast<unsigned int>(width);
     streamConfig.size.height = static_cast<unsigned int>(height);
 
     libcamera::CameraConfiguration::Status status = config->validate();
     if (status == libcamera::CameraConfiguration::Invalid) {
-        LOG_WARNING("Libcamera - R8 format invalid for camera, falling back to default configuration");
+        LOG_WARNING("Libcamera - YUV420 format invalid for camera, falling back to default configuration");
         config = camera_->generateConfiguration({libcamera::StreamRole::Viewfinder});
         if (!config) {
             LOG_ERROR("Libcamera - failed to generate a fallback camera configuration");
@@ -228,9 +232,31 @@ bool LibcameraCamera::allocateBuffers() {
             LOG_ERROR("Libcamera - failed to attach a buffer to a request");
             return false;
         }
+        applyControls(request.get());
         requests_.push_back(std::move(request));
     }
     return true;
+}
+
+void LibcameraCamera::applyControls(libcamera::Request* request) const {
+    if (request == nullptr) {
+        return;
+    }
+    request->controls().set(libcamera::controls::ExposureValue, exposureValue_);
+    request->controls().set(libcamera::controls::Contrast, contrast_);
+    request->controls().set(libcamera::controls::Brightness, brightness_);
+}
+
+void LibcameraCamera::setExposureValue(float ev) {
+    exposureValue_ = ev;
+}
+
+void LibcameraCamera::setContrast(float contrast) {
+    contrast_ = contrast;
+}
+
+void LibcameraCamera::setBrightness(float brightness) {
+    brightness_ = brightness;
 }
 
 void LibcameraCamera::queueAll() {

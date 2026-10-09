@@ -51,6 +51,14 @@ public:
 
     bool isOpen() const { return open_; }
 
+    // Controls
+    void setExposureValue(float ev);
+    void setContrast(float contrast);
+    void setBrightness(float brightness);
+    float getExposureValue() const { return exposureValue_; }
+    float getContrast() const { return contrast_; }
+    float getBrightness() const { return brightness_; }
+
     // Waits for the next frame (bounded by a timeout) and makes it available
     // through the last argument. Returns false on timeout, queue error or when
     // the camera is not open.
@@ -62,6 +70,11 @@ private:
     void queueAll();
     void onRequestCompleted(libcamera::Request* request);
     void fillRawFrame(RawFrame& out) const;
+    void applyControls(libcamera::Request* request) const;
+
+    float exposureValue_ = 1.5f;
+    float contrast_ = 1.3f;
+    float brightness_ = 0.0f;
 
     std::string cameraId_;
     std::unique_ptr<libcamera::CameraManager> manager_;
