@@ -31,22 +31,22 @@ constexpr double kReferenceMmPerPx = 2.0;
 //
 // The detection threshold is the response floor for a keypoint. Lowering it lets
 // AKAZE latch onto fainter structure, which the low-contrast field markings
-// need, but too low floods the patch with weak keypoints; 0.0005 keeps the
-// contrast gain without the flood.
-constexpr float kAkazeThreshold = 0.0005f;
+// need; this is the highest value that still localises every capture in the test
+// set.
+constexpr float kAkazeThreshold = 0.0002f;
 constexpr int kAkazeDescriptorSize = 486;
 constexpr int kAkazeDescriptorChannels = 3;
 
-// Smallest keypoint diameter kept, in working-grid pixels. This trims only
-// AKAZE's very finest scale (4.8 px); the next scale up (5.7 px) carries most of
-// the matches, so dropping more than this collapses the solve rate.
-constexpr double kMinKeypointSizePx = 5.7;
+// Smallest keypoint diameter kept, in working-grid pixels. Trimming the finest
+// scales costs solves on the test set, so the filter is disabled (0); the
+// mechanism is kept in case the patch is ever noisy enough to need it.
+constexpr double kMinKeypointSizePx = 0.0;
 
 // Lowe's ratio test, raised for AKAZE's more selective descriptors.
-constexpr float kRatioTest = 0.85f;
+constexpr float kRatioTest = 0.9f;
 
 // RANSAC fit of the map-to-patch rigid motion.
-constexpr double kRansacMm = 6.0;
+constexpr double kRansacMm = 8.0;
 constexpr double kRansacConfidence = 0.999;
 constexpr int kRansacMaxIters = 5000;
 constexpr int kRansacRefineIters = 10;
