@@ -10,13 +10,9 @@
 
 namespace vision {
 
-/**
- * Localises the robot from the four fixed landmark tags (ids 20..23) at the
- * table corners, which are 100 mm squares.
- *
- * A single visible tag is enough to fix the camera. When several are visible at
- * once their estimates are averaged, the heading circularly.
- */
+// Localises the robot from the four fixed landmark tags (ids 20..23, 100 mm
+// squares) at the table corners. One visible tag is enough; several are averaged
+// (heading circularly).
 class ArucoLocalizer : public CamLocalizer {
 public:
     explicit ArucoLocalizer(double tagSideMm = 100.0);
@@ -28,11 +24,11 @@ public:
     bool isCameraOpen() const { return detector_.isCameraOpen(); }
 
     // Detects the landmark tags on `frame`. Returns true and fills `position`
-    // when at least one of them yields a usable pose, false otherwise.
+    // when at least one tag yields a usable pose.
     bool locate(const cv::Mat& frame, CameraPosition& position);
 
-    // Position from already-computed detections; lets a caller that also needs
-    // the markers (role tagging, game elements) detect only once.
+    // Same as above from already-computed detections, so a caller that also
+    // needs the markers detects only once.
     bool locate(const std::vector<DetectionResult>& detections,
                 CameraPosition& position) const;
 

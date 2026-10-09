@@ -67,12 +67,11 @@ bool ArucoLocalizer::cameraPositionForTag(const DetectionResult& detection,
     cv::Matx33d rotation;
     cv::Rodrigues(detection.rvec, rotation);
 
-    // Camera position expressed in the marker frame: -R^T * tvec.
+    // Camera position in the marker frame: -R^T * tvec.
     const cv::Vec3d camera = -(rotation.t() * detection.tvec);
 
-    // The tag is a known landmark, so the camera's field position follows from
-    // it. The axis swap and signs are the field landmark convention, checked
-    // against captures whose true pose is known.
+    // The tag is a known landmark; axis swap and signs are the field convention,
+    // verified against captures with a known true pose.
     position.x = tagFieldX - camera[1];
     position.y = tagFieldY + camera[0];
     position.z = camera[2];

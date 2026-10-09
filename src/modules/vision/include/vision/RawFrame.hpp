@@ -4,14 +4,9 @@
 
 namespace vision {
 
-/**
- * Non-owning, immutable view of one captured frame.
- *
- * A backend fills this in when it delivers a frame: `data` points to packed
- * pixels, `stride` is the number of bytes per row and the layout still has to
- * be converted to BGR before use. The buffer is only valid until the next
- * `captureFrame()` call, so callers must copy what they keep.
- */
+// Non-owning view of one captured frame: `data` points to packed pixels with
+// `stride` bytes per row. The layout is backend-specific and must be converted
+// to BGR. The buffer is only valid until the next capture.
 struct RawFrame {
     int width = 0;
     int height = 0;

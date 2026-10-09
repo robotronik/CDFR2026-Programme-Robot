@@ -14,9 +14,8 @@
 
 #include "utils/logger.hpp"
 
-// libcamera 0.3 renamed the 24-bit packed RGB/BGR format constants
-// (RGB888/BGR888 became RGB24/BGR24). CMake defines the selector from the
-// detected libcamera version.
+// libcamera 0.3 renamed the 24-bit packed RGB/BGR constants (RGB888/BGR888 ->
+// RGB24/BGR24). CMake defines the selector from the detected libcamera version.
 #ifdef CAMERA_LIBCAMERA_FORMAT_RGB24
 #  define CAMERA_FORMAT_RGB24 libcamera::formats::RGB24
 #  define CAMERA_FORMAT_BGR24 libcamera::formats::BGR24
@@ -29,8 +28,7 @@ namespace vision {
 
 namespace {
 
-// Bail out of the frame wait after this long so a stalled driver cannot hang
-// the capture thread forever.
+// Give up the frame wait after this long so a stalled driver cannot hang capture.
 constexpr int kAcquireTimeoutMs = 1000;
 
 // True when the format stores its components as separate planes.
@@ -71,8 +69,7 @@ void LibcameraCamera::onRequestCompleted(libcamera::Request* request) {
         return;
     }
     --pending_;
-    // Keep the pipeline fed: hand the buffer back to the camera for the next
-    // frame. The first available buffer is published to captureFrame().
+    // Requeue the buffer to keep the pipeline fed; publish the first available.
     if (started_) {
         request->reuse(libcamera::Request::ReuseBuffers);
         applyControls(request);
@@ -102,9 +99,8 @@ bool LibcameraCamera::open(int deviceIndex, int width, int height) {
         return false;
     }
 
-    // Select the requested device when its id/index matches, otherwise fall back
-    // to the first camera: with a single CsiCameraProvider the ordering a device
-    // index implies is not guaranteed.
+    // Select the requested device if it matches, else the first camera (with a
+    // single CsiCameraProvider, a device index implies no ordering).
     std::string selected;
     const auto cameras = manager_->cameras();
     if (!cameraId_.empty()) {
@@ -152,11 +148,8 @@ bool LibcameraCamera::configure(int width, int height) {
     }
 
     libcamera::StreamConfiguration& streamConfig = config->at(0);
-    // Request YUV420 by default: on Raspberry Pi 5 (PiSP), YUV420 passes through
-    // the hardware ISP pipeline, enabling full hardware-accelerated Contrast,
-    // Brightness, and Exposure compensation controls.
-    // By extracting only the Y (luminance) plane in convertRawFrame, we obtain pure
-    // monochrome images without chroma noise or color artifacts.
+    // YUV420 passes through the Pi 5's hardware ISP (contrast/brightness/
+    // exposure); convertRawFrame keeps only the Y plane.
     streamConfig.pixelFormat = libcamera::formats::YUV420;
     streamConfig.size.width = static_cast<unsigned int>(width);
     streamConfig.size.height = static_cast<unsigned int>(height);
@@ -189,8 +182,7 @@ bool LibcameraCamera::configure(int width, int height) {
         return false;
     }
 
-    // configure() may replace the stream configuration, so read the negotiated
-    // values back after the call.
+    // configure() may replace the configuration; read the negotiated values back.
     const libcamera::StreamConfiguration& negotiated = config->at(0);
     stream_ = negotiated.stream();
     if (stream_ == nullptr) {

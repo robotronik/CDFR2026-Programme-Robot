@@ -16,10 +16,8 @@
 #  include "vision/LibcameraCamera.hpp"
 #endif
 
-// OpenCV moved the ArUco module into `objdetect` and introduced the
-// cv::aruco::ArucoDetector class in 4.7. Older releases (including the one
-// shipped on the Raspberry Pi) expose the legacy free functions from the
-// `aruco` contrib module instead.
+// OpenCV 4.7 moved ArUco into `objdetect` (cv::aruco::ArucoDetector); older
+// releases (e.g. on the Raspberry Pi) expose the legacy free functions.
 #if (CV_VERSION_MAJOR > 4) || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 7)
 #  define ARUCO_OPENCV_NEW_API 1
 #  include <opencv2/objdetect/aruco_detector.hpp>
@@ -30,14 +28,8 @@
 
 namespace vision {
 
-/**
- * Result of a single detected ArUco marker.
- *
- * `rvec` / `tvec` are only meaningful when `hasPose` is true. Pose estimation
- * requires both a loaded camera calibration and a registered physical size for
- * the marker id. The translation is expressed in the same unit as the
- * calibration and the registered marker size (millimetres in this project).
- */
+// One detected ArUco marker. `rvec`/`tvec` are set only when `hasPose` is true,
+// which needs a loaded calibration and a registered size for the id (mm).
 struct DetectionResult {
     int id = -1;
     std::vector<cv::Point2f> corners;
@@ -46,13 +38,8 @@ struct DetectionResult {
     bool hasPose = false;
 };
 
-/**
- * Native ArUco marker detector.
- *
- * Replaces the previous Python/REST camera service. It owns the capture device,
- * the marker dictionary/parameters and the camera calibration, and exposes a
- * small synchronous API: open a camera, then detect markers on a frame.
- */
+// ArUco marker detector. Owns the capture device, the marker dictionary and the
+// camera calibration; open a camera, then detect markers on a frame.
 class ArucoDetector {
 public:
     ArucoDetector();
@@ -61,11 +48,11 @@ public:
     ArucoDetector(const ArucoDetector&) = delete;
     ArucoDetector& operator=(const ArucoDetector&) = delete;
 
-    // Loads `camera_matrix` and `dist_coeffs` from an OpenCV YAML/XML file.
+    // Loads camera_matrix and dist_coeffs from an OpenCV YAML/XML file.
     bool loadCalibration(const std::string& calibrationFilePath);
 
-    // Physical marker size (same unit as the calibration, e.g. mm). Pose is only
-    // estimated for ids that have a registered size.
+    // Physical marker size in calibration units (mm). Pose is estimated only for
+    // ids with a registered size.
     void setMarkerSize(int id, double size);
 
     bool initCamera(int deviceIndex = 0, int width = 640, int height = 480);
@@ -73,7 +60,7 @@ public:
     void releaseCamera();
 
     // Thread-safe frame grab. Returns false (and leaves `outFrame` empty) when
-    // the camera is closed or the frame cannot be read, without throwing.
+    // the camera is closed or the frame cannot be read.
     bool captureFrame(cv::Mat& outFrame);
 
     // Controls
@@ -102,9 +89,8 @@ private:
     std::map<int, double> markerSizes_;
 
 #ifdef CAMERA_USE_LIBCAMERA
-    // On the Raspberry Pi 5 the OV9281 is behind the PiSP ISP, so the V4L2 node
-    // only yields raw Bayer frames. libcamera drives the sensor -> ISP pipeline
-    // and delivers frames OpenCV can decode.
+    // On the Pi 5 the OV9281 sits behind the PiSP ISP, so the raw V4L2 node only
+    // yields frames OpenCV cannot decode; libcamera drives the full pipeline.
     std::unique_ptr<LibcameraCamera> libcamera_;
 #else
     cv::VideoCapture capture_;
@@ -114,8 +100,8 @@ private:
     float brightness_ = 0.0f;
 
     mutable std::mutex captureMutex_;
-    // Consecutive failed frame reads, used to report a camera that opened but
-    // never delivers frames. Guarded by captureMutex_.
+    // Consecutive failed frame reads, to report a camera that opened but never
+    // delivers frames. Guarded by captureMutex_.
     int captureFailCount_ = 0;
 };
 
