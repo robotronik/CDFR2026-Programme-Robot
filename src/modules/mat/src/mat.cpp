@@ -151,7 +151,7 @@ void StopMat() {
 bool getMapStatus() {
     json response;
 
-    if (!restAPI_GET_(MAT_URL, "/fleet/live", response) || !response.is_object()) {
+    if (!restAPI_GET_(MAT_URL, "/objects", response) || !response.is_object()) {
         LOG_ERROR("Failed to fetch map status from MAT");
         return false;
     }

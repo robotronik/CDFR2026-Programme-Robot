@@ -67,7 +67,7 @@ const int ARUCO_CALIB_POSITIONS_COUNT = sizeof(ARUCO_CALIB_POSITIONS) / sizeof(p
 
 /******* CONSTANT FOR THE LEGEND OF CAMELOT *******/
 
-const position_t START_POSITION = { .x = 1250, .y = 0, .a = 90 };
+const position_t START_POSITION = { .x = 0, .y = 1250, .a = 90 };
 
 const position_t WALL_POSITION[] = {
     position_t{ .x = 1250, .y = -600, .a = 0 },

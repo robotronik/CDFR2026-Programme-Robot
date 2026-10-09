@@ -89,6 +89,7 @@ position_t cameraToRobot(const position_t& cameraPose) {
     robotPose.x = cameraPose.x - (OFFSET_CAM_X * c - OFFSET_CAM_Y * s);
     robotPose.y = cameraPose.y - (OFFSET_CAM_X * s + OFFSET_CAM_Y * c);
     robotPose.a = normalizeAngle(robotA);
+    LOG_DEBUG("Camera pose: (%.2f, %.2f, %.2f) -> Robot pose: (%.2f, %.2f, %.2f)", cameraPose.x, cameraPose.y, cameraPose.a, robotPose.x, robotPose.y, robotPose.a);
     return robotPose;
 }
 

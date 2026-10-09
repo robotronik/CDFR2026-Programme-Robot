@@ -7,7 +7,7 @@
 using json = nlohmann::json;
 
 #ifndef MAT_HOST
-#define MAT_HOST "0.0.0.0"
+#define MAT_HOST "192.168.8.102"
 #endif
 #ifndef MAT_PORT
 #define MAT_PORT 5000

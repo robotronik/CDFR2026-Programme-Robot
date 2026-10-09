@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
         //****************************************************************
         case INIT:
         {
-            static bool mast = true;
+            static bool mast = false;
             if (initState)
             {
                 LOG_GREEN_INFO("INIT");
@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
             
             update_team_strat();
 
-            if (sensor.readButtonSensor() && !sensor.readLatchSensor() && tableStatus.colorTeam != NONE)
+            if (sensor.readButtonSensor() && !sensor.readLatchSensor() && tableStatus.colorTeam != NONE && currentStrategy != nullptr)
                 nextState = WAITSTART;
             break;
         }
@@ -175,13 +175,11 @@ int main(int argc, char *argv[])
                     arduino.RGB_Blinking(255, 0, 0); // Red Blinking
                 tableStatus.calibrationAge = -1;
             }
-            
-            update_team_strat();
 
             if (tableStatus.calibrationAge == -1){
                 navigation.go();
             } else{
-                nextState = CALIBRATION;
+                //nextState = CALIBRATION;
             }
 
             if (sensor.readLatchSensor() && tableStatus.colorTeam != NONE)
