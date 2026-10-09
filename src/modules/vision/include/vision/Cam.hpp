@@ -10,32 +10,24 @@
 #include "drive_interface.h" // for position_t
 #include "vision/ArucoDetector.hpp"
 #include "vision/ArucoLocalizer.hpp"
-#include "vision/CamLocalizer.hpp"
 #include "vision/FeaturesLocalizer.hpp"
 
-// The camera is mounted on the robot at this offset, in millimetres and degrees.
-#define OFFSET_CAM_X 129 // Offset of the camera in mm on the x axis
-#define OFFSET_CAM_Y 4.5 // Offset of the camera in mm on the y axis
-#define OFFSET_CAM_A 0 // Offset angle of the camera in degrees
+// Camera offset in the robot frame, in millimetres and degrees.
+#define OFFSET_CAM_X 129
+#define OFFSET_CAM_Y 4.5
+#define OFFSET_CAM_A 0
 
-// Game elements are 110 mm cubes. Each face carries an ArUco id 13 marker whose
-// inner pattern is 80 mm, drawn with a white margin around it (the tag, 100 mm,
-// only matters for rendering). `GAME_ELEMENT_SIDE_MM` is the cube's physical
-// side, used to move from a marker's centre to the cube's centre;
-// `GAME_ELEMENT_TAG_MM` is the marker's own side, which sets the scale of its
-// estimated pose.
+// Game elements are 110 mm cubes whose faces carry an 80 mm ArUco id 13 marker;
+// the marker size sets the pose scale, the cube side places the marker above the
+// cube centre.
 #define GAME_ELEMENT_SIDE_MM 110.0
 #define GAME_ELEMENT_TAG_MM 80.0
 
-// A game element is a marker with ArUco id 13. Its pose is on the table, in
-// millimetres, with its Euler angles in degrees. The yaw reference follows the
-// marker's own axes (a marker lying flat, oriented like the field tags, reads
-// about 90 degrees).
+// A game element's table pose in millimetres and degrees. The yaw follows the
+// marker's own axes (a flat marker oriented like the field tags reads ~90 deg).
 struct GameElement {
-    // TODO
-    // Change to have a position_t
-    // and height as steps, 1,2,3 and a vertical bool
-    // make it a general struct in structs.hpp to use as well in mat logic
+    // TODO: reuse position_t and model height as steps (1,2,3 + a vertical flag),
+    // moving this to structs.hpp so the mat logic can share it.
     double x = 0.0;
     double y = 0.0;
     double z = 0.0;
@@ -44,17 +36,14 @@ struct GameElement {
     double yaw = 0.0;
 };
 
-// The camera and the robot are not the same point: the camera sits at
-// (OFFSET_CAM_X, OFFSET_CAM_Y) with heading OFFSET_CAM_A in the robot frame.
-// These convert a table pose between the two frames.
+// Table-pose conversion between the camera frame and the robot frame, which are
+// offset by (OFFSET_CAM_X, OFFSET_CAM_Y) and OFFSET_CAM_A.
 position_t cameraToRobot(const position_t& cameraPose);
 position_t robotToCamera(const position_t& robotPose);
 
-// Captures frames on its own thread and localises the camera on the field.
-// Both localisers run on every frame - ArUco landmark tags and mapped ground
-// features - so their results are always available; when both localise, the
-// feature result is the one reported. ArUco detection also feeds the game
-// elements and the preview.
+// Captures frames on its own thread and localises the camera on the field. Both
+// localisers run every frame; when both succeed the feature result is reported.
+// ArUco detection also feeds the game elements and the preview.
 class Cam {
 public:
     Cam(int camNumber, const char* calibrationFilePath, const char* mapFilePath);
@@ -68,21 +57,16 @@ public:
     void start();
     void stop();
 
-    // Odometry estimate of the robot's pose, used by the feature localiser to
-    // restrict its search. Ignored by the marker localiser.
+    // Odometry estimate of the robot's pose; restricts the feature search.
     void setPrior(const position_t& robotPose);
 
-    // Latest camera localisation on the table, preferring the feature result
-    // when both localisers report one. Returns true when one is known. This is
-    // the camera's pose; use cameraToRobot() for the robot's.
+    // Latest camera pose on the table (use cameraToRobot() for the robot pose).
     bool getLocalisation(position_t& cameraPose) const;
 
-    // JPEG-encoded copy of the latest captured frame, with the detected markers
-    // outlined and labelled. Returns false when no frame has been captured yet.
+    // JPEG of the latest frame with the detected markers outlined and labelled.
     bool getPreview(std::vector<uchar>& jpeg) const;
 
-    // JPEG-encoded copy of the latest captured frame, without any overlay.
-    // Returns false when no frame has been captured yet.
+    // JPEG of the latest frame without any overlay.
     bool getRawPreview(std::vector<uchar>& jpeg) const;
 
     // Controls
@@ -93,13 +77,11 @@ public:
     float getContrast() const { return detector_.getContrast(); }
     float getBrightness() const { return detector_.getBrightness(); }
 
-    // Game elements seen in the latest frame, placed on the table from the
-    // given camera pose.
+    // Game elements in the latest frame, placed from the given camera pose.
     std::vector<GameElement> getGameElements(const position_t& cameraPose) const;
 
-    // Places one detection on the table as the centre of its game element cube,
-    // from the given camera pose. Returns false when the detection is not a
-    // game element carrying a usable pose.
+    // Places one detection as the centre of its cube. False when it is not a
+    // game element with a usable pose.
     static bool gameElementFromTag(const vision::DetectionResult& detection,
                                    const position_t& cameraPose,
                                    GameElement& element);
@@ -111,11 +93,8 @@ private:
     std::atomic<bool> running_{false};
     std::thread worker_;
 
-    // Owns the capture device and detects the markers for the preview and the
-    // game elements.
+    // Owns the capture device; detects the markers for the preview and elements.
     vision::ArucoDetector detector_;
-    // Both localisers run on every frame; when both localise, the feature
-    // result is reported.
     vision::ArucoLocalizer arucoLocalizer_;
     vision::FeaturesLocalizer featuresLocalizer_;
 

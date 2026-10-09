@@ -5,7 +5,6 @@
 #include <vector>
 
 #include <opencv2/calib3d.hpp>
-#include <opencv2/core/types.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
@@ -17,13 +16,8 @@ namespace {
 
 // Working grid. The map and the rectified patch are both resampled to this
 // millimetre-per-pixel value, so a match between them is a rigid motion with no
-// scale term. A finer grid keeps more detail on the rectified patch, at the cost
-// of a larger map image and more keypoints to match.
+// scale term.
 constexpr double kMmPerPx = 2.0;
-
-// The grid the pixel thresholds below were measured at. Those thresholds are
-// rescaled with the working grid (a coarser grid yields fewer keypoints).
-constexpr double kReferenceMmPerPx = 2.0;
 
 // AKAZE with binary MLDB descriptors. The size is required at its full 486-bit
 // width, not a tuning knob: OpenCV silently returns a 1-byte descriptor
@@ -36,11 +30,6 @@ constexpr double kReferenceMmPerPx = 2.0;
 constexpr float kAkazeThreshold = 0.0002f;
 constexpr int kAkazeDescriptorSize = 486;
 constexpr int kAkazeDescriptorChannels = 3;
-
-// Smallest keypoint diameter kept, in working-grid pixels. Trimming the finest
-// scales costs solves on the test set, so the filter is disabled (0); the
-// mechanism is kept in case the patch is ever noisy enough to need it.
-constexpr double kMinKeypointSizePx = 0.0;
 
 // Lowe's ratio test, raised for AKAZE's more selective descriptors.
 constexpr float kRatioTest = 0.9f;
@@ -66,12 +55,6 @@ double normalizeAngle(double angle) {
     return angle;
 }
 
-// Inlier floor for the working grid, following `configure_scale` in features.py.
-int activeMinInliers() {
-    const double ratio = (kReferenceMmPerPx / kMmPerPx) * (kReferenceMmPerPx / kMmPerPx);
-    return std::max(6, static_cast<int>(std::lround(kMinInliers * ratio)));
-}
-
 // Camera-to-ground rotation with columns (right, up, forward), looking along -Z
 // and pitched down. Same construction as common/geometry.camera_rotation.
 cv::Matx33d cameraRotation(double pitchDeg) {
@@ -85,8 +68,7 @@ cv::Matx33d cameraRotation(double pitchDeg) {
 }
 
 // Pixel -> ground millimetre homography, from the camera intrinsics and the
-// mounting. Generalises common/geometry.capture_homography to any lens: it
-// reduces to the same matrix when the principal point is centred and fx == fy.
+// mounting. Generalises common/geometry.capture_homography to any lens.
 cv::Matx33d captureHomography(const cv::Matx33d& cameraMatrix,
                               double pitchDeg, double heightMm) {
     cv::Matx33d kInv = cameraMatrix.inv();
@@ -106,10 +88,9 @@ cv::Matx33d captureHomography(const cv::Matx33d& cameraMatrix,
     return to_mm * h;
 }
 
-// Ground area an image covers, as (x0, y0, x1, y1) millimetres. Sampled on a
-// grid rather than at the corners: rows that land behind the camera are thrown
-// far off to the sides. The third homogeneous coordinate is the depth and a
-// real ground hit needs it negative.
+// Ground area a capture covers, as (x0, y0, x1, y1) millimetres. Sampled on a
+// grid, not at the corners: rows behind the camera project far off to the sides.
+// The third homogeneous coordinate is the depth, negative for a real hit.
 void groundBounds(const cv::Matx33d& H, int width, int height,
                   double& x0, double& y0, double& x1, double& y1) {
     constexpr int kSamples = 65;
@@ -144,29 +125,6 @@ cv::Point2d mapPxToFieldMm(const cv::Point2d& px, const cv::Point2d& originPx,
                            double mmPerPx) {
     return cv::Point2d((px.x - originPx.x) * mmPerPx,
                        (originPx.y - px.y) * mmPerPx);
-}
-
-// Drops keypoints smaller than kMinKeypointSizePx, keeping the descriptors in
-// step with the surviving keypoints.
-void filterSmallKeypoints(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors) {
-    std::vector<cv::KeyPoint> kept;
-    std::vector<int> rows;
-    kept.reserve(keypoints.size());
-    for (int i = 0; i < static_cast<int>(keypoints.size()); ++i) {
-        if (keypoints[i].size >= kMinKeypointSizePx) {
-            kept.push_back(keypoints[i]);
-            rows.push_back(i);
-        }
-    }
-    if (kept.size() == keypoints.size()) {
-        return;
-    }
-    cv::Mat filtered(static_cast<int>(rows.size()), descriptors.cols, descriptors.type());
-    for (size_t r = 0; r < rows.size(); ++r) {
-        descriptors.row(rows[r]).copyTo(filtered.row(static_cast<int>(r)));
-    }
-    keypoints.swap(kept);
-    descriptors = filtered;
 }
 
 // Mutually-best matches that also pass the ratio test. Returns index arrays
@@ -214,7 +172,7 @@ void matchFeatures(const cv::Mat& queryDesc, const cv::Mat& trainDesc,
 bool solveRigid(const std::vector<cv::Point2d>& query,
                 const std::vector<cv::Point2d>& train,
                 cv::Mat& transform, cv::Mat& inlierMask) {
-    const int minInliers = activeMinInliers();
+    const int minInliers = static_cast<int>(kMinInliers);
     if (static_cast<int>(query.size()) < minInliers ||
         query.size() != train.size()) {
         return false;
@@ -245,16 +203,16 @@ bool solveRigid(const std::vector<cv::Point2d>& query,
         return false;
     }
 
-    // The warp fixes the scale at exactly 1; a wrong-but-self-consistent scale
-    // could otherwise pass RANSAC by shrinking the patch onto a similar region.
+    // RANSAC fixes the scale at 1; a self-consistent wrong scale could otherwise
+    // shrink the patch onto a similar region and pass.
     const double scale = std::hypot(transform.at<double>(0, 0),
                                     transform.at<double>(1, 0));
     if (scale < 0.9 || scale > 1.1) {
         return false;
     }
 
-    // A tight cluster of inliers is how a repeated texture passes everything
-    // else; a real fix has matches spread across the patch it covers.
+    // A tight inlier cluster is how repeated texture passes everything else; a
+    // real fix has matches spread across the patch.
     double minX = 1e18, minY = 1e18, maxX = -1e18, maxY = -1e18;
     for (int i = 0; i < inlierMask.rows; ++i) {
         if (!mask[i]) {
@@ -271,9 +229,8 @@ bool solveRigid(const std::vector<cv::Point2d>& query,
     return true;
 }
 
-// Robot field pose from the patch->map transform and the camera's patch pixel.
-// Pushing the camera's own patch pixel through the transform lands on the map
-// point under the camera, which is the robot's ground position.
+// Robot field pose: the camera's patch pixel pushed through the patch->map
+// transform lands on the map point under the camera.
 CameraPosition poseFromTransform(const cv::Mat& transform,
                                  const cv::Point2d& cameraPatchPx,
                                  const cv::Point2d& mapOriginPx,
@@ -290,20 +247,17 @@ CameraPosition poseFromTransform(const cv::Mat& transform,
     position.x = mm.x;
     position.y = mm.y;
     position.z = CAMERA_HEIGHT_MM;
-    // Both images use the image convention (x right, y down), so the fitted
-    // angle is clockwise on screen and the field's yaw is anticlockwise; the
-    // quarter turn reconciles the patch's "far ground" axis with the heading.
+    // Both images use x right / y down, so the fitted angle is clockwise and the
+    // field yaw anticlockwise; the quarter turn reconciles the axes.
     position.heading = normalizeAngle(
         90.0 - std::atan2(transform.at<double>(1, 0),
                           transform.at<double>(0, 0)) * kRadToDeg);
     return position;
 }
 
-// Field-millimetre box of everything the camera could be seeing, from the
-// prior. Projects the patch's valid footprint into the robot frame, places it
-// at the prior pose through the yaw slack and grows it by the position slack.
-// Returns false when the patch has no ground, so the caller matches the whole
-// map instead.
+// Field-mm box the camera could be seeing from the prior: the patch footprint
+// projected into the robot frame, swept through the yaw slack and grown by the
+// position slack. False when the patch has no ground, so the whole map is used.
 bool cameraViewWindow(const cv::Mat& rectified, const GroundWarper& warper,
                       const CameraPosition& prior, double positionSlackMm,
                       double yawSlackDeg, cv::Rect2d& window) {
@@ -416,8 +370,7 @@ bool FeaturesLocalizer::loadMap(const std::string& mapFilePath) {
         return false;
     }
 
-    // The file is 1 mm/px; the working pair is kMmPerPx, so resampling here is
-    // what lets the map and the patch share a grid and a match stay rigid.
+    // Resample the 1 mm/px file to kMmPerPx so the map and patch share a grid.
     const double nativeMmPerPx = FIELD_WIDTH_MM / gray.cols;
     if (std::fabs(nativeMmPerPx - kMmPerPx) > 1e-6) {
         const double factor = nativeMmPerPx / kMmPerPx;
@@ -432,7 +385,6 @@ bool FeaturesLocalizer::loadMap(const std::string& mapFilePath) {
     map_origin_px_ = cv::Point2d(gray.cols / 2.0 - 0.5, gray.rows / 2.0 - 0.5);
 
     detector_->detectAndCompute(gray, cv::noArray(), map_keypoints_, map_descriptors_);
-    filterSmallKeypoints(map_keypoints_, map_descriptors_);
     map_points_px_.clear();
     map_points_px_.reserve(map_keypoints_.size());
     for (const cv::KeyPoint& kp : map_keypoints_) {
@@ -504,9 +456,8 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
         gray = frame;
     }
 
-    // The warp is a pinhole homography, so the lens distortion has to come out
-    // first, otherwise the rectified patch does not sit on the same grid as the
-    // map and the match is stretched.
+    // Undistort first: the warp is a pinhole homography, so distortion would
+    // stretch the patch off the map's grid.
     cv::Mat undistorted;
     if (dist_coeffs_.empty()) {
         undistorted = gray;
@@ -520,7 +471,6 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
     cv::Mat patchDescriptors;
     detector_->detectAndCompute(rectified, cv::noArray(), patchKeypoints,
                                 patchDescriptors);
-    filterSmallKeypoints(patchKeypoints, patchDescriptors);
     if (patchKeypoints.empty() || patchDescriptors.empty()) {
         return false;
     }
@@ -531,9 +481,8 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
         patchPoints.push_back(kp.pt);
     }
 
-    // Restrict the map to what the starting position says the camera can see.
-    // Without a starting position (or on a degenerate patch) the whole map is
-    // offered.
+    // Restrict the map to the prior's view window; without a prior (or with a
+    // degenerate patch) the whole map is offered.
     std::vector<int> candidates;
     candidates.reserve(map_points_px_.size());
     cv::Rect2d window;

@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <cmath>
 #include <string>
 #include <vector>
 
@@ -7,7 +6,6 @@
 #include <opencv2/imgcodecs.hpp>
 
 #include "utils/logger.hpp"
-#include "vision/CamLocalizer.hpp"
 #include "vision/FeaturesLocalizer.hpp"
 
 namespace {
@@ -41,8 +39,7 @@ std::string findFeaturePath(const std::string& name) {
     return {};
 }
 
-// Lists the real feature captures, tests/data/features/<n>.jpg. They come from
-// the robot's camera and carry no ground-truth pose.
+// Lists the real captures in tests/data/features.
 std::vector<std::string> featureCaptures() {
     const std::string prefixes[] = {"tests/data/features/", "../tests/data/features/",
                                     "data/features/"};
@@ -59,11 +56,9 @@ std::vector<std::string> featureCaptures() {
 
 } // namespace
 
-// The feature localiser must recover a field pose from a real capture by
-// matching its rectified ground patch against the field map. The real frames
-// carry neither a ground-truth pose nor a starting position, so the whole map is
-// searched and any returned position counts. The test passes when at least one
-// capture yields a position; every capture's outcome is logged.
+// The feature localiser must recover a pose by matching a rectified capture
+// against the field map. The frames carry no ground-truth pose or starting
+// position, so the whole map is searched; passing needs at least one fix.
 bool test_features_localizer() {
     const std::string calibrationPath = findCalibrationPath("OV9281_1280_800.yaml");
     if (calibrationPath.empty()) {

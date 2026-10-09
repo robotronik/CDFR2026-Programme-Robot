@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 #
-# Docker-only build wrapper.
-#
-# Every compilation happens inside the per-architecture images; no compiler is
-# needed on the host. The workspace is mounted at its own path so build
-# artifacts (build/x86_64, build/arm64) appear directly on the host.
+# Docker-only build wrapper: every compilation happens inside the
+# per-architecture images, so no compiler is needed on the host. The workspace is
+# mounted at its own path, so build/x86_64 and build/arm64 appear on the host.
 
 set -euo pipefail
 
@@ -14,9 +12,8 @@ cd "$REPO_ROOT"
 IMAGE_X86="cdfr-builder-x86_64"
 IMAGE_ARM="cdfr-builder-arm64"
 
-# Extra `docker run` flags, container user and working directory applied to the
-# next `docker_run` call. Callers that need a tweaked container override these
-# before invoking docker_run (see the run-docker command).
+# Extra `docker run` flags, user and workdir applied to the next docker_run call;
+# callers override these before invoking it (see the run-docker command).
 DOCKER_RUN_EXTRA=()
 DOCKER_RUN_USER="$(id -u):$(id -g)"
 DOCKER_RUN_WORKDIR="$REPO_ROOT"
@@ -48,9 +45,9 @@ docker_run() {
         ssh+=(-v "${SSH_AUTH_SOCK}:/ssh-agent" -e SSH_AUTH_SOCK=/ssh-agent)
     fi
     [ -d "$HOME/.ssh" ] && ssh+=(-v "$HOME/.ssh:/home/ubuntu/.ssh:ro")
-    # --security-opt label=disable: on SELinux hosts (Fedora/RHEL) the bind mounts
-    # are otherwise denied ("Permission denied"), which cmake reports as a missing
-    # CMakePresets.json. It is a no-op on hosts without SELinux.
+    # label=disable: on SELinux hosts the bind mounts are otherwise denied
+    # ("Permission denied", which cmake reports as a missing CMakePresets.json).
+    # No-op on hosts without SELinux.
     docker run --rm "${tty[@]}" "${ssh[@]}" \
         "${DOCKER_RUN_EXTRA[@]}" \
         --network host \
@@ -115,13 +112,9 @@ case "${1:-build}" in
         build_arch x86_64
         shift
         log "Running programCDFR in the x86_64 image (no host libraries needed)"
-        # setProgramPriority() requests SCHED_FIFO, which needs CAP_SYS_NICE; Docker
-        # drops it by default. The capability is only effective for uid 0, so the
-        # container runs as root (no --user) instead of the host user, exactly as
-        # `sudo ./programCDFR` does. Files written by the run (log/) are therefore
-        # root-owned on the host. Running inside the image also matches the OpenCV
-        # 4.6 the binary was linked against, and --network host gives the REST
-        # server port 80 directly, with no NAT overhead.
+        # setProgramPriority() needs CAP_SYS_NICE, dropped by Docker by default,
+        # and the capability only works for uid 0, so run as root (no --user).
+        # Files the run writes (log/) are then root-owned on the host.
         DOCKER_RUN_EXTRA=(--cap-add=SYS_NICE)
         DOCKER_RUN_USER=""
         DOCKER_RUN_WORKDIR="$REPO_ROOT/build/x86_64"
