@@ -51,12 +51,17 @@ public:
 
     // Rectifies `frame`, matches it against the map, and fills `position` on a
     // successful fit. Returns false when no fix could be trusted.
-    bool locate(const cv::Mat& frame, CameraPosition& position);
+    //
+    // `hasStartingPosition` says whether the camera's starting pose is known.
+    // When true the match is restricted to the window around the stored prior;
+    // when false the whole map is offered to the matcher.
+    bool locate(const cv::Mat& frame, CameraPosition& position, bool hasStartingPosition);
 
 private:
     bool buildWarper(const cv::Size& size);
 
     cv::Mat camera_matrix_;
+    cv::Mat dist_coeffs_;
     bool calibrated_ = false;
 
     GroundWarper warper_;

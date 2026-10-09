@@ -207,7 +207,7 @@ void Cam::workerLoop() {
                                          cameraPrior.a});
         }
         vision::CameraPosition featurePosition;
-        const bool hasFeature = featuresLocalizer_.locate(frame, featurePosition);
+        const bool hasFeature = featuresLocalizer_.locate(frame, featurePosition, hasPrior);
 
         // Prefer the feature result when both localisers found a pose; fall
         // back to the markers when only they did.

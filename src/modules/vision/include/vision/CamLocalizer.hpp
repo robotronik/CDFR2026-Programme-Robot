@@ -36,19 +36,13 @@ struct CameraPosition {
 // localiser has no use for.
 class CamLocalizer {
 public:
-    void setPrior(const CameraPosition& prior) {
-        prior_ = prior;
-        hasPrior_ = true;
-    }
-    void clearPrior() { hasPrior_ = false; }
+    void setPrior(const CameraPosition& prior) { prior_ = prior; }
 
 protected:
-    bool hasPrior() const { return hasPrior_; }
     const CameraPosition& prior() const { return prior_; }
 
 private:
     CameraPosition prior_;
-    bool hasPrior_ = false;
 };
 
 } // namespace vision

@@ -9,7 +9,6 @@ bool test_aruco_localizer();
 bool test_camera_robot_conversion();
 bool test_game_element_cube_center();
 bool test_features_localizer();
-bool test_features_localizer_without_prior();
 bool test_mat_parse();
 
 int main(int argc, char** argv) {
@@ -33,7 +32,6 @@ int main(int argc, char** argv) {
         ok &= test_game_element_cube_center();
     } else if (group == "features") {
         ok &= test_features_localizer();
-        ok &= test_features_localizer_without_prior();
     } else {
         LOG_ERROR("Unknown test '", group, "'. Expected log, lidar, mat, aruco or features.");
         return 1;

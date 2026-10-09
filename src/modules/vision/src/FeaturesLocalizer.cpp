@@ -17,9 +17,9 @@ namespace {
 
 // Working grid. The map and the rectified patch are both resampled to this
 // millimetre-per-pixel value, so a match between them is a rigid motion with no
-// scale term. 4 mm/px is the knee of the sweep in features.py: the fastest grid
-// that still solves essentially everything.
-constexpr double kMmPerPx = 4.0;
+// scale term. A finer grid keeps more detail on the rectified patch, at the cost
+// of a larger map image and more keypoints to match.
+constexpr double kMmPerPx = 2.0;
 
 // The grid the pixel thresholds below were measured at. Those thresholds are
 // rescaled with the working grid (a coarser grid yields fewer keypoints).
@@ -28,9 +28,19 @@ constexpr double kReferenceMmPerPx = 2.0;
 // AKAZE with binary MLDB descriptors. The size is required at its full 486-bit
 // width, not a tuning knob: OpenCV silently returns a 1-byte descriptor
 // otherwise.
-constexpr float kAkazeThreshold = 0.001f;
+//
+// The detection threshold is the response floor for a keypoint. Lowering it lets
+// AKAZE latch onto fainter structure, which the low-contrast field markings
+// need, but too low floods the patch with weak keypoints; 0.0005 keeps the
+// contrast gain without the flood.
+constexpr float kAkazeThreshold = 0.0005f;
 constexpr int kAkazeDescriptorSize = 486;
 constexpr int kAkazeDescriptorChannels = 3;
+
+// Smallest keypoint diameter kept, in working-grid pixels. This trims only
+// AKAZE's very finest scale (4.8 px); the next scale up (5.7 px) carries most of
+// the matches, so dropping more than this collapses the solve rate.
+constexpr double kMinKeypointSizePx = 5.7;
 
 // Lowe's ratio test, raised for AKAZE's more selective descriptors.
 constexpr float kRatioTest = 0.85f;
@@ -134,6 +144,29 @@ cv::Point2d mapPxToFieldMm(const cv::Point2d& px, const cv::Point2d& originPx,
                            double mmPerPx) {
     return cv::Point2d((px.x - originPx.x) * mmPerPx,
                        (originPx.y - px.y) * mmPerPx);
+}
+
+// Drops keypoints smaller than kMinKeypointSizePx, keeping the descriptors in
+// step with the surviving keypoints.
+void filterSmallKeypoints(std::vector<cv::KeyPoint>& keypoints, cv::Mat& descriptors) {
+    std::vector<cv::KeyPoint> kept;
+    std::vector<int> rows;
+    kept.reserve(keypoints.size());
+    for (int i = 0; i < static_cast<int>(keypoints.size()); ++i) {
+        if (keypoints[i].size >= kMinKeypointSizePx) {
+            kept.push_back(keypoints[i]);
+            rows.push_back(i);
+        }
+    }
+    if (kept.size() == keypoints.size()) {
+        return;
+    }
+    cv::Mat filtered(static_cast<int>(rows.size()), descriptors.cols, descriptors.type());
+    for (size_t r = 0; r < rows.size(); ++r) {
+        descriptors.row(rows[r]).copyTo(filtered.row(static_cast<int>(r)));
+    }
+    keypoints.swap(kept);
+    descriptors = filtered;
 }
 
 // Mutually-best matches that also pass the ratio test. Returns index arrays
@@ -357,16 +390,19 @@ bool FeaturesLocalizer::loadCalibration(const std::string& cameraFilePath) {
         return false;
     }
     fs["camera_matrix"] >> camera_matrix_;
+    fs["dist_coeffs"] >> dist_coeffs_;
     fs.release();
 
     if (camera_matrix_.rows != 3 || camera_matrix_.cols != 3) {
         LOG_ERROR("calibration file ", cameraFilePath,
                   " has no usable camera_matrix");
         camera_matrix_.release();
+        dist_coeffs_.release();
         calibrated_ = false;
         return false;
     }
     camera_matrix_.convertTo(camera_matrix_, CV_64F);
+    dist_coeffs_.convertTo(dist_coeffs_, CV_64F);
     calibrated_ = true;
     warper_size_ = cv::Size();
     LOG_INFO("loaded calibration from ", cameraFilePath);
@@ -396,6 +432,7 @@ bool FeaturesLocalizer::loadMap(const std::string& mapFilePath) {
     map_origin_px_ = cv::Point2d(gray.cols / 2.0 - 0.5, gray.rows / 2.0 - 0.5);
 
     detector_->detectAndCompute(gray, cv::noArray(), map_keypoints_, map_descriptors_);
+    filterSmallKeypoints(map_keypoints_, map_descriptors_);
     map_points_px_.clear();
     map_points_px_.reserve(map_keypoints_.size());
     for (const cv::KeyPoint& kp : map_keypoints_) {
@@ -449,7 +486,8 @@ bool FeaturesLocalizer::buildWarper(const cv::Size& size) {
     return true;
 }
 
-bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position) {
+bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
+                               bool hasStartingPosition) {
     if (!calibrated_ || frame.empty() || map_points_px_.empty()) {
         return false;
     }
@@ -466,12 +504,23 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position) {
         gray = frame;
     }
 
-    const cv::Mat rectified = warper_.warp(gray);
+    // The warp is a pinhole homography, so the lens distortion has to come out
+    // first, otherwise the rectified patch does not sit on the same grid as the
+    // map and the match is stretched.
+    cv::Mat undistorted;
+    if (dist_coeffs_.empty()) {
+        undistorted = gray;
+    } else {
+        cv::undistort(gray, undistorted, camera_matrix_, dist_coeffs_);
+    }
+
+    const cv::Mat rectified = warper_.warp(undistorted);
 
     std::vector<cv::KeyPoint> patchKeypoints;
     cv::Mat patchDescriptors;
     detector_->detectAndCompute(rectified, cv::noArray(), patchKeypoints,
                                 patchDescriptors);
+    filterSmallKeypoints(patchKeypoints, patchDescriptors);
     if (patchKeypoints.empty() || patchDescriptors.empty()) {
         return false;
     }
@@ -482,13 +531,14 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position) {
         patchPoints.push_back(kp.pt);
     }
 
-    // Restrict the map to what the prior says the camera can see. Without a
-    // prior (or on a degenerate patch) the whole map is offered.
+    // Restrict the map to what the starting position says the camera can see.
+    // Without a starting position (or on a degenerate patch) the whole map is
+    // offered.
     std::vector<int> candidates;
     candidates.reserve(map_points_px_.size());
     cv::Rect2d window;
-    if (hasPrior() && cameraViewWindow(rectified, warper_, prior(), 0.0,
-                                       kPriorYawSlackDeg, window)) {
+    if (hasStartingPosition && cameraViewWindow(rectified, warper_, prior(), 0.0,
+                                                kPriorYawSlackDeg, window)) {
         for (int i = 0; i < static_cast<int>(map_points_px_.size()); ++i) {
             const cv::Point2d mm = mapPxToFieldMm(map_points_px_[i], map_origin_px_,
                                                   map_mm_per_px_);
