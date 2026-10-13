@@ -60,7 +60,7 @@ std::vector<VirtualStrategy*> strategies = { currentStrategy };
 ActionFSM action(currentStrategy, &drive, &tableStatus);
 
 #ifndef EMULATE_CAM
-Cam cam1 = Cam(0, "data/OV9281_1280_800.yaml", "data/FieldBW.png");
+Cam cam1 = Cam(0, "data/OV9281_1280_800.yaml", "data/table.png");
 #else
 Cam cam1(-1, "", "");
 #endif
