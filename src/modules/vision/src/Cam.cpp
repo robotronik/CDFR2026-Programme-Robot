@@ -174,14 +174,24 @@ void Cam::workerLoop() {
         return;
     }
 
+    // Throughput stats, reported once per second.
+    auto statsStart = std::chrono::steady_clock::now();
+    double loopMs = 0.0;
+    double processMs = 0.0;
+    unsigned long statsFrames = 0;
+
     while (running_.load()) {
+        const auto frameStart = std::chrono::steady_clock::now();
+
         cv::Mat frame;
         if (!detector_.captureFrame(frame)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
             continue;
         }
+        const auto processStart = std::chrono::steady_clock::now();
 
-        const std::vector<vision::DetectionResult> detections = detector_.detect(frame);
+        // ArUco detection is disabled while testing the feature localiser.
+        const std::vector<vision::DetectionResult> detections;
 
         // Snapshot the prior so setPrior() from another thread cannot race the
         // feature localiser.
@@ -194,7 +204,7 @@ void Cam::workerLoop() {
         }
 
         vision::CameraPosition arucoPosition;
-        const bool hasAruco = arucoLocalizer_.locate(detections, arucoPosition);
+        const bool hasAruco = false;
 
         if (hasPrior) {
             const position_t cameraPrior = robotToCamera(priorRobot);
@@ -216,6 +226,25 @@ void Cam::workerLoop() {
             localisation_.x = position.x;
             localisation_.y = position.y;
             localisation_.a = position.heading;
+        }
+
+        const auto frameEnd = std::chrono::steady_clock::now();
+        loopMs += std::chrono::duration<double, std::milli>(frameEnd - frameStart).count();
+        processMs += std::chrono::duration<double, std::milli>(frameEnd - processStart).count();
+        ++statsFrames;
+
+        const double windowMs =
+            std::chrono::duration<double, std::milli>(frameEnd - statsStart).count();
+        if (windowMs >= 1000.0) {
+            const double avgProcess = processMs / statsFrames;
+            LOG_GREEN_INFO("Cam ", id_, " vision: ", loopMs / statsFrames,
+                           " ms/frame (", statsFrames * 1000.0 / windowMs, " FPS), ",
+                           avgProcess, " ms processing (max ", 1000.0 / avgProcess,
+                           " FPS)");
+            statsStart = std::chrono::steady_clock::now();
+            loopMs = 0.0;
+            processMs = 0.0;
+            statsFrames = 0;
         }
     }
 

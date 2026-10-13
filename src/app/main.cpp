@@ -348,6 +348,9 @@ int StartSequence()
 
     drive.reset();
 
+    // Start the camera at startup so the feature localiser runs continuously.
+    cam1.start();
+
     LOG_GREEN_INFO("Init sequence done");
     return 0;
 }

@@ -441,9 +441,11 @@ bool FeaturesLocalizer::buildWarper(const cv::Size& size) {
 bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
                                bool hasStartingPosition) {
     if (!calibrated_ || frame.empty() || map_points_px_.empty()) {
+        LOG_WARNING("feature localisation failed: localiser not ready");
         return false;
     }
     if (warper_size_ != frame.size() && !buildWarper(frame.size())) {
+        LOG_WARNING("feature localisation failed: no ground warper");
         return false;
     }
 
@@ -472,6 +474,7 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
     detector_->detectAndCompute(rectified, cv::noArray(), patchKeypoints,
                                 patchDescriptors);
     if (patchKeypoints.empty() || patchDescriptors.empty()) {
+        LOG_WARNING("feature localisation failed: no keypoints in the capture");
         return false;
     }
 
@@ -502,6 +505,7 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
         }
     }
     if (static_cast<int>(candidates.size()) < 2) {
+        LOG_WARNING("feature localisation failed: no map keypoints in view");
         return false;
     }
 
@@ -528,14 +532,16 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
 
     cv::Mat transform, inlierMask;
     if (!solveRigid(query, train, transform, inlierMask)) {
+        LOG_WARNING("feature localisation failed: no rigid fit from ", query.size(),
+                    " matches");
         return false;
     }
 
     position = poseFromTransform(transform, warper_.cameraPatchPx(),
                                  map_origin_px_, map_mm_per_px_);
-    LOG_INFO("fix (", position.x, ", ", position.y,
-             ") mm, heading ", position.heading, " deg, ", query.size(),
-             " matches, ", cv::countNonZero(inlierMask), " inliers");
+    LOG_GREEN_INFO("position found (", position.x, ", ", position.y,
+                   ") mm, heading ", position.heading, " deg, ", query.size(),
+                   " matches, ", cv::countNonZero(inlierMask), " inliers");
     return true;
 }
 
