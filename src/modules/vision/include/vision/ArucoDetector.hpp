@@ -10,8 +10,6 @@
 #include <opencv2/core/version.hpp>
 #include <opencv2/videoio.hpp>
 
-#include "vision/RawFrame.hpp"
-
 #ifdef CAMERA_USE_LIBCAMERA
 #  include "vision/LibcameraCamera.hpp"
 #endif
@@ -59,8 +57,8 @@ public:
     bool isCameraOpen() const;
     void releaseCamera();
 
-    // Thread-safe frame grab. Returns false (and leaves `outFrame` empty) when
-    // the camera is closed or the frame cannot be read.
+    // Thread-safe frame grab, grayscale. Returns false (and leaves `outFrame`
+    // empty) when the camera is closed or the frame cannot be read.
     bool captureFrame(cv::Mat& outFrame);
 
     // Controls
@@ -71,7 +69,8 @@ public:
     float getContrast() const { return contrast_; }
     float getBrightness() const { return brightness_; }
 
-    // Detects markers on an already acquired frame (BGR, BGRA or grayscale).
+    // Detects markers on a grayscale frame (CV_8UC1). Anything else is rejected:
+    // the whole capture path is single-channel.
     std::vector<DetectionResult> detect(const cv::Mat& frame);
 
 private:

@@ -9,6 +9,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include "utils/logger.hpp"
+#include "vision/Angles.hpp"
 
 namespace vision {
 
@@ -46,17 +47,26 @@ constexpr double kMinInlierSpanMm = 300.0;
 // sweeps the patch footprint through this yaw range.
 constexpr double kPriorYawSlackDeg = 15.0;
 
-constexpr double kDegToRad = M_PI / 180.0;
-constexpr double kRadToDeg = 180.0 / M_PI;
+// Bounding box grown point by point; the 1e18 seeds let the first point set both
+// extremes.
+struct Bounds2d {
+    double minX = 1e18, minY = 1e18;
+    double maxX = -1e18, maxY = -1e18;
 
-double normalizeAngle(double angle) {
-    while (angle > 180.0) angle -= 360.0;
-    while (angle <= -180.0) angle += 360.0;
-    return angle;
-}
+    void add(double x, double y) {
+        minX = std::min(minX, x);
+        maxX = std::max(maxX, x);
+        minY = std::min(minY, y);
+        maxY = std::max(maxY, y);
+    }
+
+    bool empty() const { return minX > maxX; }
+    double width() const { return maxX - minX; }
+    double height() const { return maxY - minY; }
+};
 
 // Camera-to-ground rotation with columns (right, up, forward), looking along -Z
-// and pitched down. Same construction as common/geometry.camera_rotation.
+// and pitched down.
 cv::Matx33d cameraRotation(double pitchDeg) {
     const double p = pitchDeg * kDegToRad;
     const double cp = std::cos(p);
@@ -68,7 +78,7 @@ cv::Matx33d cameraRotation(double pitchDeg) {
 }
 
 // Pixel -> ground millimetre homography, from the camera intrinsics and the
-// mounting. Generalises common/geometry.capture_homography to any lens.
+// mounting; works for any lens since the intrinsics come from the calibration.
 cv::Matx33d captureHomography(const cv::Matx33d& cameraMatrix,
                               double pitchDeg, double heightMm) {
     cv::Matx33d kInv = cameraMatrix.inv();
@@ -94,9 +104,7 @@ cv::Matx33d captureHomography(const cv::Matx33d& cameraMatrix,
 void groundBounds(const cv::Matx33d& H, int width, int height,
                   double& x0, double& y0, double& x1, double& y1) {
     constexpr int kSamples = 65;
-    x0 = y0 = 1e18;
-    x1 = y1 = -1e18;
-    bool any = false;
+    Bounds2d bounds;
     for (int iy = 0; iy < kSamples; ++iy) {
         const double v = (height - 1) * iy / double(kSamples - 1);
         for (int ix = 0; ix < kSamples; ++ix) {
@@ -105,19 +113,18 @@ void groundBounds(const cv::Matx33d& H, int width, int height,
             if (p[2] >= -1e-9) {
                 continue;
             }
-            const double gx = p[0] / p[2];
-            const double gy = p[1] / p[2];
-            x0 = std::min(x0, gx);
-            x1 = std::max(x1, gx);
-            y0 = std::min(y0, gy);
-            y1 = std::max(y1, gy);
-            any = true;
+            bounds.add(p[0] / p[2], p[1] / p[2]);
         }
     }
-    if (!any) {
+    if (bounds.empty()) {
         x0 = y0 = 0.0;
         x1 = y1 = 1.0;
+        return;
     }
+    x0 = bounds.minX;
+    y0 = bounds.minY;
+    x1 = bounds.maxX;
+    y1 = bounds.maxY;
 }
 
 // Map pixels -> field millimetres: x right, y up, origin at the field centre.
@@ -213,17 +220,14 @@ bool solveRigid(const std::vector<cv::Point2d>& query,
 
     // A tight inlier cluster is how repeated texture passes everything else; a
     // real fix has matches spread across the patch.
-    double minX = 1e18, minY = 1e18, maxX = -1e18, maxY = -1e18;
+    Bounds2d spread;
     for (int i = 0; i < inlierMask.rows; ++i) {
         if (!mask[i]) {
             continue;
         }
-        minX = std::min(minX, query[i].x);
-        maxX = std::max(maxX, query[i].x);
-        minY = std::min(minY, query[i].y);
-        maxY = std::max(maxY, query[i].y);
+        spread.add(query[i].x, query[i].y);
     }
-    if (std::hypot(maxX - minX, maxY - minY) < kMinInlierSpanMm / kMmPerPx) {
+    if (std::hypot(spread.width(), spread.height()) < kMinInlierSpanMm / kMmPerPx) {
         return false;
     }
     return true;
@@ -287,29 +291,29 @@ bool cameraViewWindow(const cv::Mat& rectified, const GroundWarper& warper,
     if (yawSlackDeg <= 0.0) {
         angles.push_back(0.0);
     } else {
+        // Nine samples across the slack, endpoints included.
         for (int i = 0; i < 9; ++i) {
             angles.push_back(-yawSlackDeg + 2.0 * yawSlackDeg * i / 8.0);
         }
     }
 
-    double minX = 1e18, minY = 1e18, maxX = -1e18, maxY = -1e18;
+    Bounds2d bounds;
     for (double a : angles) {
         const double r = (prior.heading + a) * kDegToRad;
         const double c = std::cos(r);
         const double s = std::sin(r);
         for (const cv::Point2d& p : robot) {
-            const double fx = prior.x + p.x * c - p.y * s;
-            const double fy = prior.y + p.x * s + p.y * c;
-            minX = std::min(minX, fx);
-            maxX = std::max(maxX, fx);
-            minY = std::min(minY, fy);
-            maxY = std::max(maxY, fy);
+            bounds.add(prior.x + p.x * c - p.y * s,
+                       prior.y + p.x * s + p.y * c);
         }
+    }
+    if (bounds.empty()) {
+        return false;
     }
 
     const double pad = std::max(0.0, positionSlackMm);
-    window = cv::Rect2d(minX - pad, minY - pad,
-                        (maxX - minX) + 2.0 * pad, (maxY - minY) + 2.0 * pad);
+    window = cv::Rect2d(bounds.minX - pad, bounds.minY - pad,
+                        bounds.width() + 2.0 * pad, bounds.height() + 2.0 * pad);
     return true;
 }
 
@@ -380,14 +384,14 @@ bool FeaturesLocalizer::loadMap(const std::string& mapFilePath) {
                    0.0, 0.0, cv::INTER_AREA);
     }
 
-    map_gray_ = gray;
     map_mm_per_px_ = FIELD_WIDTH_MM / static_cast<double>(gray.cols);
     map_origin_px_ = cv::Point2d(gray.cols / 2.0 - 0.5, gray.rows / 2.0 - 0.5);
 
-    detector_->detectAndCompute(gray, cv::noArray(), map_keypoints_, map_descriptors_);
+    std::vector<cv::KeyPoint> keypoints;
+    detector_->detectAndCompute(gray, cv::noArray(), keypoints, map_descriptors_);
     map_points_px_.clear();
-    map_points_px_.reserve(map_keypoints_.size());
-    for (const cv::KeyPoint& kp : map_keypoints_) {
+    map_points_px_.reserve(keypoints.size());
+    for (const cv::KeyPoint& kp : keypoints) {
         map_points_px_.push_back(kp.pt);
     }
 
@@ -443,26 +447,22 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
     if (!calibrated_ || frame.empty() || map_points_px_.empty()) {
         return false;
     }
-    if (warper_size_ != frame.size() && !buildWarper(frame.size())) {
+    if (frame.channels() != 1) {
+        LOG_ERROR("FeaturesLocalizer::locate expects a grayscale frame, got ",
+                  frame.channels(), " channels");
         return false;
     }
-
-    cv::Mat gray;
-    if (frame.channels() == 3) {
-        cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
-    } else if (frame.channels() == 4) {
-        cv::cvtColor(frame, gray, cv::COLOR_BGRA2GRAY);
-    } else {
-        gray = frame;
+    if (warper_size_ != frame.size() && !buildWarper(frame.size())) {
+        return false;
     }
 
     // Undistort first: the warp is a pinhole homography, so distortion would
     // stretch the patch off the map's grid.
     cv::Mat undistorted;
     if (dist_coeffs_.empty()) {
-        undistorted = gray;
+        undistorted = frame;
     } else {
-        cv::undistort(gray, undistorted, camera_matrix_, dist_coeffs_);
+        cv::undistort(frame, undistorted, camera_matrix_, dist_coeffs_);
     }
 
     const cv::Mat rectified = warper_.warp(undistorted);
@@ -486,7 +486,7 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
     std::vector<int> candidates;
     candidates.reserve(map_points_px_.size());
     cv::Rect2d window;
-    if (hasStartingPosition && cameraViewWindow(rectified, warper_, prior(), 0.0,
+    if (hasStartingPosition && cameraViewWindow(rectified, warper_, prior_, 0.0,
                                                 kPriorYawSlackDeg, window)) {
         for (int i = 0; i < static_cast<int>(map_points_px_.size()); ++i) {
             const cv::Point2d mm = mapPxToFieldMm(map_points_px_[i], map_origin_px_,

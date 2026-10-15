@@ -6,7 +6,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/features2d.hpp>
 
-#include "vision/CamLocalizer.hpp"
+#include "vision/CameraGeometry.hpp"
 
 namespace vision {
 
@@ -29,22 +29,29 @@ struct GroundWarper {
 // the field map. The map keypoints are computed once; each capture is rectified
 // to the same mm/px grid, so a match is a rigid motion (no scale) that RANSAC
 // fits, from which the camera's field pose follows.
-class FeaturesLocalizer : public CamLocalizer {
+class FeaturesLocalizer {
 public:
     FeaturesLocalizer();
+
+    // Odometry estimate of the robot's pose; the match is restricted to the
+    // window around it.
+    void setPrior(const CameraPosition& prior) { prior_ = prior; }
 
     // Camera intrinsics; the capture -> ground warp is built from camera_matrix.
     bool loadCalibration(const std::string& cameraFilePath);
     // The 1 mm/px grayscale field image to match against.
     bool loadMap(const std::string& mapFilePath);
 
-    // Rectifies `frame`, matches it against the map, and fills `position` on a
-    // successful fit. When `hasStartingPosition` is true the match is restricted
-    // to the window around the stored prior, otherwise the whole map is offered.
+    // Rectifies `frame`, which must be grayscale (CV_8UC1), matches it against
+    // the map, and fills `position` on a successful fit. When
+    // `hasStartingPosition` is true the match is restricted to the window around
+    // the stored prior, otherwise the whole map is offered.
     bool locate(const cv::Mat& frame, CameraPosition& position, bool hasStartingPosition);
 
 private:
     bool buildWarper(const cv::Size& size);
+
+    CameraPosition prior_;
 
     cv::Mat camera_matrix_;
     cv::Mat dist_coeffs_;
@@ -53,10 +60,8 @@ private:
     GroundWarper warper_;
     cv::Size warper_size_;
 
-    cv::Mat map_gray_;
     double map_mm_per_px_ = 1.0;
     cv::Point2d map_origin_px_;
-    std::vector<cv::KeyPoint> map_keypoints_;
     cv::Mat map_descriptors_;
     std::vector<cv::Point2d> map_points_px_;
 

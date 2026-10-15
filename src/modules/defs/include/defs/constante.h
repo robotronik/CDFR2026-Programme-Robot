@@ -4,6 +4,12 @@
 
 #define LOOP_TIME_MS 20
 
+// Duration of a match (100 s).
+#define MATCH_DURATION_MS 100000
+
+// Position used before the opponent has been located (off the table).
+const position_t OPPONENT_POS_UNKNOWN = { .x = 3000, .y = 0, .a = 0 };
+
 #define DISTANCESTOP   500
 
 #define RAD_TO_DEG 57.29577951

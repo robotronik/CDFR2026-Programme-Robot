@@ -8,35 +8,24 @@
 #include <opencv2/imgproc.hpp>
 
 #include "utils/logger.hpp"
+#include "vision/Angles.hpp"
+#include "vision/ArucoLocalizer.hpp"
 
 namespace {
 
 constexpr int kCameraWidth = 1280;
 constexpr int kCameraHeight = 800;
 
-// Game element tag (id 13): the tag side sets the pose scale, the cube side
-// places the tag above the cube centre.
+// Game element tag (id 13): its side sets the pose scale, the cube side places
+// the tag above the cube centre.
 constexpr int kGameElementId = 13;
-constexpr double kGameElementTagMm = GAME_ELEMENT_TAG_MM;
-constexpr double kGameElementSideMm = GAME_ELEMENT_SIDE_MM;
-
-// The field landmark tags (ids 20..23) are 100 mm squares.
-constexpr double kLandmarkTagMm = 100.0;
-
-constexpr double kDegToRad = M_PI / 180.0;
-
-double normalizeAngle(double angle) {
-    while (angle > 180.0) angle -= 360.0;
-    while (angle <= -180.0) angle += 360.0;
-    return angle;
-}
 
 // Rotation from the camera's optical frame (x right, y down, z forward) to the
 // table frame (x/y in the plane, z up), looking along `headingDeg` and pitched
 // `pitchDeg` down.
 cv::Matx33d cameraToTableRotation(double headingDeg, double pitchDeg) {
-    const double a = headingDeg * kDegToRad;
-    const double p = pitchDeg * kDegToRad;
+    const double a = headingDeg * vision::kDegToRad;
+    const double p = pitchDeg * vision::kDegToRad;
     const double ca = std::cos(a), sa = std::sin(a);
     const double cp = std::cos(p), sp = std::sin(p);
 
@@ -79,27 +68,28 @@ void drawDetections(cv::Mat& image, const std::vector<vision::DetectionResult>& 
 
 position_t cameraToRobot(const position_t& cameraPose) {
     const double robotA = cameraPose.a - OFFSET_CAM_A;
-    const double rad = robotA * kDegToRad;
+    const double rad = robotA * vision::kDegToRad;
     const double c = std::cos(rad);
     const double s = std::sin(rad);
 
     position_t robotPose = {0.0, 0.0, 0.0};
     robotPose.x = cameraPose.x - (OFFSET_CAM_X * c - OFFSET_CAM_Y * s);
     robotPose.y = cameraPose.y - (OFFSET_CAM_X * s + OFFSET_CAM_Y * c);
-    robotPose.a = normalizeAngle(robotA);
-    LOG_DEBUG("Camera pose: (%.2f, %.2f, %.2f) -> Robot pose: (%.2f, %.2f, %.2f)", cameraPose.x, cameraPose.y, cameraPose.a, robotPose.x, robotPose.y, robotPose.a);
+    robotPose.a = vision::normalizeAngle(robotA);
+    LOG_DEBUG("Camera pose: (", cameraPose.x, ", ", cameraPose.y, ", ", cameraPose.a,
+              ") -> Robot pose: (", robotPose.x, ", ", robotPose.y, ", ", robotPose.a, ")");
     return robotPose;
 }
 
 position_t robotToCamera(const position_t& robotPose) {
-    const double rad = robotPose.a * kDegToRad;
+    const double rad = robotPose.a * vision::kDegToRad;
     const double c = std::cos(rad);
     const double s = std::sin(rad);
 
     position_t cameraPose = {0.0, 0.0, 0.0};
     cameraPose.x = robotPose.x + (OFFSET_CAM_X * c - OFFSET_CAM_Y * s);
     cameraPose.y = robotPose.y + (OFFSET_CAM_X * s + OFFSET_CAM_Y * c);
-    cameraPose.a = normalizeAngle(robotPose.a + OFFSET_CAM_A);
+    cameraPose.a = vision::normalizeAngle(robotPose.a + OFFSET_CAM_A);
     return cameraPose;
 }
 
@@ -113,14 +103,9 @@ Cam::Cam(int camNumber, const char* calibrationFilePath, const char* mapFilePath
     if (!detector_.loadCalibration(calibrationFilePath)) {
         LOG_ERROR("Cam ", id_, " failed to load calibration from ", calibrationFilePath);
     }
-    detector_.setMarkerSize(kGameElementId, kGameElementTagMm);
-    for (int tagId : {20, 21, 22, 23}) {
-        detector_.setMarkerSize(tagId, kLandmarkTagMm);
-    }
+    detector_.setMarkerSize(kGameElementId, GAME_ELEMENT_TAG_MM);
+    vision::ArucoLocalizer::registerLandmarkTags(detector_);
 
-    if (!arucoLocalizer_.loadCalibration(calibrationFilePath)) {
-        LOG_ERROR("Cam ", id_, " failed to load the landmark localiser calibration");
-    }
     if (!featuresLocalizer_.loadCalibration(calibrationFilePath)) {
         LOG_ERROR("Cam ", id_, " failed to load the feature localiser calibration");
     }
@@ -194,7 +179,7 @@ void Cam::workerLoop() {
         }
 
         vision::CameraPosition arucoPosition;
-        const bool hasAruco = arucoLocalizer_.locate(detections, arucoPosition);
+        const bool hasAruco = vision::ArucoLocalizer::locate(detections, arucoPosition);
 
         if (hasPrior) {
             const position_t cameraPrior = robotToCamera(priorRobot);
@@ -284,7 +269,7 @@ bool Cam::gameElementFromTag(const vision::DetectionResult& detection,
 
     // The cube centre is half a side inwards along the tag's outward normal.
     const cv::Vec3d normal = elementToTable * cv::Vec3d(0.0, 0.0, 1.0);
-    const cv::Vec3d cubePosition = tagPosition - (kGameElementSideMm / 2.0) * normal;
+    const cv::Vec3d cubePosition = tagPosition - (GAME_ELEMENT_SIDE_MM / 2.0) * normal;
 
     cv::Mat rqR, rqQ;
     const cv::Vec3d euler = cv::RQDecomp3x3(elementToTable, rqR, rqQ);

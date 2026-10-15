@@ -9,19 +9,18 @@
 
 #include "drive_interface.h" // for position_t
 #include "vision/ArucoDetector.hpp"
-#include "vision/ArucoLocalizer.hpp"
 #include "vision/FeaturesLocalizer.hpp"
 
 // Camera offset in the robot frame, in millimetres and degrees.
-#define OFFSET_CAM_X 129
-#define OFFSET_CAM_Y 4.5
-#define OFFSET_CAM_A 0
+constexpr double OFFSET_CAM_X = 129.0;
+constexpr double OFFSET_CAM_Y = 4.5;
+constexpr double OFFSET_CAM_A = 0.0;
 
 // Game elements are 110 mm cubes whose faces carry an 80 mm ArUco id 13 marker;
 // the marker size sets the pose scale, the cube side places the marker above the
 // cube centre.
-#define GAME_ELEMENT_SIDE_MM 110.0
-#define GAME_ELEMENT_TAG_MM 80.0
+constexpr double GAME_ELEMENT_SIDE_MM = 110.0;
+constexpr double GAME_ELEMENT_TAG_MM = 80.0;
 
 // A game element's table pose in millimetres and degrees. The yaw follows the
 // marker's own axes (a flat marker oriented like the field tags reads ~90 deg).
@@ -95,7 +94,6 @@ private:
 
     // Owns the capture device; detects the markers for the preview and elements.
     vision::ArucoDetector detector_;
-    vision::ArucoLocalizer arucoLocalizer_;
     vision::FeaturesLocalizer featuresLocalizer_;
 
     mutable std::mutex mutex_;

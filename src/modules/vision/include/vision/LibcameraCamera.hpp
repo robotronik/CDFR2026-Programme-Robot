@@ -3,13 +3,24 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <string>
 #include <vector>
 
 #include <libcamera/base/object.h>
+#include <libcamera/formats.h>
 #include <libcamera/libcamera.h>
 
 #include "vision/RawFrame.hpp"
+
+// The 24-bit packed RGB/BGR format constants were renamed in libcamera 0.3:
+// RGB888/BGR888 became RGB24/BGR24. CMake probes the installed header and
+// defines the selector, so the frame converters compile against either.
+#ifdef CAMERA_LIBCAMERA_FORMAT_RGB24
+#  define CAMERA_FORMAT_RGB24 libcamera::formats::RGB24
+#  define CAMERA_FORMAT_BGR24 libcamera::formats::BGR24
+#else
+#  define CAMERA_FORMAT_RGB24 libcamera::formats::RGB888
+#  define CAMERA_FORMAT_BGR24 libcamera::formats::BGR888
+#endif
 
 namespace vision {
 
@@ -25,7 +36,7 @@ namespace vision {
 // that stays valid until the next capture.
 class LibcameraCamera : public libcamera::Object {
 public:
-    explicit LibcameraCamera(const std::string& cameraId = {});
+    LibcameraCamera() = default;
     ~LibcameraCamera();
 
     LibcameraCamera(const LibcameraCamera&) = delete;
@@ -44,9 +55,6 @@ public:
     void setExposureValue(float ev);
     void setContrast(float contrast);
     void setBrightness(float brightness);
-    float getExposureValue() const { return exposureValue_; }
-    float getContrast() const { return contrast_; }
-    float getBrightness() const { return brightness_; }
 
     // Waits for the next frame (bounded by a timeout) into `out`. False on
     // timeout or error.
@@ -64,7 +72,6 @@ private:
     float contrast_ = 1.3f;
     float brightness_ = 0.0f;
 
-    std::string cameraId_;
     std::unique_ptr<libcamera::CameraManager> manager_;
     std::shared_ptr<libcamera::Camera> camera_;
     std::unique_ptr<libcamera::CameraConfiguration> config_;
@@ -72,22 +79,18 @@ private:
     std::unique_ptr<libcamera::FrameBufferAllocator> allocator_;
     std::vector<std::unique_ptr<libcamera::Request>> requests_;
 
-    std::size_t pending_ = 0;
     const libcamera::FrameBuffer* ready_ = nullptr;
 
     bool open_ = false;
     // libcamera 0.2 has no Camera::isRunning(); track it to stop/queue only once
     // capture has started.
     bool started_ = false;
-    unsigned int captureFailCount_ = 0;
 
     // Configured stream metrics, to interpret the completed frame's planes.
     int width_ = 0;
     int height_ = 0;
     int stride_ = 0;
     libcamera::PixelFormat pixelFormat_;
-    // True when the format is stored as several planes to be flattened.
-    bool multiPlanar_ = false;
 
     // Owned copy of the latest frame, repacked so it outlives the mmap'ed camera
     // buffer. Mutable because fillRawFrame() is const.

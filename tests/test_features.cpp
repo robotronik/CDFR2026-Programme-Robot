@@ -90,7 +90,7 @@ bool test_features_localizer() {
     int solved = 0;
     for (const std::string& path : captures) {
         const std::string name = path.substr(path.find_last_of('/') + 1);
-        const cv::Mat image = cv::imread(path, cv::IMREAD_COLOR);
+        const cv::Mat image = cv::imread(path, cv::IMREAD_GRAYSCALE);
         if (image.empty()) {
             LOG_ERROR("Features test - cannot read ", path);
             return false;

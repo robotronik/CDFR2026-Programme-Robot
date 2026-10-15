@@ -7,8 +7,9 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 
-#include "vision/Cam.hpp"
 #include "utils/logger.hpp"
+#include "vision/ArucoLocalizer.hpp"
+#include "vision/Cam.hpp"
 
 namespace {
 
@@ -99,11 +100,12 @@ bool test_aruco_localizer() {
         return false;
     }
 
-    vision::ArucoLocalizer localizer;
-    if (!localizer.loadCalibration(calibrationPath)) {
+    vision::ArucoDetector detector;
+    if (!detector.loadCalibration(calibrationPath)) {
         LOG_ERROR("ArUco localizer test - failed to load ", calibrationPath);
         return false;
     }
+    vision::ArucoLocalizer::registerLandmarkTags(detector);
 
     // The accepted band is centred on the camera mounting height.
     constexpr double kCameraHeightToleranceMm = 20.0;
@@ -117,8 +119,8 @@ bool test_aruco_localizer() {
             return false;
         }
 
-        const cv::Mat image = cv::imread(imagePath, cv::IMREAD_COLOR);
-        const std::vector<vision::DetectionResult> detections = localizer.detector().detect(image);
+        const cv::Mat image = cv::imread(imagePath, cv::IMREAD_GRAYSCALE);
+        const std::vector<vision::DetectionResult> detections = detector.detect(image);
 
         // The landmark tags (ids 20..23) are the ones the localizer can use.
         const vision::DetectionResult* landmark = nullptr;
@@ -134,7 +136,7 @@ bool test_aruco_localizer() {
         }
 
         vision::CameraPosition position;
-        if (!localizer.locate(detections, position)) {
+        if (!vision::ArucoLocalizer::locate(detections, position)) {
             LOG_ERROR("ArUco localizer test - no position found in ", imagePath);
             return false;
         }
@@ -176,7 +178,7 @@ bool test_aruco_localizer() {
     // A frame with no known tag must report that no position was found.
     const cv::Mat blank(480, 640, CV_8UC1, cv::Scalar(255));
     vision::CameraPosition none;
-    if (localizer.locate(blank, none)) {
+    if (vision::ArucoLocalizer::locate(detector.detect(blank), none)) {
         LOG_ERROR("ArUco localizer test - reported a position for a blank frame");
         return false;
     }
@@ -254,7 +256,7 @@ bool test_game_element_cube_center() {
             return false;
         }
 
-        const cv::Mat image = cv::imread(imagePath, cv::IMREAD_COLOR);
+        const cv::Mat image = cv::imread(imagePath, cv::IMREAD_GRAYSCALE);
         const std::vector<vision::DetectionResult> detections = detector.detect(image);
 
         // A field landmark tag may also be present but is not a game element.
