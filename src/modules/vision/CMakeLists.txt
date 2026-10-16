@@ -57,6 +57,13 @@ if(CMAKE_CROSSCOMPILING)
     target_link_libraries(vision PUBLIC PkgConfig::LIBCAMERA)
     target_compile_definitions(vision PUBLIC CAMERA_USE_LIBCAMERA)
 
+    # libcamera's public headers use std::span since the 2026-10-09 Pi package, so
+    # the ARM target needs C++20. It must be PUBLIC: LibcameraCamera derives from
+    # libcamera::Object (required for libcamera's signal marshalling) and Cam.hpp
+    # exposes it, so the executable and the tests compile as C++20 too. The
+    # x86_64 build has no libcamera and stays on the project-wide C++17.
+    target_compile_features(vision PUBLIC cxx_std_20)
+
     # The libcamera `base/` headers are internal: some packages omit them, the Pi
     # package ships ones that refuse to compile. Provide our own ABI-compatible
     # declarations, include-dir first so they win over any installed copy.

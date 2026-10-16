@@ -32,6 +32,7 @@ RestAPI::RestAPI(main_State_t* currentState,
                  Arduino* arduino,
                  Lidar* lidar,
                  Cam* cam,
+                 Navigation* navigation,
                  std::vector<VirtualStrategy*>* strategies)
     : currentState(currentState),
       nextState(nextState),
@@ -40,6 +41,7 @@ RestAPI::RestAPI(main_State_t* currentState,
       arduino(arduino),
       lidar(lidar),
       cam(cam),
+      navigation(navigation),
       strategies(strategies){
 }
 
@@ -219,7 +221,7 @@ void RestAPI::start(){
         }
         response["lidar"] = limitedAbsoluteLidarData;
         json current_navigation_path;
-        navigation.pathJson(current_navigation_path);
+        navigation->pathJson(current_navigation_path);
         response["navigation"] = current_navigation_path;
         
         response["target_pos"] = (position_t)drive->target;
@@ -526,7 +528,7 @@ void RestAPI::start(){
 
         const position_t pos = readRequestedPosition(req_data, drive->position);
         drive->setCoordinates(pos);
-        navigation.goTo(pos, false);
+        navigation->goTo(pos, false);
 
         return jsonMessage("Successful");
     });
@@ -542,7 +544,7 @@ void RestAPI::start(){
 
         const position_t pos = readRequestedPosition(req_data, drive->position);
         LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", pos.x, " y=", pos.y, " a=", pos.a);
-        navigation.goTo(pos, false);
+        navigation->goTo(pos, false);
 
         return jsonMessage("Successful");
     });
@@ -558,7 +560,7 @@ void RestAPI::start(){
 
         const position_t pos = readRequestedPosition(req_data, drive->position);
         LOG_INFO("Manual ctrl : Requested set_target_coordinates_Astart, x=", pos.x, " y=", pos.y, " a=", pos.a);
-        navigation.goTo(pos, true);
+        navigation->goTo(pos, true);
 
         return jsonMessage("Successful");
     });
@@ -580,7 +582,7 @@ void RestAPI::start(){
         LOG_INFO("Manual ctrl : Requested set_move, value=", req_value);
 
         position_t pos = {newXvalue, newYvalue, drive->position.a};
-        navigation.goTo(pos);
+        navigation->goTo(pos);
 
         return jsonMessage("Successful");
     });
@@ -598,7 +600,7 @@ void RestAPI::start(){
 
         // TODO
         position_t pos = {drive->position.x, drive->position.y, drive->position.a + req_value};
-        navigation.goTo(pos);
+        navigation->goTo(pos);
 
         LOG_INFO("Manual ctrl : Requested set_rotate, value=", req_value);
 
