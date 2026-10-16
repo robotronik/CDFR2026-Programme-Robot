@@ -5,6 +5,8 @@
 
 #ifdef CAMERA_USE_LIBCAMERA
 #  include <libcamera/formats.h>
+
+#  include "vision/RawFrame.hpp"
 #endif
 
 #include "utils/logger.hpp"
@@ -17,18 +19,13 @@ namespace {
 constexpr int kPredefinedDictionary = cv::aruco::DICT_4X4_50;
 
 // Detection parameters, mirroring the previous Python service
-// (pi_detect_aruco.py). The corner refinement window is left at its default
-// (0.01) which matches the value previously set explicitly in Python.
+// (pi_detect_aruco.py).
 void configureParameters(cv::aruco::DetectorParameters& p) {
     p.adaptiveThreshWinSizeMin = 3;
     p.adaptiveThreshWinSizeMax = 23;
     p.adaptiveThreshWinSizeStep = 10;
-    // The competition tags are printed with low contrast under uneven lighting,
-    // so the marker and its background sit close together and the adaptive
-    // threshold needs a small constant to separate them. A larger constant such
-    // as 20 (chosen for the game element tags' white margin) missed every
-    // low-contrast capture; 13 still detects all the real OV9281 captures in
-    // tests/data/aruco_loc.
+    // Low-contrast tags need a small adaptive-threshold constant (13); larger
+    // values missed the real captures in tests/data/aruco_loc.
     p.adaptiveThreshConstant = 13;
 
     p.minMarkerPerimeterRate = 0.03;
@@ -64,20 +61,21 @@ std::vector<cv::Point3f> markerObjectPoints(double markerLength) {
     };
 }
 
-#ifdef CAMERA_USE_LIBCAMERA
-// The 24-bit packed RGB/BGR format constants were renamed in libcamera 0.3:
-// RGB888/BGR888 became RGB24/BGR24.
-#ifdef CAMERA_LIBCAMERA_FORMAT_RGB24
-#  define CAMERA_FORMAT_RGB24 libcamera::formats::RGB24
-#  define CAMERA_FORMAT_BGR24 libcamera::formats::BGR24
-#else
-#  define CAMERA_FORMAT_RGB24 libcamera::formats::RGB888
-#  define CAMERA_FORMAT_BGR24 libcamera::formats::BGR888
-#endif
+// Report a device that opened but never delivers frames occasionally, not once
+// per failed read.
+constexpr int kCaptureFailReportInterval = 400;
 
-// Converts one libcamera frame into a BGR cv::Mat. Returns false for formats
-// the detector does not know how to unpack.
-bool convertRawFrame(const RawFrame& raw, cv::Mat& out) {
+void reportCaptureFailure(int previousFailures) {
+    if (previousFailures == 0 || previousFailures % kCaptureFailReportInterval == 0) {
+        LOG_WARNING("camera returned no frame (", previousFailures + 1, " failures)");
+    }
+}
+
+#ifdef CAMERA_USE_LIBCAMERA
+// Converts one libcamera frame into a grayscale cv::Mat: the whole pipeline
+// works on luminance only. The result owns its pixels, so it stays valid after
+// the camera buffer is recycled. Returns false for formats it cannot unpack.
+bool convertToGray(const RawFrame& raw, cv::Mat& out) {
     if (raw.data == nullptr || raw.width <= 0 || raw.height <= 0) {
         return false;
     }
@@ -85,16 +83,14 @@ bool convertRawFrame(const RawFrame& raw, cv::Mat& out) {
     switch (raw.format) {
     case libcamera::formats::R8: {
         const cv::Mat gray(raw.height, raw.width, CV_8UC1, const_cast<uint8_t*>(raw.data), raw.stride);
-        cv::cvtColor(gray, out, cv::COLOR_GRAY2BGR);
+        out = gray.clone();
         return true;
     }
     case libcamera::formats::R10:
     case libcamera::formats::R12:
     case libcamera::formats::R16: {
         const cv::Mat gray16(raw.height, raw.width, CV_16UC1, const_cast<uint8_t*>(raw.data), raw.stride);
-        cv::Mat gray8;
-        gray16.convertTo(gray8, CV_8U, 1.0 / 256.0);
-        cv::cvtColor(gray8, out, cv::COLOR_GRAY2BGR);
+        gray16.convertTo(out, CV_8U, 1.0 / 256.0);
         return true;
     }
     case libcamera::formats::BGRA8888:
@@ -111,44 +107,39 @@ bool convertRawFrame(const RawFrame& raw, cv::Mat& out) {
         // the XRGB/ARGB groups use the opposite order.
         if (raw.format == libcamera::formats::RGBA8888 ||
             raw.format == libcamera::formats::BGRA8888) {
-            cv::cvtColor(bgra, out, cv::COLOR_BGRA2BGR);
+            cv::cvtColor(bgra, out, cv::COLOR_BGRA2GRAY);
         } else {
-            cv::cvtColor(bgra, out, cv::COLOR_RGBA2BGR);
+            cv::cvtColor(bgra, out, cv::COLOR_RGBA2GRAY);
         }
         return true;
     }
     case CAMERA_FORMAT_BGR24: {
         const cv::Mat bgr(raw.height, raw.width, CV_8UC3, const_cast<uint8_t*>(raw.data), raw.stride);
-        out = bgr.clone();
+        cv::cvtColor(bgr, out, cv::COLOR_BGR2GRAY);
         return true;
     }
     case CAMERA_FORMAT_RGB24: {
         const cv::Mat rgb(raw.height, raw.width, CV_8UC3, const_cast<uint8_t*>(raw.data), raw.stride);
-        cv::cvtColor(rgb, out, cv::COLOR_RGB2BGR);
+        cv::cvtColor(rgb, out, cv::COLOR_RGB2GRAY);
         return true;
     }
     case libcamera::formats::YUYV: {
         const cv::Mat yuyv(raw.height, raw.width, CV_8UC2, const_cast<uint8_t*>(raw.data), raw.stride);
-        cv::cvtColor(yuyv, out, cv::COLOR_YUV2BGR_YUYV);
+        cv::cvtColor(yuyv, out, cv::COLOR_YUV2GRAY_YUYV);
         return true;
     }
     case libcamera::formats::UYVY: {
         const cv::Mat uyvy(raw.height, raw.width, CV_8UC2, const_cast<uint8_t*>(raw.data), raw.stride);
-        cv::cvtColor(uyvy, out, cv::COLOR_YUV2BGR_UYVY);
+        cv::cvtColor(uyvy, out, cv::COLOR_YUV2GRAY_UYVY);
         return true;
     }
     case libcamera::formats::NV12:
     case libcamera::formats::NV21:
     case libcamera::formats::YUV420: {
-        // Plane 0 is the pure grayscale Luminance (Y) channel processed by the ISP.
-        // For a monochrome sensor like the OV9281, the chroma planes (UV) contain
-        // only noise and uncalibrated chroma that produce false green/magenta colors
-        // if converted via YUV2BGR.
-        // Extracting only the Y plane gives 100% pure black & white with zero color
-        // artifacts, while fully leveraging the ISP's hardware contrast, brightness,
-        // and exposure compensation!
+        // The ISP's Y plane alone: the chroma planes of the monochrome OV9281
+        // are pure noise, and the detector only needs luminance.
         const cv::Mat gray(raw.height, raw.width, CV_8UC1, const_cast<uint8_t*>(raw.data), raw.stride);
-        cv::cvtColor(gray, out, cv::COLOR_GRAY2BGR);
+        out = gray.clone();
         return true;
     }
     default:
@@ -269,9 +260,8 @@ bool ArucoDetector::initCamera(int deviceIndex, int width, int height) {
     }
 
     // On Linux the default backend is GStreamer, whose pipeline fails to start
-    // for plain UVC webcams (including the OV9281 and laptop cameras), so
-    // capture never produces a frame. V4L2 talks to the device directly; fall
-    // back to the default backend when it is unavailable.
+    // for plain UVC webcams, so talk to the device through V4L2 and fall back to
+    // the default backend when it is unavailable.
 #ifdef __linux__
     capture_.open(deviceIndex, cv::CAP_V4L2);
     if (!capture_.isOpened()) {
@@ -343,14 +333,9 @@ bool ArucoDetector::captureFrame(cv::Mat& outFrame) {
     }
 
     RawFrame raw;
-    if (!libcamera_->captureFrame(raw) || !convertRawFrame(raw, outFrame)) {
+    if (!libcamera_->captureFrame(raw) || !convertToGray(raw, outFrame)) {
         outFrame.release();
-        // An open device that never delivers a frame is the usual cause of a
-        // missing preview, so report it instead of failing silently.
-        if (captureFailCount_ == 0 || captureFailCount_ % 400 == 0) {
-            LOG_WARNING("camera returned no frame (",
-                        captureFailCount_ + 1, " failures)");
-        }
+        reportCaptureFailure(captureFailCount_);
         ++captureFailCount_;
         return false;
     }
@@ -362,18 +347,16 @@ bool ArucoDetector::captureFrame(cv::Mat& outFrame) {
     capture_ >> outFrame;
     if (outFrame.empty()) {
         outFrame.release();
-        // An open device that never delivers a frame is the usual cause of a
-        // missing preview, so report it instead of failing silently.
-        if (captureFailCount_ == 0 || captureFailCount_ % 400 == 0) {
-            LOG_WARNING("camera returned no frame (",
-                        captureFailCount_ + 1, " failures)");
-        }
+        reportCaptureFailure(captureFailCount_);
         ++captureFailCount_;
         return false;
     }
 
-    if (outFrame.channels() == 1) {
-        cv::cvtColor(outFrame, outFrame, cv::COLOR_GRAY2BGR);
+    // The pipeline is grayscale from here on; V4L2 webcams deliver BGR.
+    if (outFrame.channels() == 3) {
+        cv::cvtColor(outFrame, outFrame, cv::COLOR_BGR2GRAY);
+    } else if (outFrame.channels() == 4) {
+        cv::cvtColor(outFrame, outFrame, cv::COLOR_BGRA2GRAY);
     }
 #endif
 
@@ -390,24 +373,19 @@ std::vector<DetectionResult> ArucoDetector::detect(const cv::Mat& frame) {
     if (frame.empty()) {
         return results;
     }
-
-    cv::Mat gray;
-    if (frame.channels() == 3) {
-        cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
-    } else if (frame.channels() == 4) {
-        cv::cvtColor(frame, gray, cv::COLOR_BGRA2GRAY);
-    } else {
-        gray = frame;
+    if (frame.channels() != 1) {
+        LOG_ERROR("ArucoDetector::detect expects a grayscale frame, got ",
+                  frame.channels(), " channels");
+        return results;
     }
 
     std::vector<std::vector<cv::Point2f>> markerCorners;
     std::vector<int> ids;
-    std::vector<std::vector<cv::Point2f>> rejected;
 
 #if ARUCO_OPENCV_NEW_API
-    detector_->detectMarkers(gray, markerCorners, ids, rejected);
+    detector_->detectMarkers(frame, markerCorners, ids);
 #else
-    cv::aruco::detectMarkers(gray, dictionary_, markerCorners, ids, parameters_, rejected);
+    cv::aruco::detectMarkers(frame, dictionary_, markerCorners, ids, parameters_);
 #endif
 
     results.reserve(ids.size());

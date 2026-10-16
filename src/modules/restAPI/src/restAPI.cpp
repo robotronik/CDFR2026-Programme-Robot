@@ -32,6 +32,7 @@ RestAPI::RestAPI(main_State_t* currentState,
                  Arduino* arduino,
                  Lidar* lidar,
                  Cam* cam,
+                 Navigation* navigation,
                  std::vector<VirtualStrategy*>* strategies)
     : currentState(currentState),
       nextState(nextState),
@@ -40,6 +41,7 @@ RestAPI::RestAPI(main_State_t* currentState,
       arduino(arduino),
       lidar(lidar),
       cam(cam),
+      navigation(navigation),
       strategies(strategies){
 }
 
@@ -57,8 +59,8 @@ bool RestAPI::consumeStrategyRequest(std::string& strategy){
     return true;
 }
 
-crow::response readHtmlFile(const std::string& path);
-std::string getContentType(const std::string& path);
+static crow::response serveFile(const std::string& path);
+static std::string getContentType(const std::string& path);
 
 static std::vector<std::string> getLocalIPv4Addresses(){
     std::vector<std::string> ips;
@@ -85,6 +87,42 @@ static std::vector<std::string> getLocalIPv4Addresses(){
 
 static crow::SimpleApp app;
 
+// Error reply with a JSON body, so every failure path looks the same.
+static crow::response jsonError(int code, const std::string& message){
+    json response;
+    response["message"] = message;
+    return crow::response(code, response.dump(4));
+}
+
+static crow::response jsonMessage(const std::string& message){
+    json response;
+    response["message"] = message;
+    return crow::response(response.dump(4));
+}
+
+// Parses the request body into `out`; returns false when it is not valid JSON.
+static bool parseBody(const crow::request& req, json& out){
+    out = json::parse(req.body, nullptr, false);
+    return !out.is_discarded();
+}
+
+// Reads x/y/a from the request, keeping the current value for absent fields.
+static position_t readRequestedPosition(const json& req_data, const position_t& current){
+    position_t pos = current;
+    if (req_data.contains("x")) pos.x = req_data["x"];
+    if (req_data.contains("y")) pos.y = req_data["y"];
+    if (req_data.contains("a")) pos.a = req_data["a"];
+    return pos;
+}
+
+static bool isKnownStrategy(const std::vector<VirtualStrategy*>* strategies, const std::string& name){
+    if (strategies == nullptr) return false;
+    for (VirtualStrategy* strategy : *strategies)
+        if (strategy != nullptr && strategy->getNom() == name)
+            return true;
+    return false;
+}
+
 void RestAPI::start(){
     LOG_INFO("Starting API Server on port ", API_PORT);
 
@@ -93,49 +131,49 @@ void RestAPI::start(){
     // Define a simple route for the root endpoint
     CROW_ROUTE(app, "/")
     ([this](){
-        return readHtmlFile("html/index.html");
+        return serveFile("html/index.html");
     });
 
     // Define a simple route for the display page
     CROW_ROUTE(app, "/display")
     ([this](){
-        return readHtmlFile("html/display.html");
+        return serveFile("html/display.html");
     });
 
     // Define a simple route for the lidar page
     CROW_ROUTE(app, "/lidar")
     ([this](){
-        return readHtmlFile("html/lidar.html");
+        return serveFile("html/lidar.html");
     });
 
     // Define a simple route for the lidar page
     CROW_ROUTE(app, "/logs")
     ([this](){
-        return readHtmlFile("html/logs.html");
+        return serveFile("html/logs.html");
     });
 
     // Define a simple route for the navbar
     CROW_ROUTE(app, "/navbar.html")
     ([this](){
-        return readHtmlFile("html/navbar.html");
+        return serveFile("html/navbar.html");
     });
 
     // Define a simple route for robot page
     CROW_ROUTE(app, "/robot")
     ([this](){
-        return readHtmlFile("html/robot.html");
+        return serveFile("html/robot.html");
     });
 
     // Define a simple route for the control page
     CROW_ROUTE(app, "/control")
     ([this](){
-        return readHtmlFile("html/control.html");
+        return serveFile("html/control.html");
     });
 
     // Define a simple route for the camera page
     CROW_ROUTE(app, "/camera")
     ([this](){
-        return readHtmlFile("html/camera.html");
+        return serveFile("html/camera.html");
     });
 
     // ------------------------------- GET Routes -------------------------------
@@ -183,7 +221,7 @@ void RestAPI::start(){
         }
         response["lidar"] = limitedAbsoluteLidarData;
         json current_navigation_path;
-        navigation.pathJson(current_navigation_path);
+        navigation->pathJson(current_navigation_path);
         response["navigation"] = current_navigation_path;
         
         response["target_pos"] = (position_t)drive->target;
@@ -354,11 +392,8 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/preview")
     ([this](){
         std::vector<uchar> jpeg;
-        if (!cam->getPreview(jpeg)){
-            json response;
-            response["message"] = "No preview available";
-            return crow::response(503, response.dump());
-        }
+        if (!cam->getPreview(jpeg))
+            return jsonError(503, "No preview available");
         crow::response res(200, std::string(jpeg.begin(), jpeg.end()));
         res.set_header("Content-Type", "image/jpeg");
         return res;
@@ -368,11 +403,8 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/preview_raw")
     ([this](){
         std::vector<uchar> jpeg;
-        if (!cam->getRawPreview(jpeg)){
-            json response;
-            response["message"] = "No preview available";
-            return crow::response(503, response.dump());
-        }
+        if (!cam->getRawPreview(jpeg))
+            return jsonError(503, "No preview available");
         crow::response res(200, std::string(jpeg.begin(), jpeg.end()));
         res.set_header("Content-Type", "image/jpeg");
         return res;
@@ -390,12 +422,9 @@ void RestAPI::start(){
 
     CROW_ROUTE(app, "/camera_settings").methods(crow::HTTPMethod::POST)
     ([this](const crow::request& req){
-        auto req_data = json::parse(req.body, nullptr, false);
-        if (req_data.is_discarded()) {
-            json err;
-            err["message"] = "Invalid JSON";
-            return crow::response(400, err.dump());
-        }
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
         if (req_data.contains("exposure_value") && req_data["exposure_value"].is_number()) {
             cam->setExposureValue(req_data["exposure_value"].get<float>());
         }
@@ -417,230 +446,133 @@ void RestAPI::start(){
 
     // Define a route for a POST request that accepts JSON data and responds with a message
     CROW_ROUTE(app, "/post_status").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
-        // Parse the incoming JSON
         LOG_INFO("Request body is " + req.body);
-        auto req_data = json::parse(req.body);
 
-        // Extract fields
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
+
         main_State_t req_state = req_data["state"];
 
-        if (req_state < 0 || req_state > 6){
-            // Denies the POST resquest
-            json response;
-            response["message"] = "Requested state out of borders!";
+        // Only the states the API is allowed to select: MANUAL and CALIBRATION
+        // are entered by the state machine itself.
+        if (req_state < 0 || req_state > TEST)
+            return jsonError(400, "Requested state out of borders!");
 
-            // Return the response as JSON
-            return crow::response(400, response.dump(4));
-        }
-
-        // Apply the post method
         *nextState = req_state;
-
-        // Create a response JSON
-        json response;
-        response["message"] = "Successfull";
-
-        // Return the response as JSON
-        return crow::response(response.dump(4));
+        return jsonMessage("Successful");
     });
 
     // Define a route for a POST request that accepts a color as JSON data (0:None, 1:Blue, 2:Yellow)
     CROW_ROUTE(app, "/set_color").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
-        auto req_data = json::parse(req.body);
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
+
         colorTeam_t req_color = req_data["color"];
 
-        if (req_color < 0 || req_color > 2){
-            json response;
-            response["message"] = "Invalid Request Color";
-            return crow::response(400, response.dump(4));
-        }
-        if (*currentState == RUN){
-            json response;
-            response["message"] = "Cannot change the color in the current state";
-            return crow::response(400, response.dump(4));
-        }
+        if (req_color < 0 || req_color > YELLOW)
+            return jsonError(400, "Invalid Request Color");
+        if (*currentState == RUN)
+            return jsonError(400, "Cannot change the color in the current state");
 
         requestedColor = req_color;
         hasColorRequest = true;
 
-        json response;
-        response["message"] = "Successfull";
-        return crow::response(response.dump(4));
+        return jsonMessage("Successful");
     });
 
     // Define a route for a POST request that accepts a strategy to apply
     CROW_ROUTE(app, "/set_strat").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
-        auto req_data = json::parse(req.body);
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
+
         std::string req_strat = req_data["strat"];
 
-        bool known = false;
-        if (strategies != nullptr){
-            for (VirtualStrategy* strategy : *strategies){
-                if (strategy != nullptr && strategy->getNom() == req_strat){
-                    known = true;
-                    break;
-                }
-            }
-        }
-        if (!known){
-            json response;
-            response["message"] = "Invalid Strategy Request";
-            return crow::response(400, response.dump(4));
-        }
-        if (*currentState == RUN){
-            json response;
-            response["message"] = "Cannot change the strategy in the current state";
-            return crow::response(400, response.dump(4));
-        }
+        if (!isKnownStrategy(strategies, req_strat))
+            return jsonError(400, "Invalid Strategy Request");
+        if (*currentState == RUN)
+            return jsonError(400, "Cannot change the strategy in the current state");
 
         requestedStrategy = req_strat;
         hasStrategyRequest = true;
 
-        json response;
-        response["message"] = "Successfull";
-        return crow::response(response.dump(4));
+        return jsonMessage("Successful");
     });
 
     // Define a route for a POST request that sets the manual control mode
     CROW_ROUTE(app, "/set_manual_control_mode").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
-        auto req_data = json::parse(req.body);
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
+
         bool req_value = req_data["value"];
-        if(req_value && *currentState != WAITSTART){
-            json response;
-            response["message"] = "Cannot enter manual mode when not in WAITSTART";
-            return crow::response(400, response.dump(4));
-        }
-        else if (!req_value && *currentState != MANUAL){
-            json response;
-            response["message"] = "Cannot exit manual mode when not in MANUAL";
-            return crow::response(400, response.dump(4));
-        }
+        if (req_value && *currentState != WAITSTART)
+            return jsonError(400, "Cannot enter manual mode when not in WAITSTART");
+        if (!req_value && *currentState != MANUAL)
+            return jsonError(400, "Cannot exit manual mode when not in MANUAL");
 
-        //Apply the value
         manual_ctrl = req_value;
-
-        json response;
-        response["message"] = "Successfull";
-        return crow::response(response.dump(4));
+        return jsonMessage("Successful");
     });
 
     // Define a route for a POST request that sets the robot position coordinates
     CROW_ROUTE(app, "/set_coordinates").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
-        auto req_data = json::parse(req.body);
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL){
-            json response;
-            response["message"] = "Cannot change the coordinates when not in MANUAL mode";
-            return crow::response(400, response.dump(4));
-        }
+        if (*currentState != MANUAL)
+            return jsonError(400, "Cannot change the coordinates when not in MANUAL mode");
 
-        double req_x_value = drive->position.x;
-        if (req_data.contains("x"))
-            req_x_value = req_data["x"];
-            
-        double req_y_value = drive->position.y;
-        if (req_data.contains("y"))
-            req_y_value = req_data["y"];
-
-        double req_a_value = drive->position.a;
-        if (req_data.contains("a"))
-            req_a_value = req_data["a"];
-
-        //Apply the values
-        position_t pos = {req_x_value, req_y_value, req_a_value};
+        const position_t pos = readRequestedPosition(req_data, drive->position);
         drive->setCoordinates(pos);
-        navigation.goTo(pos, false);
+        navigation->goTo(pos, false);
 
-        json response;
-        response["message"] = "Successfull";
-        return crow::response(response.dump(4));
+        return jsonMessage("Successful");
     });
 
     // Define a route for a POST request that sets a target position
     CROW_ROUTE(app, "/set_target_coordinates").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
-        auto req_data = json::parse(req.body);
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL){
-            json response;
-            response["message"] = "Cannot change the coordinates when not in MANUAL mode";
-            return crow::response(400, response.dump(4));
-        }
+        if (*currentState != MANUAL)
+            return jsonError(400, "Cannot change the coordinates when not in MANUAL mode");
 
-        double req_x_value = drive->position.x;
-        if (req_data.contains("x"))
-            req_x_value = req_data["x"];
-            
-        double req_y_value = drive->position.y;
-        if (req_data.contains("y"))
-            req_y_value = req_data["y"];
+        const position_t pos = readRequestedPosition(req_data, drive->position);
+        LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", pos.x, " y=", pos.y, " a=", pos.a);
+        navigation->goTo(pos, false);
 
-        double req_a_value = drive->position.a;
-
-        // Apply the values
-        if (req_data.contains("a")){
-            double req_a_value = req_data["a"];
-            LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", req_x_value, " y=", req_y_value, " a=", req_a_value);
-            position_t pos = {req_x_value, req_y_value, req_a_value};
-            navigation.goTo(pos, false);
-        }
-        else{
-            LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", req_x_value, " y=", req_y_value);
-            position_t pos = {req_x_value, req_y_value, req_a_value};
-            navigation.goTo(pos, false);
-        }
-
-        json response;
-        response["message"] = "Successfull";
-        return crow::response(response.dump(4));
+        return jsonMessage("Successful");
     });
 
     // Define a route for a POST request that sets a target position using Astarts
     CROW_ROUTE(app, "/set_target_coordinates_Astart").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
-        auto req_data = json::parse(req.body);
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL){
-            json response;
-            response["message"] = "Cannot change the coordinates when not in MANUAL mode";
-            return crow::response(400, response.dump(4));
-        }
+        if (*currentState != MANUAL)
+            return jsonError(400, "Cannot change the coordinates when not in MANUAL mode");
 
-        double req_x_value = drive->position.x;
-        if (req_data.contains("x"))
-            req_x_value = req_data["x"];
-            
-        double req_y_value = drive->position.y;
-        if (req_data.contains("y"))
-            req_y_value = req_data["y"];
+        const position_t pos = readRequestedPosition(req_data, drive->position);
+        LOG_INFO("Manual ctrl : Requested set_target_coordinates_Astart, x=", pos.x, " y=", pos.y, " a=", pos.a);
+        navigation->goTo(pos, true);
 
-        double req_a_value = drive->position.a;
-
-        // Apply the values
-        if (req_data.contains("a")){
-            LOG_INFO("Manual ctrl : Requested set_target_coordinates_Astart, x=", req_x_value, " y=", req_y_value, " a=", req_a_value);
-            position_t pos = {req_x_value, req_y_value, req_a_value};
-            navigation.goTo(pos, true);
-        }
-        else{
-            LOG_INFO("Manual ctrl : Requested set_target_coordinates_Astart, x=", req_x_value, " y=", req_y_value);
-            position_t pos = {req_x_value, req_y_value, req_a_value};
-
-            navigation.goTo(pos, true);
-        }
-
-        json response;
-        response["message"] = "Successfull";
-        return crow::response(response.dump(4));
+        return jsonMessage("Successful");
     });
 
     // Define a route for a POST request that move by a certain amount in mm
     CROW_ROUTE(app, "/set_move").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
-        auto req_data = json::parse(req.body);
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL){
-            json response;
-            response["message"] = "Cannot move when not in MANUAL mode";
-            return crow::response(400, response.dump(4));
-        }
+        if (*currentState != MANUAL)
+            return jsonError(400, "Cannot move when not in MANUAL mode");
 
         double req_value = req_data["value"];
 
@@ -649,129 +581,100 @@ void RestAPI::start(){
 
         LOG_INFO("Manual ctrl : Requested set_move, value=", req_value);
 
-        // Apply the value
         position_t pos = {newXvalue, newYvalue, drive->position.a};
-        navigation.goTo(pos);
+        navigation->goTo(pos);
 
-        json response;
-        response["message"] = "Successfull";
-        return crow::response(response.dump(4));
+        return jsonMessage("Successful");
     });
 
     // Define a route for a POST request to rotate by a certain amount in degrees
     CROW_ROUTE(app, "/set_rotate").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
-        auto req_data = json::parse(req.body);
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL){
-            json response;
-            response["message"] = "Cannot rotate when not in MANUAL mode";
-            return crow::response(400, response.dump(4));
-        }
+        if (*currentState != MANUAL)
+            return jsonError(400, "Cannot rotate when not in MANUAL mode");
 
         int req_value = req_data["value"];
 
-        // Apply the value
         // TODO
         position_t pos = {drive->position.x, drive->position.y, drive->position.a + req_value};
-        navigation.goTo(pos);
+        navigation->goTo(pos);
 
         LOG_INFO("Manual ctrl : Requested set_rotate, value=", req_value);
 
-        json response;
-        response["message"] = "Successfull";
-        return crow::response(response.dump(4));
+        return jsonMessage("Successful");
     });
 
     // Define a route for a POST request to rotate a servo to a certain value
     CROW_ROUTE(app, "/set_servo").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
-        auto req_data = json::parse(req.body);
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL){
-            json response;
-            response["message"] = "Cannot rotate servo when not in MANUAL mode";
-            return crow::response(400, response.dump(4));
-        }
+        if (*currentState != MANUAL)
+            return jsonError(400, "Cannot rotate servo when not in MANUAL mode");
 
         int req_value = req_data["value"];
         int req_id = req_data["id"];
         int req_speed = req_data["speed"];
 
-        //Apply the value
         if (req_speed != 0)
             arduino->moveServoSpeed(req_id, req_value, req_speed);
         else
             arduino->moveServo(req_id, req_value);
 
-        json response;
-        response["message"] = "Successfull";
-        return crow::response(response.dump(4));
+        return jsonMessage("Successful");
     });
 
     // Define a route for a POST request to rotate a stepper to a certain value
     CROW_ROUTE(app, "/set_stepper").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
-        auto req_data = json::parse(req.body);
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL){
-            json response;
-            response["message"] = "Cannot rotate stepper when not in MANUAL mode";
-            return crow::response(400, response.dump(4));
-        }
+        if (*currentState != MANUAL)
+            return jsonError(400, "Cannot rotate stepper when not in MANUAL mode");
 
         int req_value = req_data["value"];
         int req_id = req_data["id"];
 
-        //Apply the value
         arduino->moveStepper(req_value, req_id);
 
-        json response;
-        response["message"] = "Successfull";
-        return crow::response(response.dump(4));
+        return jsonMessage("Successful");
     });
 
     // Define a route for a PORT request to test action functions
     CROW_ROUTE(app, "/test_action").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
-        auto req_data = json::parse(req.body);
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL){
-            json response;
-            response["message"] = "Cannot test actions when not in MANUAL mode";
-            return crow::response(400, response.dump(4));
-        }
-        if (manual_currentFunc != nullptr){
-            json response;
-            response["message"] = "Another action is currently running, cannot execute the requested action";
-            return crow::response(400, response.dump(4));
-        }
+        if (*currentState != MANUAL)
+            return jsonError(400, "Cannot test actions when not in MANUAL mode");
+        if (manual_currentFunc != nullptr)
+            return jsonError(400, "Another action is currently running, cannot execute the requested action");
 
         std::string req_value = req_data["value"];
 
-        // Apply the value
-        if      (req_value == "Test"){
-            // TODO change condition to check if 'req_value' is a command and associate it with mouvement to test
-            //manual_currentFunc = NULL; NULL should be replace by the value to test
-        }
-        else {
-            json response;
-            response["message"] = "Invalid action requested";
-            return crow::response(400, response.dump(4));
+        if (req_value != "Test"){
+            // TODO associate each command with the action to test:
+            // manual_currentFunc = ...;
+            return jsonError(400, "Invalid action requested");
         }
 
-        json response;
-        response["message"] = "Successfull";
-        return crow::response(response.dump(4));
+        return jsonMessage("Successful");
     });
 
     // Define a route for a stop request
-    CROW_ROUTE(app, "/stop").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
-
-        json response;
-        response["message"] = "Successfull";
+    CROW_ROUTE(app, "/stop").methods(crow::HTTPMethod::POST)([this](const crow::request&){
 
         // Apply the value
         //exit_requested = true;
         *nextState = FIN;
 
-        return crow::response(response.dump(4));
+        return jsonMessage("Successful");
     });
 
     // ------------------------------- Routes for serving files -------------------------------
@@ -779,49 +682,30 @@ void RestAPI::start(){
     // Route for serving SVG and PNG files
     CROW_ROUTE(app, "/assets/<string>")
     .methods(crow::HTTPMethod::GET)([this](const std::string& filename) {
-        std::ifstream file("html/assets/" + filename, std::ios::binary);
-        
-        if (!file) {
-            return crow::response(404, "File not found");
-        }
-
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-        crow::response res{buffer.str()};
-        res.set_header("Cache-Control", "public, max-age=3600");
-        res.set_header("Content-Type", getContentType(filename));
-        return res;
+        return serveFile("html/assets/" + filename);
     });
 
     // Route for serving css files
     CROW_ROUTE(app, "/css/<string>")
     .methods(crow::HTTPMethod::GET)([this](const std::string& filename) {
-        return readHtmlFile("html/css/" + filename);
+        return serveFile("html/css/" + filename);
     });
     // Route for serving js files
     CROW_ROUTE(app, "/js/<string>")
     .methods(crow::HTTPMethod::GET)([this](const std::string& filename) {
-        return readHtmlFile("html/js/" + filename);
+        return serveFile("html/js/" + filename);
     });
 
 
     // Route for serving the favicon ico files
     CROW_ROUTE(app, "/favicon.ico") ([this](){
-        std::ifstream file("html/favicon.ico", std::ios::binary);
-        if (!file) {
-            return crow::response(404, "File not found");
-        }
-
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-        crow::response res{buffer.str()};
-        res.set_header("Cache-Control", "public, max-age=3600");
-        res.set_header("Content-Type", "image/x-icon");
-        return res;
+        return serveFile("html/favicon.ico");
     });
 
 
-    // Set the port and run the app with 2 threads
+    // Set the port and run the app with 2 threads.
+    // signal_clear() stops crow from installing its own SIGINT handler, which
+    // would otherwise steal Ctrl-C from the main loop.
     app.loglevel(crow::LogLevel::Warning);
     app.signal_clear().port(API_PORT).concurrency(2).run();
 }
@@ -830,25 +714,26 @@ void RestAPI::stop(){
     app.stop();
     LOG_INFO("Stopped API Server");
 }
-// Function to read an HTML file and return its content as a crow::response
-crow::response readHtmlFile(const std::string& path) {
-    std::ifstream file(path);
-    
-    if (!file) {  // Check if file exists and is open
-        return crow::response(404, "File not found");  // Return a 404 response if file is missing
+// Serves a file from disk with its Content-Type, or a 404. Binary read so that
+// images work as well as HTML/CSS/JS.
+static crow::response serveFile(const std::string& path) {
+    std::ifstream file(path, std::ios::binary);
+
+    if (!file) {
+        return crow::response(404, "File not found");
     }
 
     std::stringstream buffer;
-    buffer << file.rdbuf();  // Read the file into the buffer
+    buffer << file.rdbuf();
 
     crow::response res{buffer.str()};
-    res.set_header("Content-Type", getContentType(path));  // Set correct Content-Type header
+    res.set_header("Content-Type", getContentType(path));
     res.set_header("Cache-Control", "public, max-age=3600");
     return res;
 }
 
-// Helper function to determine Content-Type based on file extension
-std::string getContentType(const std::string& path) {
+// Content-Type from the file extension.
+static std::string getContentType(const std::string& path) {
     std::string extension = path.substr(path.find_last_of(".") + 1);
     if (extension == "css") {
         return "text/css";
@@ -858,6 +743,8 @@ std::string getContentType(const std::string& path) {
         return "image/svg+xml";
     } else if (extension == "png") {
         return "image/png";
+    } else if (extension == "ico") {
+        return "image/x-icon";
     } else if (extension == "html"){
         return "text/html";
     } else {

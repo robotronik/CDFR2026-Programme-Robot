@@ -1,27 +1,15 @@
 #include "vision/ArucoLocalizer.hpp"
 
 #include <cmath>
-#include <vector>
 
 #include <opencv2/calib3d.hpp>
 
-#include "utils/logger.hpp"
+#include "vision/Angles.hpp"
 
 namespace vision {
 
-namespace {
-
-constexpr double kDegToRad = M_PI / 180.0;
-constexpr double kRadToDeg = 180.0 / M_PI;
-
-double normalizeAngle(double angle) {
-    while (angle > 180.0) angle -= 360.0;
-    while (angle <= -180.0) angle += 360.0;
-    return angle;
-}
-
 // The field's landmark tags, ids 20..23, at the table corners.
-const std::map<int, cv::Point2d>& tagFieldPositions() {
+const std::map<int, cv::Point2d>& ArucoLocalizer::landmarkTags() {
     static const std::map<int, cv::Point2d> positions = {
         {20, {-400.0, -900.0}}, // Top-right
         {21, {-400.0,  900.0}}, // Top-left
@@ -31,28 +19,14 @@ const std::map<int, cv::Point2d>& tagFieldPositions() {
     return positions;
 }
 
-} // namespace
-
-ArucoLocalizer::ArucoLocalizer(double tagSideMm) {
-    for (const auto& entry : tagFieldPositions()) {
-        detector_.setMarkerSize(entry.first, tagSideMm);
+void ArucoLocalizer::registerLandmarkTags(ArucoDetector& detector) {
+    for (const auto& entry : landmarkTags()) {
+        detector.setMarkerSize(entry.first, kLandmarkTagMm);
     }
 }
 
-bool ArucoLocalizer::loadCalibration(const std::string& calibrationFilePath) {
-    return detector_.loadCalibration(calibrationFilePath);
-}
-
-bool ArucoLocalizer::initCamera(int deviceIndex, int width, int height) {
-    return detector_.initCamera(deviceIndex, width, height);
-}
-
-void ArucoLocalizer::releaseCamera() {
-    detector_.releaseCamera();
-}
-
 const cv::Point2d* ArucoLocalizer::fieldPosition(int tagId) {
-    const std::map<int, cv::Point2d>& positions = tagFieldPositions();
+    const std::map<int, cv::Point2d>& positions = landmarkTags();
     const auto it = positions.find(tagId);
     return it == positions.end() ? nullptr : &it->second;
 }
@@ -67,12 +41,11 @@ bool ArucoLocalizer::cameraPositionForTag(const DetectionResult& detection,
     cv::Matx33d rotation;
     cv::Rodrigues(detection.rvec, rotation);
 
-    // Camera position expressed in the marker frame: -R^T * tvec.
+    // Camera position in the marker frame: -R^T * tvec.
     const cv::Vec3d camera = -(rotation.t() * detection.tvec);
 
-    // The tag is a known landmark, so the camera's field position follows from
-    // it. The axis swap and signs are the field landmark convention, checked
-    // against captures whose true pose is known.
+    // The tag is a known landmark; axis swap and signs are the field convention,
+    // verified against captures with a known true pose.
     position.x = tagFieldX - camera[1];
     position.y = tagFieldY + camera[0];
     position.z = camera[2];
@@ -84,12 +57,8 @@ bool ArucoLocalizer::cameraPositionForTag(const DetectionResult& detection,
     return true;
 }
 
-bool ArucoLocalizer::locate(const cv::Mat& frame, CameraPosition& position) {
-    return locate(detector_.detect(frame), position);
-}
-
 bool ArucoLocalizer::locate(const std::vector<DetectionResult>& detections,
-                            CameraPosition& position) const {
+                            CameraPosition& position) {
     double sumX = 0.0, sumY = 0.0, sumZ = 0.0;
     double sumCos = 0.0, sumSin = 0.0;
     int count = 0;

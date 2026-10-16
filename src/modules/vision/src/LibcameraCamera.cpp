@@ -1,11 +1,9 @@
 #include "vision/LibcameraCamera.hpp"
 
-#include <algorithm>
 #include <chrono>
 #include <cstring>
 
 #include <sys/mman.h>
-#include <unistd.h>
 
 #include <libcamera/base/event_dispatcher.h>
 #include <libcamera/base/thread.h>
@@ -14,53 +12,14 @@
 
 #include "utils/logger.hpp"
 
-// libcamera 0.3 renamed the 24-bit packed RGB/BGR format constants
-// (RGB888/BGR888 became RGB24/BGR24). CMake defines the selector from the
-// detected libcamera version.
-#ifdef CAMERA_LIBCAMERA_FORMAT_RGB24
-#  define CAMERA_FORMAT_RGB24 libcamera::formats::RGB24
-#  define CAMERA_FORMAT_BGR24 libcamera::formats::BGR24
-#else
-#  define CAMERA_FORMAT_RGB24 libcamera::formats::RGB888
-#  define CAMERA_FORMAT_BGR24 libcamera::formats::BGR888
-#endif
-
 namespace vision {
 
 namespace {
 
-// Bail out of the frame wait after this long so a stalled driver cannot hang
-// the capture thread forever.
+// Give up the frame wait after this long so a stalled driver cannot hang capture.
 constexpr int kAcquireTimeoutMs = 1000;
 
-// True when the format stores its components as separate planes.
-bool isPlanarPixelFormat(const libcamera::PixelFormat& format) {
-    switch (format) {
-    case libcamera::formats::R8:
-    case libcamera::formats::R10:
-    case libcamera::formats::R12:
-    case libcamera::formats::R16:
-    case libcamera::formats::YUYV:
-    case libcamera::formats::UYVY:
-    case libcamera::formats::RGB565:
-    case CAMERA_FORMAT_RGB24:
-    case CAMERA_FORMAT_BGR24:
-    case libcamera::formats::XRGB8888:
-    case libcamera::formats::XBGR8888:
-    case libcamera::formats::ARGB8888:
-    case libcamera::formats::ABGR8888:
-    case libcamera::formats::RGBA8888:
-    case libcamera::formats::BGRA8888:
-        return false;
-    default:
-        // NV12, YUV420, YUV422 (planar variants), YUV444...
-        return true;
-    }
-}
-
 } // namespace
-
-LibcameraCamera::LibcameraCamera(const std::string& cameraId) : cameraId_(cameraId) {}
 
 LibcameraCamera::~LibcameraCamera() {
     close();
@@ -70,15 +29,11 @@ void LibcameraCamera::onRequestCompleted(libcamera::Request* request) {
     if (request->status() == libcamera::Request::RequestCancelled) {
         return;
     }
-    --pending_;
-    // Keep the pipeline fed: hand the buffer back to the camera for the next
-    // frame. The first available buffer is published to captureFrame().
+    // Requeue the buffer to keep the pipeline fed; publish the first available.
     if (started_) {
         request->reuse(libcamera::Request::ReuseBuffers);
         applyControls(request);
-        if (camera_->queueRequest(request) == 0) {
-            ++pending_;
-        }
+        camera_->queueRequest(request);
     }
     if (ready_ == nullptr) {
         ready_ = request->buffers().begin()->second;
@@ -102,14 +57,12 @@ bool LibcameraCamera::open(int deviceIndex, int width, int height) {
         return false;
     }
 
-    // Select the requested device when its id/index matches, otherwise fall back
-    // to the first camera: with a single CsiCameraProvider the ordering a device
-    // index implies is not guaranteed.
+    // Select the requested device when the index is in range, else the first
+    // camera (with a single CsiCameraProvider, a device index implies no
+    // ordering).
     std::string selected;
     const auto cameras = manager_->cameras();
-    if (!cameraId_.empty()) {
-        selected = cameraId_;
-    } else if (deviceIndex >= 0 && static_cast<std::size_t>(deviceIndex) < cameras.size()) {
+    if (deviceIndex >= 0 && static_cast<std::size_t>(deviceIndex) < cameras.size()) {
         selected = cameras[deviceIndex]->id();
     }
     if (selected.empty() || manager_->get(selected) == nullptr) {
@@ -133,10 +86,8 @@ bool LibcameraCamera::open(int deviceIndex, int width, int height) {
         return false;
     }
 
-    pending_ = 0;
     ready_ = nullptr;
     started_ = false;
-    captureFailCount_ = 0;
     open_ = true;
     LOG_GREEN_INFO("Libcamera - camera '", selected, "' opened at ", width_, "x", height_,
                    " (", pixelFormat_.toString(), ")");
@@ -152,11 +103,8 @@ bool LibcameraCamera::configure(int width, int height) {
     }
 
     libcamera::StreamConfiguration& streamConfig = config->at(0);
-    // Request YUV420 by default: on Raspberry Pi 5 (PiSP), YUV420 passes through
-    // the hardware ISP pipeline, enabling full hardware-accelerated Contrast,
-    // Brightness, and Exposure compensation controls.
-    // By extracting only the Y (luminance) plane in convertRawFrame, we obtain pure
-    // monochrome images without chroma noise or color artifacts.
+    // YUV420 passes through the Pi 5's hardware ISP (contrast/brightness/
+    // exposure); convertToGray keeps only the Y plane.
     streamConfig.pixelFormat = libcamera::formats::YUV420;
     streamConfig.size.width = static_cast<unsigned int>(width);
     streamConfig.size.height = static_cast<unsigned int>(height);
@@ -189,8 +137,7 @@ bool LibcameraCamera::configure(int width, int height) {
         return false;
     }
 
-    // configure() may replace the stream configuration, so read the negotiated
-    // values back after the call.
+    // configure() may replace the configuration; read the negotiated values back.
     const libcamera::StreamConfiguration& negotiated = config->at(0);
     stream_ = negotiated.stream();
     if (stream_ == nullptr) {
@@ -202,7 +149,6 @@ bool LibcameraCamera::configure(int width, int height) {
     height_ = static_cast<int>(negotiated.size.height);
     stride_ = static_cast<int>(negotiated.stride);
     pixelFormat_ = negotiated.pixelFormat;
-    multiPlanar_ = isPlanarPixelFormat(pixelFormat_);
 
     config_ = std::move(config);
     return true;
@@ -263,9 +209,7 @@ void LibcameraCamera::queueAll() {
     for (const std::unique_ptr<libcamera::Request>& request : requests_) {
         if (camera_->queueRequest(request.get()) < 0) {
             LOG_ERROR("Libcamera - failed to queue a capture request");
-            continue;
         }
-        ++pending_;
     }
 }
 
@@ -298,16 +242,8 @@ bool LibcameraCamera::captureFrame(RawFrame& out) {
     }
 
     if (ready_ == nullptr) {
-        if (captureFailCount_ == 0 || captureFailCount_ % 400 == 0) {
-            LOG_WARNING("Libcamera - no frame delivered (", captureFailCount_ + 1, " failures)");
-        }
-        ++captureFailCount_;
+        // Reporting a missing frame is ArucoDetector's job, for every backend.
         return false;
-    }
-
-    if (captureFailCount_ > 0) {
-        LOG_GREEN_INFO("Libcamera - frames resumed after ", captureFailCount_, " failures");
-        captureFailCount_ = 0;
     }
 
     fillRawFrame(out);
@@ -329,53 +265,19 @@ void LibcameraCamera::fillRawFrame(RawFrame& out) const {
         return;
     }
 
-    if (!multiPlanar_) {
-        // Packed and single-plane formats expose all their bytes in the first
-        // plane.
-        const libcamera::FrameBuffer::Plane& plane = planes.front();
-        const std::size_t length = static_cast<std::size_t>(plane.length);
-        void* mapped = mmap(nullptr, length, PROT_READ, MAP_SHARED, plane.fd.get(), 0);
-        if (mapped == MAP_FAILED) {
-            LOG_WARNING("Libcamera - failed to map the frame buffer");
-            return;
-        }
-        buffer_.resize(length);
-        std::memcpy(buffer_.data(), mapped, length);
-        munmap(mapped, length);
-        out.data = buffer_.data();
+    // Publish plane 0 only: for a planar format it is the Y plane, which carries
+    // all the luminance the grayscale pipeline uses, and a packed format keeps
+    // every byte of the image in its first plane.
+    const libcamera::FrameBuffer::Plane& plane = planes.front();
+    const std::size_t length = static_cast<std::size_t>(plane.length);
+    void* mapped = mmap(nullptr, length, PROT_READ, MAP_SHARED, plane.fd.get(), 0);
+    if (mapped == MAP_FAILED) {
+        LOG_WARNING("Libcamera - failed to map the frame buffer");
         return;
     }
-
-    // Planar formats are not contiguous in one camera buffer: pack the planes
-    // back-to-back so the decoder can read them as a single image.
-    std::size_t totalLength = 0;
-    for (const auto& plane : planes) {
-        totalLength += static_cast<std::size_t>(plane.length);
-    }
-    buffer_.resize(totalLength);
-    std::size_t offset = 0;
-    const long pageSize = sysconf(_SC_PAGE_SIZE);
-    for (const libcamera::FrameBuffer::Plane& plane : planes) {
-        const std::size_t length = static_cast<std::size_t>(plane.length);
-        if (offset + length > buffer_.size()) {
-            return;
-        }
-        const off_t pageOffset = (plane.offset != libcamera::FrameBuffer::Plane::kInvalidOffset)
-                                     ? (plane.offset & ~(pageSize - 1))
-                                     : 0;
-        const std::size_t offsetDiff = (plane.offset != libcamera::FrameBuffer::Plane::kInvalidOffset)
-                                           ? (plane.offset - pageOffset)
-                                           : 0;
-        const std::size_t mapLength = length + offsetDiff;
-        void* mapped = mmap(nullptr, mapLength, PROT_READ, MAP_SHARED, plane.fd.get(), pageOffset);
-        if (mapped == MAP_FAILED) {
-            LOG_WARNING("Libcamera - failed to map a frame buffer plane");
-            return;
-        }
-        std::memcpy(buffer_.data() + offset, static_cast<const uint8_t*>(mapped) + offsetDiff, length);
-        munmap(mapped, mapLength);
-        offset += length;
-    }
+    buffer_.resize(length);
+    std::memcpy(buffer_.data(), mapped, length);
+    munmap(mapped, length);
     out.data = buffer_.data();
 }
 
@@ -393,7 +295,6 @@ void LibcameraCamera::close() {
     // Requests are owned by the vector and destroyed here; the frame buffers
     // they reference are freed with the allocator below.
     requests_.clear();
-    pending_ = 0;
     ready_ = nullptr;
 
     allocator_.reset();
