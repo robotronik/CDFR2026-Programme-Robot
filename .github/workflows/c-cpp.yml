@@ -19,9 +19,7 @@ jobs:
         run: ./build.sh build
 
       - name: Run tests (x86_64)
-        # TODO : Fix Lidar test so it passes so we can remove continue-on-error.
-        # Tests report their real result (ctest fails when a test fails), but a
-        # failing test must not fail the whole workflow.
+        # TODO: fix the Lidar test so continue-on-error can be removed.
         continue-on-error: true
         run: ./build.sh test
 
@@ -46,3 +44,49 @@ jobs:
           name: programCDFR-arm64
           path: programCDFR-arm64.zip
           if-no-files-found: error
+
+  # Hardware checks on the bench, run on the arm64 bundle just built. See
+  # docs/HIL.md. Skipped for fork PRs: their artifact must never execute on the
+  # bench.
+  bench:
+    needs: build-and-test
+    if: >-
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, bench]
+    timeout-minutes: 10
+    # One bench: never two runs at once.
+    concurrency:
+      group: bench
+      cancel-in-progress: false
+
+    steps:
+      - name: Download the arm64 bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: programCDFR-arm64
+          path: bundle
+
+      - name: Unpack
+        run: unzip -o bundle/programCDFR-arm64.zip -d bench
+
+      - name: Free the port, the camera and the lidar
+        run: sudo systemctl stop programCDFR || true
+
+      - name: Run the hardware checks
+        working-directory: bench
+        run: |
+          log="$RUNNER_TEMP/hil.log"
+          sudo ./programCDFR --unit-test 2>&1 | tee "$log"
+          if grep -q "HIL FAIL" "$log"; then
+            echo "::error::hardware checks reported a failure (see the log above)"
+            exit 1
+          fi
+          if ! grep -q "HIL hardware checks done" "$log"; then
+            echo "::error::the checks did not finish"
+            exit 1
+          fi
+
+      - name: Restart the robot service
+        if: always()
+        run: sudo systemctl start programCDFR || true

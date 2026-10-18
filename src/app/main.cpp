@@ -2,12 +2,13 @@
 
 #include <stdlib.h>
 #include <signal.h>
+#include <cmath>
 #include <string>
 #include <thread>
 #include <vector>
 #include <unistd.h>  // for usleep
 
-#include "utils/logger.hpp" // logger 
+#include "utils/logger.hpp"
 
 //lidar related
 #include "lidar/Lidar.hpp"
@@ -75,38 +76,39 @@ bool initState;
 std::thread api_server_thread;
 
 // REST API
-RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &lidar, &cam1, &strategies);
+RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &lidar, &cam1, &navigation, &strategies);
 
 // Prototypes
 int StartSequence();
 void GetLidar();
 void EndSequence();
 void tests();
+bool tryConnectMat();
 
 // Signal Management
 bool exit_requested = false;
+// Set by --unit-test: the TEST state runs the bench checks once and exits.
+bool unitTestMode = false;
 void ctrlc(int)
 {
-    LOG_INFO("Stop Signal Recieved");
+    LOG_INFO("Stop Signal Received");
     exit_requested = true;
 }
-void ctrlz(int)
-{
-    LOG_INFO("Termination Signal Recieved");
-    exit(0);
-}
 
-int main(int argc, char *argv[])
+int main(int argc, char** argv)
 {
+    for (int i = 1; i < argc; i++) {
+        if (std::string(argv[i]) == "--unit-test")
+            unitTestMode = true;
+    }
+
     LOG_DEBUG("LOG ID : ", log_main_get_id());
     if (StartSequence() != 0)
         return -1;
 
-    // Private counter
-    unsigned long loopStartTime;
     while (!exit_requested)
     {
-        loopStartTime = _millis();
+        const unsigned long loopStartTime = _millis();
 
         // Get Sensor Data
         {
@@ -114,17 +116,16 @@ int main(int argc, char *argv[])
             // The odometry prior helps the feature localiser; the marker
             // localiser ignores it.
             cam1.setPrior(drive.position);
-            //LOG_INFO("x: ", drive.position.x, " y: ", drive.position.y, " a: ", drive.position.a);
 
             if (currentState != INIT && currentState != FIN)
             {
 #ifndef DISABLE_LIDAR
                 GetLidar();
 #endif
-                if (tableStatus.mastStatus) {// TODO make request async to reduce delay issue in case of deconnection
-                    if(getMapStatus()){ // Getting data from mast
+                if (tableStatus.mastStatus) { // TODO make request async to reduce delay issue in case of deconnection
+                    if (getMapStatus()) { // Getting data from mast
                         tableStatus.updateMapStatus();
-                    }else{
+                    } else {
                         LOG_ERROR("Failed to get map status from mast");
                         tableStatus.mastStatus = false; // Don't try to get mast information for the rest of the match
                     }
@@ -138,7 +139,7 @@ int main(int argc, char *argv[])
         //****************************************************************
         case INIT:
         {
-            static bool mast = false;
+            static bool matStarted = false;
             if (initState)
             {
                 LOG_GREEN_INFO("INIT");
@@ -146,15 +147,9 @@ int main(int argc, char *argv[])
                 tableStatus.reset();
                 arduino.RGB_Rainbow();
             }
-            if(!mast){
-                bool sucess;
-                mast = StartMat(sucess);
-                if(sucess){
-                    tableStatus.mastStatus = true;
-                    LOG_GREEN_INFO("MAT is ready");
-                } 
-            }
-            
+            if (!matStarted)
+                matStarted = tryConnectMat();
+
             update_team_strat();
 
             if (sensor.readButtonSensor() && !sensor.readLatchSensor() && tableStatus.colorTeam != NONE && currentStrategy != nullptr)
@@ -165,7 +160,7 @@ int main(int argc, char *argv[])
         case WAITSTART:
         {
             if (initState){
-                LOG_GREEN_INFO("WAITSTART");  
+                LOG_GREEN_INFO("WAITSTART");
                 actuators.enableActuators();
                 actuators.homeActuators();
                 lidar.startSpin();
@@ -194,8 +189,7 @@ int main(int argc, char *argv[])
             if (initState){
                 LOG_GREEN_INFO("CALIBRATION");
             }
-            tableStatus.pos_opponent.x = 3000.0f;
-            tableStatus.pos_opponent.y = 0;
+            tableStatus.pos_opponent = OPPONENT_POS_UNKNOWN;
 
             tableStatus.startTime = _millis();
             static bool has_calib = false;
@@ -224,7 +218,7 @@ int main(int argc, char *argv[])
             }
             bool finished = action.RunFSM();
 
-            if (_millis() > tableStatus.startTime + 100000 || finished || sensor.readButtonSensor())
+            if (_millis() > tableStatus.startTime + MATCH_DURATION_MS || finished || sensor.readButtonSensor())
                 nextState = FIN;
             break;
         }
@@ -235,14 +229,10 @@ int main(int argc, char *argv[])
                 LOG_GREEN_INFO("TEST");
             }
 
-            if(!tableStatus.mastStatus){
-                bool sucess;
-                StartMat(sucess);
-                if(sucess){
-                    tableStatus.mastStatus = true;
-                    LOG_GREEN_INFO("MAT is ready");
-                } 
-            }
+            // The bench has no MAT; keep its connection errors out of the checks.
+            if (!unitTestMode && !tableStatus.mastStatus)
+                tryConnectMat();
+
             tests();
             break;
         }
@@ -256,10 +246,10 @@ int main(int argc, char *argv[])
             navigation.go();
 
             // Execute the function as long as it returns false
-                manual_loop();
-                if (!manual_ctrl){
-                    exit_requested = true;
-                }
+            manual_loop();
+            if (!manual_ctrl){
+                exit_requested = true;
+            }
             break;
         }
         //****************************************************************
@@ -283,7 +273,6 @@ int main(int argc, char *argv[])
         }
         //****************************************************************
         default:
-            LOG_GREEN_INFO("default");
             nextState = INIT;
             break;
         }
@@ -314,7 +303,6 @@ int StartSequence()
 {
     signal(SIGTERM, ctrlc);
     signal(SIGINT, ctrlc);
-    // signal(SIGTSTP, ctrlz);
 
     setProgramPriority();
 
@@ -337,8 +325,14 @@ int StartSequence()
     currentState = TEST;
     nextState = TEST;
 #else
-    currentState = INIT;
-    nextState = INIT;
+    if (unitTestMode) {
+        LOG_GREEN_INFO("Running hardware checks (--unit-test)");
+        currentState = TEST;
+        nextState = TEST;
+    } else {
+        currentState = INIT;
+        nextState = INIT;
+    }
 #endif // TEST_API_ONLY
 
     initState = true;
@@ -354,9 +348,9 @@ int StartSequence()
 
 void GetLidar()
 {
-    static position_t pos_opponent = {3000,0,0};
+    static position_t pos_opponent = OPPONENT_POS_UNKNOWN;
     double IsDataValid = (fabs(drive.velocity.a) <= 45.0) || (position_distance(drive.position, pos_opponent) < 1000);
-    
+
     if (lidar.getData()){
         convertAngularToAxial(lidar.data, lidar.count, drive.position, 150);
         pathfind_fill_lidar(&lidar);
@@ -366,8 +360,8 @@ void GetLidar()
                 (_millis() - tableStatus.startTime > 1000)){ // Only update opponent position after 1 second from the start to avoid false readings at the beginning
             tableStatus.pos_opponent.x = pos_opponent.x;
             tableStatus.pos_opponent.y = pos_opponent.y;
-            opponentInAction(pos_opponent);            
-            
+            opponentInAction(pos_opponent);
+
         }
     }
 }
@@ -375,7 +369,7 @@ void GetLidar()
 void EndSequence()
 {
     LOG_GREEN_INFO("Stopping");
-    
+
     // Stop the lidar
     lidar.Stop();
     cam1.stop();
@@ -401,17 +395,190 @@ void EndSequence()
 }
 
 
+// ------------------------------------------------------
+//                HARDWARE CHECKS (HIL)
+// ------------------------------------------------------
+// Read-only bench checks: the camera is started and its controls are written,
+// the lidar motor is spun up to produce a scan, and both boards are queried.
+// No actuator motion is commanded.
+namespace {
+
+constexpr int FRAME_TIMEOUT_MS = 5000;
+constexpr int LIDAR_TIMEOUT_MS = 5000;
+constexpr int LIDAR_MIN_POINTS = 50;
+constexpr double LIDAR_MAX_RANGE_MM = 12000.0;
+
+int checkFailures = 0;
+
+bool check(const char* name, bool ok)
+{
+    if (ok) {
+        LOG_GREEN_INFO("HIL PASS  ", name);
+    } else {
+        LOG_ERROR("HIL FAIL  ", name);
+        checkFailures++;
+    }
+    return ok;
+}
+
+void skip(const char* name)
+{
+    LOG_WARNING("HIL SKIP  ", name);
+}
+
+bool sameFloat(float a, float b)
+{
+    return std::fabs(a - b) < 1e-5f;
+}
+
+bool waitForFrame()
+{
+    std::vector<uchar> jpeg;
+    const unsigned long start = _millis();
+    while (_millis() - start < FRAME_TIMEOUT_MS) {
+        if (cam1.getRawPreview(jpeg) && !jpeg.empty())
+            return true;
+        usleep(50 * 1000);
+    }
+    return false;
+}
+
+void testCamera()
+{
+    cam1.start();
+    if (!check("camera: a frame arrives", waitForFrame()))
+        return;
+
+    // Write the three hardware controls, then check that the values read back
+    // and that frames still arrive. The previous values are restored so the
+    // bench is left as it was found.
+    const float ev = cam1.getExposureValue();
+    const float contrast = cam1.getContrast();
+    const float brightness = cam1.getBrightness();
+
+    cam1.setExposureValue(ev + 1.0f);
+    cam1.setContrast(contrast + 0.2f);
+    cam1.setBrightness(brightness + 0.1f);
+
+    check("camera: exposure value round-trip", sameFloat(cam1.getExposureValue(), ev + 1.0f));
+    check("camera: contrast round-trip", sameFloat(cam1.getContrast(), contrast + 0.2f));
+    check("camera: brightness round-trip", sameFloat(cam1.getBrightness(), brightness + 0.1f));
+    check("camera: frames still arrive after a control change", waitForFrame());
+
+    cam1.setExposureValue(ev);
+    cam1.setContrast(contrast);
+    cam1.setBrightness(brightness);
+}
+
+void testLidar()
+{
+#ifdef DISABLE_LIDAR
+    skip("lidar: not built on this target (DISABLE_LIDAR)");
+#else
+    lidar.startSpin();
+
+    bool gotScan = false;
+    const unsigned long start = _millis();
+    while (_millis() - start < LIDAR_TIMEOUT_MS) {
+        if (lidar.getData() && lidar.count > 0) {
+            gotScan = true;
+            break;
+        }
+        usleep(50 * 1000);
+    }
+    lidar.stopSpin();
+
+    if (!check("lidar: a scan arrives", gotScan))
+        return;
+
+    check("lidar: point count is not empty", lidar.count > 0 && lidar.count <= SIZEDATALIDAR);
+
+    // Only the ranges the sensor can actually measure are meaningful; a bench
+    // with little in view still yields a few of them.
+    int plausible = 0;
+    double shortest = LIDAR_MAX_RANGE_MM;
+    double longest = 0.0;
+    for (int i = 0; i < lidar.count; i++) {
+        const double dist = lidar.data[i].dist;
+        if (dist > 0.0 && dist <= LIDAR_MAX_RANGE_MM) {
+            plausible++;
+            if (dist < shortest) shortest = dist;
+            if (dist > longest) longest = dist;
+        }
+    }
+    LOG_INFO("HIL lidar: ", lidar.count, " points, ", plausible,
+             " with a plausible range (", shortest, " .. ", longest, " mm)");
+
+    check("lidar: enough plausible ranges", plausible >= LIDAR_MIN_POINTS);
+    check("lidar: ranges are not all identical", longest > shortest);
+#endif
+}
+
+void testI2c()
+{
+#ifdef EMULATE_I2C
+    skip("i2c: boards are emulated on this target (EMULATE_I2C)");
+#else
+    // Arduino board: read-only queries, nothing is commanded to move.
+    bool sensor = false;
+    check("i2c: arduino answers (sensor read)", arduino.readSensor(BUTTON_SENSOR_NUM, sensor));
+
+    int32_t stepper = 0;
+    check("i2c: arduino answers (stepper read)", arduino.getStepper(stepper, STEPPER_NUM_2));
+
+    int servo = 0;
+    check("i2c: arduino answers (servo read)", arduino.getServo(SERVO_CLAW_CLOSE_1, servo));
+
+    // Drive board: update() reads the motion and the target over I2C.
+    drive.update();
+    LOG_INFO("HIL drive: position (", drive.position.x, ", ", drive.position.y, ", ",
+             drive.position.a, ")");
+    check("i2c: drive board answers (motion read)",
+          std::isfinite(drive.position.x) && std::isfinite(drive.position.y) &&
+              std::isfinite(drive.position.a));
+#endif
+}
+
+} // namespace
+
 void tests()
 {
-    /*
-        * Call test functions here. 
-        * They will be executed in loop until the program is stopped. 
-    */ 
+    // TEST is also the host API-test state, which runs no hardware checks.
+    if (!unitTestMode)
+        return;
+
+    static bool alreadyRun = false;
+    if (alreadyRun)
+        return;
+    alreadyRun = true;
+
+    LOG_GREEN_INFO("===== HIL hardware checks =====");
+    testCamera();
+    testLidar();
+    testI2c();
+    LOG_GREEN_INFO("===== HIL hardware checks done: ", checkFailures, " failure(s) =====");
+
+    // EndSequence() stops the camera and the lidar for us.
+    exit_requested = true;
 }
 
 // ------------------------------------------------------
 //                        OTHER
 // ------------------------------------------------------
+
+// Tries to connect to the MAT. Returns true once the request was accepted,
+// and sets tableStatus.mastStatus when the link is actually up.
+bool tryConnectMat()
+{
+    bool connectionOk = false;
+    const bool started = StartMat(connectionOk);
+    if (connectionOk)
+    {
+        tableStatus.mastStatus = true;
+        LOG_GREEN_INFO("MAT is ready");
+    }
+    return started;
+}
 
 bool returnToHome(){
 
@@ -428,15 +595,12 @@ bool returnToHome(){
     return false;
 }
 
-void opponentInAction(position_t position){
-    if (position_equals(position, position_t{.x=0, .y=0, .a=0})){
-        return; // useless code to get rid of warning 
-    }
-    // TODO implement this function
-    /* Detect from position of adversary the action of the adversary */
+// TODO implement this function
+/* Detect from position of adversary the action of the adversary */
+void opponentInAction(position_t /*position*/){
 }
 
-void switchTeamSide(colorTeam_t color){ // TODO moove to tableState
+void switchTeamSide(colorTeam_t color){ // TODO move to tableState
     if (color == NONE) return;
     if (currentState == RUN) return;
     if (color != tableStatus.colorTeam){
@@ -465,14 +629,7 @@ void switchTeamSide(colorTeam_t color){ // TODO moove to tableState
     }
 }
 
-void check(colorTeam_t color, std::string strategy){
-    // Check if the color and strategy are valid
-    if (color == NONE)
-        LOG_ERROR("Invalid color (", color, ") or strategy (", strategy, ")");
-    // TODO add check if necessary
-}
-
-void switchStrategy(std::string strategy){ // TODO moove to tableState
+void switchStrategy(std::string strategy){ // TODO move to tableState
     if (currentState == RUN) return;
 
     if (strategy != action.getStrategy()->getNom()){
@@ -482,9 +639,6 @@ void switchStrategy(std::string strategy){ // TODO moove to tableState
                 selectedStrategy = candidate;
         if (!selectedStrategy) return;
 
-        colorTeam_t color = tableStatus.colorTeam;
-
-        check(color, strategy);
         LOG_INFO("Strategy switch detected");
         tableStatus.strategy = strategy;
         action.setStrategy(selectedStrategy);

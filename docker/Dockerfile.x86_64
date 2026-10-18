@@ -29,9 +29,8 @@ RUN mkdir -p /opt/cdfr \
         /opt/cdfr/cdfr2024-programme-Actionneur \
     && rm -rf /opt/cdfr/*/.git
 
-# Reuse the base image's non-root `ubuntu` user (uid/gid 1000) so files created
-# in the mounted workspace stay user-owned. Dev Containers remaps its uid to the
-# host user, and build.sh runs with --user "$(id -u):$(id -g)".
+# Reuse the base image's non-root `ubuntu` user (uid/gid 1000) so workspace files
+# stay user-owned (Dev Containers remaps the uid; build.sh passes --user).
 ENV HOME=/home/ubuntu
 
 WORKDIR /workspace
