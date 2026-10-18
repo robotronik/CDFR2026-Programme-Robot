@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <signal.h>
+#include <cmath>
 #include <string>
 #include <thread>
 #include <vector>
@@ -86,14 +87,21 @@ bool tryConnectMat();
 
 // Signal Management
 bool exit_requested = false;
+// Set by --unit-test: the TEST state runs the bench checks once and exits.
+bool unitTestMode = false;
 void ctrlc(int)
 {
     LOG_INFO("Stop Signal Received");
     exit_requested = true;
 }
 
-int main()
+int main(int argc, char** argv)
 {
+    for (int i = 1; i < argc; i++) {
+        if (std::string(argv[i]) == "--unit-test")
+            unitTestMode = true;
+    }
+
     LOG_DEBUG("LOG ID : ", log_main_get_id());
     if (StartSequence() != 0)
         return -1;
@@ -221,7 +229,8 @@ int main()
                 LOG_GREEN_INFO("TEST");
             }
 
-            if (!tableStatus.mastStatus)
+            // The bench has no MAT; keep its connection errors out of the checks.
+            if (!unitTestMode && !tableStatus.mastStatus)
                 tryConnectMat();
 
             tests();
@@ -316,8 +325,14 @@ int StartSequence()
     currentState = TEST;
     nextState = TEST;
 #else
-    currentState = INIT;
-    nextState = INIT;
+    if (unitTestMode) {
+        LOG_GREEN_INFO("Running hardware checks (--unit-test)");
+        currentState = TEST;
+        nextState = TEST;
+    } else {
+        currentState = INIT;
+        nextState = INIT;
+    }
 #endif // TEST_API_ONLY
 
     initState = true;
@@ -380,12 +395,171 @@ void EndSequence()
 }
 
 
+// ------------------------------------------------------
+//                HARDWARE CHECKS (HIL)
+// ------------------------------------------------------
+// Read-only bench checks: the camera is started and its controls are written,
+// the lidar motor is spun up to produce a scan, and both boards are queried.
+// No actuator motion is commanded.
+namespace {
+
+constexpr int FRAME_TIMEOUT_MS = 5000;
+constexpr int LIDAR_TIMEOUT_MS = 5000;
+constexpr int LIDAR_MIN_POINTS = 50;
+constexpr double LIDAR_MAX_RANGE_MM = 12000.0;
+
+int checkFailures = 0;
+
+bool check(const char* name, bool ok)
+{
+    if (ok) {
+        LOG_GREEN_INFO("HIL PASS  ", name);
+    } else {
+        LOG_ERROR("HIL FAIL  ", name);
+        checkFailures++;
+    }
+    return ok;
+}
+
+void skip(const char* name)
+{
+    LOG_WARNING("HIL SKIP  ", name);
+}
+
+bool sameFloat(float a, float b)
+{
+    return std::fabs(a - b) < 1e-5f;
+}
+
+bool waitForFrame()
+{
+    std::vector<uchar> jpeg;
+    const unsigned long start = _millis();
+    while (_millis() - start < FRAME_TIMEOUT_MS) {
+        if (cam1.getRawPreview(jpeg) && !jpeg.empty())
+            return true;
+        usleep(50 * 1000);
+    }
+    return false;
+}
+
+void testCamera()
+{
+    cam1.start();
+    if (!check("camera: a frame arrives", waitForFrame()))
+        return;
+
+    // Write the three hardware controls, then check that the values read back
+    // and that frames still arrive. The previous values are restored so the
+    // bench is left as it was found.
+    const float ev = cam1.getExposureValue();
+    const float contrast = cam1.getContrast();
+    const float brightness = cam1.getBrightness();
+
+    cam1.setExposureValue(ev + 1.0f);
+    cam1.setContrast(contrast + 0.2f);
+    cam1.setBrightness(brightness + 0.1f);
+
+    check("camera: exposure value round-trip", sameFloat(cam1.getExposureValue(), ev + 1.0f));
+    check("camera: contrast round-trip", sameFloat(cam1.getContrast(), contrast + 0.2f));
+    check("camera: brightness round-trip", sameFloat(cam1.getBrightness(), brightness + 0.1f));
+    check("camera: frames still arrive after a control change", waitForFrame());
+
+    cam1.setExposureValue(ev);
+    cam1.setContrast(contrast);
+    cam1.setBrightness(brightness);
+}
+
+void testLidar()
+{
+#ifdef DISABLE_LIDAR
+    skip("lidar: not built on this target (DISABLE_LIDAR)");
+#else
+    lidar.startSpin();
+
+    bool gotScan = false;
+    const unsigned long start = _millis();
+    while (_millis() - start < LIDAR_TIMEOUT_MS) {
+        if (lidar.getData() && lidar.count > 0) {
+            gotScan = true;
+            break;
+        }
+        usleep(50 * 1000);
+    }
+    lidar.stopSpin();
+
+    if (!check("lidar: a scan arrives", gotScan))
+        return;
+
+    check("lidar: point count is not empty", lidar.count > 0 && lidar.count <= SIZEDATALIDAR);
+
+    // Only the ranges the sensor can actually measure are meaningful; a bench
+    // with little in view still yields a few of them.
+    int plausible = 0;
+    double shortest = LIDAR_MAX_RANGE_MM;
+    double longest = 0.0;
+    for (int i = 0; i < lidar.count; i++) {
+        const double dist = lidar.data[i].dist;
+        if (dist > 0.0 && dist <= LIDAR_MAX_RANGE_MM) {
+            plausible++;
+            if (dist < shortest) shortest = dist;
+            if (dist > longest) longest = dist;
+        }
+    }
+    LOG_INFO("HIL lidar: ", lidar.count, " points, ", plausible,
+             " with a plausible range (", shortest, " .. ", longest, " mm)");
+
+    check("lidar: enough plausible ranges", plausible >= LIDAR_MIN_POINTS);
+    check("lidar: ranges are not all identical", longest > shortest);
+#endif
+}
+
+void testI2c()
+{
+#ifdef EMULATE_I2C
+    skip("i2c: boards are emulated on this target (EMULATE_I2C)");
+#else
+    // Arduino board: read-only queries, nothing is commanded to move.
+    bool sensor = false;
+    check("i2c: arduino answers (sensor read)", arduino.readSensor(BUTTON_SENSOR_NUM, sensor));
+
+    int32_t stepper = 0;
+    check("i2c: arduino answers (stepper read)", arduino.getStepper(stepper, STEPPER_NUM_2));
+
+    int servo = 0;
+    check("i2c: arduino answers (servo read)", arduino.getServo(SERVO_CLAW_CLOSE_1, servo));
+
+    // Drive board: update() reads the motion and the target over I2C.
+    drive.update();
+    LOG_INFO("HIL drive: position (", drive.position.x, ", ", drive.position.y, ", ",
+             drive.position.a, ")");
+    check("i2c: drive board answers (motion read)",
+          std::isfinite(drive.position.x) && std::isfinite(drive.position.y) &&
+              std::isfinite(drive.position.a));
+#endif
+}
+
+} // namespace
+
 void tests()
 {
-    /*
-        * Call test functions here.
-        * They will be executed in loop until the program is stopped.
-    */
+    // TEST is also the host API-test state, which runs no hardware checks.
+    if (!unitTestMode)
+        return;
+
+    static bool alreadyRun = false;
+    if (alreadyRun)
+        return;
+    alreadyRun = true;
+
+    LOG_GREEN_INFO("===== HIL hardware checks =====");
+    testCamera();
+    testLidar();
+    testI2c();
+    LOG_GREEN_INFO("===== HIL hardware checks done: ", checkFailures, " failure(s) =====");
+
+    // EndSequence() stops the camera and the lidar for us.
+    exit_requested = true;
 }
 
 // ------------------------------------------------------

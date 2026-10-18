@@ -92,6 +92,21 @@ lidar, and run the API in test mode; the **MAT is disabled** as well (it is the
 robot's vision server) — the ARM build keeps it enabled. Override with
 `-DCDFR_ENABLE_MAT=ON` when needed.
 
+### 🔌 Hardware checks on the bench (HIL)
+
+The CTest suite replays recorded data and never touches a device. To check the
+real hardware — camera, lidar and the two boards — run the same binary with the
+boot argument below and read the `HIL` lines in its log. Nothing is commanded to
+move, and the program exits when the checks are done. See
+[docs/HIL.md](docs/HIL.md) for what is covered and what is not.
+
+```bash
+sudo ./programCDFR --unit-test
+```
+
+CI runs these on a self-hosted runner installed on the bench
+(`.github/workflows/hil.yml`).
+
 ### 🏃 Running on the host
 
 `./build.sh run` executes the binary outside Docker, so the host must provide the
