@@ -105,7 +105,7 @@ sudo ./programCDFR --unit-test
 ```
 
 CI runs these on a self-hosted runner installed on the bench
-(`.github/workflows/hil.yml`).
+(`.github/workflows/c-cpp.yml`, the `bench` job).
 
 ### 🏃 Running on the host
 

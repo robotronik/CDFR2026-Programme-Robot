@@ -69,20 +69,26 @@ a lens cap the image may not move measurably.
 
 ## CI
 
-`./build.sh build` produces `programCDFR-arm64.zip`, and
-`.github/workflows/hil.yml` runs it on a self-hosted runner installed on the
-bench:
+The `bench` job in `.github/workflows/c-cpp.yml` runs the hardware checks:
 
 ```
-CI (GitHub-hosted)  ->  artifact programCDFR-arm64  ->  HIL job (self-hosted, label "bench")
+build-and-test (GitHub-hosted)  ->  artifact programCDFR-arm64  ->  bench job (self-hosted, label "bench")
 ```
 
-The job downloads the artifact of the CI run that just finished (`run-id`), stops
-the installed service, runs `./programCDFR --unit-test`, greps the log, and always
-restarts the service. It runs for **every branch**, on pushes and on pull requests
-opened from this repository; a fork PR is excluded so its artifact never executes
-on the bench. It is not part of the PR checks, so a bench that is switched off
-cannot block a merge.
+It waits for the build, downloads the arm64 bundle that run just produced, unpacks
+it, stops the installed service, runs `./programCDFR --unit-test`, greps the log,
+and always restarts the service. It runs on **every branch**, for pushes and for
+pull requests opened from this repository; a fork PR is skipped so its artifact
+never executes on the bench. It lives in the same workflow as the build, so its
+result appears next to it in the Actions run.
+
+It is deliberately **not** a `workflow_run` workflow: that event only fires when
+the workflow file exists on the default branch, which would have kept the bench
+dormant on feature branches. A `push`/`pull_request` job uses the YAML from the
+commit being built, so it is active as soon as the branch is pushed.
+
+If the bench is switched off, the job waits in the queue instead of failing —
+cancel the run if it is in the way.
 
 ### Setting up the bench runner
 
@@ -107,7 +113,7 @@ curl -fsSLO https://github.com/actions/runner/releases/download/v2.338.0/actions
 echo "628b4a7258487b80c1d3c221095a7ded349f5ae0175fd3dfab708d07428f041b  actions-runner-linux-arm64-2.338.0.tar.gz" | sha256sum -c -
 tar xzf actions-runner-linux-arm64-2.338.0.tar.gz
 
-# Register. `bench` is the label hil.yml matches; self-hosted/Linux/ARM64 are added
+# Register. `bench` is the label the bench job matches; self-hosted/Linux/ARM64 are added
 # automatically.
 ./config.sh --url https://github.com/robotronik/CDFR2026-Programme-Robot \
             --token "$TOKEN" --name bench-pi --labels bench --unattended
@@ -136,7 +142,7 @@ sudo ./svc.sh install root && sudo ./svc.sh start
 ```
 
 A root agent on a public repository is the highest-risk configuration, and the
-`if: event == 'push'` gate in `hil.yml` is what makes it acceptable. Keep that
+`if:` gate in the bench job is what makes it acceptable. Keep that
 gate.
 
 **Least privilege — stay as `robotronik`:**
@@ -163,11 +169,4 @@ The unit name must match the one `autoRunInstaller.sh` creates, which is
 
 The runner updates itself periodically, which needs write access to its own
 directory — `/opt/actions-runner` is owned by `robotronik` for that reason.
-
-### `workflow_run` needs the default branch
-
-A `workflow_run` workflow only triggers if it exists on the repository's **default
-branch** (`main`). As long as `hil.yml` lives only on a feature branch, the job
-never runs, even though CI did. Once it is merged to `main`, it triggers for every
-branch: each push runs CI, and each finished CI run starts the bench job.
 
