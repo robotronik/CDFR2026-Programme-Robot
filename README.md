@@ -63,3 +63,4 @@ Install the [clangd extension](https://marketplace.visualstudio.com/items?itemNa
 - [Raspberry Pi](docs/raspberry-pi.md) — setup, deploy, logs, debugging, touchscreen
 - [Robot](docs/robot.md) — actuators, LED signals, debug sounds, match checklist
 - [Code style](docs/style.md) — how to write code here, clang-format
+- [Bench checks (HIL)](docs/HIL.md) — checking the real hardware with `--unit-test`, the CI bench job
