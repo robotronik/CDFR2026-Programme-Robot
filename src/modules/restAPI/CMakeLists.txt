@@ -3,6 +3,7 @@ add_library(restAPI OBJECT)
 target_sources(restAPI
     PRIVATE
         src/restAPI.cpp
+        src/matAPI.cpp
         src/manual_mode.cpp
 )
 

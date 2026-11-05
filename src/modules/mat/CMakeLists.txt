@@ -13,6 +13,8 @@ target_include_directories(mat
 target_link_libraries(mat
     PUBLIC
         utils
+        defs
+        restAPI
         project_compiler_options
 )
 

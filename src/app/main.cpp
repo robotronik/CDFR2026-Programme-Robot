@@ -114,13 +114,11 @@ int main()
 #ifndef DISABLE_LIDAR
                 GetLidar();
 #endif
-                if (tableStatus.mastStatus) { // TODO make request async to reduce delay issue in case of deconnection
-                    if (getMapStatus()) { // Getting data from mast
-                        tableStatus.updateMapStatus();
-                    } else {
-                        LOG_ERROR("Failed to get map status from mast");
-                        tableStatus.mastStatus = false; // Don't try to get mast information for the rest of the match
-                    }
+                if(getMapStatus()){ // données du mat récupérées via la REST
+                    tableStatus.updateMapStatus(getMatTableData());
+                }else{
+                    LOG_ERROR("Failed to get map status from mast");
+                    tableStatus.mastStatus = false; // Don't try to get mast information for the rest of the match
                 }
             }
         }

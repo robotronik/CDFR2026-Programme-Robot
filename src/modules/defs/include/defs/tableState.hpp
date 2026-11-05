@@ -1,6 +1,6 @@
 #pragma once
 #include "defs/structs.hpp"
-#include "mat/mat.hpp"
+#include "defs/matTypes.hpp"
 #include "navigation/driveControl.h"
 #include <utils/json.hpp>
 #include <vector>
@@ -28,7 +28,7 @@ class TableState
         void resetCalibrationAge(){ calibrationAge = 0;}
 
         bool mastStatus = false; // Status of mast if exist
-        void updateMapStatus(); // update of tableState relative to data recived by mast
+        void updateMapStatus(const MatTableData& data); // update of tableState relative to data recived by mast
 
         bool m_isPointInsideRectangle(float px, float py, float cx, float cy, float w, float h);
         bool isRobotInArrivalZone(position_t position);
