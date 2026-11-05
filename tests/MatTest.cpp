@@ -1,10 +1,11 @@
 #include "mat/mat.hpp"
+#include "restAPI/matAPI.hpp"
 
 // Vérifie la lecture d'une réponse GET /fleet/live du mat : position de
 // l'adversaire et objets de jeu, y compris les champs manquants ou nuls.
 bool test_mat_parse() {
     // La route interrogée par getMapStatus() doit rester celle de l'API du mat.
-    if (MAT_LIVE_PATH != "/fleet/live") return false;
+    if (mat_api::MAT_OBJECTS_PATH != "/fleet/live") return false;
 
     const json payload = json::parse(R"JSON({
         "our_color": "blue",
