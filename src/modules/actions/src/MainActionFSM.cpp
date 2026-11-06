@@ -72,7 +72,6 @@ bool ActionFSM::RunFSM(){
         actionStartTime = _millis();
     }
     else if (ret == FSM_RETURN_ERROR){
-        // TODO handle database
         currentAction = SetBestAction();
         actionStartTime = _millis();
     }
