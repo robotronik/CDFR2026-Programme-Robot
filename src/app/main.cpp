@@ -114,12 +114,24 @@ int main()
 #ifndef DISABLE_LIDAR
                 GetLidar();
 #endif
-                if(getMapStatus()){ // données du mat récupérées via la REST
-                    tableStatus.updateMapStatus(getMatTableData());
+                // Le thread de fond de mat_api rafraîchit la table : on ne lit
+                // que la dernière donnée, sans bloquer la boucle.
+#ifndef DISABLE_MAT
+                MatTableData matData;
+                unsigned long matAgeMs = 0;
+                if(getMapStatus(matData, matAgeMs)){
+                    tableStatus.updateMapStatus(matData);
                 }else{
-                    LOG_ERROR("Failed to get map status from mast");
-                    tableStatus.mastStatus = false; // Don't try to get mast information for the rest of the match
+                    static unsigned long lastMatWarning = 0;
+                    if (lastMatWarning == 0 || _millis() - lastMatWarning >= 1000){
+                        lastMatWarning = _millis();
+                        if (matAgeMs == 0)
+                            LOG_ERROR("No data received from MAT yet");
+                        else
+                            LOG_ERROR("MAT data is stale (", matAgeMs, " ms old)");
+                    }
                 }
+#endif
             }
         }
 

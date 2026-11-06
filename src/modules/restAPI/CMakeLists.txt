@@ -22,5 +22,6 @@ target_link_libraries(restAPI
         vision
         utils
         Crow::Crow
+        Threads::Threads
         project_compiler_options
 )

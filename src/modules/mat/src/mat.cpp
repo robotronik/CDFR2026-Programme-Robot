@@ -3,20 +3,6 @@
 #include "restAPI/matAPI.hpp"
 #include "utils/logger.hpp"
 
-#include <mutex>
-
-namespace {
-
-std::mutex g_matMutex;
-MatTableData g_matTableData;
-
-}  // namespace
-
-MatTableData getMatTableData() {
-    std::lock_guard<std::mutex> lock(g_matMutex);
-    return g_matTableData;
-}
-
 #ifndef DISABLE_MAT
 
 bool StartMat(bool& connectionOk) {
@@ -43,17 +29,8 @@ void StopMat() {
     mat_api::stop();
 }
 
-bool getMapStatus() {
-    MatTableData data;
-    if (!mat_api::fetchTable(data)) {
-        LOG_ERROR("Failed to fetch map status from MAT");
-        return false;
-    }
-    {
-        std::lock_guard<std::mutex> lock(g_matMutex);
-        g_matTableData = data;
-    }
-    return true;
+bool getMapStatus(MatTableData& data, unsigned long& ageMs) {
+    return mat_api::latest(data, ageMs);
 }
 
 #else  // DISABLE_MAT
@@ -65,7 +42,8 @@ bool StartMat(bool& connectionOk) {
 
 void StopMat() {}
 
-bool getMapStatus() {
+bool getMapStatus(MatTableData&, unsigned long& ageMs) {
+    ageMs = 0;
     return false;
 }
 
