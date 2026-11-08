@@ -357,6 +357,15 @@ In the code, these elements are referred to as *banner*, *stocks*, *columns*, *p
 - **RAINBOW**:
   - 🌈 The robot is waiting for user input.
 
+## 🔊 Debug Sounds
+
+The program plays short sounds to mark startup, match end and shutdown, and any
+`debugSound::play("name.wav")` you add for debugging a code path (samples in
+[`data/sounds/`](data/sounds)). They are heard on a USB speaker plugged into the
+robot (the Pi 5 has no audio jack) and on a laptop running the Docker image:
+`./build.sh run-docker` plays the startup sound on launch. See
+[AUDIO.md](AUDIO.md).
+
 ## ✅ Match Checklist
 
 - Position the robot.
