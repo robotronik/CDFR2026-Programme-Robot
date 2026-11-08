@@ -30,6 +30,8 @@ RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
         libopencv-features2d410 \
         libopencv-flann410 \
         libopencv-objdetect410 \
+        sox \
+        libsox-fmt-all \
         clangd \
     && cd /tmp/opencv-dev \
     && apt-get download \

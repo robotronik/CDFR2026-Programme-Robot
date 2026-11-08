@@ -52,6 +52,8 @@ RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
         libopencv-flann410:arm64 \
         libopencv-objdetect410:arm64 \
         libcamera-dev:arm64 \
+        sox \
+        libsox-fmt-all \
         rsync \
         openssh-client \
     && cd /tmp/opencv-dev \
