@@ -19,30 +19,31 @@
 #define MAT_STALE_MS 120
 #endif
 
-// Client REST du mat. mat.cpp ne fait plus d'HTTP : il appelle ce module.
-// Les requêtes sont faites par un thread de fond : la boucle principale ne
-// bloque jamais et ne lit que la dernière table reçue (latest()).
+// Client REST du mat. mat.cpp ne fait pas d'HTTP : il appelle ce module.
+// Les requêtes sont faites par un thread de fond, toujours actif : la boucle
+// principale ne bloque jamais et ne lit que la dernière table reçue (latest()).
 namespace mat_api {
 
 extern const std::string MAT_OBJECTS_PATH;
 
-// Demande le démarrage de la détection. Non bloquant : le thread de fond envoie
-// GET /start puis rafraîchit la table en continu. `connectionOk` passe à true
-// dès que le mat a répondu ; les appels suivants ne font que relire le statut.
-bool start(bool& connectionOk);
+// Démarre le thread de fond (une seule fois) ; non bloquant. Il interroge
+// GET /objects en continu et retente indéfiniment si le mat est absent : seul
+// le retour (vert) et la perte (erreur) de la connexion sont loggés.
+// Retourne true si le mat est connecté à cet instant.
+bool start();
 
 // Arrête le rafraîchissement et envoie GET /stop. Attend la fin du thread.
 void stop();
 
 // Copie la dernière table reçue, sans aucun appel réseau. Retourne false tant
 // qu'aucune donnée n'est arrivée ou que la dernière est plus vieille que
-// MAT_STALE_MS ; `ageMs` reçoit alors l'âge de la dernière donnée (0 si aucune).
-bool latest(MatTableData& data, unsigned long& ageMs);
+// MAT_STALE_MS.
+bool latest(MatTableData& data);
 
 // GET /objects bloquant, hors thread de fond (tests / outils).
 bool fetchTable(MatTableData& data);
 
-// Dernier statut connu du mat, sans appel réseau.
+// Vrai si la dernière table reçue n'est pas périmée, sans appel réseau.
 bool ready();
 
 }  // namespace mat_api

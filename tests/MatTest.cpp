@@ -45,7 +45,6 @@ bool test_mat_parse() {
 
 bool test_start_mat(){
     // Is it useful ?
-    bool sucess;
-    while(!StartMat(sucess));
-    return sucess;
+    while(!StartMat());
+    return true;
 }

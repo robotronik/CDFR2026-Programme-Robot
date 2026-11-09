@@ -51,53 +51,45 @@ HttpGet get(httplib::Client& cli, const std::string& path, json& response) {
 std::mutex g_mutex;
 std::condition_variable g_wake;
 std::thread g_thread;
-bool g_runRequested = false;      // le thread de fond doit continuer
-bool g_detectionStarted = false;  // GET /start a répondu
-MatTableData g_data;              // dernière table reçue
+bool g_runRequested = false;  // le thread de fond doit continuer
+MatTableData g_data;          // dernière table reçue
 bool g_hasData = false;
 std::chrono::steady_clock::time_point g_stamp;
 
+// Appelé avec g_mutex verrouillé.
+bool isFreshLocked() {
+    return g_hasData &&
+           std::chrono::steady_clock::now() - g_stamp <= std::chrono::milliseconds(MAT_STALE_MS);
+}
+
 // Boucle de rafraîchissement : un seul client HTTP, utilisé uniquement ici.
+// Le mat peut être absent, ou n'importe quand : la connexion est retentée sans
+// fin. Seuls le retour et la perte de la connexion sont loggés (jamais les
+// tentatives), le reste du log est géré par la boucle principale (latest()).
 void workerLoop() {
     httplib::Client cli(MAT_URL);
     configure(cli);
 
-    // Le mat peut rester absent longtemps : une ligne de log par seconde au plus.
-    auto lastErrorLog = std::chrono::steady_clock::time_point{};
-    const auto reportFailure = [&lastErrorLog](const std::string& path, const std::string& error) {
-        const auto now = std::chrono::steady_clock::now();
-        if (now - lastErrorLog < std::chrono::seconds(1)) {
-            return;
-        }
-        lastErrorLog = now;
-        LOG_ERROR("MAT ", MAT_URL, path, ": ", error);
-    };
-
-    bool detectionStarted = false;
+    bool connected = false;
     while (true) {
         json response;
-        if (!detectionStarted) {
-            const HttpGet start = get(cli, "/start", response);
-            if (!start.ok) {
-                reportFailure("/start", start.error);
-            } else if (!response.is_object()) {
-                reportFailure("/start", "unexpected response");
-            } else {
-                detectionStarted = true;
-                std::lock_guard<std::mutex> lock(g_mutex);
-                g_detectionStarted = true;
-            }
-        } else {
-            const HttpGet objects = get(cli, mat_api::MAT_OBJECTS_PATH, response);
-            if (objects.ok) {
-                const MatTableData data = parseMatTableData(response);
+        const HttpGet objects = get(cli, mat_api::MAT_OBJECTS_PATH, response);
+
+        if (objects.ok) {
+            const MatTableData data = parseMatTableData(response);
+            {
                 std::lock_guard<std::mutex> lock(g_mutex);
                 g_data = data;
                 g_hasData = true;
                 g_stamp = std::chrono::steady_clock::now();
-            } else {
-                reportFailure(mat_api::MAT_OBJECTS_PATH, objects.error);
             }
+            if (!connected) {
+                LOG_GREEN_INFO("MAT connected");
+                connected = true;
+            }
+        } else if (connected) {
+            LOG_ERROR("MAT lost: ", objects.error);
+            connected = false;
         }
 
         std::unique_lock<std::mutex> lock(g_mutex);
@@ -107,7 +99,7 @@ void workerLoop() {
     }
 
     // Le client HTTP n'appartient qu'à ce thread : /stop est envoyé ici.
-    if (detectionStarted) {
+    if (connected) {
         json response;
         const HttpGet stop = get(cli, "/stop", response);
         if (stop.ok && response.is_object()) {
@@ -116,33 +108,23 @@ void workerLoop() {
             LOG_ERROR("Failed to stop MAT: ", stop.ok ? "unexpected response" : stop.error);
         }
     }
-
-    std::lock_guard<std::mutex> lock(g_mutex);
-    g_detectionStarted = false;
 }
 
 }  // namespace
 
 bool mat_api::ready() {
     std::lock_guard<std::mutex> lock(g_mutex);
-    return g_detectionStarted;
+    return isFreshLocked();
 }
 
-bool mat_api::start(bool& connectionOk) {
+bool mat_api::start() {
     std::lock_guard<std::mutex> lock(g_mutex);
-
-    if (g_detectionStarted) {
-        connectionOk = true;
-        return true;
-    }
 
     if (!g_thread.joinable()) {
         g_runRequested = true;
         g_thread = std::thread(workerLoop);
     }
-
-    connectionOk = false;
-    return false;
+    return isFreshLocked();
 }
 
 void mat_api::stop() {
@@ -160,19 +142,10 @@ void mat_api::stop() {
     g_hasData = false;
 }
 
-bool mat_api::latest(MatTableData& data, unsigned long& ageMs) {
+bool mat_api::latest(MatTableData& data) {
     std::lock_guard<std::mutex> lock(g_mutex);
 
-    if (!g_hasData) {
-        ageMs = 0;
-        return false;
-    }
-
-    const auto age = std::chrono::steady_clock::now() - g_stamp;
-    ageMs = static_cast<unsigned long>(
-        std::chrono::duration_cast<std::chrono::milliseconds>(age).count());
-
-    if (ageMs > MAT_STALE_MS) {
+    if (!isFreshLocked()) {
         return false;
     }
 

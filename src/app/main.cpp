@@ -38,7 +38,6 @@
     #define DISABLE_LIDAR
     #define TEST_API_ONLY
     #define EMULATE_I2C
-    #define DISABLE_MAT
 #endif
 
 // Hardware init
@@ -82,9 +81,9 @@ RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &lidar, &
 // Prototypes
 int StartSequence();
 void GetLidar();
+void GetMat();
 void EndSequence();
 void tests();
-bool tryConnectMat();
 
 // Signal Management
 bool exit_requested = false;
@@ -116,24 +115,7 @@ int main()
 #ifndef DISABLE_LIDAR
                 GetLidar();
 #endif
-                // Le thread de fond de mat_api rafraîchit la table : on ne lit
-                // que la dernière donnée, sans bloquer la boucle.
-#ifndef DISABLE_MAT
-                MatTableData matData;
-                unsigned long matAgeMs = 0;
-                if(getMapStatus(matData, matAgeMs)){
-                    tableStatus.updateMapStatus(matData);
-                }else{
-                    static unsigned long lastMatWarning = 0;
-                    if (lastMatWarning == 0 || _millis() - lastMatWarning >= 1000){
-                        lastMatWarning = _millis();
-                        if (matAgeMs == 0)
-                            LOG_ERROR("No data received from MAT yet");
-                        else
-                            LOG_ERROR("MAT data is stale (", matAgeMs, " ms old)");
-                    }
-                }
-#endif
+                GetMat();
             }
         }
 
@@ -143,7 +125,6 @@ int main()
         //****************************************************************
         case INIT:
         {
-            static bool matStarted = false;
             if (initState)
             {
                 LOG_GREEN_INFO("INIT");
@@ -151,8 +132,6 @@ int main()
                 tableStatus.reset();
                 arduino.RGB_Rainbow();
             }
-            if (!matStarted)
-                matStarted = tryConnectMat();
 
             update_team_strat();
 
@@ -233,9 +212,6 @@ int main()
                 LOG_GREEN_INFO("TEST");
             }
 
-            if (!tableStatus.mastStatus)
-                tryConnectMat();
-
             tests();
             break;
         }
@@ -265,7 +241,6 @@ int main()
                 drive.disable();
                 actuators.disableActuators();
                 lidar.stopSpin();
-                StopMat();
             }
 
             if (!sensor.readLatchSensor()){
@@ -319,6 +294,10 @@ int StartSequence()
     }
 #endif
 
+    // Start the MAT client: its thread retries in the background until the mat
+    // is reachable (logs the (re)connection), and is only stopped at exit.
+    StartMat();
+
     // Start the api server in a separate thread
     api_server_thread = std::thread([&]()
                                     { api.start(); });
@@ -363,9 +342,22 @@ void GetLidar()
     }
 }
 
+void GetMat()
+{
+    // Le thread de fond de mat_api rafraîchit la table : on ne lit que la
+    // dernière donnée, sans bloquer la boucle. Il loggue lui-même la connexion
+    // et sa perte, rien à faire ici si la donnée est absente.
+    MatTableData matData;
+    if (getMapStatus(matData))
+        tableStatus.updateMapStatus(matData);
+}
+
 void EndSequence()
 {
     LOG_GREEN_INFO("Stopping");
+
+    // Stop the MAT thread (sends GET /stop)
+    StopMat();
 
     // Stop the lidar
     lidar.Stop();
@@ -403,20 +395,6 @@ void tests()
 // ------------------------------------------------------
 //                        OTHER
 // ------------------------------------------------------
-
-// Tries to connect to the MAT. Returns true once the request was accepted,
-// and sets tableStatus.mastStatus when the link is actually up.
-bool tryConnectMat()
-{
-    bool connectionOk = false;
-    const bool started = StartMat(connectionOk);
-    if (connectionOk)
-    {
-        tableStatus.mastStatus = true;
-        LOG_GREEN_INFO("MAT is ready");
-    }
-    return started;
-}
 
 bool returnToHome(){
 
