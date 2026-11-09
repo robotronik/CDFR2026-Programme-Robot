@@ -34,9 +34,11 @@
 #include "actions/ActuatorsControl.hpp"
 
 #ifndef __CROSS_COMPILE_ARM__
+    // Desktop Build
     #define DISABLE_LIDAR
     #define TEST_API_ONLY
     #define EMULATE_I2C
+    #define DISABLE_MAT
 #endif
 
 // Hardware init
