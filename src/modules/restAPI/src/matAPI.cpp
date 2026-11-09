@@ -1,6 +1,5 @@
 #include "restAPI/matAPI.hpp"
 
-#include <chrono>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -18,6 +17,7 @@ constexpr int READ_TIMEOUT_US = 150 * 1000;     // 150 ms
 
 const std::string MAT_URL = std::string(MAT_HOST) + ":" + std::to_string(MAT_PORT);
 constexpr auto POLL_PERIOD = std::chrono::milliseconds(MAT_POLL_PERIOD_MS);
+constexpr auto STALE_PERIOD = std::chrono::milliseconds(MAT_STALE_MS);
 
 void configure(httplib::Client& cli) {
     cli.set_connection_timeout(0, CONNECT_TIMEOUT_US);
@@ -47,25 +47,22 @@ HttpGet get(httplib::Client& cli, const std::string& path, json& response) {
     return {true, {}};
 }
 
-// État partagé entre le thread de fond et la boucle principale.
+// État partagé entre le thread de fond et la boucle principale (protégé par g_mutex).
 std::mutex g_mutex;
-std::condition_variable g_wake;
+std::condition_variable g_wake;   // réveille le thread de fond au stop()
 std::thread g_thread;
-bool g_runRequested = false;  // le thread de fond doit continuer
-MatTableData g_data;          // dernière table reçue
+bool g_runRequested = false;
+MatTableData g_data;              // dernière table reçue
 bool g_hasData = false;
 std::chrono::steady_clock::time_point g_stamp;
 
-// Appelé avec g_mutex verrouillé.
-bool isFreshLocked() {
-    return g_hasData &&
-           std::chrono::steady_clock::now() - g_stamp <= std::chrono::milliseconds(MAT_STALE_MS);
+// g_mutex doit être verrouillé.
+bool isFresh() {
+    return g_hasData && std::chrono::steady_clock::now() - g_stamp <= STALE_PERIOD;
 }
 
-// Boucle de rafraîchissement : un seul client HTTP, utilisé uniquement ici.
-// Le mat peut être absent, ou n'importe quand : la connexion est retentée sans
-// fin. Seuls le retour et la perte de la connexion sont loggés (jamais les
-// tentatives), le reste du log est géré par la boucle principale (latest()).
+// Interroge le mat sans fin. Seuls le retour et la perte de la connexion sont
+// loggés (jamais les tentatives).
 void workerLoop() {
     httplib::Client cli(MAT_URL);
     configure(cli);
@@ -75,27 +72,27 @@ void workerLoop() {
         json response;
         const HttpGet objects = get(cli, mat_api::MAT_OBJECTS_PATH, response);
 
+        std::unique_lock<std::mutex> lock(g_mutex);
+        if (g_runRequested == false) {
+            break;
+        }
         if (objects.ok) {
-            const MatTableData data = parseMatTableData(response);
-            {
-                std::lock_guard<std::mutex> lock(g_mutex);
-                g_data = data;
-                g_hasData = true;
-                g_stamp = std::chrono::steady_clock::now();
-            }
-            if (!connected) {
-                LOG_GREEN_INFO("MAT connected");
-                connected = true;
-            }
-        } else if (connected) {
+            g_data = parseMatTableData(response);
+            g_hasData = true;
+            g_stamp = std::chrono::steady_clock::now();
+        }
+        lock.unlock();
+
+        if (objects.ok && !connected) {
+            LOG_GREEN_INFO("MAT connected");
+            connected = true;
+        } else if (!objects.ok && connected) {
             LOG_ERROR("MAT lost: ", objects.error);
             connected = false;
         }
 
-        std::unique_lock<std::mutex> lock(g_mutex);
-        if (g_wake.wait_for(lock, POLL_PERIOD, [] { return !g_runRequested; })) {
-            break;
-        }
+        lock.lock();
+        g_wake.wait_for(lock, POLL_PERIOD, [] { return !g_runRequested; });
     }
 
     // Le client HTTP n'appartient qu'à ce thread : /stop est envoyé ici.
@@ -112,11 +109,6 @@ void workerLoop() {
 
 }  // namespace
 
-bool mat_api::ready() {
-    std::lock_guard<std::mutex> lock(g_mutex);
-    return isFreshLocked();
-}
-
 bool mat_api::start() {
     std::lock_guard<std::mutex> lock(g_mutex);
 
@@ -124,7 +116,7 @@ bool mat_api::start() {
         g_runRequested = true;
         g_thread = std::thread(workerLoop);
     }
-    return isFreshLocked();
+    return isFresh();
 }
 
 void mat_api::stop() {
@@ -142,13 +134,17 @@ void mat_api::stop() {
     g_hasData = false;
 }
 
+bool mat_api::ready() {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    return isFresh();
+}
+
 bool mat_api::latest(MatTableData& data) {
     std::lock_guard<std::mutex> lock(g_mutex);
 
-    if (!isFreshLocked()) {
+    if (!isFresh()) {
         return false;
     }
-
     data = g_data;
     return true;
 }
@@ -161,10 +157,6 @@ bool mat_api::fetchTable(MatTableData& data) {
     const HttpGet result = get(cli, mat_api::MAT_OBJECTS_PATH, response);
     if (!result.ok) {
         LOG_ERROR("MAT ", MAT_URL, mat_api::MAT_OBJECTS_PATH, ": ", result.error);
-        return false;
-    }
-    if (!response.is_object()) {
-        LOG_ERROR("Malformed response from MAT ", mat_api::MAT_OBJECTS_PATH);
         return false;
     }
     data = parseMatTableData(response);
