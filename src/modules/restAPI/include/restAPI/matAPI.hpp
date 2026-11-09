@@ -27,8 +27,9 @@ namespace mat_api {
 extern const std::string MAT_OBJECTS_PATH;
 
 // Démarre le thread de fond (une seule fois) ; non bloquant. Il interroge
-// GET /objects en continu et retente indéfiniment si le mat est absent : seul
-// le retour (vert) et la perte (erreur) de la connexion sont loggés.
+// GET /objects en continu et retente indéfiniment si le mat est absent. Sont
+// loggés : l'échec du premier essai au démarrage (erreur), le retour (vert) et
+// la perte (erreur) de la connexion ; pas les tentatives suivantes.
 // Retourne true si le mat est connecté à cet instant.
 bool start();
 

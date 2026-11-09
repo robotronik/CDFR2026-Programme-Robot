@@ -296,7 +296,8 @@ int StartSequence()
 
     // Start the MAT client: its thread retries in the background until the mat
     // is reachable (logs the (re)connection), and is only stopped at exit.
-    StartMat();
+    if (!StartMat())
+        LOG_ERROR("MAT not connected at init, retrying in the background");
 
     // Start the api server in a separate thread
     api_server_thread = std::thread([&]()

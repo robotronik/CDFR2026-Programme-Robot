@@ -61,13 +61,14 @@ bool isFresh() {
     return g_hasData && std::chrono::steady_clock::now() - g_stamp <= STALE_PERIOD;
 }
 
-// Interroge le mat sans fin. Seuls le retour et la perte de la connexion sont
-// loggés (jamais les tentatives).
+// Interroge le mat sans fin. Seuls le retour, la perte de la connexion et
+// l'échec du tout premier essai sont loggés (jamais les tentatives suivantes).
 void workerLoop() {
     httplib::Client cli(MAT_URL);
     configure(cli);
 
     bool connected = false;
+    bool firstAttemptDone = false;
     while (true) {
         json response;
         const HttpGet objects = get(cli, mat_api::MAT_OBJECTS_PATH, response);
@@ -89,6 +90,10 @@ void workerLoop() {
         } else if (!objects.ok && connected) {
             LOG_ERROR("MAT lost: ", objects.error);
             connected = false;
+        } else if (!objects.ok && !connected && !firstAttemptDone) {
+            LOG_ERROR("MAT not reachable at startup (", MAT_URL, "), retrying in background: ",
+                      objects.error);
+            firstAttemptDone = true;
         }
 
         lock.lock();
