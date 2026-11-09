@@ -1,39 +1,25 @@
-# Build image for the aarch64 (Raspberry Pi) target.
-# Compiles on amd64 using the aarch64-linux-gnu cross toolchain; target
-# libraries (e.g. sqlite3) come from arm64 multiarch packages.
-#
-# The base is Debian 13 (trixie) so the produced binary matches Raspberry Pi OS
-# Trixie: GCC 14 / glibc 2.41 and OpenCV 4.10 (libopencv_*.so.410) come from
-# Debian, while libcamera (libcamera.so.0.7) comes from the Raspberry Pi fork on
-# archive.raspberrypi.com, mirroring the camera stack the Pi itself ships.
+# Build image for the aarch64 (Raspberry Pi) target, cross-compiled on amd64 with
+# the aarch64-linux-gnu toolchain; target libraries come from arm64 multiarch
+# packages. The base is Debian 13 (trixie), matching Raspberry Pi OS Trixie: GCC
+# 14 / glibc 2.41, OpenCV 4.10, and the Pi libcamera fork (libcamera.so.0.7).
 
 FROM debian:trixie
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Enable arm64 packages in addition to the amd64 host packages. Unlike Ubuntu,
-# deb.debian.org serves every architecture from the same suites, so the default
-# trixie sources already cover arm64. The Raspberry Pi archive is then added for
-# the libcamera fork that drives the Pi 5 camera.
-#
-# Its InRelease is still signed with a SHA1-bound key, which trixie's `sqv`
-# verifier refuses ("SHA1 is not considered secure"), so the archive is marked
-# trusted rather than verified with a signed-by keyring. Both architectures are
-# enabled: its packages are Multi-Arch: same, so the amd64 twin has to be
-# installable alongside the arm64 one.
+# Add the Raspberry Pi archive for the libcamera fork that drives the Pi 5 camera.
+# It is marked trusted (not signed-by): its InRelease is SHA1-signed, which
+# trixie's `sqv` refuses. (Debian's own trixie suites already cover arm64.)
 RUN dpkg --add-architecture arm64 \
     && printf '%s\n' \
         'deb [trusted=yes] http://archive.raspberrypi.com/debian/ trixie main' \
         > /etc/apt/sources.list.d/raspberrypi.list
 
-# The Pi archive rebuilds many base libraries with a `+rpt` suffix. Those are
-# Multi-Arch: same, so pulling them for arm64 would clash with the amd64
-# counterparts (which only exist in Debian). Keep the Pi archive at a low
-# priority so Debian wins everywhere, and only prefer it for the libcamera stack.
-# The specific record must name the foreign architecture explicitly (pkg:arm64),
-# otherwise it does not match; libpisp1 is Multi-Arch: same and also exists in
-# Debian, so both architectures must be pinned to the Pi version or apt cannot
-# pair the arm64 libcamera0.7 with a matching libpisp1.
+# Keep the Pi archive at low priority so Debian wins everywhere, and prefer it
+# only for the libcamera stack. Pins must name the foreign architecture
+# explicitly (pkg:arm64) or they do not match; libpisp1 is Multi-Arch: same and
+# also in Debian, so both architectures are pinned to the Pi version so apt can
+# pair arm64 libcamera0.7 with a matching libpisp1.
 RUN printf '%s\n' \
         'Package: libcamera-dev:arm64 libcamera0.7:arm64 libcamera-ipa:arm64 libpisp1:arm64 libpisp1:amd64 libpisp-common' \
         'Pin: origin "archive.raspberrypi.com"' \
@@ -74,9 +60,8 @@ RUN mkdir -p /opt/cdfr \
     && rm -rf /opt/cdfr/*/.git
 
 # Debian has no non-root user, so create `ubuntu` (uid/gid 1000) like the old
-# Ubuntu base did: files created in the mounted workspace stay user-owned, and
-# build.sh's --user "$(id -u):$(id -g)" and the $HOME/.ssh bind mount have a
-# home to land in.
+# Ubuntu base: workspace files stay user-owned, and build.sh's --user and the
+# $HOME/.ssh bind mount have a home.
 RUN groupadd -g 1000 ubuntu \
     && useradd -m -u 1000 -g 1000 -s /bin/bash ubuntu
 ENV HOME=/home/ubuntu

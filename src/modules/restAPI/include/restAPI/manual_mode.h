@@ -1,5 +1,5 @@
-#ifndef MANAL_MODE_H
-#define MANAL_MODE_H
+#ifndef MANUAL_MODE_H
+#define MANUAL_MODE_H
 
 #include <stdbool.h>
 
@@ -18,4 +18,4 @@ void manual_clearFunc();
 }
 #endif
 
-#endif // MANAL_MODE_H
+#endif // MANUAL_MODE_H

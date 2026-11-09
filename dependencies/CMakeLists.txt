@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-#-----------------------------------------
-# RPLIDAR SDK
-#-----------------------------------------
+# RPLIDAR SDK.
 set(RPLIDAR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/rplidar_sdk")
 
 add_library(rplidar_sdk STATIC
@@ -37,9 +35,7 @@ target_include_directories(rplidar_sdk PRIVATE
 target_link_libraries(rplidar_sdk PUBLIC Threads::Threads)
 target_compile_definitions(rplidar_sdk PRIVATE _CPU_ENDIAN_LITTLE)
 
-#-----------------------------------------
-# libi2c (prebuilt static library, per architecture)
-#-----------------------------------------
+# libi2c: prebuilt static library, per architecture.
 add_library(i2c_lib STATIC IMPORTED GLOBAL)
 if(CMAKE_CROSSCOMPILING)
     set_target_properties(i2c_lib PROPERTIES

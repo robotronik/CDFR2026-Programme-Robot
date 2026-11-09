@@ -267,23 +267,15 @@ sudo apt-get update
 sudo apt-get upgrade -y
 ```
 
-Then, install Xorg, Openbox, and Chromium if not already installed:
+Then install the packages and start Chromium in kiosk mode:
 
 ```bash
-sudo apt install libcamera-apps
-sudo apt-get install xorg openbox chromium-browser
-sudo apt install xorg openbox -y
+sudo apt install libcamera-apps xorg openbox chromium-browser
 export DISPLAY=:0
-sudo startx /usr/bin/chromium-browser --noerrdialogs --kiosk http:localhost/robot --incognito --disable-extensions --no-sandbox
+sudo startx /usr/bin/chromium-browser --noerrdialogs --kiosk http://localhost/robot --incognito --disable-extensions --no-sandbox
 ```
 
-Alternatively, use:
-
-```bash
-/usr/bin/chromium-browser --kiosk http:localhost/robot --incognito --disable-extensions
-```
-
-For configuring a long display, edit the configuration file:
+For a portrait display, edit the configuration file:
 
 ```bash
 sudo nano /boot/firmware/config.txt
@@ -308,28 +300,21 @@ max_framebuffers=2
 # disable_fw_kms_setup=1
 ```
 
-If you are running the Raspberry Pi OS with the default desktop, you can add the command to the autostart file so it launches when the X session starts:
+To launch the kiosk automatically at session start:
 
-1. Open (or create if it doesn’t exist) the autostart file:
+**X11 desktop** — add the kiosk command to the autostart file:
 
-   ```bash
-   mkdir -p /home/robotronik/.config/autostart
-   nano /home/robotronik/.config/autostart/kiosk.desktop
-   ```
+```bash
+mkdir -p /home/robotronik/.config/autostart
+nano /home/robotronik/.config/autostart/kiosk.desktop
+```
 
-2. Add the following command:
+```bash
+@/usr/bin/chromium-browser --kiosk http://localhost/robot --incognito --disable-extensions
+```
 
-   ```bash
-   @/usr/bin/chromium-browser --kiosk http://localhost/robot --incognito --disable-extensions
-   ```
+**Debian 13 (GNOME / Wayland)** — create `~/.config/autostart/kiosk.desktop` with:
 
-✅ Correct setup for Debian 13 (GNOME / Wayland)
-
-Create the file:
-
-~/.config/autostart/kiosk.desktop
-
-With this content:
 ```bash
 [Desktop Entry]
 Type=Application
@@ -337,14 +322,12 @@ Name=Kiosk Mode
 Exec=bash -c "sleep 5 && /usr/bin/chromium --kiosk http://localhost/robot --incognito --no-first-run --no-default-browser-check --password-store=basic"
 X-GNOME-Autostart-enabled=true
 ```
-Then:
+
 ```bash
 chmod +x ~/.config/autostart/kiosk.desktop
 ```
-That’s the correct GNOME-compatible autostart format.
 
-
-3. Save the file and reboot the system.
+Then reboot the system.
 
 ## ⚙️ Actions and Actuators
 
