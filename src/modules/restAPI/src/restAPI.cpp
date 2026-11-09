@@ -454,9 +454,10 @@ void RestAPI::start(){
 
         main_State_t req_state = req_data["state"];
 
-        // Only the states the API is allowed to select: MANUAL and CALIBRATION
-        // are entered by the state machine itself.
-        if (req_state < 0 || req_state > TEST)
+        // MANUAL and CALIBRATION are entered by the state machine itself, and the
+        // enum has gaps (1, 2): only accept the states the switch handles.
+        if (req_state != INIT && req_state != WAITSTART && req_state != RUN &&
+            req_state != FIN && req_state != TEST)
             return jsonError(400, "Requested state out of borders!");
 
         *nextState = req_state;
