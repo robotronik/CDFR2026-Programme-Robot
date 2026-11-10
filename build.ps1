@@ -126,15 +126,16 @@ function Deploy {
     Invoke-Container -Image $spec.Image -DockerArgs $dockerArgs -CommandArgs @('cmake', '--build', '--preset', 'arm64', '--target', 'deploy')
 }
 
-function Run-Program([string[]]$ProgramArgs) {
+function Run-Program {
     Build-Arch 'x86_64'
     $port = if ($env:CDFR_RUN_PORT) { $env:CDFR_RUN_PORT } else { '80' }
-    $containerArgs = @('sudo', './programCDFR') + $ProgramArgs
-    Write-Log "Running programCDFR from build/x86_64 (host port $port -> container 80)"
+    $workDir = "${ContainerWork}/build/x86_64"
+    Write-Log "Running the local REST API and simulator at http://127.0.0.1:${port}/simulation/"
+    # The logger expects numLog in the mounted log directory.
     Invoke-Container -Image $ImageX86 `
-        -DockerArgs @('-p', "${port}:80", '--cap-add=SYS_NICE') `
-        -WorkDir "${ContainerWork}/build/x86_64" `
-        -CommandArgs $containerArgs
+        -DockerArgs @('-p', "127.0.0.1:${port}:8080", '--tmpfs', "$workDir/log") `
+        -WorkDir $workDir `
+        -CommandArgs @('sh', '-ec', 'echo 0 > log/numLog; exec ./programCDFR --simulate')
 }
 
 function Open-Shell([string]$Arch) {
@@ -149,7 +150,7 @@ Usage: build.bat <command> [arch|args...]
 
 Commands:
   build [x86_64|arm64]   Build the given target, or both when omitted
-  run [args...]          Build x86_64 and run the program locally (REST API on port 80)
+  run                    Build x86_64 and run the local REST API and simulator
   test                   Build x86_64 and run the CTest suite
   deploy                 Build arm64 and deploy it to the robot
   shell [x86_64|arm64]   Interactive shell in the target image (default: x86_64)
@@ -177,11 +178,13 @@ try {
             Assert-Docker
             Build-Arch 'x86_64'
             Write-Log 'Running tests'
-            Invoke-Container -Image $ImageX86 -CommandArgs @('ctest', '--preset', 'x86_64')
+            Invoke-Container -Image $ImageX86 -DockerArgs @('--tmpfs', "${ContainerWork}/build/x86_64/log") `
+                -CommandArgs @('sh', '-ec', 'echo 0 > build/x86_64/log/numLog; exec ctest --preset x86_64')
         }
         'run' {
+            if ($rest.Count -gt 0) { throw 'Usage: build.bat run' }
             Assert-Docker
-            Run-Program $rest
+            Run-Program
         }
         'deploy' {
             Assert-Docker

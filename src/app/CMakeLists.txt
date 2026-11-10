@@ -9,6 +9,12 @@ target_link_libraries(programCDFR PRIVATE
     project_compiler_options
 )
 
+# Refresh the served table and navigation when their HTML changes.
+set_property(TARGET programCDFR APPEND PROPERTY LINK_DEPENDS
+    "${CMAKE_SOURCE_DIR}/html/display.html"
+    "${CMAKE_SOURCE_DIR}/html/navbar.html"
+)
+
 add_custom_command(TARGET programCDFR POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/html $<TARGET_FILE_DIR:programCDFR>/html
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/tests/lidar $<TARGET_FILE_DIR:programCDFR>/tests/lidar

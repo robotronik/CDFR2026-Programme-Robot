@@ -19,6 +19,7 @@ class GoToPositionAction : public VirtualAction {
         ~GoToPositionAction() override = default;
 
         ReturnFSM_t run() override;
+        bool completed() const { return done; }
         bool stop() override;
         void reset() override;
         bool available(float &reward) override;

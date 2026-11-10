@@ -2,7 +2,10 @@
 
 #include <stdlib.h>
 #include <signal.h>
+#include <algorithm>
+#include <atomic>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 #include <unistd.h>  // for usleep
@@ -78,32 +81,72 @@ std::thread api_server_thread;
 RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &lidar, &cam1, &navigation, &strategies);
 
 // Prototypes
-int StartSequence();
+int StartSequence(bool simulation);
 void GetLidar();
 void EndSequence();
 void tests();
 bool tryConnectMat();
 
 // Signal Management
-bool exit_requested = false;
+static_assert(std::atomic<bool>::is_always_lock_free);
+std::atomic<bool> exit_requested{false};
 void ctrlc(int)
 {
-    LOG_INFO("Stop Signal Received");
-    exit_requested = true;
+    exit_requested.store(true);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    const bool simulation = argc > 1 && std::string_view(argv[1]) == "--simulate";
+#ifdef __CROSS_COMPILE_ARM__
+    if (simulation) {
+        LOG_ERROR("Simulation requires the x86_64 build");
+        return 1;
+    }
+#endif
     LOG_DEBUG("LOG ID : ", log_main_get_id());
-    if (StartSequence() != 0)
+    if (StartSequence(simulation) != 0)
         return -1;
 
+    unsigned long previousLoopStartTime = _millis();
     while (!exit_requested)
     {
         const unsigned long loopStartTime = _millis();
 
-        // Get Sensor Data
-        {
+        if (simulation) {
+            const auto request = api.consumeSimulationRequest();
+            if (currentState == INIT || request.type != SimulationRequest::None) {
+                if (request.type == SimulationRequest::Start) {
+                    if (request.strategy) {
+                        tableStatus.colorTeam = request.color;
+                        action.setStrategy(request.strategy);
+                    }
+                    action.getStrategy()->reset();
+                    currentState = RUN;
+                } else {
+                    actuators.disableActuators();
+                    action.Reset();
+                    navigation = Navigation(&drive, &tableStatus, &cam1);
+                    tableStatus.reset();
+                    tableStatus.startTime = 0;
+                    if (tableStatus.colorTeam == NONE) tableStatus.colorTeam = BLUE;
+                    currentState = WAITSTART;
+                }
+                nextState = currentState;
+                initState = currentState == RUN;
+                tableStatus.strategy = action.getStrategy()->getNom();
+                drive.setCoordinates(action.getStrategy()->StratStartingPos());
+                if (initState) actuators.enableActuators();
+                else api.publishSimulation();
+            }
+            if (currentState != RUN) {
+                usleep(LOOP_TIME_MS * 1000);
+                continue;
+            }
+            drive.updateSimulation(std::min(loopStartTime - previousLoopStartTime, 100UL) / 1000.0);
+            previousLoopStartTime = loopStartTime;
+        } else {
+            // Get Sensor Data
             drive.update();
             // The odometry prior helps the feature localiser; the marker
             // localiser ignores it.
@@ -274,6 +317,10 @@ int main()
             initState = true;
             currentState = nextState;
         }
+        if (simulation) {
+            if (currentState == FIN) actuators.disableActuators();
+            api.publishSimulation();
+        }
 
         // Check if state machine is running above loop time
         unsigned long ms = _millis();
@@ -281,8 +328,13 @@ int main()
             LOG_WARNING("Loop took more than " , LOOP_TIME_MS, "ms to execute (", (ms - loopStartTime), " ms)");
         }
         //State machine runs at a constant rate
-        while (_millis() < loopStartTime + LOOP_TIME_MS){
-            usleep(100);
+        if (simulation) {
+            if (ms < loopStartTime + LOOP_TIME_MS)
+                usleep((loopStartTime + LOOP_TIME_MS - ms) * 1000);
+        } else {
+            while (_millis() < loopStartTime + LOOP_TIME_MS){
+                usleep(100);
+            }
         }
     }
 
@@ -290,12 +342,12 @@ int main()
     return 0;
 }
 
-int StartSequence()
+int StartSequence(bool simulation)
 {
     signal(SIGTERM, ctrlc);
     signal(SIGINT, ctrlc);
 
-    setProgramPriority();
+    if (!simulation) setProgramPriority();
 
     arduino.RGB_Blinking(255, 0, 0); // Red blinking
 
@@ -307,18 +359,14 @@ int StartSequence()
     }
 #endif
 
-    // Start the api server in a separate thread
-    api_server_thread = std::thread([&]()
-                                    { api.start(); });
-
-#ifdef TEST_API_ONLY
-    LOG_GREEN_INFO("Running in API test mode only");
-    currentState = TEST;
-    nextState = TEST;
-#else
     currentState = INIT;
-    nextState = INIT;
-#endif // TEST_API_ONLY
+#ifdef TEST_API_ONLY
+    if (!simulation) {
+        LOG_GREEN_INFO("Running in API test mode only");
+        currentState = TEST;
+    }
+#endif
+    nextState = currentState;
 
     initState = true;
     manual_init();
@@ -326,6 +374,9 @@ int StartSequence()
     pathfind_setup();
 
     drive.reset();
+
+    if (simulation) api.publishSimulation();
+    api_server_thread = std::thread([simulation] { api.start(simulation); });
 
     LOG_GREEN_INFO("Init sequence done");
     return 0;

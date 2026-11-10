@@ -5,11 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=0.5">
     <title>Live Table</title>
     <!-- Bootstrap CSS -->
-    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
     <style>
         canvas {
             border: 2px solid white;
-            background-color: #f1f1f1;
+            width: 100%;
+            height: auto;
+            background:
+                url('/assets/background.svg') center / calc(100% * 3000 / 3300) calc(100% * 2000 / 2300) no-repeat,
+                linear-gradient(silver, silver) center / calc(100% * 3044 / 3300) calc(100% * 2044 / 2300) no-repeat #f1f1f1;
+        }
+        .simulation canvas {
+            display: block;
+            max-width: 110vh;
+            margin-inline: auto;
+            aspect-ratio: 33 / 23;
+        }
+        .simulation #colorLabel {
+            display: none;
+        }
+        #simulationToolbar h3 {
+            font-size: 1rem;
         }
         .status-dot {
             width: 30px;
@@ -27,9 +43,28 @@
 
     <div class="container mt-4">
         <div class="d-flex justify-content-center align-items-center">
-            <h1 class="text-white mb-0">2D Table and Robot Display</h1>
+            <h1 class="text-white mb-0" id="pageTitle">2D Table and Robot Display</h1>
             <span class="status-dot ms-3" id="statusDot"></span>
         </div>
+    </div>
+
+    <div id="simulationControls" class="container text-center mt-3" lang="fr" hidden>
+        <div id="simulationToolbar" class="d-flex flex-wrap justify-content-center align-items-center gap-2">
+            <label class="d-flex align-items-center gap-2">
+                Couleur
+                <select id="simulationColor" class="form-select form-select-sm w-auto" disabled>
+                    <option value="1">Bleu</option>
+                    <option value="2">Jaune</option>
+                </select>
+            </label>
+            <label class="d-flex align-items-center gap-2">
+                Stratégie
+                <select id="simulationStrategy" class="form-select form-select-sm w-auto" disabled></select>
+            </label>
+            <button id="startSimulation" class="btn btn-primary" type="button" disabled>Démarrer le match</button>
+            <button id="resetSimulation" class="btn btn-danger" type="button" disabled>Reset</button>
+        </div>
+        <p id="simulationMessage" class="mb-0" role="status"></p>
     </div>
 
     <!-- Canvas element where we will draw shapes and images -->
@@ -50,39 +85,107 @@
         const scoreLabel = document.getElementById('scoreLabel');
         const colorLabel = document.getElementById('colorLabel');
         const timeLabel = document.getElementById('timeLabel');
+        const simulationControls = document.getElementById('simulationControls');
+        const colorSelect = document.getElementById('simulationColor');
+        const strategySelect = document.getElementById('simulationStrategy');
+        const startButton = document.getElementById('startSimulation');
+        const resetButton = document.getElementById('resetSimulation');
+        const simulationMessage = document.getElementById('simulationMessage');
+        const simulation = location.pathname === '/simulation/';
+        const commandError = 'La commande a échoué. Réessayez.';
+        const unavailableMessage = 'Simulateur indisponible.';
+        const tableWidth = canvas.width;
+        const tableHeight = canvas.height;
+        let lastSimulationReply = performance.now();
+        let latestFrame;
+        let displayedPose;
+        let frameTime;
+        let animation;
+        let polling;
+        let starting = false;
+        let commandFailed = false;
 
-        // Load the vinyl svg
-        const svgBackground = new Image();
-        svgBackground.src = 'assets/background.svg';
-        const svgGrid = new Image();
-        svgGrid.src = 'assets/vinyl.svg';
+        function setSimulationMessage(message) {
+            if (simulationMessage.textContent !== message) simulationMessage.textContent = message;
+        }
 
-        let centerX = canvas.width / 2;
-        let centerY = canvas.height / 2;
+        function setSimulationControls(ready, connected) {
+            startButton.disabled = colorSelect.disabled = strategySelect.disabled = !ready;
+            resetButton.disabled = !connected;
+        }
 
-        let topLeftX = centerX - 3000/2;
-        let topLeftY = centerY - 2000/2;
-        
+        if (simulation) {
+            document.getElementById('simulationToolbar').append(timeLabel, scoreLabel);
+            simulationControls.hidden = false;
+            document.title = 'Simulation';
+            document.getElementById('pageTitle').textContent = 'Simulateur CDFR';
+            document.body.classList.add('simulation');
+            setSimulationMessage('Connexion au simulateur…');
+            new ResizeObserver(([{ contentRect }]) => {
+                const scale = Math.min(devicePixelRatio, 2);
+                canvas.width = Math.round(contentRect.width * scale);
+                canvas.height = Math.round(contentRect.height * scale);
+                ctx.setTransform(canvas.width / tableWidth, 0, 0, canvas.height / tableHeight, 0, 0);
+                if (latestFrame && !document.hidden) draw(latestFrame, displayedPose);
+            }).observe(canvas);
+        }
+
+        async function sendSimulationCommand(command, settings) {
+            commandFailed = false;
+            setSimulationMessage('');
+            try {
+                const response = await fetch('/simulation/' + command, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                if (!response.ok) throw new Error(response.statusText);
+            } catch (error) {
+                commandFailed = true;
+                setSimulationMessage(commandError);
+            }
+        }
+
+        startButton.addEventListener('click', async () => {
+            starting = true;
+            setSimulationControls(false, true);
+            await sendSimulationCommand('start', { color: Number(colorSelect.value), strategy: strategySelect.value });
+            starting = false;
+        });
+        resetButton.addEventListener('click', () => sendSimulationCommand('reset'));
+
+        const centerX = tableWidth / 2;
+        const centerY = tableHeight / 2;
+
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
-        // Function to start the continuous fetching loop
-        async function startContinuousFetch() {
-            while (true) {  // Infinite loop
-                await getData();  // Wait for the data to be fetched and drawn
-                await sleep(10);  // Wait for 10ms before the next iteration
-            }
+        async function pollData(signal) {
+            while (!signal.aborted) await sleep(await getData(signal));
         }
 
-        async function getData() {
+        function updateVisibility() {
+            polling?.abort();
+            cancelAnimationFrame(animation);
+            if (document.hidden) return;
+            if (latestFrame) draw(latestFrame, displayedPose);
+            lastSimulationReply = performance.now();
+            polling = new AbortController();
+            pollData(polling.signal);
+        }
+
+        async function getData(signal) {
             try {
-                let response = await fetch('/get_global');
+                const response = simulation
+                    ? await fetch('/simulation/view', { method: 'POST', signal })
+                    : await fetch('/get_global', { signal });
+                if (signal.aborted) return 0;
                 if (!response.ok) {
                     throw new Error('Network response was not ok ' + response.statusText);
                 }
-                let data = await response.json();
-                draw(data); // Pass the fetched data
+                const data = await response.json();
+                if (signal.aborted) return 0;
                 let robotStatus = data["status"];
                 if (robotStatus == 0)
                     stateLabel.innerHTML = "Robot State : Init";
@@ -101,7 +204,7 @@
                 else
                     stateLabel.innerHTML = "Robot State : Undefined";
                 
-                scoreLabel.innerHTML = "Score : " + data["score"];
+                scoreLabel.textContent = "Score : " + data["score"];
 
                 let robotColor = data["table"]["colorTeam"];
                 if (robotColor == 1)
@@ -111,23 +214,77 @@
                 else
                     colorLabel.innerHTML = "Color : Undefined";
 
-                timeLabel.innerHTML = "Time : " + data["table"]["startTime"];
+                if (simulation) {
+                    animateSimulation(data);
+                    const firstSnapshot = strategySelect.options.length === 0;
+                    if (firstSnapshot) {
+                        for (const strategy of data.strategies) strategySelect.add(new Option(strategy));
+                    }
+                    if (firstSnapshot || robotStatus === 4 || robotStatus === 5) {
+                        if (robotColor) colorSelect.value = robotColor;
+                        if (data.table.strategy) strategySelect.value = data.table.strategy;
+                    }
+                    lastSimulationReply = performance.now();
+                    setSimulationMessage(commandFailed ? commandError : '');
+                    setSimulationControls(!starting && robotStatus === 3 && !!strategySelect.value, true);
+                    timeLabel.textContent = `Temps écoulé ${(data.elapsedMs / 1000).toFixed(1)} s`;
+                } else {
+                    draw(data);
+                    timeLabel.textContent = "Time : " + data["table"]["startTime"];
+                }
 
                 statusDot.style.backgroundColor = 'green';
+                return simulation ? 100 : 10;
             } catch (error) {
+                if (signal.aborted) return 0;
+                if (simulation) {
+                    if (performance.now() - lastSimulationReply > 1200) {
+                        setSimulationControls(false, false);
+                        statusDot.style.backgroundColor = 'red';
+                        setSimulationMessage(unavailableMessage);
+                    }
+                    return 200;
+                }
                 console.error('Failed to fetch data:', error);
                 statusDot.style.backgroundColor = 'red';
+                return 200;
             }
         }
 
-        function draw(data) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+        function animateSimulation(data) {
+            const target = data.pos;
+            const previous = latestFrame;
+            if (previous && previous.status === data.status && previous.elapsedMs === data.elapsedMs &&
+                previous.pos.x === target.x && previous.pos.y === target.y && previous.pos.a === target.a) return;
 
-            ctx.fillStyle = 'silver';
-            ctx.fillRect(topLeftX - 22, topLeftY - 22, 3000+22*2, 2000+22*2); //Top left, size
-            ctx.drawImage(svgBackground, topLeftX, topLeftY, 3000, 2000);
-            // Dont draw the grid
-            //ctx.drawImage(svgGrid, topLeftX, topLeftY, 3000, 2000);
+            cancelAnimationFrame(animation);
+            const now = performance.now();
+            const from = displayedPose;
+            const duration = Math.max(20, Math.min(now - frameTime, 150));
+            frameTime = now;
+            latestFrame = data;
+            if (data.status !== 4 || previous?.status !== 4 || data.elapsedMs < previous.elapsedMs ||
+                (from.x === target.x && from.y === target.y && from.a === target.a)) {
+                displayedPose = target;
+                draw(data);
+                return;
+            }
+            const angleDelta = (target.a - from.a + 540) % 360 - 180;
+            function frame(time) {
+                const progress = Math.max(0, Math.min((time - now) / duration, 1));
+                displayedPose = {
+                    x: from.x + (target.x - from.x) * progress,
+                    y: from.y + (target.y - from.y) * progress,
+                    a: from.a + angleDelta * progress
+                };
+                draw(data, displayedPose);
+                if (progress < 1) animation = requestAnimationFrame(frame);
+            }
+            animation = requestAnimationFrame(frame);
+        }
+
+        function draw(data, pose = data.pos) {
+            ctx.clearRect(0, 0, tableWidth, tableHeight);
 
             if (data["costmap"]) {
                 drawCostmap(data["costmap"]);
@@ -136,37 +293,36 @@
             // Draw robot
             ctx.lineWidth = 4;
             ctx.strokeStyle = 'white';
-            drawRobot(ctx, data["pos"]["y"], 
-                            data["pos"]["x"],
-                            data["pos"]["a"]);
+            drawRobot(ctx, pose.y, pose.x, pose.a);
 
             //Draws an arrow of the target position
             drawArrow(ctx, data["target_pos"]["y"], data["target_pos"]["x"], data["target_pos"]["a"]);
 
-            // Draw opponent
-            ctx.strokeStyle = 'white';
-            ctx.beginPath();
-            ctx.arc(data["table"]["pos_opponent"]["y"] + centerX, data["table"]["pos_opponent"]["x"] + centerY, 150, 0, Math.PI * 2);
-            ctx.closePath();
-            ctx.stroke();
+            if (!simulation) {
+                // Draw opponent
+                ctx.strokeStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(data["table"]["pos_opponent"]["y"] + centerX, data["table"]["pos_opponent"]["x"] + centerY, 150, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.stroke();
 
-            // Draw yellow beacons
-            ctx.fillStyle = 'gold';
-            ctx.beginPath(); ctx.arc(centerX - 1594, centerY - 950, 20, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(centerX - 1594, centerY + 950, 20, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(centerX + 1594, centerY - 0, 20, 0, Math.PI * 2); ctx.fill();
+                // Draw yellow beacons
+                ctx.fillStyle = 'gold';
+                ctx.beginPath(); ctx.arc(centerX - 1594, centerY - 950, 20, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(centerX - 1594, centerY + 950, 20, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(centerX + 1594, centerY - 0, 20, 0, Math.PI * 2); ctx.fill();
 
-            // Draw blue beacons
-            ctx.fillStyle = 'blue';
-            ctx.beginPath(); ctx.arc(centerX + 1594, centerY - 950, 20, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(centerX + 1594, centerY + 950, 20, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(centerX - 1594, centerY - 0, 20, 0, Math.PI * 2); ctx.fill();
+                // Draw blue beacons
+                ctx.fillStyle = 'blue';
+                ctx.beginPath(); ctx.arc(centerX + 1594, centerY - 950, 20, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(centerX + 1594, centerY + 950, 20, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(centerX - 1594, centerY - 0, 20, 0, Math.PI * 2); ctx.fill();
 
-            
-            ctx.strokeStyle = 'green';
-            data["lidar"].forEach(point => {
-                drawPoint(ctx, point.y, point.x);
-            });
+                ctx.strokeStyle = 'green';
+                data["lidar"].forEach(point => {
+                    drawPoint(ctx, point.y, point.x);
+                });
+            }
             
             // Draw the current robot's path
             ctx.lineWidth = 6;
@@ -217,13 +373,6 @@
             ctx.stroke();
         }
         
-        //Screen coords, relative to center
-        function drawSegment(ctx, ax, ay, bx, by) {
-            ctx.beginPath();
-            ctx.lineTo(centerX + ax, centerY + ay);
-            ctx.lineTo(centerX + bx, centerY + by);
-            ctx.stroke();
-        }
         function drawArrow(ctx, x, y, angleDeg) {
             // Convert angle from degrees to radians
             const angleRad = angleDeg * Math.PI / 180;
@@ -271,13 +420,6 @@
             ctx.stroke();
         }
 
-        // Set the canvas to scale with the width of the window
-        function resizeCanvas() {
-            let ratio = canvas.height / canvas.width;
-            canvas.style.width = window.innerWidth + 'px';  // Scale the width to fit the screen width
-            canvas.style.height = (window.innerWidth * ratio) + 'px';
-        }
-
         function drawCostmap(costmap) {
             const scale = 25;
 
@@ -288,23 +430,17 @@
             });
         }
 
-        // Call the function to resize initially
-        resizeCanvas();
-
-        // Optionally, listen for window resize events to adjust the canvas size dynamically
-        window.addEventListener('resize', resizeCanvas);
-
-        // Start the continuous fetching loop
-        startContinuousFetch();
+        document.addEventListener('visibilitychange', updateVisibility);
+        updateVisibility();
     </script>
 
     <!-- Bootstrap JS and dependencies -->
-    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="/js/bootstrap.bundle.min.js"></script>
     
     <script>
         // Load navbar from external file
-        fetch('navbar.html')
-            .then(response => response.text())
+        fetch('/navbar.html')
+            .then(response => response.ok ? response.text() : '')
             .then(data => {
                 document.getElementById('navbar-placeholder').innerHTML = data;
             });

@@ -1,7 +1,8 @@
 #include "navigation/driveControl.h"
 #include "utils/logger.hpp"
 #include "defs/structs.hpp"
-#include <math.h>
+#include <algorithm>
+#include <cmath>
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -138,8 +139,27 @@ void DriveControl::update() {
     target = convertPackedToPosition(drive_interface::get_target());
 }
 
+void DriveControl::updateSimulation(double seconds) {
+    velocity = {};
+    if (!is_enabled || seconds <= 0.0) return;
+
+    // shortcut: capped speeds only, add acceleration when validating motion timing.
+    const double dx = target.x - position.x;
+    const double dy = target.y - position.y;
+    const double distance = std::hypot(dx, dy);
+    const double speed = is_slow_mode ? 300.0 : 600.0; // mm/s
+    const double fraction = distance > 0.0 ? std::min(speed * seconds / distance, 1.0) : 0.0;
+    const double angle = std::remainder(target.a - position.a, 360.0);
+    const double maxTurn = (is_slow_mode ? 90.0 : 180.0) * seconds;
+    const double turn = std::clamp(angle, -maxTurn, maxTurn);
+
+    position = {position.x + dx * fraction, position.y + dy * fraction,
+                normalize_angle(position.a + turn)};
+    velocity = {dx * fraction / seconds, dy * fraction / seconds, turn / seconds};
+}
+
 void DriveControl::setCoordinates(position_t pos) {
-    position = pos;
+    position = target = pos;
     velocity = {0.0, 0.0, 0.0};
     acceleration = {0.0, 0.0, 0.0};
     drive_interface::set_coordinates(convertPositionToPacked(pos));

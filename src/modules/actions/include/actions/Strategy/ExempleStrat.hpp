@@ -46,9 +46,9 @@ public:
        et doit être rejouée depuis le début).
 
        ATTENTION : les actions précédentes sont détruites. Appeler
-       ActionFSM::Reset() juste après, sinon le FSM garde un currentAction
+       ActionFSM::Reset() avant, sinon le FSM garde un currentAction
        pointant sur une action libérée. */
-    void reset();
+    void reset() override;
 
     // Function to handle the strategy
     position_t StratStartingPos() override;

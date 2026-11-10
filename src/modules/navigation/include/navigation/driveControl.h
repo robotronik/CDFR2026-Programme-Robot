@@ -20,6 +20,7 @@ class DriveControl : private drive_interface {
 
         // Updates the motion and target
         void update();
+        void updateSimulation(double seconds);
 
         void enable();
         void disable();

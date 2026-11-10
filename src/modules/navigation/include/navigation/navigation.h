@@ -50,7 +50,7 @@ class Navigation {
         bool current_slow_mode = false;
         bool current_complete_stop = true;
 
-        position_t currentPath[1024];
+        position_t currentPath[1024]{};
         int currentPathLength = 0;
 
         bool driving = true;

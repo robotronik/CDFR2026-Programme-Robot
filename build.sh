@@ -14,7 +14,7 @@ IMAGE_ARM="cdfr-builder-arm64"
 
 # Extra `docker run` flags, user and workdir applied to the next docker_run call;
 # callers override these before invoking it (see the run-docker command).
-DOCKER_RUN_EXTRA=()
+DOCKER_RUN_EXTRA=(--network host)
 DOCKER_RUN_USER="$(id -u):$(id -g)"
 DOCKER_RUN_WORKDIR="$REPO_ROOT"
 
@@ -50,7 +50,6 @@ docker_run() {
     # No-op on hosts without SELinux.
     docker run --rm "${tty[@]}" "${ssh[@]}" \
         "${DOCKER_RUN_EXTRA[@]}" \
-        --network host \
         --security-opt label=disable \
         "${user[@]}" \
         -v "$REPO_ROOT:$REPO_ROOT" \
@@ -78,13 +77,16 @@ Usage: ./build.sh <command> [arch]
 
 Commands:
   build [x86_64|arm64]   Build the given target, or both when omitted
-  run [args...]          Build x86_64 and run on the host (needs sudo + OpenCV 4.6)
+  run                    Build x86_64 and run the local REST API and simulator
   run-docker [args...]   Build x86_64 and run inside the x86_64 image (no host deps)
   test                   Build x86_64 and run the CTest suite
   deploy                 Build arm64 and deploy it to the robot
   shell [x86_64|arm64]   Interactive shell in the target image (default: x86_64)
   images                 (Re)build both Docker images
   clean                  Remove the build/ directory
+
+Environment:
+  CDFR_RUN_PORT          Host port published for the local REST API (default: 80)
 EOF
 }
 
@@ -100,13 +102,18 @@ case "${1:-build}" in
     test)
         build_arch x86_64
         log "Running tests"
-        docker_run "$IMAGE_X86" ctest --preset x86_64
+        DOCKER_RUN_EXTRA=(--tmpfs "$REPO_ROOT/build/x86_64/log:mode=1777")
+        docker_run "$IMAGE_X86" sh -ec 'echo 0 > build/x86_64/log/numLog; exec ctest --preset x86_64'
         ;;
     run)
+        if (( $# != 1 )); then echo 'Usage: ./build.sh run' >&2; exit 1; fi
         build_arch x86_64
-        shift
-        log "Running programCDFR from build/x86_64 (sudo is required for port 80)"
-        (cd "$REPO_ROOT/build/x86_64" && sudo ./programCDFR "$@")
+        port=${CDFR_RUN_PORT:-80}
+        log "Running the local REST API and simulator at http://127.0.0.1:$port/simulation/"
+        DOCKER_RUN_WORKDIR="$REPO_ROOT/build/x86_64"
+        DOCKER_RUN_EXTRA=(-p "127.0.0.1:$port:8080" --tmpfs "$DOCKER_RUN_WORKDIR/log:mode=1777")
+        # The logger expects numLog in the mounted log directory.
+        docker_run "$IMAGE_X86" sh -ec 'echo 0 > log/numLog; exec ./programCDFR --simulate'
         ;;
     run-docker)
         build_arch x86_64
@@ -115,7 +122,7 @@ case "${1:-build}" in
         # setProgramPriority() needs CAP_SYS_NICE, dropped by Docker by default,
         # and the capability only works for uid 0, so run as root (no --user).
         # Files the run writes (log/) are then root-owned on the host.
-        DOCKER_RUN_EXTRA=(--cap-add=SYS_NICE)
+        DOCKER_RUN_EXTRA=(--network host --cap-add=SYS_NICE)
         DOCKER_RUN_USER=""
         DOCKER_RUN_WORKDIR="$REPO_ROOT/build/x86_64"
         docker_run "$IMAGE_X86" ./programCDFR "$@"

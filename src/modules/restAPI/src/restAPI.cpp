@@ -1,7 +1,10 @@
 #include "restAPI/restAPI.hpp"
+#include <chrono>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 #include <ifaddrs.h>
 #include <arpa/inet.h>
@@ -20,6 +23,10 @@
 #include "restAPI/manual_mode.h" // for manual mode functions
 
 #include <crow.h>
+#ifndef __CROSS_COMPILE_ARM__
+#include "actions/Strategy/RandomExploration.hpp"
+#include "actions/Strategy/StocksEtChateau.hpp"
+#endif
 #include "utils/json.hpp" // For handling JSON
 using json = nlohmann::json;
 
@@ -45,6 +52,8 @@ RestAPI::RestAPI(main_State_t* currentState,
       strategies(strategies){
 }
 
+RestAPI::~RestAPI() = default;
+
 bool RestAPI::consumeColorRequest(colorTeam_t& color){
     if (!hasColorRequest) return false;
     color = requestedColor;
@@ -57,6 +66,25 @@ bool RestAPI::consumeStrategyRequest(std::string& strategy){
     strategy = requestedStrategy;
     hasStrategyRequest = false;
     return true;
+}
+
+json RestAPI::strategyNames() const {
+    json names = json::array();
+    if (strategies) {
+        for (const auto* strategy : *strategies) {
+            if (strategy) names.push_back(strategy->getNom());
+        }
+    }
+    return names;
+}
+
+VirtualStrategy* RestAPI::findStrategy(const std::string& name) const {
+    if (strategies) {
+        for (auto* strategy : *strategies) {
+            if (strategy && strategy->getNom() == name) return strategy;
+        }
+    }
+    return nullptr;
 }
 
 static crow::response serveFile(const std::string& path);
@@ -87,6 +115,61 @@ static std::vector<std::string> getLocalIPv4Addresses(){
 
 static crow::SimpleApp app;
 
+namespace {
+using Clock = std::chrono::steady_clock;
+
+constexpr auto simulatorTimeout = std::chrono::milliseconds(900);
+}
+
+void RestAPI::expireSimulationView() {
+    if (simulationNeedsView && Clock::now() >= simulationViewUntil) {
+        simulationNeedsView = false;
+        simulationReady = false;
+        simulationRequest = {SimulationRequest::Reset};
+    }
+}
+
+SimulationRequest RestAPI::consumeSimulationRequest() {
+    std::lock_guard<std::mutex> lock(simulationMutex);
+    expireSimulationView();
+    if (simulationRequest.type != SimulationRequest::None) simulationReady = false;
+    return std::exchange(simulationRequest, SimulationRequest{});
+}
+
+json RestAPI::readSimulationSnapshot() {
+    std::lock_guard<std::mutex> lock(simulationMutex);
+    return simulationSnapshot;
+}
+
+void RestAPI::publishSimulation() {
+#ifndef __CROSS_COMPILE_ARM__
+    // The first snapshot is published before the API thread starts.
+    if (strategies && !explorationStrategy) {
+        explorationStrategy = std::make_unique<RandomExploration>(*drive, *tableStatus);
+        stocksStrategy = std::make_unique<StocksEtChateau>(*drive, *tableStatus);
+        strategies->push_back(explorationStrategy.get());
+        strategies->push_back(stocksStrategy.get());
+    }
+#endif
+    // Read the pose and path together on the main thread.
+    json response = {
+        {"simulation", true},
+        {"elapsedMs", tableStatus->startTime == 0 ? 0 : _millis() - tableStatus->startTime},
+        {"status", *currentState},
+        {"table", *tableStatus},
+        {"strategies", strategyNames()},
+        {"score", tableStatus->getScore()},
+        {"lidar", json::array()},
+        {"costmap", json::array()},
+        {"pos", drive->position},
+        {"target_pos", drive->target}
+    };
+    navigation->pathJson(response["navigation"]);
+    std::lock_guard<std::mutex> lock(simulationMutex);
+    simulationSnapshot.swap(response);
+    simulationReady = *currentState == WAITSTART && *nextState == WAITSTART;
+}
+
 // Error reply with a JSON body, so every failure path looks the same.
 static crow::response jsonError(int code, const std::string& message){
     json response;
@@ -115,17 +198,7 @@ static position_t readRequestedPosition(const json& req_data, const position_t& 
     return pos;
 }
 
-static bool isKnownStrategy(const std::vector<VirtualStrategy*>* strategies, const std::string& name){
-    if (strategies == nullptr) return false;
-    for (VirtualStrategy* strategy : *strategies)
-        if (strategy != nullptr && strategy->getNom() == name)
-            return true;
-    return false;
-}
-
-void RestAPI::start(){
-    LOG_INFO("Starting API Server on port ", API_PORT);
-
+void RestAPI::registerRobotRoutes(bool simulation){
     // ------------------------------- HTML Pages -------------------------------
 
     // Define a simple route for the root endpoint
@@ -154,8 +227,19 @@ void RestAPI::start(){
 
     // Define a simple route for the navbar
     CROW_ROUTE(app, "/navbar.html")
-    ([this](){
-        return serveFile("html/navbar.html");
+    ([simulation](){
+        auto page = serveFile("html/navbar.html");
+#ifndef __CROSS_COMPILE_ARM__
+        if (simulation) {
+            constexpr char marker[] = "<!-- simulation-nav -->";
+            const auto link = page.body.find(marker);
+            if (link != std::string::npos) {
+                page.body.replace(link, sizeof(marker) - 1,
+                                  R"(<li class="nav-item"><a class="nav-link" href="/simulation/">Simulation</a></li>)");
+            }
+        }
+#endif
+        return page;
     });
 
     // Define a simple route for robot page
@@ -180,39 +264,46 @@ void RestAPI::start(){
 
     // Define a route for a simple GET request that returns the status
     CROW_ROUTE(app, "/get_status")
-    ([this](){
+    ([this, simulation](){
         json response;
-        response["status"] = *currentState;
+        response["status"] = simulation ? readSimulationSnapshot().at("status") : json(*currentState);
 
         return crow::response(response.dump(4));
     });
 
     // Define a route for a simple GET request that returns the position
     CROW_ROUTE(app, "/get_pos")
-    ([this](){
+    ([this, simulation](){
         json response;
-        response["pos"] = (position_t)drive->position;
+        response["pos"] = simulation ? readSimulationSnapshot().at("pos") : json(drive->position);
 
         return crow::response(response.dump(4));
     });
 
     // Define a route for a simple GET request that returns the table status
     CROW_ROUTE(app, "/get_table")
-    ([this](){
+    ([this, simulation](){
         json response;
-        response["table"] = *tableStatus;
-        response["score"] = tableStatus->getScore();
+        if (simulation) {
+            const auto snapshot = readSimulationSnapshot();
+            response["table"] = snapshot.at("table");
+            response["score"] = snapshot.at("score");
+        } else {
+            response["table"] = *tableStatus;
+            response["score"] = tableStatus->getScore();
+        }
         return crow::response(response.dump(4));
     });
 
     // Define a route for a simple GET request that returns all of the information
     CROW_ROUTE(app, "/get_global")
-    ([this](){
+    ([this, simulation](){
+        if (simulation) return crow::response(readSimulationSnapshot().dump());
         json response;
         response["status"] = *currentState;
         response["table"] = *tableStatus;
         response["score"] = tableStatus->getScore();
-        
+
         json limitedAbsoluteLidarData = json::array();
 
         // Add the first lidar->count elements to the new array
@@ -223,7 +314,7 @@ void RestAPI::start(){
         json current_navigation_path;
         navigation->pathJson(current_navigation_path);
         response["navigation"] = current_navigation_path;
-        
+
         response["target_pos"] = (position_t)drive->target;
         response["pos"] = (position_t)drive->position;
         // Costmap
@@ -249,13 +340,25 @@ void RestAPI::start(){
 
     // Define a route for an simple GET request that returns the general data
     CROW_ROUTE(app, "/get_robot")
-    ([this](){
+    ([this, simulation](){
         json response;
-        response["status"] = *currentState;
-        response["team"] = tableStatus->colorTeam;
-        response["score"] = tableStatus->getScore();
-        response["time"] = (tableStatus->startTime == 0) ? 0 : (_millis() - tableStatus->startTime);
-        response["strategy"] = tableStatus->strategy;
+        if (simulation) {
+            const auto snapshot = readSimulationSnapshot();
+            const auto& table = snapshot.at("table");
+            response = {
+                {"status", snapshot.at("status")},
+                {"team", table.at("colorTeam")},
+                {"score", snapshot.at("score")},
+                {"time", snapshot.at("elapsedMs")},
+                {"strategy", table.at("strategy")}
+            };
+        } else {
+            response["status"] = *currentState;
+            response["team"] = tableStatus->colorTeam;
+            response["score"] = tableStatus->getScore();
+            response["time"] = (tableStatus->startTime == 0) ? 0 : (_millis() - tableStatus->startTime);
+            response["strategy"] = tableStatus->strategy;
+        }
         response["runid"] = log_main_get_id();
         return crow::response(response.dump(4));
     });
@@ -263,15 +366,7 @@ void RestAPI::start(){
     // Define a route that returns the names of the available strategies
     CROW_ROUTE(app, "/get_strategies")
     ([this](){
-        json strategies_json = json::array();
-        if (strategies != nullptr){
-            for (VirtualStrategy* strategy : *strategies){
-                if (strategy != nullptr)
-                    strategies_json.push_back(strategy->getNom());
-            }
-        }
-        json response;
-        response["strategies"] = strategies_json;
+        json response = {{"strategies", strategyNames()}};
         return crow::response(response.dump());
     });
 
@@ -324,9 +419,9 @@ void RestAPI::start(){
     });
 
     CROW_ROUTE(app, "/get_costmap")
-    ([this](){
+    ([simulation](){
         json response;
-        response["costmap"] = astar_get_costmap_json();
+        response["costmap"] = simulation ? json::array() : astar_get_costmap_json();
         return crow::response(response.dump());
     });
 
@@ -336,7 +431,8 @@ void RestAPI::start(){
     // the table. Placed from the camera's own localisation when it has one,
     // otherwise from the robot's known position.
     CROW_ROUTE(app, "/objects")
-    ([this](){
+    ([this, simulation](){
+        if (simulation) return crow::response(200, "json", R"({"objects":[]})");
         position_t camera_pos = {0.0, 0.0, 0.0};
         if (!cam->getLocalisation(camera_pos)){
             camera_pos = robotToCamera(drive->position);
@@ -373,7 +469,8 @@ void RestAPI::start(){
 
     // Starts/stops the camera capture thread.
     CROW_ROUTE(app, "/start")
-    ([this](){
+    ([this, simulation](){
+        if (simulation) return crow::response(409);
         cam->start();
         json response;
         response["message"] = "Camera started";
@@ -441,7 +538,9 @@ void RestAPI::start(){
         response["brightness"] = cam->getBrightness();
         return crow::response(200, response.dump());
     });
+}
 
+void RestAPI::registerRobotCommands() {
     // ------------------------------- POST Routes -------------------------------
 
     // Define a route for a POST request that accepts JSON data and responds with a message
@@ -491,7 +590,7 @@ void RestAPI::start(){
 
         std::string req_strat = req_data["strat"];
 
-        if (!isKnownStrategy(strategies, req_strat))
+        if (!findStrategy(req_strat))
             return jsonError(400, "Invalid Strategy Request");
         if (*currentState == RUN)
             return jsonError(400, "Cannot change the strategy in the current state");
@@ -677,6 +776,16 @@ void RestAPI::start(){
 
         return jsonMessage("Successful");
     });
+}
+
+void RestAPI::start(bool simulation){
+#ifdef __CROSS_COMPILE_ARM__
+    simulation = false;
+#endif
+    const int port = simulation ? 8080 : API_PORT;
+    LOG_INFO("Starting API Server on port ", port);
+    registerRobotRoutes(simulation);
+    if (!simulation) registerRobotCommands();
 
     // ------------------------------- Routes for serving files -------------------------------
 
@@ -703,15 +812,62 @@ void RestAPI::start(){
         return serveFile("html/favicon.ico");
     });
 
+#ifndef __CROSS_COMPILE_ARM__
+    if (simulation) {
+        CROW_ROUTE(app, "/simulation/")([] {
+            auto page = serveFile("html/display.html");
+            page.set_header("Cache-Control", "no-store");
+            return page;
+        });
+        CROW_ROUTE(app, "/simulation/view").methods(crow::HTTPMethod::POST)([this] {
+            std::lock_guard<std::mutex> lock(simulationMutex);
+            // A returning viewer must not revive an expired match.
+            expireSimulationView();
+            simulationViewUntil = Clock::now() + simulatorTimeout;
+            crow::response response(200, "json", simulationSnapshot.dump());
+            response.set_header("Cache-Control", "no-store");
+            return response;
+        });
+        CROW_ROUTE(app, "/simulation/start").methods(crow::HTTPMethod::POST)([this](const crow::request& req) {
+            SimulationRequest start{SimulationRequest::Start};
+            if (!req.body.empty()) {
+                const auto settings = json::parse(req.body, nullptr, false);
+                if (!settings.is_object() || !settings.contains("color") || !settings.contains("strategy"))
+                    return crow::response(400);
+                const auto& color = settings["color"];
+                const auto& strategy = settings["strategy"];
+                if (!color.is_number_integer() || (color != BLUE && color != YELLOW) || !strategy.is_string())
+                    return crow::response(400);
+                start.color = color.get<colorTeam_t>();
+                start.strategy = findStrategy(strategy.get<std::string>());
+                if (!start.strategy) return crow::response(400);
+            }
+            std::lock_guard<std::mutex> lock(simulationMutex);
+            expireSimulationView();
+            if (Clock::now() >= simulationViewUntil) return crow::response(409);
+            if (!simulationReady || simulationRequest.type != SimulationRequest::None) return crow::response(409);
+            simulationNeedsView = true;
+            simulationRequest = start;
+            return crow::response(204);
+        });
+        CROW_ROUTE(app, "/simulation/reset").methods(crow::HTTPMethod::POST)([this](){
+            std::lock_guard<std::mutex> lock(simulationMutex);
+            simulationNeedsView = false;
+            simulationRequest = {SimulationRequest::Reset};
+            return crow::response(204);
+        });
+    }
+#endif
 
     // Set the port and run the app with 2 threads.
     // signal_clear() stops crow from installing its own SIGINT handler, which
     // would otherwise steal Ctrl-C from the main loop.
     app.loglevel(crow::LogLevel::Warning);
-    app.signal_clear().port(API_PORT).concurrency(2).run();
+    app.signal_clear().port(port).concurrency(2).run();
 }
 
 void RestAPI::stop(){
+    app.wait_for_server_start();
     app.stop();
     LOG_INFO("Stopped API Server");
 }

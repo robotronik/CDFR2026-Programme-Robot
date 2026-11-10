@@ -23,10 +23,7 @@ This program enables the robot to perform various tasks such as navigation, data
   compiler, CMake, or library needs to be installed on your machine.
 - SSH access to the robot, only if you want to deploy.
 
-Nothing else is needed for `build`, `test`, `deploy`, `shell` or `run-docker`.
-Only `run`, which executes the binary directly on the host instead of inside the
-image, needs the runtime libraries listed in
-[Running on the host](#-running-on-the-host).
+The local run commands use the runtime libraries from the x86_64 Docker image.
 
 ## 📥 Installation
 
@@ -63,8 +60,8 @@ Everything runs inside Docker; the host compiler is never used.
 ./build.sh build          # Build both x86_64 and arm64
 ./build.sh build x86_64   # Build a single target
 ./build.sh build arm64
-./build.sh run            # Build x86_64 and run it on the host (needs sudo + OpenCV 4.6)
-./build.sh run-docker     # Build x86_64 and run it inside the Docker image (no host deps)
+./build.sh run            # Build x86_64 and start the local REST API and simulator
+./build.sh run-docker     # Build x86_64 and run the robot program inside Docker
 ./build.sh test           # Build x86_64 and run the CTest suite
 ./build.sh deploy         # Build arm64 and deploy it to the robot
 ./build.sh shell          # Interactive shell in the x86_64 image
@@ -73,47 +70,12 @@ Everything runs inside Docker; the host compiler is never used.
 ./build.sh clean          # Remove the build/ directory
 ```
 
-`./build.sh run` executes the x86_64 binary from `build/x86_64` (so it finds its
-`html/` and `data/` assets) and needs `sudo` because the REST server binds port 80,
-on top of the host libraries listed below.
+`./build.sh run-docker` starts the robot program in API test mode with host
+networking. The container runs as root so `SYS_NICE` can raise the program's
+priority. The log directory it creates is owned by root on the host.
 
-`./build.sh run-docker` runs the very same binary inside the `cdfr-builder-x86_64`
-image instead. It needs neither `sudo` nor any host library, and it is the
-portable way to run the program when the host's OpenCV version differs from the
-one used to build (the binary is linked against OpenCV 4.6 and will fail with
-`libopencv_aruco.so.406: cannot open shared object file` on a host that ships a
-different version). Internally the container runs as root — needed so that
-`--cap-add=SYS_NICE` can raise the program's real-time priority, the same thing
-`sudo` does for `run` — and binds port 80 through `--network host`. As a result
-the files it writes (the `log/` directory) are owned by root on the host.
-
-Local x86_64 builds have no hardware, so they use the emulated I2C, disable the
-lidar, and run the API in test mode; the **MAT is disabled** as well (it is the
-robot's vision server) — the ARM build keeps it enabled. Override with
-`-DCDFR_ENABLE_MAT=ON` when needed.
-
-### 🏃 Running on the host
-
-`./build.sh run` executes the binary outside Docker, so the host must provide the
-same shared libraries the binary was linked against. Those come from the image's
-OpenCV 4.6 (Ubuntu 24.04 packaging), plus `sudo`/`CAP_SYS_NICE` for the real-time
-scheduler and port 80.
-
-On **Ubuntu 24.04**:
-
-```bash
-sudo apt install libopencv-contrib406t64 libopencv-videoio406t64
-```
-
-`libopencv-contrib406t64` brings the contrib module set (`libopencv_aruco.so.406`)
-and its core dependencies; `libopencv-videoio406t64` provides the camera/video
-I/O module. Both are needed — a plain `libopencv-dev` install of a *different*
-OpenCV version is not enough, since the loader matches the exact `406` ABI.
-
-On a host whose OpenCV is a different version (for example 25.04 ships OpenCV
-4.10 as `libopencv_*410`), these libraries cannot be installed from the
-distribution repositories. Use `./build.sh run-docker` there instead of installing
-OpenCV by hand.
+Local x86_64 builds use emulated I2C and disable the lidar and MAT. The ARM
+build keeps MAT enabled. Override with `-DCDFR_ENABLE_MAT=ON` when needed.
 
 Artifacts are written to `build/x86_64/programCDFR` and
 `build/arm64/programCDFR`. Each build directory also contains the runtime bundle
@@ -137,7 +99,7 @@ host — only Docker Desktop, which must be running.
 ```bat
 build.bat build          REM Build both x86_64 and arm64
 build.bat build arm64
-build.bat run            REM Build x86_64 and run it locally (REST API on http://localhost)
+build.bat run            REM Build x86_64 and start the local REST API and simulator
 build.bat test           REM Build x86_64 and run the CTest suite
 build.bat deploy         REM Build arm64 and deploy it to the robot
 build.bat shell          REM Interactive shell in the x86_64 image
@@ -150,9 +112,6 @@ Windows-specific notes:
 - The repository is mounted at `/work` inside the container (Windows paths cannot
   be reused as Linux paths as in `build.sh`); build outputs still appear on the
   host under `build\<arch>`.
-- `build.bat run` publishes container port 80 on `http://localhost`. Override the
-  host port with the `CDFR_RUN_PORT` environment variable
-  (e.g. `set CDFR_RUN_PORT=8080`).
 - `build.bat deploy` authenticates with the SSH keys in `%USERPROFILE%\.ssh`,
   mounted read-only into the container. Set them up for the robot first (the
   Windows OpenSSH client ships with `ssh-keygen`/`ssh`; `ssh-copy-id` is not
@@ -160,6 +119,23 @@ Windows-specific notes:
   A passphrase-protected key needs an SSH agent (`ssh-agent` + `ssh-add`).
 - The x86_64 build disables `compile_commands.json` export on Windows because the
   symlink it creates cannot be written reliably on a Windows bind mount.
+
+## High-level simulator
+
+With Docker running, use `./build.sh run` on Linux or `.\build.bat run` in
+PowerShell on Windows. Open [Simulation](http://127.0.0.1/simulation/) beside
+**Live Table** in the local REST API. Set `CDFR_RUN_PORT` to use another port.
+Press **Ctrl+C** to stop.
+
+Choose **Bleu** or **Jaune** and a strategy, then click **Démarrer le match**.
+**ExplorationAleatoire** visits random positions for 100 seconds.
+**StocksEtChateau** visits all ten stock locations, then parks in the starting
+zone of the selected color. The red **Reset** button clears the path, score and
+clock at any time. The match resets within about one second when the last
+Simulation tab is hidden or closed.
+
+The x86_64 simulator runs the match strategies and path planner with virtual
+motion on an empty table. The local **Live Table** shows the simulated robot.
 
 ## 🛠️ Compilation for Raspberry Pi
 

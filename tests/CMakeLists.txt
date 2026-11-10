@@ -20,3 +20,15 @@ foreach(group log lidar mat aruco features)
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     )
 endforeach()
+
+if(NOT CMAKE_CROSSCOMPILING)
+    add_executable(simulation_test SimulationTest.cpp)
+    target_link_libraries(simulation_test PRIVATE robot_core project_compiler_options)
+    add_dependencies(simulation_test programCDFR)
+    add_test(NAME simulation COMMAND simulation_test)
+    set_tests_properties(simulation PROPERTIES
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+        RUN_SERIAL TRUE
+        TIMEOUT 40
+    )
+endif()
