@@ -31,6 +31,15 @@ bool ActuatorsControl::moveServoAndWait(int servo, int target, int speed){
     return s == target;
 }
 
+
+// ------------------------------------------------------
+//                  PUMP CONTROL
+// ------------------------------------------------------
+
+bool ActuatorsControl::setPumpState(bool state){
+    return arduino->writeSensor(SENSOR_PUMP, state);
+}
+
 // ------------------------------------------------------
 //                   STEPPER CONTROL
 // ------------------------------------------------------
