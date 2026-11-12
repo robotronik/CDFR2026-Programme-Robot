@@ -4,6 +4,7 @@ target_sources(defs
     PRIVATE
         src/structs.cpp
         src/tableState.cpp
+        src/matTypes.cpp
 )
 
 target_include_directories(defs
@@ -15,7 +16,6 @@ target_include_directories(defs
 target_link_libraries(defs
     PUBLIC
         utils
-        mat
         external_robot_interfaces
         project_compiler_options
 )

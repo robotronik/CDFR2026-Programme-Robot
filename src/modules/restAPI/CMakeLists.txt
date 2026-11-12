@@ -3,6 +3,7 @@ add_library(restAPI OBJECT)
 target_sources(restAPI
     PRIVATE
         src/restAPI.cpp
+        src/matAPI.cpp
         src/manual_mode.cpp
 )
 
@@ -21,5 +22,6 @@ target_link_libraries(restAPI
         vision
         utils
         Crow::Crow
+        Threads::Threads
         project_compiler_options
 )

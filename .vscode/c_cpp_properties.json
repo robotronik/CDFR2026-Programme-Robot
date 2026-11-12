@@ -8,9 +8,7 @@
                 "${workspaceFolder}/../cdfr2024-programme-Actionneur/include/common",
                 "/usr/include/opencv4"
             ],
-            "defines": [
-                "DISABLE_MAT"
-            ],
+            "defines": [],
             "compilerPath": "/usr/bin/g++",
             "cStandard": "c17",
             "cppStandard": "gnu++17",

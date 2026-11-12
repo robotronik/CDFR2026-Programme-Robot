@@ -88,9 +88,7 @@ different version). Internally the container runs as root — needed so that
 the files it writes (the `log/` directory) are owned by root on the host.
 
 Local x86_64 builds have no hardware, so they use the emulated I2C, disable the
-lidar, and run the API in test mode; the **MAT is disabled** as well (it is the
-robot's vision server) — the ARM build keeps it enabled. Override with
-`-DCDFR_ENABLE_MAT=ON` when needed.
+lidar, and run the API in test mode.
 
 ### 🏃 Running on the host
 
