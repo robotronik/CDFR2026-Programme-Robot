@@ -100,3 +100,28 @@ void ActuatorsControl::disableActuators(){
     arduino->disableServos();
     drive->disable();
 }
+
+bool Wall::wDrop(){
+    arduino->setPumpSate(false);
+}
+
+bool Wall::wTake(){
+    arduino->setPumpSate(true);
+}
+
+bool Tower::tDrop(int idx){
+    arduino->setPumpSate(false);
+}
+
+bool Tower::rotate(int idxS, bool dir){
+    if (dir)
+        arduino->moveServoSpeed(idxS, 180, 50); // TODO :Modifier position et speed
+    else
+        arduino->moveServoSpeed(idxS, 0, 50); // TODO :Modifier position et speed
+}
+
+bool Door::dDrop(){
+    tDrop(0); //TODO : Modifier idx tour
+    tDrop(1); //TODO : Modifier idx tour
+    rotate(0, False); //TODO : Modifier idxS servo
+}
