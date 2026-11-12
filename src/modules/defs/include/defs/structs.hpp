@@ -40,5 +40,13 @@ typedef enum {
     YELLOW
 } colorTeam_t;
 
+typedef struct {
+    int id; // index of quarry
+    int nb; // number of rocks in quarry
+    position_t pos; // position of quarry
+    float trustFactor; // % of trust on this quarry
+    // TODO is it a good idea to add position of each rock ?
+} quarry_t;
+
 // Define serialization for lidarAnalize_t
 void to_json(json& j, const lidarAnalize_t& p);

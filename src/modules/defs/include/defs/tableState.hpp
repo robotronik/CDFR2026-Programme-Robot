@@ -4,6 +4,7 @@
 #include "navigation/driveControl.h"
 #include <utils/json.hpp>
 #include <vector>
+#include "defs/constante.h"
 
 using json = nlohmann::json;
 
@@ -38,10 +39,20 @@ class TableState
         // Les stratégies (ex: GoToPositionAction) les utilisent pour viser
         // l'élément le plus proche du robot.
         std::vector<MatGameElement> elements;
-        bool quarryAvailable[10] = {3, 3, 3, 3, 3, 3, 3, 3, 3, 3}; // Availability of quarrys 
+        quarry_t quarry[10]; // table of quarrys
+        inline bool isQuarryAvailable(int index) { return quarry[index].nb > 0; };
+        inline bool remainQuarry(){
+            for(int i = 0; i < 10; i++){
+                if(quarry[i].nb > 0){
+                    return true;
+                }
+            }
+            return false;
+        }
 
     private:
         DriveControl* drive;
+        void initQuarry();
 };
 
 // Serialize tableState

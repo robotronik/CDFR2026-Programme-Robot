@@ -15,6 +15,7 @@ TableState::~TableState(){}
 
 void TableState::reset(){
     resetCalibrationAge();
+    initQuarry();
     /* reset of specific The legend of Camelot */
     elements.clear();
 }
@@ -54,6 +55,15 @@ void to_json(json& j, const TableState& ts) {
         {"strategy", ts.strategy}
     };
 }
+
+void TableState::initQuarry(){
+        for (int i = 0; i < 10; i++){
+            quarry[i].nb = 3;
+            quarry[i].id = i;
+            quarry[i].pos = QUARRY_POSITION[i];
+            quarry[i].trustFactor = 1; // 100% for now
+        }
+    }
 
 void TableState::updateMapStatus(){
     const MatTableData data = getMatTableData();
