@@ -37,7 +37,7 @@ bool ActuatorsControl::moveServoAndWait(int servo, int target, int speed){
 // ------------------------------------------------------
 
 bool ActuatorsControl::setPumpState(bool state){
-    return arduino->writeSensor(SENSOR_PUMP, state);
+    return arduino->writeSensor(SENSOR_NUM_8, state);
 }
 
 // ------------------------------------------------------
