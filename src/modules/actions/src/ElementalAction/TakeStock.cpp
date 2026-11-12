@@ -1,31 +1,33 @@
 #include "actions/ElementalAction/TakeStock.hpp"
 #include "defs/tableState.hpp"
+#include "navigation/driveControl.h" // pour position_t
+#include "constante.h"
 
 bool TakeStock::getBestQuarry(const position_t& from, position_t& target) {
-    int quarry[] = tableState->quarryAvailable;
+    int quarry[10] = tableState->quarryAvailable;
     if (quarry == {0,0,0,0,0,0,0,0,0,0}) {
         return false;
     }
 
-    position_t closest = position_t QUARRY_POSITION[0];
-    double minDistance = position_distance(from, {closest[0][0], closest[0][1], closest[0][2]});
+    position_t closest = QUARRY_POSITION[0];
+    double minDistance = position_distance(from, {QUARRY_POSITION[0].x, QUARRY_POSITION[0].y, QUARRY_POSITION[0].a});
     int maxstone = quarry[0];
     
     int taille = sizeof(quarry);
 
     for (int i = 0; i < taille;i++ ) {
-        double distance = position_distance(from, {QUARRY_POSITION[i][0],QUARRY_POSITION[i][1] ,QUARRY_POSITION[i][2] });
+        double distance = position_distance(from, {QUARRY_POSITION[i].x,QUARRY_POSITION[i].y ,QUARRY_POSITION[i].a });
         int stone = quarry[i];
-        if (distance < minDistance) and (stone>=maxstone) {
+        if (distance < minDistance  && stone>=maxstone) {
             minDistance = distance;
-            closest = QUARRY_POSITION[0];
+            closest = QUARRY_POSITION[i];
             maxstone = stone;
         }
     }
 
-    target.x = closest->x;
-    target.y = closest->y;
-    target.a = closest->a;
-    return true;.
+    target.x = closest.x;
+    target.y = closest.y;
+    target.a = closest.a;
+    return true;
     
 }
