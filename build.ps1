@@ -130,9 +130,19 @@ function Run-Program([string[]]$ProgramArgs) {
     Build-Arch 'x86_64'
     $port = if ($env:CDFR_RUN_PORT) { $env:CDFR_RUN_PORT } else { '80' }
     $containerArgs = @('sudo', './programCDFR') + $ProgramArgs
+    # Debug sounds (see AUDIO.md): Docker Desktop forwards the WSLg audio
+    # socket, which PulseAudio clients reach at the same path inside the
+    # container. Absent on Linux/macOS hosts, where nothing is added.
+    $dockerArgs = @('-p', "${port}:80", '--cap-add=SYS_NICE')
+    if (Test-Path '/mnt/wslg/PulseServer') {
+        $dockerArgs += @(
+            '-v', '/mnt/wslg/PulseServer:/mnt/wslg/PulseServer:ro',
+            '-e', 'PULSE_SERVER=unix:/mnt/wslg/PulseServer'
+        )
+    }
     Write-Log "Running programCDFR from build/x86_64 (host port $port -> container 80)"
     Invoke-Container -Image $ImageX86 `
-        -DockerArgs @('-p', "${port}:80", '--cap-add=SYS_NICE') `
+        -DockerArgs $dockerArgs `
         -WorkDir "${ContainerWork}/build/x86_64" `
         -CommandArgs $containerArgs
 }

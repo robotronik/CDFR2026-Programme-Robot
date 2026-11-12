@@ -3,6 +3,7 @@ add_library(utils OBJECT)
 target_sources(utils
     PRIVATE
         src/logger.cpp
+        src/debugSound.cpp
 )
 
 target_include_directories(utils

@@ -18,6 +18,16 @@ DOCKER_RUN_EXTRA=()
 DOCKER_RUN_USER="$(id -u):$(id -g)"
 DOCKER_RUN_WORKDIR="$REPO_ROOT"
 
+# Debug sounds (see AUDIO.md): let the container reach the host's audio
+# server so `play` in the program is heard on the laptop's speakers. Only the
+# PulseAudio/PipeWire socket is shared -- no device access -- and only when the
+# host actually runs such a server (Linux with XDG_RUNTIME_DIR; not macOS/Windows).
+AUDIO_RUN_ARGS=()
+PULSE_DIR="/run/user/$(id -u)/pulse"
+if [ -S "$PULSE_DIR/native" ]; then
+    AUDIO_RUN_ARGS=(-e PULSE_SERVER=unix:/pulse/native -v "$PULSE_DIR":/pulse:ro)
+fi
+
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 
 build_image() {
@@ -50,6 +60,7 @@ docker_run() {
     # No-op on hosts without SELinux.
     docker run --rm "${tty[@]}" "${ssh[@]}" \
         "${DOCKER_RUN_EXTRA[@]}" \
+        "${AUDIO_RUN_ARGS[@]}" \
         --network host \
         --security-opt label=disable \
         "${user[@]}" \
