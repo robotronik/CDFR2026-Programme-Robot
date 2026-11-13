@@ -7,6 +7,15 @@ FROM debian:trixie
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Git, CA certs are needed by the clone layer below, so it can come before the
+# package layer. Each RUN is a separate cache layer: packages are always found in
+# the CI image cache (exported to the GitHub Actions cache by the workflow), while
+# a new external-repo commit only re-runs the (fast) clone layer.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 # Add the Raspberry Pi archive for the libcamera fork that drives the Pi 5 camera.
 # It is marked trusted (not signed-by): its InRelease is SHA1-signed, which
 # trixie's `sqv` refuses. (Debian's own trixie suites already cover arm64.)
@@ -30,22 +39,6 @@ RUN printf '%s\n' \
         'Pin-Priority: 100' \
         > /etc/apt/preferences.d/raspberrypi.pref
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        cmake \
-        ninja-build \
-        git \
-        ca-certificates \
-        pkg-config \
-        gcc-aarch64-linux-gnu \
-        g++-aarch64-linux-gnu \
-        libsqlite3-dev:arm64 \
-        libopencv-dev:arm64 \
-        libopencv-contrib-dev:arm64 \
-        libcamera-dev:arm64 \
-        rsync \
-        openssh-client \
-    && rm -rf /var/lib/apt/lists/*
-
 # External robot repositories: drive/protocol headers used at compile time.
 # Baked into the image so the build is self-contained.
 ARG DRIVE_CONTROL_REF=main
@@ -58,6 +51,13 @@ RUN mkdir -p /opt/cdfr \
         https://github.com/robotronik/cdfr2024-programme-Actionneur.git \
         /opt/cdfr/cdfr2024-programme-Actionneur \
     && rm -rf /opt/cdfr/*/.git
+
+# Only the package list matters for this layer: changing what is installed
+# re-runs it, but it is restored from cache when the list is unchanged.
+ADD docker/packages.arm64 /tmp/cdfr-packages.list
+RUN apt-get update \
+    && xargs -a /tmp/cdfr-packages.list apt-get install -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /tmp/cdfr-packages.list
 
 # Debian has no non-root user, so create `ubuntu` (uid/gid 1000) like the old
 # Ubuntu base: workspace files stay user-owned, and build.sh's --user and the

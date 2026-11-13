@@ -5,6 +5,13 @@ on: [push, pull_request]
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      # Cache the Docker image layers (apt packages, repository clones) in the
+      # GitHub Actions cache; ./build.sh uses these to export and import them.
+      # The images are split into layers, so a Dockerfile or package-list change
+      # only re-runs the affected layer instead of the whole image.
+      DOCKER_CACHE_FROM: type=gha
+      DOCKER_CACHE_TO: type=gha,mode=max
 
     steps:
       - name: Checkout with submodules

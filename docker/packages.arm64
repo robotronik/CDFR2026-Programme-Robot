@@ -1,0 +1,11 @@
+cmake
+ninja-build
+pkg-config
+gcc-aarch64-linux-gnu
+g++-aarch64-linux-gnu
+libsqlite3-dev:arm64
+libopencv-dev:arm64
+libopencv-contrib-dev:arm64
+libcamera-dev:arm64
+rsync
+openssh-client
