@@ -76,7 +76,7 @@ bool initState;
 std::thread api_server_thread;
 
 // REST API
-RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &lidar, &cam1, &navigation, &strategies);
+RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &sensor, &actuators, &lidar, &cam1, &navigation, &strategies);
 
 // Prototypes
 int StartSequence();
