@@ -161,6 +161,38 @@ Windows-specific notes:
 - The x86_64 build disables `compile_commands.json` export on Windows because the
   symlink it creates cannot be written reliably on a Windows bind mount.
 
+## 🧠 Editor and IntelliSense (clangd)
+
+Code completion and navigation use **clangd**: the headers it needs (OpenCV,
+SQLite, the DriveControl/Actionneur interfaces, the FetchContent dependencies)
+only exist inside the build image, so a language server running on the host can
+never resolve them. [`scripts/clangd-docker.sh`](scripts/clangd-docker.sh) starts
+clangd *inside* `cdfr-builder-x86_64`, with the repository mounted at its own path
+so the absolute paths in `build/x86_64/compile_commands.json` stay valid.
+
+Nothing is installed on the host beyond Docker: [`.vscode/settings.json`](.vscode/settings.json)
+points `clangd.path` at the wrapper and disables the Microsoft C/C++ extension's
+IntelliSense so both do not fight over the same files. Install the
+[clangd extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)
+if VS Code does not prompt for it.
+
+- `./build.sh build x86_64` regenerates `build/x86_64/compile_commands.json`
+  (CMake reconfigures on every run); the `compile_commands.json` at the repository
+  root is a symlink to it.
+- The wrapper also reconfigures CMake when the database is missing or older than
+  the CMake files, so after adding a source file (and listing it in its
+  `CMakeLists.txt`) restart clangd with *Clangd: Restart language server*.
+  Sources not listed in any `CMakeLists.txt` have no entry in the database.
+- Shared server settings live in [`.clangd`](.clangd); command-line use works too:
+  `./scripts/clangd-docker.sh --check=src/app/main.cpp`.
+- Inside the dev container the wrapper detects that it already runs in the image
+  and executes clangd directly, so `./build.sh images` must be re-run once to pick
+  up the `clangd` package added to the image.
+- On Windows the wrapper cannot run; `.vscode/settings.json` falls back to a plain
+  `clangd`, so use the [dev container](.devcontainer/devcontainer.json) there.
+- The first start can take a few seconds while clangd indexes; the index is cached
+  in `.cache/clangd/`.
+
 ## 🛠️ Compilation for Raspberry Pi
 
 The ARM binary is cross-compiled by `./build.sh build arm64`; no cross-toolchain or
