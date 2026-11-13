@@ -41,7 +41,7 @@ const position_t OPPONENT_POS_UNKNOWN = { .x = 3000, .y = 0, .a = 0 };
 #define LS_BOTTOM_NUM        5
 #define SENSOR_NUM_6         6
 #define SENSOR_NUM_7         7
-#define SENSOR_NUM_8         8
+#define SENSOR_NUM_8         1
 
 
 #define MAX_WIDTH_TABLE 1000
