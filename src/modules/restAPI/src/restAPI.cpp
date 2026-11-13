@@ -11,6 +11,8 @@
 #include "defs/mainState.hpp"
 #include "defs/tableState.hpp"
 #include "i2c/Arduino.hpp"
+#include "actions/SensorControl.hpp"
+#include "actions/ActuatorsControl.hpp"
 #include "lidar/Lidar.hpp"
 #include "lidar/lidarAnalize.h" //for static variable
 #include "navigation/navigation.h"
@@ -30,6 +32,8 @@ RestAPI::RestAPI(main_State_t* currentState,
                  DriveControl* drive,
                  TableState* tableStatus,
                  Arduino* arduino,
+                 SensorControl* sensor,
+                 ActuatorsControl* actuators,
                  Lidar* lidar,
                  Cam* cam,
                  Navigation* navigation,
@@ -39,6 +43,8 @@ RestAPI::RestAPI(main_State_t* currentState,
       drive(drive),
       tableStatus(tableStatus),
       arduino(arduino),
+      sensor(sensor),
+      actuators(actuators),
       lidar(lidar),
       cam(cam),
       navigation(navigation),
@@ -662,6 +668,8 @@ void RestAPI::start(){
         if (req_value != "Test"){
             // TODO associate each command with the action to test:
             // manual_currentFunc = ...;
+            if(req_value == "PumpOn") manual_currentFunc = [this]{ return actuators->setPumpState(true); };
+            if(req_value == "PumpOff") manual_currentFunc = [this]{ return actuators->setPumpState(false); };
             return jsonError(400, "Invalid action requested");
         }
 
