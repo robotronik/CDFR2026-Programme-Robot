@@ -15,7 +15,8 @@ sudo apt install -y \
   libsqlite3-0 \
   libopencv-objdetect410 libopencv-imgcodecs410 libopencv-calib3d410 \
   libopencv-features2d410 libopencv-imgproc410 libopencv-core410 \
-  libcamera0.8 libcamera-ipa libpisp1
+  libcamera0.8 libcamera-ipa libpisp1 \
+  sox libsox-fmt-all
 ```
 
 `libopencv-objdetect410` provides ArUco; `libcamera0.8` comes from
