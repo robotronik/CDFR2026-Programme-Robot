@@ -1,7 +1,7 @@
 #include "restAPI/manual_mode.h"
 
 bool manual_ctrl = false;
-bool (*manual_currentFunc)() = nullptr;
+std::function<bool()> manual_currentFunc = nullptr;
 
 void manual_init()
 {
