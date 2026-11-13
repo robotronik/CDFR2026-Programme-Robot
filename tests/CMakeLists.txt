@@ -9,7 +9,6 @@ add_executable(robot_tests
 
 target_link_libraries(robot_tests PRIVATE
     robot_core
-    project_compiler_options
 )
 
 # One test per group. Tests run from the project root so the shared relative

@@ -6,7 +6,6 @@ target_include_directories(programCDFR PRIVATE
 
 target_link_libraries(programCDFR PRIVATE
     robot_core
-    project_compiler_options
 )
 
 add_custom_command(TARGET programCDFR POST_BUILD

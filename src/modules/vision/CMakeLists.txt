@@ -21,7 +21,6 @@ target_include_directories(vision
 
 # OpenCV: native ArUco marker detection and frame handling.
 find_package(OpenCV REQUIRED CONFIG)
-target_include_directories(vision PUBLIC ${OpenCV_INCLUDE_DIRS})
 
 target_link_libraries(vision
     PUBLIC
