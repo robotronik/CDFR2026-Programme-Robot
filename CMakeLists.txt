@@ -1,8 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
-
-if(POLICY CMP0135)
-    cmake_policy(SET CMP0135 NEW)
-endif()
+cmake_minimum_required(VERSION 3.20)
 
 project(ProgramCDFR LANGUAGES C CXX)
 
