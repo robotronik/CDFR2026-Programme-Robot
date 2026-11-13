@@ -23,7 +23,17 @@ log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 build_image() {
     local image="$1" dockerfile="$2"
     log "Building image $image"
-    docker build -t "$image" -f "$dockerfile" .
+    local args=(-t "$image" -f "$dockerfile")
+    # When the caller sets DOCKER_CACHE_FROM/DOCKER_CACHE_TO (CI does, to the
+    # GitHub Actions cache) route the build through BuildKit, which keeps the
+    # individual layers. Otherwise use the plain classic builder.
+    if [ -n "${DOCKER_CACHE_FROM:-}" ] || [ -n "${DOCKER_CACHE_TO:-}" ]; then
+        [ -n "${DOCKER_CACHE_FROM:-}" ] && args+=(--cache-from "$DOCKER_CACHE_FROM")
+        [ -n "${DOCKER_CACHE_TO:-}" ] && args+=(--cache-to "$DOCKER_CACHE_TO")
+        DOCKER_BUILDKIT=1 docker build "${args[@]}" .
+    else
+        docker build "${args[@]}" .
+    fi
 }
 
 ensure_image() {

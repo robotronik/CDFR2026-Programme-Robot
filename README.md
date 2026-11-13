@@ -122,7 +122,15 @@ shipped alongside the executable (`html/`, `data/`, `tests/lidar` and
   the host and file ownership is preserved.
 - The two images are defined in [`docker/Dockerfile.x86_64`](docker/Dockerfile.x86_64)
   and [`docker/Dockerfile.arm64`](docker/Dockerfile.arm64); rebuild them with
-  `./build.sh images` after changing their contents.
+  `./build.sh images` after changing their contents. The installed apt packages
+  live in [`docker/packages.x86_64`](docker/packages.x86_64) and
+  [`docker/packages.arm64`](docker/packages.arm64), so editing an installed package
+  does not touch the Dockerfile (and vice versa).
+- CI caches the image layers in the GitHub Actions cache (`DOCKER_CACHE_FROM` /
+  `DOCKER_CACHE_TO` in [`.github/workflows/c-cpp.yml`](.github/workflows/c-cpp.yml)),
+  so only the layers whose input changed are rebuilt: a new external-repository
+  commit re-runs the clone layer, a `docker/packages.<arch>` change re-runs the
+  package layer.
 - VS Code / CLion Dev Container support is available via
   [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json).
 

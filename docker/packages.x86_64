@@ -1,0 +1,8 @@
+build-essential
+cmake
+ninja-build
+sudo
+libsqlite3-dev
+libopencv-dev
+libopencv-contrib-dev
+clangd-18
