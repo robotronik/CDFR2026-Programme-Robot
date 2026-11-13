@@ -26,14 +26,14 @@ jobs:
       - name: Pull the previous images
         run: |
           for arch in x86_64 arm64; do
-            docker pull "ghcr.io/${{ github.repository }}/cdfr-builder-$arch:cache" \
+            docker pull "ghcr.io/${{ github.repository_owner }}/cdfr2026-programme-robot/cdfr-builder-$arch:cache" \
               || echo "::notice::No cached image for $arch yet (first run)"
           done
 
       - name: Build Docker images
         run: |
           for arch in x86_64 arm64; do
-            DOCKER_CACHE_IMAGE="ghcr.io/${{ github.repository }}/cdfr-builder-$arch:cache" \
+            DOCKER_CACHE_IMAGE="ghcr.io/${{ github.repository_owner }}/cdfr2026-programme-robot/cdfr-builder-$arch:cache" \
               ./build.sh images "$arch"
           done
 
@@ -42,7 +42,7 @@ jobs:
         if: github.event_name == 'push'
         run: |
           for arch in x86_64 arm64; do
-            docker push "ghcr.io/${{ github.repository }}/cdfr-builder-$arch:cache"
+            docker push "ghcr.io/${{ github.repository_owner }}/cdfr2026-programme-robot/cdfr-builder-$arch:cache"
           done
 
       - name: Build x86_64 and arm64
