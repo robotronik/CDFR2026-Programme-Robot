@@ -181,7 +181,8 @@ sudo apt install -y \
   libsqlite3-0 \
   libopencv-objdetect410 libopencv-imgcodecs410 libopencv-calib3d410 \
   libopencv-features2d410 libopencv-imgproc410 libopencv-core410 \
-  libcamera0.7 libcamera-ipa libpisp1
+  libcamera0.7 libcamera-ipa libpisp1 \
+  sox libsox-fmt-all
 ```
 
 ArUco lives in the core OpenCV `objdetect` module from 4.7 onwards, hence

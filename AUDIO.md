@@ -57,7 +57,7 @@ container's):
 
 | Where | Hears it | What to do |
 |---|---|---|
-| Raspberry Pi | ✅ USB speaker | `sox` is in the image; plug the speaker in a USB port |
+| Raspberry Pi | ✅ USB speaker | install SoX on the Pi once (`sudo apt install sox libsox-fmt-all`, see [README](README.md#runtime-dependencies-on-the-pi)); plug the speaker in a USB port |
 | Laptop, Linux, `./build.sh run-docker` | ✅ laptop speakers | nothing: `build.sh` shares `$XDG_RUNTIME_DIR/pulse` with the container when a PulseAudio/PipeWire server runs |
 | Laptop, Linux, `./build.sh run` | ✅ laptop speakers | nothing (the program runs on the host) |
 | Laptop, Windows, `build.bat run` | ✅ laptop speakers (WSLg) | nothing: `build.ps1` mounts `/mnt/wslg/PulseServer` |
