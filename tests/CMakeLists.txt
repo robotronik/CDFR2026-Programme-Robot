@@ -19,5 +19,6 @@ foreach(group log lidar mat aruco features)
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     )
 endforeach()
-# TODO: these fail on main already; fix them and drop this line.
-set_tests_properties(lidar aruco PROPERTIES DISABLED TRUE)
+# TODO: these fail on main already, so a failure counts as a pass (still run and logged).
+# Once one is fixed it "fails" in CI: fix it, then remove it from this line.
+set_tests_properties(lidar aruco PROPERTIES WILL_FAIL TRUE)
