@@ -1,15 +1,23 @@
 #pragma once
-#include "VirtualAction.hpp"
+#include "actions/VirtualAction.hpp"
 #include "defs/tableState.hpp"
+#include "navigation/driveControl.h"
 
 class TakeStock : public VirtualAction {
     private:
         TableState* tableState;
+        DriveControl* drive;
+        position_t target;
+        bool moving;
+        bool needsTarget = false;
+        bool done = false;
+        int value;
+        bool resolveTarget();
     public:
         TakeStock(const std::string& name, TableState* tableState);
         ~TakeStock() override = default;
 
-        bool TakeBlock(const position_t&  from, position_t& target);
+        position_t BestPositionToTake(const position_t&  from, position_t& target);
 
         ReturnFSM_t run() override;
         bool stop() override;
@@ -21,7 +29,6 @@ class TakeStock : public VirtualAction {
     protected:
         bool errorManagement();
         bool successManagement();
-        bool besttake(const position_t& from, position_t& target);
+        bool BestTake(const position_t& from, position_t& target);
         bool getBestQuarry(const position_t& from, position_t& target);
-        bool TakeBlock(const position_t&  from, position_t& target);
 };
