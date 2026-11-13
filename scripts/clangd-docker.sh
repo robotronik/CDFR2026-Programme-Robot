@@ -9,8 +9,8 @@
 # database is.
 #
 # This wrapper forwards every invocation to the image, with the repository
-# mounted at its own path so the paths recorded in
-# build/x86_64/compile_commands.json stay valid.
+# mounted at its own path so the paths recorded in the compilation database
+# stay valid. The database is produced (inside the image) in .cache/clangd-db.
 #
 # Used by the vscode-clangd extension (.vscode/settings.json), and usable from
 # a shell, e.g.:  ./scripts/clangd-docker.sh --check=src/app/main.cpp
@@ -20,8 +20,12 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 IMAGE="${CDFR_CLANGD_IMAGE:-cdfr-builder-x86_64}"
 DOCKERFILE="$REPO_ROOT/docker/Dockerfile.x86_64"
-BUILD_DIR="$REPO_ROOT/build/x86_64"
-DB="$BUILD_DIR/compile_commands.json"
+# Dedicated configure directory, kept apart from build/x86_64: that tree is
+# wiped by `./build.sh clean` and can be reconfigured on the host by the CMake
+# Tools extension, which would record host compiler and include paths clangd
+# cannot use.
+DB_DIR="$REPO_ROOT/.cache/clangd-db"
+DB="$DB_DIR/compile_commands.json"
 
 log() { printf 'clangd-docker: %s\n' "$*" >&2; }
 
@@ -52,20 +56,25 @@ needs_configure() {
     [ -f "$DB" ] || return 0
     [ "$REPO_ROOT/CMakePresets.json" -nt "$DB" ] && return 0
     [ -n "$(find "$REPO_ROOT" \
-              \( -name build -o -name .git \) -prune -o \
+              \( -name build -o -name .cache -o -name .git \) -prune -o \
               -name CMakeLists.txt -newer "$DB" -print -quit)" ] && return 0
     return 1
 }
 
 if needs_configure; then
-    log "refreshing $DB"
+    log "refreshing the compilation database in ${DB_DIR#"$REPO_ROOT"/}"
+    # CDFR_COMPILE_COMMANDS_SYMLINK=OFF: this database is clangd's private copy
+    # and must not rewrite the ./build.sh symlink at the repository root.
     docker run --rm \
         --security-opt label=disable \
         --user "$(id -u):$(id -g)" \
         -e HOME=/tmp \
         -v "$REPO_ROOT:$REPO_ROOT" \
         -w "$REPO_ROOT" \
-        "$IMAGE" cmake --preset x86_64 >&2
+        "$IMAGE" cmake --preset x86_64 \
+        -B "$DB_DIR" \
+        -DCDFR_COMPILE_COMMANDS_SYMLINK=OFF >&2 \
+        || log "configure failed, clangd starts without an up-to-date database"
 fi
 
 # stdin/stdout carry the LSP stream, hence -i and no -t.

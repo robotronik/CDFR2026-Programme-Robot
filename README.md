@@ -166,23 +166,30 @@ SQLite, the DriveControl/Actionneur interfaces, the FetchContent dependencies)
 only exist inside the build image, so a language server running on the host can
 never resolve them. [`scripts/clangd-docker.sh`](scripts/clangd-docker.sh) starts
 clangd *inside* `cdfr-builder-x86_64`, with the repository mounted at its own path
-so the absolute paths in `build/x86_64/compile_commands.json` stay valid.
+so the absolute paths in the compilation database stay valid.
 
 Nothing is installed on the host beyond Docker: [`.vscode/settings.json`](.vscode/settings.json)
-points `clangd.path` at the wrapper and disables the Microsoft C/C++ extension's
-IntelliSense so both do not fight over the same files. Install the
+points `clangd.path` at the wrapper, disables the Microsoft C/C++ extension's
+IntelliSense so both do not fight over the same files, and turns off CMake Tools'
+automatic configure (see below). Install the
 [clangd extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)
 if VS Code does not prompt for it.
 
-- `./build.sh build x86_64` regenerates `build/x86_64/compile_commands.json`
-  (CMake reconfigures on every run); the `compile_commands.json` at the repository
-  root is a symlink to it.
-- The wrapper also reconfigures CMake when the database is missing or older than
-  the CMake files, so after adding a source file (and listing it in its
-  `CMakeLists.txt`) restart clangd with *Clangd: Restart language server*.
-  Sources not listed in any `CMakeLists.txt` have no entry in the database.
+- The database is **not** `build/x86_64/compile_commands.json`. The wrapper
+  configures its own tree in `.cache/clangd-db/` from inside the container, so it
+  is unaffected by `./build.sh clean`, by arm64-only builds, and by anything the
+  host does to `build/`.
+- The wrapper reconfigures that tree when it is missing or older than the CMake
+  files, so after adding a source file (and listing it in its `CMakeLists.txt`)
+  restart clangd with *Clangd: Restart language server*. Sources not listed in any
+  `CMakeLists.txt` have no entry in the database.
 - Shared server settings live in [`.clangd`](.clangd); command-line use works too:
-  `./scripts/clangd-docker.sh --check=src/app/main.cpp`.
+  `./scripts/clangd-docker.sh --check=src/app/main.cpp`. Delete
+  `.cache/clangd-db/` to force a rebuild of the database.
+- Do not use the CMake Tools extension to configure this project on the host: it
+  would write the host compiler, Ninja and OpenCV into `build/x86_64`, breaking
+  the container build and producing a database clangd cannot use. It is disabled
+  in `.vscode/settings.json`; build with `./build.sh` instead.
 - Inside the dev container the wrapper detects that it already runs in the image
   and executes clangd directly, so `./build.sh images` must be re-run once to pick
   up the `clangd` package added to the image.

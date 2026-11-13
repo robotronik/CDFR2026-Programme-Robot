@@ -17,7 +17,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib" CACHE PATH "Library
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib" CACHE PATH "Archive output directory")
 
 # Symlink compile_commands.json into the project root for LSP servers (clangd).
-if(CMAKE_EXPORT_COMPILE_COMMANDS AND NOT CMAKE_CROSSCOMPILING)
+# The IDE's own configuration (scripts/clangd-docker.sh) uses a separate build
+# directory and turns this off, so it never rewrites the build's link.
+option(CDFR_COMPILE_COMMANDS_SYMLINK
+    "Link compile_commands.json into the source root" ON)
+if(CMAKE_EXPORT_COMPILE_COMMANDS AND NOT CMAKE_CROSSCOMPILING
+   AND CDFR_COMPILE_COMMANDS_SYMLINK)
     if(EXISTS "${CMAKE_SOURCE_DIR}/compile_commands.json" OR IS_SYMLINK "${CMAKE_SOURCE_DIR}/compile_commands.json")
         file(REMOVE "${CMAKE_SOURCE_DIR}/compile_commands.json")
     endif()

@@ -114,11 +114,16 @@ case "${1:-build}" in
         log "Running programCDFR in the x86_64 image (no host libraries needed)"
         # setProgramPriority() needs CAP_SYS_NICE, dropped by Docker by default,
         # and the capability only works for uid 0, so run as root (no --user).
-        # Files the run writes (log/) are then root-owned on the host.
         DOCKER_RUN_EXTRA=(--cap-add=SYS_NICE)
         DOCKER_RUN_USER=""
         DOCKER_RUN_WORKDIR="$REPO_ROOT/build/x86_64"
         docker_run "$IMAGE_X86" ./programCDFR "$@"
+        # Root-owned log/ files make `./build.sh clean` fail, so give them back
+        # to the host user.
+        docker run --rm --security-opt label=disable \
+            -v "$REPO_ROOT:$REPO_ROOT" \
+            "$IMAGE_X86" chown -R "$(id -u):$(id -g)" \
+            "$REPO_ROOT/build/x86_64/log" 2>/dev/null || true
         ;;
     deploy)
         ensure_image "$IMAGE_ARM" docker/Dockerfile.arm64
