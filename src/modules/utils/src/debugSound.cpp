@@ -1,20 +1,11 @@
 #include "utils/debugSound.hpp"
 
 #include <fcntl.h>
-#include <signal.h>
+#include <sched.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include "utils/logger.hpp"
-
-namespace {
-
-// A finished player is reaped by this immediately, so no zombie lingers.
-void reapPlayer(int) {
-    while (waitpid(-1, nullptr, WNOHANG) > 0) {}
-}
-
-} // namespace
 
 namespace debugSound {
 
@@ -25,28 +16,22 @@ void play(const std::string& name) {
         return;
     }
 
-    // Reap asynchronously: the caller must not wait for the sound to finish.
-    static bool handlerInstalled = false;
-    if (!handlerInstalled) {
-        struct sigaction sa = {};
-        sa.sa_handler = reapPlayer;
-        sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
-        sigaction(SIGCHLD, &sa, nullptr);
-        handlerInstalled = true;
-    }
-
-    // `play` (SoX) decodes the file to the default output. A missing `play` only
-    // makes the child exit; it never affects this call.
-    if (fork() == 0) {
-        const int null = open("/dev/null", O_RDWR);
-        if (null >= 0) {
+    // Double fork: init adopts the player and reaps it, so we never wait on it.
+    const pid_t middle = fork();
+    if (middle == 0) {
+        if (fork() == 0) {
+            // Don't inherit the control loop's real-time priority.
+            const sched_param normal = {};
+            sched_setscheduler(0, SCHED_OTHER, &normal);
+            const int null = open("/dev/null", O_RDWR);
             dup2(null, STDIN_FILENO);
             dup2(null, STDOUT_FILENO);
             dup2(null, STDERR_FILENO);
+            execlp("play", "play", "-q", path.c_str(), (char*)nullptr);
         }
-        execlp("play", "play", "-q", path.c_str(), (char*)nullptr);
-        _exit(127);
+        _exit(0);
     }
+    if (middle > 0) waitpid(middle, nullptr, 0);
 }
 
 } // namespace debugSound
