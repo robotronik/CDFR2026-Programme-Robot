@@ -665,13 +665,12 @@ void RestAPI::start(){
 
         std::string req_value = req_data["value"];
 
-        if (req_value != "Test"){
-            // TODO associate each command with the action to test:
-            // manual_currentFunc = ...;
-            if(req_value == "PumpOn") manual_currentFunc = [this]{ return actuators->setPumpState(true); };
-            if(req_value == "PumpOff") manual_currentFunc = [this]{ return actuators->setPumpState(false); };
+        if(req_value == "PumpOn")
+            manual_currentFunc = [this]{ return actuators->setPumpState(true); };
+        else if(req_value == "PumpOff")
+            manual_currentFunc = [this]{ return actuators->setPumpState(false); };
+        else if (req_value != "Test")
             return jsonError(400, "Invalid action requested");
-        }
 
         return jsonMessage("Successful");
     });
