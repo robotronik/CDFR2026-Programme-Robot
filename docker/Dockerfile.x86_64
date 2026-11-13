@@ -14,6 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libsqlite3-dev \
         libopencv-dev \
         libopencv-contrib-dev \
+        clangd-18 \
+    && ln -s /usr/lib/llvm-18/bin/clangd /usr/bin/clangd \
     && rm -rf /var/lib/apt/lists/*
 
 # External robot repositories: drive/protocol headers used at compile time.

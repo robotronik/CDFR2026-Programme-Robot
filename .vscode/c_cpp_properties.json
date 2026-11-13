@@ -1,14 +1,8 @@
 {
     "configurations": [
         {
-            "name": "CDFR2027",
-            "includePath": [
-                "${workspaceFolder}/**",
-                "${workspaceFolder}/../CDFR2026-Program-DriveControl/include/interface",
-                "${workspaceFolder}/../cdfr2024-programme-Actionneur/include/common",
-                "/usr/include/opencv4"
-            ],
-            "defines": [],
+            "name": "CDFR2027 (build container)",
+            "compileCommands": "${workspaceFolder}/build/x86_64/compile_commands.json",
             "compilerPath": "/usr/bin/g++",
             "cStandard": "c17",
             "cppStandard": "gnu++17",
