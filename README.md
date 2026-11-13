@@ -123,6 +123,16 @@ shipped alongside the executable (`html/`, `data/`, `tests/lidar` and
 - The two images are defined in [`docker/Dockerfile.x86_64`](docker/Dockerfile.x86_64)
   and [`docker/Dockerfile.arm64`](docker/Dockerfile.arm64); rebuild them with
   `./build.sh images` after changing their contents.
+- The arm64 image pins the Raspberry Pi libcamera stack to the revision installed
+  on the robot. The fork keeps the soname (`libcamera.so.0.7`) between rebuilds
+  while changing the C++ signature of `Camera::generateConfiguration`
+  (`libcamera::Span` → `std::span`), so a binary built against another revision
+  still links and boots, then dies on the first camera call with
+  `symbol lookup error: undefined symbol` — and systemd restarts it into `INIT`.
+  The pinned `.debs` are fetched from the Pi pool and their sha256, plus the
+  installed `libcamera*.so.0.7.2` checksums, are asserted at build time. When the
+  robot's packages are upgraded, bump `RPT_LIBCAMERA_VERSION` / `RPT_LIBPISP_VERSION`
+  and the checksums together.
 - VS Code / CLion Dev Container support is available via
   [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json).
 
