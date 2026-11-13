@@ -1,4 +1,5 @@
 #include "defs/constante.h"
+#include "utils/logger.hpp"
 #include "actions/ActuatorsControl.hpp"
 
 ActuatorsControl::ActuatorsControl(Arduino* arduino, DriveControl* drive) : arduino(arduino), drive(drive) {
