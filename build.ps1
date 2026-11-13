@@ -129,14 +129,13 @@ function Deploy {
 function Run-Program([string[]]$ProgramArgs) {
     Build-Arch 'x86_64'
     $port = if ($env:CDFR_RUN_PORT) { $env:CDFR_RUN_PORT } else { '80' }
-    $containerArgs = @('sudo', './programCDFR') + $ProgramArgs
-    # Debug sounds (see AUDIO.md): Docker Desktop forwards the WSLg audio
-    # socket, which PulseAudio clients reach at the same path inside the
-    # container. Absent on Linux/macOS hosts, where nothing is added.
+    # Already root in the image; sudo would drop PULSE_SERVER.
+    $containerArgs = @('./programCDFR') + $ProgramArgs
     $dockerArgs = @('-p', "${port}:80", '--cap-add=SYS_NICE')
-    if (Test-Path '/mnt/wslg/PulseServer') {
+    # Debug sounds (AUDIO.md): Docker Desktop's path to the WSLg audio socket.
+    if ($env:OS -eq 'Windows_NT') {
         $dockerArgs += @(
-            '-v', '/mnt/wslg/PulseServer:/mnt/wslg/PulseServer:ro',
+            '-v', '/run/desktop/mnt/host/wslg:/mnt/wslg:ro',
             '-e', 'PULSE_SERVER=unix:/mnt/wslg/PulseServer'
         )
     }

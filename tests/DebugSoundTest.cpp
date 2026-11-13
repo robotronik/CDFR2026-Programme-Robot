@@ -2,7 +2,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -60,10 +59,16 @@ bool testDebugSound() {
         ok = false;
     }
 
-    // Players must be reaped once they finish, not accumulate as zombies.
+    // play() must not reap children that aren't its own.
+    const pid_t other = fork();
+    if (other == 0) _exit(0);
+
+    // Players must not accumulate as zombies.
     sleep(3); // longer than start.wav
-    kill(getpid(), SIGCHLD); // make the pending signal deliver even without a new call
-    usleep(20000);
+    if (waitpid(other, nullptr, 0) != other) {
+        LOG_ERROR("debugSound reaped a child that was not a player");
+        ok = false;
+    }
     const int children = childCount();
     if (children > 0) {
         LOG_ERROR("debugSound left ", children, " unreaped player(s)");

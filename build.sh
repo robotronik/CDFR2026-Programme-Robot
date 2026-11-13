@@ -18,12 +18,9 @@ DOCKER_RUN_EXTRA=()
 DOCKER_RUN_USER="$(id -u):$(id -g)"
 DOCKER_RUN_WORKDIR="$REPO_ROOT"
 
-# Debug sounds (see AUDIO.md): let the container reach the host's audio
-# server so `play` in the program is heard on the laptop's speakers. Only the
-# PulseAudio/PipeWire socket is shared -- no device access -- and only when the
-# host actually runs such a server (Linux with XDG_RUNTIME_DIR; not macOS/Windows).
+# Debug sounds (AUDIO.md): the host's PulseAudio/PipeWire socket, if any.
 AUDIO_RUN_ARGS=()
-PULSE_DIR="/run/user/$(id -u)/pulse"
+PULSE_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/pulse"
 if [ -S "$PULSE_DIR/native" ]; then
     AUDIO_RUN_ARGS=(-e PULSE_SERVER=unix:/pulse/native -v "$PULSE_DIR":/pulse:ro)
 fi
@@ -60,7 +57,6 @@ docker_run() {
     # No-op on hosts without SELinux.
     docker run --rm "${tty[@]}" "${ssh[@]}" \
         "${DOCKER_RUN_EXTRA[@]}" \
-        "${AUDIO_RUN_ARGS[@]}" \
         --network host \
         --security-opt label=disable \
         "${user[@]}" \
@@ -117,7 +113,8 @@ case "${1:-build}" in
         build_arch x86_64
         shift
         log "Running programCDFR from build/x86_64 (sudo is required for port 80)"
-        (cd "$REPO_ROOT/build/x86_64" && sudo ./programCDFR "$@")
+        # sudo drops XDG_RUNTIME_DIR, so pass the audio server explicitly.
+        (cd "$REPO_ROOT/build/x86_64" && sudo PULSE_SERVER="unix:$PULSE_DIR/native" ./programCDFR "$@")
         ;;
     run-docker)
         build_arch x86_64
@@ -126,7 +123,7 @@ case "${1:-build}" in
         # setProgramPriority() needs CAP_SYS_NICE, dropped by Docker by default,
         # and the capability only works for uid 0, so run as root (no --user).
         # Files the run writes (log/) are then root-owned on the host.
-        DOCKER_RUN_EXTRA=(--cap-add=SYS_NICE)
+        DOCKER_RUN_EXTRA=(--cap-add=SYS_NICE "${AUDIO_RUN_ARGS[@]}")
         DOCKER_RUN_USER=""
         DOCKER_RUN_WORKDIR="$REPO_ROOT/build/x86_64"
         docker_run "$IMAGE_X86" ./programCDFR "$@"
@@ -138,6 +135,7 @@ case "${1:-build}" in
         docker_run "$IMAGE_ARM" cmake --build --preset arm64 --target deploy
         ;;
     shell)
+        DOCKER_RUN_EXTRA=("${AUDIO_RUN_ARGS[@]}")
         case "${2:-x86_64}" in
             x86_64) ensure_image "$IMAGE_X86" docker/Dockerfile.x86_64; docker_run "$IMAGE_X86" bash ;;
             arm64)  ensure_image "$IMAGE_ARM" docker/Dockerfile.arm64; docker_run "$IMAGE_ARM" bash ;;

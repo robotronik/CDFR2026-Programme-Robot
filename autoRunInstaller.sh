@@ -16,6 +16,9 @@ install_service() {
     program_name=$(basename "$program_path")
     SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+    # Debug sounds (AUDIO.md): ALSA's default is HDMI on a Pi 5, so use the USB speaker.
+    usb_card=$(awk -F'[][ ]+' '/USB-Audio/ {print $3; exit}' /proc/asound/cards)
+
     service_content="[Unit]
 Description=Service pour $program_name
 After=network.target
@@ -30,6 +33,7 @@ AmbientCapabilities=CAP_SYS_NICE CAP_NET_BIND_SERVICE
 StandardOutput=journal
 StandardError=journal
 WorkingDirectory=$SCRIPT_DIR
+Environment=AUDIODRIVER=alsa AUDIODEV=plughw:CARD=$usb_card
 [Install]
 WantedBy=multi-user.target
 "
