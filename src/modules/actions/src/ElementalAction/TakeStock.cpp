@@ -5,6 +5,12 @@
 #include "GoToPositionAction.cpp"
 #include "navigation/navigation.h" // pour nav_return_t & position_t
 
+TakeStock::TakeStock(TableState* tableStatus, DriveControl* drive)
+    : tableState(tableStatus)
+{
+    state = MOVE1;
+}
+
 bool TakeStock::getBestQuarry(const position_t& from, position_t& target) {
     if (tableState->remainQuarry()) {
         return false;
@@ -12,6 +18,7 @@ bool TakeStock::getBestQuarry(const position_t& from, position_t& target) {
 
     position_t closest = QUARRY_POSITION[0];
     double minDistance = position_distance(from, {QUARRY_POSITION[0].x, QUARRY_POSITION[0].y, QUARRY_POSITION[0].a});
+    //TODO implement A* (pathfind a la place de position_distance)
     int maxstone = tableState->isQuarryAvailable(0) ;
     
     int taille = sizeof(tableState->quarry);
@@ -63,31 +70,50 @@ bool TakeStock::BestTake(const position_t& from, position_t& target) {
     return getBestQuarry(from, target);//TODO ajouter le vole des bloques ou la recuperation des bloques hors carriere
 }
 
-ReturnFSM_t run(){
-    getBestQuarry(drive->getPosition(), target)
-    const position_t etape = BestPositionToTake(drive->getPosition(), target)
+ReturnFSM_t TakeStock::run(){
+    getBestQuarry(drive->getPosition(), target);
+    const position_t etape = BestPositionToTake(drive->getPosition(), target);
 
+    switch (MOVE) {
+        case MOVE1:
+            nav_return_t res1 = navigation.goTo(target, true, false, false);
+            switch (res1) {
+                case NAV_PAUSED:
+                    LOG_DEBUG("TakeStock: nav is paused");
+                    moving = false;
+                    break;
+                case NAV_ERROR:
+                    errorManagement();
+                    return FSM_RETURN_ERROR;
+                case NAV_DONE:
+                    return MOVE1;
+                case NAV_IN_PROCESS:
+                    moving = true;
+                    break;
+            }
+        case MOVE2:
+            //allume les pompes 
+            nav_return_t res2 = navigation.goTo(etape, true, true, true);//TODO fast mode
+            switch (res2) {
+                case NAV_PAUSED:
+                    LOG_DEBUG("TakeStock: nav is paused");
+                    moving = false;
+                    break;
+                case NAV_ERROR:
+                    errorManagement();
+                    return FSM_RETURN_ERROR;
+                case NAV_DONE:
+                    successManagement();
+                    return FSM_RETURN_DONE;
+                case NAV_IN_PROCESS:
+                    moving = true;
+                    break;
 
-    nav_return_t res1 = navigation.goTo(target, true, false, false);
-    
-    switch (res1) {
-        case NAV_PAUSED:
-            LOG_DEBUG("GoToPositionAction: nav is paused");
-            moving = false;
-            break;
-        case NAV_ERROR:
-            errorManagement();
-            return FSM_RETURN_ERROR;
-        case NAV_DONE:
-            successManagement();
-            return FSM_RETURN_DONE;
-        case NAV_IN_PROCESS:
-            moving = true;
-            break;
+        }
+        
+        
     }
     return FSM_RETURN_WORKING;
-//allume les pompes
-    nav_return_t res2 = navigation.goTo(objectif , true, true, true);//TODO fast mode
 
 }
 
