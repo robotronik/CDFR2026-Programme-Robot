@@ -5,22 +5,45 @@ on: [push, pull_request]
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    env:
-      # Cache the Docker image layers (apt packages, repository clones) in the
-      # GitHub Actions cache; ./build.sh uses these to export and import them.
-      # The images are split into layers, so a Dockerfile or package-list change
-      # only re-runs the affected layer instead of the whole image.
-      DOCKER_CACHE_FROM: type=gha
-      DOCKER_CACHE_TO: type=gha,mode=max
-
     steps:
       - name: Checkout with submodules
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
+      # Cache the image layers in GHCR: pull the image pushed by a previous run
+      # and use it as --cache-from, then push the new one. Each Dockerfile is
+      # split into layers (clone, then packages), so a Dockerfile or
+      # package-list change only re-runs the affected layer. This needs no
+      # Actions-internal credentials, unlike buildx's type=gha backend.
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull the previous images
+        run: |
+          for arch in x86_64 arm64; do
+            docker pull "ghcr.io/${{ github.repository }}/cdfr-builder-$arch:cache" \
+              || echo "::notice::No cached image for $arch yet (first run)"
+          done
+
       - name: Build Docker images
-        run: ./build.sh images
+        run: |
+          for arch in x86_64 arm64; do
+            DOCKER_CACHE_IMAGE="ghcr.io/${{ github.repository }}/cdfr-builder-$arch:cache" \
+              ./build.sh images "$arch"
+          done
+
+      - name: Push the image cache
+        # pull_request runs from forks cannot write to GHCR.
+        if: github.event_name == 'push'
+        run: |
+          for arch in x86_64 arm64; do
+            docker push "ghcr.io/${{ github.repository }}/cdfr-builder-$arch:cache"
+          done
 
       - name: Build x86_64 and arm64
         run: ./build.sh build

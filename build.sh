@@ -23,16 +23,17 @@ log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 build_image() {
     local image="$1" dockerfile="$2"
     log "Building image $image"
-    local args=(-t "$image" -f "$dockerfile")
-    # When the caller sets DOCKER_CACHE_FROM/DOCKER_CACHE_TO (CI does, to the
-    # GitHub Actions cache) route the build through BuildKit, which keeps the
-    # individual layers. Otherwise use the plain classic builder.
-    if [ -n "${DOCKER_CACHE_FROM:-}" ] || [ -n "${DOCKER_CACHE_TO:-}" ]; then
-        [ -n "${DOCKER_CACHE_FROM:-}" ] && args+=(--cache-from "$DOCKER_CACHE_FROM")
-        [ -n "${DOCKER_CACHE_TO:-}" ] && args+=(--cache-to "$DOCKER_CACHE_TO")
-        DOCKER_BUILDKIT=1 docker build "${args[@]}" .
+    # Optional registry cache: CI sets DOCKER_CACHE_IMAGE to the image pushed by
+    # the previous run and pulls it first. BuildKit then reuses the layers of
+    # that image whose input is unchanged, and the inline cache written into it
+    # is what the next run reads.
+    if [ -n "${DOCKER_CACHE_IMAGE:-}" ]; then
+        DOCKER_BUILDKIT=1 docker build -t "$image" -f "$dockerfile" \
+            --cache-from "$DOCKER_CACHE_IMAGE" \
+            --cache-to type=inline \
+            -t "$DOCKER_CACHE_IMAGE" .
     else
-        docker build "${args[@]}" .
+        docker build -t "$image" -f "$dockerfile" .
     fi
 }
 
@@ -93,7 +94,7 @@ Commands:
   test                   Build x86_64 and run the CTest suite
   deploy                 Build arm64 and deploy it to the robot
   shell [x86_64|arm64]   Interactive shell in the target image (default: x86_64)
-  images                 (Re)build both Docker images
+  images [x86_64|arm64] (Re)build both Docker images, or just the given one
   clean                  Remove the build/ directory
 EOF
 }
@@ -144,8 +145,16 @@ case "${1:-build}" in
         esac
         ;;
     images)
-        build_image "$IMAGE_X86" docker/Dockerfile.x86_64
-        build_image "$IMAGE_ARM" docker/Dockerfile.arm64
+        if [ -n "${2:-}" ]; then
+            case "$2" in
+                x86_64) build_image "$IMAGE_X86" docker/Dockerfile.x86_64 ;;
+                arm64)  build_image "$IMAGE_ARM" docker/Dockerfile.arm64 ;;
+                *) echo "Unknown architecture: $2" >&2; exit 1 ;;
+            esac
+        else
+            build_image "$IMAGE_X86" docker/Dockerfile.x86_64
+            build_image "$IMAGE_ARM" docker/Dockerfile.arm64
+        fi
         ;;
     clean)
         rm -rf build compile_commands.json
