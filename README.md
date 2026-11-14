@@ -184,8 +184,9 @@ if VS Code does not prompt for it.
 - Shared server settings live in [`.clangd`](.clangd); command-line use works too:
   `./scripts/clangd-docker.sh --check=src/app/main.cpp`.
 - Inside the dev container the wrapper detects that it already runs in the image
-  and executes clangd directly, so `./build.sh images` must be re-run once to pick
-  up the `clangd` package added to the image.
+  and executes clangd directly.
+- An image built before clangd was added to it fails with `clangd: executable
+  file not found`: run `./build.sh images` once to rebuild it.
 - On Windows the wrapper cannot run, so use the
   [dev container](.devcontainer/devcontainer.json) there.
 - The first start can take a few seconds while clangd indexes; the index is cached
