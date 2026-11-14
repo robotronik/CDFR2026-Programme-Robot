@@ -94,7 +94,7 @@ Commands:
   deploy                 Build arm64 and deploy it to the robot
   shell [x86_64|arm64]   Interactive shell in the target image (default: x86_64)
   clangd [args...]       Language server in the x86_64 image (used by editors)
-  images                 (Re)build both Docker images
+  images [x86_64|arm64]  (Re)build the given Docker image, or both when omitted
   clean                  Remove the build/ directory
 EOF
 }
@@ -150,8 +150,13 @@ case "${1:-build}" in
         docker_run "$IMAGE_X86" clangd "$@"
         ;;
     images)
-        build_image "$IMAGE_X86" docker/Dockerfile.x86_64
-        build_image "$IMAGE_ARM" docker/Dockerfile.arm64
+        case "${2:-}" in
+            x86_64) build_image "$IMAGE_X86" docker/Dockerfile.x86_64 ;;
+            arm64)  build_image "$IMAGE_ARM" docker/Dockerfile.arm64 ;;
+            "")     build_image "$IMAGE_X86" docker/Dockerfile.x86_64
+                    build_image "$IMAGE_ARM" docker/Dockerfile.arm64 ;;
+            *) echo "Unknown architecture: $2" >&2; exit 1 ;;
+        esac
         ;;
     clean)
         rm -rf build compile_commands.json

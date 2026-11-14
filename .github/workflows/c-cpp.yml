@@ -28,8 +28,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Builds the Docker image first when it is missing (always, on a fresh runner).
-      - name: Build ${{ matrix.arch }}
+      - name: Build the ${{ matrix.arch }} image
+        run: ./build.sh images ${{ matrix.arch }}
+
+      - name: Build the ${{ matrix.arch }} program
         run: ./build.sh build ${{ matrix.arch }}
 
       - name: Push the image cache
