@@ -42,7 +42,7 @@ bool ActuatorsControl::setPumpState(bool state, int pumpIdx){
 }
 
 bool ActuatorsControl::setElectroState(bool state, int electroIdx){
-    return arduino->writeSensor(SENSOR_NUM_8, state); //TODO : Change to eletroIdx when multiple pumps are used
+    return arduino->writeSensor(1, state); //TODO : Change to eletroIdx when multiple pumps are used
 }
 // ------------------------------------------------------
 //                   STEPPER CONTROL
