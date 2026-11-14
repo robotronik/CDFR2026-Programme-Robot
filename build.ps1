@@ -129,7 +129,7 @@ function Deploy {
 function Run-Program([string[]]$ProgramArgs) {
     Build-Arch 'x86_64'
     $port = if ($env:CDFR_RUN_PORT) { $env:CDFR_RUN_PORT } else { '80' }
-    $containerArgs = @('sudo', './programCDFR') + $ProgramArgs
+    $containerArgs = @('./programCDFR') + $ProgramArgs
     Write-Log "Running programCDFR from build/x86_64 (host port $port -> container 80)"
     Invoke-Container -Image $ImageX86 `
         -DockerArgs @('-p', "${port}:80", '--cap-add=SYS_NICE') `
