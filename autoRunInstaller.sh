@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# The binary is built against these exact libcamera packages (see
+# docker/Dockerfile.arm64); an apt upgrade to another revision breaks the camera.
+hold_libcamera() {
+    local pkgs=(libcamera0.8 libcamera-ipa libpisp1 libpisp-common)
+    local missing=()
+    for pkg in "${pkgs[@]}"; do
+        dpkg -s "$pkg" >/dev/null 2>&1 || missing+=("$pkg")
+    done
+    if [ ${#missing[@]} -ne 0 ]; then
+        echo "AVERTISSEMENT : paquets libcamera absents, non figés : ${missing[*]}" >&2
+        echo "Installez-les avec : sudo apt install ${missing[*]}" >&2
+    fi
+    sudo apt-mark hold "${pkgs[@]}" >/dev/null
+}
+
 install_service() {
     if [ $# -ne 1 ]; then
         echo "Utilisation: $0 --install /chemin/vers/votre/programme"
@@ -15,6 +30,8 @@ install_service() {
 
     program_name=$(basename "$program_path")
     SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+    hold_libcamera
 
     service_content="[Unit]
 Description=Service pour $program_name

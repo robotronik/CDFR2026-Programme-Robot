@@ -2,7 +2,7 @@
 
 The robot runs **Raspberry Pi OS Trixie (64-bit)**. The arm64 build image is
 Debian 13, so the binary links against the libraries the Pi ships: GCC 14 /
-glibc 2.41, OpenCV 4.10 and the Raspberry Pi libcamera fork (`libcamera.so.0.7`).
+glibc 2.41, OpenCV 4.10 and the Raspberry Pi libcamera fork (`libcamera.so.0.8`).
 It is `aarch64` and cannot run on a 32-bit OS.
 
 ## Setup
@@ -15,11 +15,22 @@ sudo apt install -y \
   libsqlite3-0 \
   libopencv-objdetect410 libopencv-imgcodecs410 libopencv-calib3d410 \
   libopencv-features2d410 libopencv-imgproc410 libopencv-core410 \
-  libcamera0.7 libcamera-ipa libpisp1
+  libcamera0.8 libcamera-ipa libpisp1
 ```
 
-`libopencv-objdetect410` provides ArUco; `libcamera0.7` comes from
+`libopencv-objdetect410` provides ArUco; `libcamera0.8` comes from
 `archive.raspberrypi.com`.
+
+The binary links against `libcamera.so.0.8`, so the Pi must have it (and the
+matching `libcamera-ipa`/`libpisp1`) installed, not the older `libcamera0.7`.
+After upgrading an existing robot, check with:
+
+```bash
+ldd /home/robotronik/CDFR/arm_bin/programCDFR | grep libcamera
+```
+
+It must print `libcamera.so.0.8`; if it still prints `.0.7`, the old revision is
+still installed and the service will fail at startup.
 
 Then enable the I2C bus and the UART (used by the actuators and the lidar) in:
 
