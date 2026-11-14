@@ -139,6 +139,7 @@ case "${1:-build}" in
         ;;
     clangd)
         shift
+        [ -f /.dockerenv ] && exec clangd "$@"   # already inside the image (dev container)
         # stdout carries the LSP stream: everything else goes to stderr.
         ensure_image "$IMAGE_X86" docker/Dockerfile.x86_64 >&2
         [ -f build/x86_64/compile_commands.json ] || docker_run "$IMAGE_X86" cmake --preset x86_64 >&2

@@ -162,11 +162,11 @@ Windows-specific notes:
 ## 🧠 Editor and IntelliSense (clangd)
 
 Code completion uses **clangd**, run inside the x86_64 image by
-[`scripts/clangd-docker.sh`](scripts/clangd-docker.sh), because the headers
+`./build.sh clangd`, because the headers
 (OpenCV, SQLite, the robot interfaces, the FetchContent dependencies) only exist
 there. Install the
 [clangd extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd);
-[`.vscode/settings.json`](.vscode/settings.json) already points it at the script
+[`.vscode/settings.json`](.vscode/settings.json) already points it at that command
 and turns off the Microsoft C/C++ IntelliSense so the two do not compete.
 
 - `compile_commands.json` is refreshed by every `./build.sh build`; after adding
