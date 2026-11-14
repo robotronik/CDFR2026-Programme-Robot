@@ -1,8 +1,2 @@
-# Only the Dockerfiles and the package lists are part of the image build. Keeping
-# the context tiny means a Dockerfile edit does not re-hash the whole repository.
-# The package lists are `ADD`ed by the Dockerfiles, so they stay in the context.
-docker/Dockerfile.arm64
-docker/Dockerfile.x86_64
-
-!docker/packages.arm64
-!docker/packages.x86_64
+# No build step reads the context: the Dockerfiles fetch everything themselves.
+*
