@@ -1,10 +1,15 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
-#include "defs/tableState.hpp"
+#include "defs/constante.h"
+#include "defs/structs.hpp"
+#include "utils/utils.h"
 #include "drive_interface.h"
 #include "navigation/navigation.h" // pour nav_return_t & position_t
+#include "defs/tableState.hpp"
 #include "navigation/pathfind.h"
 #include "actions/ActuatorsControl.hpp"
+#include <cmath>
+
 /*
     Action d'attente simple : temporise pendant WAIT_DURATION_MS
     puis rend la main (FSM_RETURN_DONE) pour permettre au FSM
@@ -25,11 +30,11 @@ class DropAction : public VirtualAction {
 
     protected:
         /*
-            Error management and sucess management not used but still implemented for exemple
+            Error management and sucess management not used but still could bin in the future
+            bool errorManagement();
+            bool successManagement();
         */
-        bool errorManagement();
-        bool successManagement();
-
+        
     private:
         TableState* tableState;
         DriveControl* drive;

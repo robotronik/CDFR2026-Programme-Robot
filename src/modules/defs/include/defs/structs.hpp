@@ -43,9 +43,9 @@ typedef struct
 typedef enum
 {
     UNCONSTRUCTED=0,
-    WALL=8,
-    TOWER=6,
-    DOOR=23,
+    WALL=5,
+    TOWER=5,
+    DOOR=20,
 } constructionType_t;
 
 typedef struct

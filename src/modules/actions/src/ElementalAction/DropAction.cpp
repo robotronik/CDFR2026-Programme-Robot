@@ -1,11 +1,6 @@
+#pragma once
 #include "actions/ElementalAction/DropAction.hpp"
-#include "actions/VirtualAction.hpp"
-#include "defs/constante.h"
-#include "defs/structs.hpp"
-#include "drive_interface.h"
-#include "navigation/navigation.h"
-#include "utils/utils.h"
-#include <cmath>
+
 
 //#include "utils/logger.hpp"
 
@@ -13,6 +8,7 @@ DropAction::DropAction(TableState* state, DriveControl* drive, ActuatorsControl*
     this->tableState = state;
     this->drive = drive;
     this->actuators = actuators;
+    this->nom = "DropAction";
     reset();
 }
 
@@ -47,7 +43,7 @@ void DropAction::reset() {
 bool DropAction::available(float &reward) {
     reset();
     if (getBestDropZone()) {
-        reward = (float)WALL/best_path_length;
+        reward = (float)(WALL + 3)/best_path_length;
     }else{
         reward = 0.0f;
     }
@@ -65,6 +61,7 @@ bool DropAction::mouvementBlock() {
 }
 
 bool DropAction::getBestDropZone(){
+    // TODO check if has block to drop
     if (!tableState->remainEmptyWall()) return false;
     if(!tableState->needWall()) return false;
     position_t robot_pos = drive->getPosition();
