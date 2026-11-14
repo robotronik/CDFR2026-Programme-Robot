@@ -24,7 +24,8 @@ lidar and run the API in test mode.
 
 `./build.sh run` runs the program as root inside the container, so that
 `--cap-add=SYS_NICE` can raise its real-time priority. The files it writes (the
-`log/` directory) are therefore owned by root on the host.
+`log/` directory) are therefore owned by root on the host; `./build.sh clean`
+deletes them through the container.
 
 ## Windows
 
