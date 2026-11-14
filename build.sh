@@ -13,22 +13,25 @@ IMAGE_X86="cdfr-builder-x86_64"
 IMAGE_ARM="cdfr-builder-arm64"
 
 # Extra `docker run` flags, user and workdir applied to the next docker_run call;
-# callers override these before invoking it (see the run-docker command).
+# callers override these before invoking it (see the run command).
 DOCKER_RUN_EXTRA=()
 DOCKER_RUN_USER="$(id -u):$(id -g)"
 DOCKER_RUN_WORKDIR="$REPO_ROOT"
 
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 
+# Images are labelled with their Dockerfile's hash, so editing a Dockerfile
+# rebuilds its image on the next run.
 build_image() {
     local image="$1" dockerfile="$2"
     log "Building image $image"
-    docker build -t "$image" -f "$dockerfile" .
+    docker build -t "$image" --label "cdfr_dockerfile=$(git hash-object "$dockerfile")" -f "$dockerfile" .
 }
 
 ensure_image() {
     local image="$1" dockerfile="$2"
-    docker image inspect "$image" >/dev/null 2>&1 || build_image "$image" "$dockerfile"
+    [ "$(docker image inspect -f '{{.Config.Labels.cdfr_dockerfile}}' "$image" 2>/dev/null)" = "$(git hash-object "$dockerfile")" ] \
+        || build_image "$image" "$dockerfile"
 }
 
 # docker_run <image> <command...>
@@ -37,7 +40,7 @@ docker_run() {
     local tty=() ssh=() user=()
     [ -t 0 ] && tty+=(-it)
     # An empty DOCKER_RUN_USER keeps the image's default user (root), which is
-    # required to actually exercise added capabilities (see run-docker).
+    # required to actually exercise added capabilities (see run).
     if [ -n "$DOCKER_RUN_USER" ]; then
         user=(--user "$DOCKER_RUN_USER")
     fi
@@ -78,11 +81,11 @@ Usage: ./build.sh <command> [arch]
 
 Commands:
   build [x86_64|arm64]   Build the given target, or both when omitted
-  run [args...]          Build x86_64 and run on the host (needs sudo + OpenCV 4.6)
-  run-docker [args...]   Build x86_64 and run inside the x86_64 image (no host deps)
+  run [args...]          Build x86_64 and run it inside the x86_64 image
   test                   Build x86_64 and run the CTest suite
   deploy                 Build arm64 and deploy it to the robot
   shell [x86_64|arm64]   Interactive shell in the target image (default: x86_64)
+  clangd [args...]       Language server in the x86_64 image (used by editors)
   images                 (Re)build both Docker images
   clean                  Remove the build/ directory
 EOF
@@ -105,13 +108,7 @@ case "${1:-build}" in
     run)
         build_arch x86_64
         shift
-        log "Running programCDFR from build/x86_64 (sudo is required for port 80)"
-        (cd "$REPO_ROOT/build/x86_64" && sudo ./programCDFR "$@")
-        ;;
-    run-docker)
-        build_arch x86_64
-        shift
-        log "Running programCDFR in the x86_64 image (no host libraries needed)"
+        log "Running programCDFR in the x86_64 image"
         # setProgramPriority() needs CAP_SYS_NICE, dropped by Docker by default,
         # and the capability only works for uid 0, so run as root (no --user).
         # Files the run writes (log/) are then root-owned on the host.
@@ -132,6 +129,15 @@ case "${1:-build}" in
             arm64)  ensure_image "$IMAGE_ARM" docker/Dockerfile.arm64; docker_run "$IMAGE_ARM" bash ;;
             *) echo "Unknown architecture: $2" >&2; exit 1 ;;
         esac
+        ;;
+    clangd)
+        shift
+        [ -f /.dockerenv ] && exec clangd "$@"   # already inside the image (dev container)
+        # stdout carries the LSP stream: everything else goes to stderr.
+        ensure_image "$IMAGE_X86" docker/Dockerfile.x86_64 >&2
+        [ -f build/x86_64/compile_commands.json ] || docker_run "$IMAGE_X86" cmake --preset x86_64 >&2
+        DOCKER_RUN_EXTRA=(-i)
+        docker_run "$IMAGE_X86" clangd "$@"
         ;;
     images)
         build_image "$IMAGE_X86" docker/Dockerfile.x86_64

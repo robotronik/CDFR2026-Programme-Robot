@@ -1,7 +1,5 @@
 {
-    "clangd.path": "${workspaceFolder}/scripts/clangd-docker.sh",
-    "windows": {
-        "clangd.path": "clangd"
-    },
+    "clangd.path": "${workspaceFolder}/build.sh",
+    "clangd.arguments": ["clangd"],
     "C_Cpp.intelliSenseEngine": "disabled"
 }

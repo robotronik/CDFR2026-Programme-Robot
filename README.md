@@ -23,10 +23,6 @@ This program enables the robot to perform various tasks such as navigation, data
   compiler, CMake, or library needs to be installed on your machine.
 - SSH access to the robot, only if you want to deploy.
 
-Nothing else is needed for `build`, `test`, `deploy`, `shell` or `run-docker`.
-Only `run`, which executes the binary directly on the host instead of inside the
-image, needs the runtime libraries listed in
-[Running on the host](#-running-on-the-host).
 
 ## 📥 Installation
 
@@ -63,8 +59,7 @@ Everything runs inside Docker; the host compiler is never used.
 ./build.sh build          # Build both x86_64 and arm64
 ./build.sh build x86_64   # Build a single target
 ./build.sh build arm64
-./build.sh run            # Build x86_64 and run it on the host (needs sudo + OpenCV 4.6)
-./build.sh run-docker     # Build x86_64 and run it inside the Docker image (no host deps)
+./build.sh run            # Build x86_64 and run it inside the Docker image
 ./build.sh test           # Build x86_64 and run the CTest suite
 ./build.sh deploy         # Build arm64 and deploy it to the robot
 ./build.sh shell          # Interactive shell in the x86_64 image
@@ -73,45 +68,15 @@ Everything runs inside Docker; the host compiler is never used.
 ./build.sh clean          # Remove the build/ directory
 ```
 
-`./build.sh run` executes the x86_64 binary from `build/x86_64` (so it finds its
-`html/` and `data/` assets) and needs `sudo` because the REST server binds port 80,
-on top of the host libraries listed below.
-
-`./build.sh run-docker` runs the very same binary inside the `cdfr-builder-x86_64`
-image instead. It needs neither `sudo` nor any host library, and it is the
-portable way to run the program when the host's OpenCV version differs from the
-one used to build (the binary is linked against OpenCV 4.6 and will fail with
-`libopencv_aruco.so.406: cannot open shared object file` on a host that ships a
-different version). Internally the container runs as root — needed so that
-`--cap-add=SYS_NICE` can raise the program's real-time priority, the same thing
-`sudo` does for `run` — and binds port 80 through `--network host`. As a result
-the files it writes (the `log/` directory) are owned by root on the host.
+`./build.sh run` runs the binary from `build/x86_64` (so it finds its `html/` and
+`data/` assets) inside the `cdfr-builder-x86_64` image, so it needs neither `sudo`
+nor any host library. The container runs as root — needed so that
+`--cap-add=SYS_NICE` can raise the program's real-time priority — and binds
+port 80 through `--network host`. As a result the files it writes (the `log/`
+directory) are owned by root on the host.
 
 Local x86_64 builds have no hardware, so they use the emulated I2C, disable the
 lidar, and run the API in test mode.
-
-### 🏃 Running on the host
-
-`./build.sh run` executes the binary outside Docker, so the host must provide the
-same shared libraries the binary was linked against. Those come from the image's
-OpenCV 4.6 (Ubuntu 24.04 packaging), plus `sudo`/`CAP_SYS_NICE` for the real-time
-scheduler and port 80.
-
-On **Ubuntu 24.04**:
-
-```bash
-sudo apt install libopencv-contrib406t64 libopencv-videoio406t64
-```
-
-`libopencv-contrib406t64` brings the contrib module set (`libopencv_aruco.so.406`)
-and its core dependencies; `libopencv-videoio406t64` provides the camera/video
-I/O module. Both are needed — a plain `libopencv-dev` install of a *different*
-OpenCV version is not enough, since the loader matches the exact `406` ABI.
-
-On a host whose OpenCV is a different version (for example 25.04 ships OpenCV
-4.10 as `libopencv_*410`), these libraries cannot be installed from the
-distribution repositories. Use `./build.sh run-docker` there instead of installing
-OpenCV by hand.
 
 Artifacts are written to `build/x86_64/programCDFR` and
 `build/arm64/programCDFR`. Each build directory also contains the runtime bundle
@@ -121,8 +86,8 @@ shipped alongside the executable (`html/`, `data/` and
 - The workspace is mounted at its own path, so build outputs appear directly on
   the host and file ownership is preserved.
 - The two images are defined in [`docker/Dockerfile.x86_64`](docker/Dockerfile.x86_64)
-  and [`docker/Dockerfile.arm64`](docker/Dockerfile.arm64); rebuild them with
-  `./build.sh images` after changing their contents.
+  and [`docker/Dockerfile.arm64`](docker/Dockerfile.arm64). An image is rebuilt
+  automatically when its Dockerfile changes; `./build.sh images` forces a rebuild.
 - VS Code / CLion Dev Container support is available via
   [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json).
 
@@ -161,35 +126,18 @@ Windows-specific notes:
 
 ## 🧠 Editor and IntelliSense (clangd)
 
-Code completion and navigation use **clangd**: the headers it needs (OpenCV,
-SQLite, the DriveControl/Actionneur interfaces, the FetchContent dependencies)
-only exist inside the build image, so a language server running on the host can
-never resolve them. [`scripts/clangd-docker.sh`](scripts/clangd-docker.sh) starts
-clangd *inside* `cdfr-builder-x86_64`, with the repository mounted at its own path
-so the absolute paths in `build/x86_64/compile_commands.json` stay valid.
+Code completion uses **clangd**, run inside the x86_64 image by
+`./build.sh clangd`, because the headers
+(OpenCV, SQLite, the robot interfaces, the FetchContent dependencies) only exist
+there. Install the
+[clangd extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd);
+[`.vscode/settings.json`](.vscode/settings.json) already points it at that command
+and turns off the Microsoft C/C++ IntelliSense so the two do not compete.
 
-Nothing is installed on the host beyond Docker: [`.vscode/settings.json`](.vscode/settings.json)
-points `clangd.path` at the wrapper and disables the Microsoft C/C++ extension's
-IntelliSense so both do not fight over the same files. Install the
-[clangd extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)
-if VS Code does not prompt for it.
-
-- `./build.sh build x86_64` regenerates `build/x86_64/compile_commands.json`
-  (CMake reconfigures on every run); the `compile_commands.json` at the repository
-  root is a symlink to it.
-- The wrapper also reconfigures CMake when the database is missing or older than
-  the CMake files, so after adding a source file (and listing it in its
-  `CMakeLists.txt`) restart clangd with *Clangd: Restart language server*.
-  Sources not listed in any `CMakeLists.txt` have no entry in the database.
-- Shared server settings live in [`.clangd`](.clangd); command-line use works too:
-  `./scripts/clangd-docker.sh --check=src/app/main.cpp`.
-- Inside the dev container the wrapper detects that it already runs in the image
-  and executes clangd directly, so `./build.sh images` must be re-run once to pick
-  up the `clangd` package added to the image.
-- On Windows the wrapper cannot run; `.vscode/settings.json` falls back to a plain
-  `clangd`, so use the [dev container](.devcontainer/devcontainer.json) there.
-- The first start can take a few seconds while clangd indexes; the index is cached
-  in `.cache/clangd/`.
+- `compile_commands.json` is refreshed by every `./build.sh build`; after adding
+  a source file, build once and restart clangd.
+- From a shell: `./build.sh clangd --check=src/app/main.cpp`.
+- On Windows, use the [dev container](.devcontainer/devcontainer.json).
 
 ## 🛠️ Compilation for Raspberry Pi
 

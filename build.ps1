@@ -49,19 +49,20 @@ function Assert-Docker {
 
 function Build-Image([string]$Image, [string]$Dockerfile) {
     Write-Log "Building image $Image"
-    docker build -t $Image -f $Dockerfile .
+    docker build -t $Image --label "cdfr_dockerfile=$(git hash-object $Dockerfile)" -f $Dockerfile .
     if ($LASTEXITCODE -ne 0) { throw "Failed to build image $Image" }
 }
 
+# Images are labelled with their Dockerfile's hash (see Build-Image), so editing
+# a Dockerfile rebuilds its image on the next run.
 function Ensure-Image([string]$Image, [string]$Dockerfile) {
-    $exists = $false
+    $label = $null
     try {
-        & docker image inspect $Image *> $null
-        $exists = ($LASTEXITCODE -eq 0)
+        $label = & docker image inspect -f '{{.Config.Labels.cdfr_dockerfile}}' $Image 2> $null
     } catch {
-        $exists = $false
+        $label = $null
     }
-    if (-not $exists) { Build-Image $Image $Dockerfile }
+    if ($label -ne (git hash-object $Dockerfile)) { Build-Image $Image $Dockerfile }
 }
 
 function Get-ArchSpec([string]$Arch) {
