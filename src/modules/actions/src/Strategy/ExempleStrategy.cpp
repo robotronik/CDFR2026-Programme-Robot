@@ -4,10 +4,12 @@
 #include "utils/logger.hpp"
 #include "navigation/pathfind.h"
 #include "defs/constante.h"
+
 #include "actions/ElementalAction/WaitAction.hpp"
 //#include "actions/ElementalAction/CalibrationAction.hpp"
 #include "actions/ElementalAction/NavHomeAction.hpp"
 #include "actions/ElementalAction/GoToPositionAction.hpp"
+#include "actions/ElementalAction/DropAction.hpp"
 
 /*
     ============================================================
@@ -20,10 +22,11 @@
     mesure qu'elles deviennent la plus prioritaire.
 */
 
-ExempleStrat::ExempleStrat(DriveControl* dc, TableState* ts){
+ExempleStrat::ExempleStrat(DriveControl* dc, TableState* ts, ActuatorsControl* ac){
     nom = "ExempleStrat";
     drive = dc;
     tableStatus = ts;
+    actuators = ac;
     reset();
 }
 
@@ -70,10 +73,11 @@ void ExempleStrat::buildPossibleActions(){
 
     addAction(1.0f, std::make_unique<WaitAction>(400));
     //addAction(1.0f, std::make_unique<CalibrationAction>(drive, tableStatus));
-    addAction(1.0f, std::make_unique<NavHomeAction>(tableStatus, drive));
+    addAction(0.0f, std::make_unique<NavHomeAction>(tableStatus, drive));
     // Cible dynamique : l'élément de jeu le plus proche connu de tableStatus,
     // fixé au démarrage de l'action (cf. GoToPositionAction::getClosestElement()).
     addAction(1.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, drive));
+    addAction(1.0f, std::make_unique<DropAction>(tableStatus, drive, actuators));
 }
 
 VirtualAction* ExempleStrat::tempAction(){
