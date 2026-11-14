@@ -123,14 +123,16 @@ shipped alongside the executable (`html/`, `data/`, `tests/lidar` and
 - The two images are defined in [`docker/Dockerfile.x86_64`](docker/Dockerfile.x86_64)
   and [`docker/Dockerfile.arm64`](docker/Dockerfile.arm64); rebuild them with
   `./build.sh images` after changing their contents.
-- CI caches the image layers in GHCR: it pulls `cdfr-builder-<arch>:cache` (the
-  image pushed by the previous run), builds with it as `--cache-from`, and pushes
-  the new image back ([`.github/workflows/c-cpp.yml`](.github/workflows/c-cpp.yml)).
+- CI caches the image layers in GHCR: `./build.sh images` pulls
+  `cdfr-builder-<arch>:cache` (the image pushed by the previous run), builds with
+  it as `--cache-from`, and CI pushes the new image back
+  ([`.github/workflows/c-cpp.yml`](.github/workflows/c-cpp.yml)).
   Only the layers whose input changed are rebuilt: a new external-repository
   commit re-runs the `ADD` layer that fetches it, a Dockerfile edit re-runs its
   layer and the ones after it. The cache is only pushed on `push` events, so runs from forks
-  build without it. Set `DOCKER_CACHE_IMAGE=<image>` when calling
-  `./build.sh images` to use the same cache locally.
+  build without it. Set `DOCKER_CACHE_REGISTRY=<registry/path>` when calling
+  `./build.sh images` to use the same cache locally. The images need BuildKit
+  (`docker-buildx`).
 - VS Code / CLion Dev Container support is available via
   [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json).
 
