@@ -21,9 +21,17 @@ DOCKER_RUN_WORKDIR="$REPO_ROOT"
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 
 build_image() {
-    local image="$1" dockerfile="$2"
+    local image="$1" dockerfile="$2" cache_args=()
     log "Building image $image"
-    docker build -t "$image" -f "$dockerfile" .
+    # Optional layer cache in a registry (GHCR in CI): reuse the inline cache of
+    # the last pushed $image:cache and tag the new build as the next one.
+    if [ -n "${DOCKER_CACHE_REGISTRY:-}" ]; then
+        local cache="$DOCKER_CACHE_REGISTRY/$image:cache"
+        docker pull "$cache" || true # none on the first run
+        cache_args=(--cache-from "$cache" --cache-to type=inline -t "$cache")
+    fi
+    # The Dockerfiles use ADD <git url>, which only BuildKit supports.
+    DOCKER_BUILDKIT=1 docker build -t "$image" -f "$dockerfile" "${cache_args[@]}" .
 }
 
 ensure_image() {

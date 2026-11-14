@@ -5,15 +5,34 @@ on: [push, pull_request]
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
+    env:
+      DOCKER_CACHE_REGISTRY: ghcr.io/${{ github.repository_owner }}/cdfr2026-programme-robot
     steps:
       - name: Checkout with submodules
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
+      # Cache the image layers in GHCR: build.sh pulls the image pushed by a
+      # previous run and uses it as --cache-from, then the new one is pushed, so
+      # only layers whose input changed are rebuilt. This needs no
+      # Actions-internal credentials, unlike buildx's type=gha backend.
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Docker images
         run: ./build.sh images
+
+      - name: Push the image cache
+        # Only main writes the cache, so branches can't overwrite it; PR runs read it.
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker push "$DOCKER_CACHE_REGISTRY/cdfr-builder-x86_64:cache"
+          docker push "$DOCKER_CACHE_REGISTRY/cdfr-builder-arm64:cache"
 
       - name: Build x86_64 and arm64
         run: ./build.sh build
