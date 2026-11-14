@@ -2,7 +2,7 @@
   "version": 3,
   "cmakeMinimumRequired": {
     "major": 3,
-    "minor": 20,
+    "minor": 21,
     "patch": 0
   },
   "configurePresets": [
@@ -13,8 +13,7 @@
       "binaryDir": "${sourceDir}/build/x86_64",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CDFR_EXTERNAL_DIR": "/opt/cdfr"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {
@@ -25,7 +24,7 @@
       "toolchainFile": "${sourceDir}/cmake/aarch64_toolchain.cmake",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CDFR_EXTERNAL_DIR": "/opt/cdfr"
+        "BUILD_TESTING": "OFF"
       }
     }
   ],

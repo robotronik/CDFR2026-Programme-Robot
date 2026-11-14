@@ -38,15 +38,13 @@ jobs:
         run: ./build.sh build
 
       - name: Run tests (x86_64)
-        # TODO: fix the Lidar test so continue-on-error can be removed.
-        continue-on-error: true
         run: ./build.sh test
 
       - name: Package runtime bundles
         run: |
           for arch in x86_64 arm64; do
             dir="build/$arch"
-            files="programCDFR html data tests/lidar autoRunInstaller.sh"
+            files="programCDFR html data autoRunInstaller.sh"
             (cd "$dir" && zip -r "../../programCDFR-$arch.zip" $files)
           done
 
