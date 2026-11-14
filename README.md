@@ -121,8 +121,8 @@ shipped alongside the executable (`html/`, `data/` and
 - The workspace is mounted at its own path, so build outputs appear directly on
   the host and file ownership is preserved.
 - The two images are defined in [`docker/Dockerfile.x86_64`](docker/Dockerfile.x86_64)
-  and [`docker/Dockerfile.arm64`](docker/Dockerfile.arm64); rebuild them with
-  `./build.sh images` after changing their contents.
+  and [`docker/Dockerfile.arm64`](docker/Dockerfile.arm64). An image is rebuilt
+  automatically when its Dockerfile changes; `./build.sh images` forces a rebuild.
 - VS Code / CLion Dev Container support is available via
   [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json).
 
@@ -186,7 +186,7 @@ if VS Code does not prompt for it.
 - Inside the dev container the wrapper detects that it already runs in the image
   and executes clangd directly.
 - An image built before clangd was added to it fails with `clangd: executable
-  file not found`: run `./build.sh images` once to rebuild it.
+  file not found`: run any `./build.sh` command once to rebuild it.
 - On Windows the wrapper cannot run, so use the
   [dev container](.devcontainer/devcontainer.json) there.
 - The first start can take a few seconds while clangd indexes; the index is cached

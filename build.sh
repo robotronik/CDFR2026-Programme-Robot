@@ -20,15 +20,18 @@ DOCKER_RUN_WORKDIR="$REPO_ROOT"
 
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 
+# Images are labelled with their Dockerfile's hash, so editing a Dockerfile
+# rebuilds its image on the next run.
 build_image() {
     local image="$1" dockerfile="$2"
     log "Building image $image"
-    docker build -t "$image" -f "$dockerfile" .
+    docker build -t "$image" --label "cdfr_dockerfile=$(git hash-object "$dockerfile")" -f "$dockerfile" .
 }
 
 ensure_image() {
     local image="$1" dockerfile="$2"
-    docker image inspect "$image" >/dev/null 2>&1 || build_image "$image" "$dockerfile"
+    [ "$(docker image inspect -f '{{.Config.Labels.cdfr_dockerfile}}' "$image" 2>/dev/null)" = "$(git hash-object "$dockerfile")" ] \
+        || build_image "$image" "$dockerfile"
 }
 
 # docker_run <image> <command...>
