@@ -19,8 +19,10 @@ This program enables the robot to perform various tasks such as navigation, data
 
 ## 🔧 Prerequisites
 
-- **Docker** (daemon running) — all compilation happens inside containers, so no
-  compiler, CMake, or library needs to be installed on your machine.
+- **Docker** (daemon running) with **BuildKit** (`docker-buildx`; bundled with
+  Docker Desktop, a separate package on e.g. Arch) — all compilation happens
+  inside containers, so no compiler, CMake, or library needs to be installed on
+  your machine.
 - SSH access to the robot, only if you want to deploy.
 
 Nothing else is needed for `build`, `test`, `deploy`, `shell` or `run-docker`.
@@ -131,8 +133,7 @@ shipped alongside the executable (`html/`, `data/`, `tests/lidar` and
   commit re-runs the `ADD` layer that fetches it, a Dockerfile edit re-runs its
   layer and the ones after it. The cache is only pushed from `main`, so other branches
   and pull requests read it but can't overwrite it. Set `DOCKER_CACHE_REGISTRY=<registry/path>` when calling
-  `./build.sh images` to use the same cache locally. The images need BuildKit
-  (`docker-buildx`).
+  `./build.sh images` to use the same cache locally.
 - VS Code / CLion Dev Container support is available via
   [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json).
 
