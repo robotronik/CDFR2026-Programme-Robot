@@ -122,16 +122,13 @@ shipped alongside the executable (`html/`, `data/`, `tests/lidar` and
   the host and file ownership is preserved.
 - The two images are defined in [`docker/Dockerfile.x86_64`](docker/Dockerfile.x86_64)
   and [`docker/Dockerfile.arm64`](docker/Dockerfile.arm64); rebuild them with
-  `./build.sh images` after changing their contents. The installed apt packages
-  live in [`docker/packages.x86_64`](docker/packages.x86_64) and
-  [`docker/packages.arm64`](docker/packages.arm64), so editing an installed package
-  does not touch the Dockerfile (and vice versa).
+  `./build.sh images` after changing their contents.
 - CI caches the image layers in GHCR: it pulls `cdfr-builder-<arch>:cache` (the
   image pushed by the previous run), builds with it as `--cache-from`, and pushes
   the new image back ([`.github/workflows/c-cpp.yml`](.github/workflows/c-cpp.yml)).
   Only the layers whose input changed are rebuilt: a new external-repository
-  commit re-runs the clone layer, a `docker/packages.<arch>` change re-runs the
-  package layer. The cache is only pushed on `push` events, so runs from forks
+  commit re-runs the clone layer, a Dockerfile edit re-runs its layer and the
+  ones after it. The cache is only pushed on `push` events, so runs from forks
   build without it. Set `DOCKER_CACHE_IMAGE=<image>` when calling
   `./build.sh images` to use the same cache locally.
 - VS Code / CLion Dev Container support is available via

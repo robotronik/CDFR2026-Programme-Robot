@@ -1,16 +1,21 @@
 # Build image for the x86_64 target (native compilation inside the container).
 
-# Git, CA certs are needed by the clone layer below, so it can come before the
-# package layer. Each RUN is a separate cache layer: packages are always found in
-# the CI image cache (exported to the GitHub Actions cache by the workflow), while
-# a new external-repo commit only re-runs the (fast) clone layer.
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        cmake \
+        ninja-build \
         git \
         ca-certificates \
+        sudo \
+        libsqlite3-dev \
+        libopencv-dev \
+        libopencv-contrib-dev \
+        clangd-18 \
+    && ln -s /usr/lib/llvm-18/bin/clangd /usr/bin/clangd \
     && rm -rf /var/lib/apt/lists/*
 
 # External robot repositories: drive/protocol headers used at compile time.
@@ -25,14 +30,6 @@ RUN mkdir -p /opt/cdfr \
         https://github.com/robotronik/cdfr2024-programme-Actionneur.git \
         /opt/cdfr/cdfr2024-programme-Actionneur \
     && rm -rf /opt/cdfr/*/.git
-
-# Only the package list matters for this layer: changing what is installed
-# re-runs it, but it is restored from cache when the list is unchanged.
-ADD docker/packages.x86_64 /tmp/cdfr-packages.list
-RUN apt-get update \
-    && xargs -a /tmp/cdfr-packages.list apt-get install -y --no-install-recommends \
-    && ln -s /usr/lib/llvm-18/bin/clangd /usr/bin/clangd \
-    && rm -rf /var/lib/apt/lists/* /tmp/cdfr-packages.list
 
 # Reuse the base image's non-root `ubuntu` user (uid/gid 1000) so workspace files
 # stay user-owned (Dev Containers remaps the uid; build.sh passes --user).
