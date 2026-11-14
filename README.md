@@ -186,8 +186,8 @@ if VS Code does not prompt for it.
 - Inside the dev container the wrapper detects that it already runs in the image
   and executes clangd directly, so `./build.sh images` must be re-run once to pick
   up the `clangd` package added to the image.
-- On Windows the wrapper cannot run; `.vscode/settings.json` falls back to a plain
-  `clangd`, so use the [dev container](.devcontainer/devcontainer.json) there.
+- On Windows the wrapper cannot run, so use the
+  [dev container](.devcontainer/devcontainer.json) there.
 - The first start can take a few seconds while clangd indexes; the index is cached
   in `.cache/clangd/`.
 
