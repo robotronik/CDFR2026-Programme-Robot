@@ -120,18 +120,13 @@ case "${1:-build}" in
         log "Running programCDFR in the x86_64 image (http://localhost:${CDFR_RUN_PORT:-8080})"
         # setProgramPriority() needs CAP_SYS_NICE, dropped by Docker by default,
         # and the capability only works for uid 0, so run as root (no --user).
+        # Files the run writes (log/) are then root-owned on the host.
         # Publish the port instead of --network host, which rootless Docker and
         # Docker Desktop don't expose to the host; 8080 because rootless can't bind 80.
         DOCKER_RUN_EXTRA=(--cap-add=SYS_NICE -p "${CDFR_RUN_PORT:-8080}:80")
         DOCKER_RUN_USER=""
         DOCKER_RUN_WORKDIR="$REPO_ROOT/build/x86_64"
         docker_run "$IMAGE_X86" ./programCDFR "$@"
-        # Root-owned log/ files make `./build.sh clean` fail, so give them back
-        # to the host user.
-        docker run --rm --security-opt label=disable \
-            -v "$REPO_ROOT:$REPO_ROOT" \
-            "$IMAGE_X86" chown -R "$(id -u):$(id -g)" \
-            "$REPO_ROOT/build/x86_64/log" 2>/dev/null || true
         ;;
     deploy)
         ensure_image "$IMAGE_ARM" docker/Dockerfile.arm64
@@ -165,7 +160,11 @@ case "${1:-build}" in
         esac
         ;;
     clean)
-        rm -rf build compile_commands.json
+        if ! rm -rf build compile_commands.json; then
+            # `run` leaves root-owned files (log/): delete them as root.
+            DOCKER_RUN_USER=""
+            docker_run "$IMAGE_X86" rm -rf "$REPO_ROOT/build"
+        fi
         log "Build artifacts removed"
         ;;
     -h|--help|help)
