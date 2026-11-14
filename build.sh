@@ -160,7 +160,11 @@ case "${1:-build}" in
         esac
         ;;
     clean)
-        rm -rf build compile_commands.json
+        if ! rm -rf build compile_commands.json; then
+            # `run` leaves root-owned files (log/): delete them as root.
+            DOCKER_RUN_USER=""
+            docker_run "$IMAGE_X86" rm -rf "$REPO_ROOT/build"
+        fi
         log "Build artifacts removed"
         ;;
     -h|--help|help)
