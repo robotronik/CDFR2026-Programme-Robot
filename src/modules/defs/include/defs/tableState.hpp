@@ -1,6 +1,7 @@
 #pragma once
 #include "defs/structs.hpp"
 #include "defs/matTypes.hpp"
+#include "defs/constante.h"
 #include "navigation/driveControl.h"
 #include <utils/json.hpp>
 #include <vector>
@@ -39,8 +40,19 @@ class TableState
         // l'élément le plus proche du robot.
         std::vector<MatGameElement> elements;
 
+        wallZone_t wallZone[WALL_ZONE_COUNT];
+        towerZone_t towerZone[TOWER_ZONE_COUNT];
+
+        bool remainEmptyWall();
+        bool remainEmptyTower();
+        bool remainEmptyDrop();
+        int needTower();
+        int needWall();
+        bool needDoor();
+
     private:
         DriveControl* drive;
+        void initDropZone();
 };
 
 // Serialize tableState

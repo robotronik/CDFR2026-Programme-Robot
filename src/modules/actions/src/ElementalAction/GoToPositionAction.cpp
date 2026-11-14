@@ -114,7 +114,7 @@ bool GoToPositionAction::available(float &reward){
     // Cible dynamique : sans élément connu, l'action n'est pas jouable.
     if (!resolveTarget()) return false;
     double path_length_mm;
-    position_t path[100]; // Assuming a maximum path length
+    position_t path[1024]; // Assuming a maximum path length
     if(!pathfind(drive->getPosition(), target, path, path_length_mm)){
         return false;
     }
