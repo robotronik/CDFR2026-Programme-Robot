@@ -6,6 +6,7 @@ target_sources(actions
         src/ElementalAction/GoToPositionAction.cpp
         src/ElementalAction/NavHomeAction.cpp
         src/ElementalAction/WaitAction.cpp
+        src/ElementalAction/DropAction.cpp
         src/Strategy/ExempleStrategy.cpp
         src/ActuatorsControl.cpp
         src/MainActionFSM.cpp
