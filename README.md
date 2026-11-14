@@ -161,36 +161,18 @@ Windows-specific notes:
 
 ## 🧠 Editor and IntelliSense (clangd)
 
-Code completion and navigation use **clangd**: the headers it needs (OpenCV,
-SQLite, the DriveControl/Actionneur interfaces, the FetchContent dependencies)
-only exist inside the build image, so a language server running on the host can
-never resolve them. [`scripts/clangd-docker.sh`](scripts/clangd-docker.sh) starts
-clangd *inside* `cdfr-builder-x86_64`, with the repository mounted at its own path
-so the absolute paths in `build/x86_64/compile_commands.json` stay valid.
+Code completion uses **clangd**, run inside the x86_64 image by
+[`scripts/clangd-docker.sh`](scripts/clangd-docker.sh), because the headers
+(OpenCV, SQLite, the robot interfaces, the FetchContent dependencies) only exist
+there. Install the
+[clangd extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd);
+[`.vscode/settings.json`](.vscode/settings.json) already points it at the script
+and turns off the Microsoft C/C++ IntelliSense so the two do not compete.
 
-Nothing is installed on the host beyond Docker: [`.vscode/settings.json`](.vscode/settings.json)
-points `clangd.path` at the wrapper and disables the Microsoft C/C++ extension's
-IntelliSense so both do not fight over the same files. Install the
-[clangd extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)
-if VS Code does not prompt for it.
-
-- `./build.sh build x86_64` regenerates `build/x86_64/compile_commands.json`
-  (CMake reconfigures on every run); the `compile_commands.json` at the repository
-  root is a symlink to it.
-- The wrapper also reconfigures CMake when the database is missing or older than
-  the CMake files, so after adding a source file (and listing it in its
-  `CMakeLists.txt`) restart clangd with *Clangd: Restart language server*.
-  Sources not listed in any `CMakeLists.txt` have no entry in the database.
-- Shared server settings live in [`.clangd`](.clangd); command-line use works too:
-  `./scripts/clangd-docker.sh --check=src/app/main.cpp`.
-- Inside the dev container the wrapper detects that it already runs in the image
-  and executes clangd directly.
-- An image built before clangd was added to it fails with `clangd: executable
-  file not found`: run any `./build.sh` command once to rebuild it.
-- On Windows the wrapper cannot run, so use the
-  [dev container](.devcontainer/devcontainer.json) there.
-- The first start can take a few seconds while clangd indexes; the index is cached
-  in `.cache/clangd/`.
+- `compile_commands.json` is refreshed by every `./build.sh build`; after adding
+  a source file, build once and restart clangd.
+- From a shell: `./build.sh clangd --check=src/app/main.cpp`.
+- On Windows, use the [dev container](.devcontainer/devcontainer.json).
 
 ## 🛠️ Compilation for Raspberry Pi
 
