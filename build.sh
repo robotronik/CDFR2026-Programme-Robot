@@ -33,7 +33,8 @@ build_image() {
         cache_args=(--cache-from "$cache" --cache-to type=inline -t "$cache")
     fi
     # The Dockerfiles use ADD <git url>, which only BuildKit supports.
-    DOCKER_BUILDKIT=1 docker build -t "$image" --label "cdfr_dockerfile=$(git hash-object "$dockerfile")" -f "$dockerfile" "${cache_args[@]}" .
+    DOCKER_BUILDKIT=1 docker build -t "$image" --label "cdfr_dockerfile=$(git hash-object "$dockerfile")" \
+        -f "$dockerfile" "${cache_args[@]}" .
 }
 
 ensure_image() {
