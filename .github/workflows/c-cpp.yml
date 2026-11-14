@@ -4,7 +4,11 @@ on: [push, pull_request]
 
 jobs:
   build-and-test:
+    name: build-and-test (${{ matrix.arch }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x86_64, arm64]
     env:
       DOCKER_CACHE_REGISTRY: ghcr.io/${{ github.repository_owner }}/cdfr2026-programme-robot
     steps:
@@ -24,40 +28,27 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker images
-        run: ./build.sh images
+      # Builds the Docker image first when it is missing (always, on a fresh runner).
+      - name: Build ${{ matrix.arch }}
+        run: ./build.sh build ${{ matrix.arch }}
 
       - name: Push the image cache
         # Only main writes the cache, so branches can't overwrite it; PR runs read it.
         if: github.ref == 'refs/heads/main'
-        run: |
-          docker push "$DOCKER_CACHE_REGISTRY/cdfr-builder-x86_64:cache"
-          docker push "$DOCKER_CACHE_REGISTRY/cdfr-builder-arm64:cache"
+        run: docker push "$DOCKER_CACHE_REGISTRY/cdfr-builder-${{ matrix.arch }}:cache"
 
-      - name: Build x86_64 and arm64
-        run: ./build.sh build
-
-      - name: Run tests (x86_64)
+      - name: Run tests
+        if: matrix.arch == 'x86_64'
         run: ./build.sh test
 
-      - name: Package runtime bundles
+      - name: Package runtime bundle
         run: |
-          for arch in x86_64 arm64; do
-            dir="build/$arch"
-            files="programCDFR html data autoRunInstaller.sh"
-            (cd "$dir" && zip -r "../../programCDFR-$arch.zip" $files)
-          done
+          cd "build/${{ matrix.arch }}"
+          zip -r "../../programCDFR-${{ matrix.arch }}.zip" programCDFR html data autoRunInstaller.sh
 
-      - name: Upload x86_64 bundle
+      - name: Upload bundle
         uses: actions/upload-artifact@v4
         with:
-          name: programCDFR-x86_64
-          path: programCDFR-x86_64.zip
-          if-no-files-found: error
-
-      - name: Upload arm64 bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: programCDFR-arm64
-          path: programCDFR-arm64.zip
+          name: programCDFR-${{ matrix.arch }}
+          path: programCDFR-${{ matrix.arch }}.zip
           if-no-files-found: error
