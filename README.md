@@ -127,8 +127,8 @@ shipped alongside the executable (`html/`, `data/`, `tests/lidar` and
   image pushed by the previous run), builds with it as `--cache-from`, and pushes
   the new image back ([`.github/workflows/c-cpp.yml`](.github/workflows/c-cpp.yml)).
   Only the layers whose input changed are rebuilt: a new external-repository
-  commit re-runs the clone layer, a Dockerfile edit re-runs its layer and the
-  ones after it. The cache is only pushed on `push` events, so runs from forks
+  commit re-runs the `ADD` layer that fetches it, a Dockerfile edit re-runs its
+  layer and the ones after it. The cache is only pushed on `push` events, so runs from forks
   build without it. Set `DOCKER_CACHE_IMAGE=<image>` when calling
   `./build.sh images` to use the same cache locally.
 - VS Code / CLion Dev Container support is available via

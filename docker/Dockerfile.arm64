@@ -50,14 +50,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Baked into the image so the build is self-contained.
 ARG DRIVE_CONTROL_REF=main
 ARG ACTIONNEUR_REF=master
-RUN mkdir -p /opt/cdfr \
-    && git clone --depth 1 --branch "${DRIVE_CONTROL_REF}" \
-        https://github.com/robotronik/CDFR2026-Program-DriveControl.git \
-        /opt/cdfr/CDFR2026-Program-DriveControl \
-    && git clone --depth 1 --branch "${ACTIONNEUR_REF}" \
-        https://github.com/robotronik/cdfr2024-programme-Actionneur.git \
-        /opt/cdfr/cdfr2024-programme-Actionneur \
-    && rm -rf /opt/cdfr/*/.git
+# BuildKit resolves the branch head on each build, so a new commit invalidates the layer; .git is not kept.
+ADD https://github.com/robotronik/CDFR2026-Program-DriveControl.git#${DRIVE_CONTROL_REF} /opt/cdfr/CDFR2026-Program-DriveControl
+ADD https://github.com/robotronik/cdfr2024-programme-Actionneur.git#${ACTIONNEUR_REF} /opt/cdfr/cdfr2024-programme-Actionneur
 
 # Debian has no non-root user, so create `ubuntu` (uid/gid 1000) like the old
 # Ubuntu base: workspace files stay user-owned, and build.sh's --user and the

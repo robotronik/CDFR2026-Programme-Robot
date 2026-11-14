@@ -22,14 +22,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Baked into the image so the build is self-contained.
 ARG DRIVE_CONTROL_REF=main
 ARG ACTIONNEUR_REF=master
-RUN mkdir -p /opt/cdfr \
-    && git clone --depth 1 --branch "${DRIVE_CONTROL_REF}" \
-        https://github.com/robotronik/CDFR2026-Program-DriveControl.git \
-        /opt/cdfr/CDFR2026-Program-DriveControl \
-    && git clone --depth 1 --branch "${ACTIONNEUR_REF}" \
-        https://github.com/robotronik/cdfr2024-programme-Actionneur.git \
-        /opt/cdfr/cdfr2024-programme-Actionneur \
-    && rm -rf /opt/cdfr/*/.git
+# BuildKit resolves the branch head on each build, so a new commit invalidates the layer; .git is not kept.
+ADD https://github.com/robotronik/CDFR2026-Program-DriveControl.git#${DRIVE_CONTROL_REF} /opt/cdfr/CDFR2026-Program-DriveControl
+ADD https://github.com/robotronik/cdfr2024-programme-Actionneur.git#${ACTIONNEUR_REF} /opt/cdfr/cdfr2024-programme-Actionneur
 
 # Reuse the base image's non-root `ubuntu` user (uid/gid 1000) so workspace files
 # stay user-owned (Dev Containers remaps the uid; build.sh passes --user).
