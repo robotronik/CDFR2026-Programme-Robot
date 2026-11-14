@@ -129,8 +129,8 @@ function Deploy {
 
 function Run-Program([string[]]$ProgramArgs) {
     Build-Arch 'x86_64'
-    $port = if ($env:CDFR_RUN_PORT) { $env:CDFR_RUN_PORT } else { '80' }
-    $containerArgs = @('sudo', './programCDFR') + $ProgramArgs
+    $port = if ($env:CDFR_RUN_PORT) { $env:CDFR_RUN_PORT } else { '8080' }
+    $containerArgs = @('./programCDFR') + $ProgramArgs
     Write-Log "Running programCDFR from build/x86_64 (host port $port -> container 80)"
     Invoke-Container -Image $ImageX86 `
         -DockerArgs @('-p', "${port}:80", '--cap-add=SYS_NICE') `
@@ -150,7 +150,7 @@ Usage: build.bat <command> [arch|args...]
 
 Commands:
   build [x86_64|arm64]   Build the given target, or both when omitted
-  run [args...]          Build x86_64 and run the program locally (REST API on port 80)
+  run [args...]          Build x86_64 and run the program locally (UI on http://localhost:8080)
   test                   Build x86_64 and run the CTest suite
   deploy                 Build arm64 and deploy it to the robot
   shell [x86_64|arm64]   Interactive shell in the target image (default: x86_64)
@@ -158,7 +158,7 @@ Commands:
   clean                  Remove the build/ directory
 
 Environment:
-  CDFR_RUN_PORT          Host port published for ./programCDFR (default: 80)
+  CDFR_RUN_PORT          Host port published for ./programCDFR (default: 8080)
 '@
 }
 
