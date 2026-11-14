@@ -70,10 +70,10 @@ Everything runs inside Docker; the host compiler is never used.
 
 `./build.sh run` runs the binary from `build/x86_64` (so it finds its `html/` and
 `data/` assets) inside the `cdfr-builder-x86_64` image, so it needs neither `sudo`
-nor any host library. The container runs as root — needed so that
-`--cap-add=SYS_NICE` can raise the program's real-time priority — and binds
-port 80 through `--network host`. As a result the files it writes (the `log/`
-directory) are owned by root on the host.
+nor any host library. The UI is on <http://localhost:8080> (set `CDFR_RUN_PORT` to
+use another port). The container runs as root — needed so that
+`--cap-add=SYS_NICE` can raise the program's real-time priority — so the files it
+writes (the `log/` directory) are owned by root on the host.
 
 Local x86_64 builds have no hardware, so they use the emulated I2C, disable the
 lidar, and run the API in test mode.
