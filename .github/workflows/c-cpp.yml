@@ -28,8 +28,8 @@ jobs:
         run: ./build.sh images
 
       - name: Push the image cache
-        # pull_request runs from forks cannot write to GHCR.
-        if: github.event_name == 'push'
+        # Only main writes the cache, so branches can't overwrite it; PR runs read it.
+        if: github.ref == 'refs/heads/main'
         run: |
           docker push "$DOCKER_CACHE_REGISTRY/cdfr-builder-x86_64:cache"
           docker push "$DOCKER_CACHE_REGISTRY/cdfr-builder-arm64:cache"

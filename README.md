@@ -129,8 +129,8 @@ shipped alongside the executable (`html/`, `data/`, `tests/lidar` and
   ([`.github/workflows/c-cpp.yml`](.github/workflows/c-cpp.yml)).
   Only the layers whose input changed are rebuilt: a new external-repository
   commit re-runs the `ADD` layer that fetches it, a Dockerfile edit re-runs its
-  layer and the ones after it. The cache is only pushed on `push` events, so runs from forks
-  build without it. Set `DOCKER_CACHE_REGISTRY=<registry/path>` when calling
+  layer and the ones after it. The cache is only pushed from `main`, so other branches
+  and pull requests read it but can't overwrite it. Set `DOCKER_CACHE_REGISTRY=<registry/path>` when calling
   `./build.sh images` to use the same cache locally. The images need BuildKit
   (`docker-buildx`).
 - VS Code / CLion Dev Container support is available via
