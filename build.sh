@@ -13,7 +13,7 @@ IMAGE_X86="cdfr-builder-x86_64"
 IMAGE_ARM="cdfr-builder-arm64"
 
 # Extra `docker run` flags, user and workdir applied to the next docker_run call;
-# callers override these before invoking it (see the run-docker command).
+# callers override these before invoking it (see the run command).
 DOCKER_RUN_EXTRA=()
 DOCKER_RUN_USER="$(id -u):$(id -g)"
 DOCKER_RUN_WORKDIR="$REPO_ROOT"
@@ -40,7 +40,7 @@ docker_run() {
     local tty=() ssh=() user=()
     [ -t 0 ] && tty+=(-it)
     # An empty DOCKER_RUN_USER keeps the image's default user (root), which is
-    # required to actually exercise added capabilities (see run-docker).
+    # required to actually exercise added capabilities (see run).
     if [ -n "$DOCKER_RUN_USER" ]; then
         user=(--user "$DOCKER_RUN_USER")
     fi
@@ -81,8 +81,7 @@ Usage: ./build.sh <command> [arch]
 
 Commands:
   build [x86_64|arm64]   Build the given target, or both when omitted
-  run [args...]          Build x86_64 and run on the host (needs sudo + OpenCV 4.6)
-  run-docker [args...]   Build x86_64 and run inside the x86_64 image (no host deps)
+  run [args...]          Build x86_64 and run it inside the x86_64 image
   test                   Build x86_64 and run the CTest suite
   deploy                 Build arm64 and deploy it to the robot
   shell [x86_64|arm64]   Interactive shell in the target image (default: x86_64)
@@ -109,13 +108,7 @@ case "${1:-build}" in
     run)
         build_arch x86_64
         shift
-        log "Running programCDFR from build/x86_64 (sudo is required for port 80)"
-        (cd "$REPO_ROOT/build/x86_64" && sudo ./programCDFR "$@")
-        ;;
-    run-docker)
-        build_arch x86_64
-        shift
-        log "Running programCDFR in the x86_64 image (no host libraries needed)"
+        log "Running programCDFR in the x86_64 image"
         # setProgramPriority() needs CAP_SYS_NICE, dropped by Docker by default,
         # and the capability only works for uid 0, so run as root (no --user).
         # Files the run writes (log/) are then root-owned on the host.

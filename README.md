@@ -23,10 +23,6 @@ This program enables the robot to perform various tasks such as navigation, data
   compiler, CMake, or library needs to be installed on your machine.
 - SSH access to the robot, only if you want to deploy.
 
-Nothing else is needed for `build`, `test`, `deploy`, `shell` or `run-docker`.
-Only `run`, which executes the binary directly on the host instead of inside the
-image, needs the runtime libraries listed in
-[Running on the host](#-running-on-the-host).
 
 ## 📥 Installation
 
@@ -63,8 +59,7 @@ Everything runs inside Docker; the host compiler is never used.
 ./build.sh build          # Build both x86_64 and arm64
 ./build.sh build x86_64   # Build a single target
 ./build.sh build arm64
-./build.sh run            # Build x86_64 and run it on the host (needs sudo + OpenCV 4.6)
-./build.sh run-docker     # Build x86_64 and run it inside the Docker image (no host deps)
+./build.sh run            # Build x86_64 and run it inside the Docker image
 ./build.sh test           # Build x86_64 and run the CTest suite
 ./build.sh deploy         # Build arm64 and deploy it to the robot
 ./build.sh shell          # Interactive shell in the x86_64 image
@@ -73,45 +68,15 @@ Everything runs inside Docker; the host compiler is never used.
 ./build.sh clean          # Remove the build/ directory
 ```
 
-`./build.sh run` executes the x86_64 binary from `build/x86_64` (so it finds its
-`html/` and `data/` assets) and needs `sudo` because the REST server binds port 80,
-on top of the host libraries listed below.
-
-`./build.sh run-docker` runs the very same binary inside the `cdfr-builder-x86_64`
-image instead. It needs neither `sudo` nor any host library, and it is the
-portable way to run the program when the host's OpenCV version differs from the
-one used to build (the binary is linked against OpenCV 4.6 and will fail with
-`libopencv_aruco.so.406: cannot open shared object file` on a host that ships a
-different version). Internally the container runs as root — needed so that
-`--cap-add=SYS_NICE` can raise the program's real-time priority, the same thing
-`sudo` does for `run` — and binds port 80 through `--network host`. As a result
-the files it writes (the `log/` directory) are owned by root on the host.
+`./build.sh run` runs the binary from `build/x86_64` (so it finds its `html/` and
+`data/` assets) inside the `cdfr-builder-x86_64` image, so it needs neither `sudo`
+nor any host library. The container runs as root — needed so that
+`--cap-add=SYS_NICE` can raise the program's real-time priority — and binds
+port 80 through `--network host`. As a result the files it writes (the `log/`
+directory) are owned by root on the host.
 
 Local x86_64 builds have no hardware, so they use the emulated I2C, disable the
 lidar, and run the API in test mode.
-
-### 🏃 Running on the host
-
-`./build.sh run` executes the binary outside Docker, so the host must provide the
-same shared libraries the binary was linked against. Those come from the image's
-OpenCV 4.6 (Ubuntu 24.04 packaging), plus `sudo`/`CAP_SYS_NICE` for the real-time
-scheduler and port 80.
-
-On **Ubuntu 24.04**:
-
-```bash
-sudo apt install libopencv-contrib406t64 libopencv-videoio406t64
-```
-
-`libopencv-contrib406t64` brings the contrib module set (`libopencv_aruco.so.406`)
-and its core dependencies; `libopencv-videoio406t64` provides the camera/video
-I/O module. Both are needed — a plain `libopencv-dev` install of a *different*
-OpenCV version is not enough, since the loader matches the exact `406` ABI.
-
-On a host whose OpenCV is a different version (for example 25.04 ships OpenCV
-4.10 as `libopencv_*410`), these libraries cannot be installed from the
-distribution repositories. Use `./build.sh run-docker` there instead of installing
-OpenCV by hand.
 
 Artifacts are written to `build/x86_64/programCDFR` and
 `build/arm64/programCDFR`. Each build directory also contains the runtime bundle
