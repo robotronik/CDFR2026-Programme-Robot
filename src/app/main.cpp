@@ -53,7 +53,7 @@ ActuatorsControl actuators(&arduino, &drive);
 TableState tableStatus(&drive);
 
 // Brain Init
-VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus);
+VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus, &actuators);
 
 // Strategies selectable through the REST API
 std::vector<VirtualStrategy*> strategies = { currentStrategy };
