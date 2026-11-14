@@ -1,6 +1,7 @@
 #pragma once
 #include "defs/structs.hpp"
 #include "defs/matTypes.hpp"
+#include "defs/constante.h"
 #include "navigation/driveControl.h"
 #include <utils/json.hpp>
 #include <vector>
@@ -42,8 +43,19 @@ class TableState
         bool remainQuarry();
         int isQuarryAvailable(int idx);
 
+        wallZone_t wallZone[WALL_ZONE_COUNT];
+        towerZone_t towerZone[TOWER_ZONE_COUNT];
+
+        bool remainEmptyWall();
+        bool remainEmptyTower();
+        bool remainEmptyDrop();
+        int needTower();
+        int needWall();
+        bool needDoor();
+
     private:
         DriveControl* drive;
+        void initDropZone();
 };
 
 // Serialize tableState
