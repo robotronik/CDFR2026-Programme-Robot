@@ -6,9 +6,6 @@
   },
   "workspaceFolder": "/workspaces/CDFR2026-Programme-Robot",
   "remoteUser": "ubuntu",
-  "mounts": [
-    "source=cdfr-devcontainer-ccache,target=/ccache,type=volume"
-  ],
   "customizations": {
     "vscode": {
       "settings": {

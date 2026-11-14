@@ -1,0 +1,2 @@
+# No build step reads the context: the Dockerfiles fetch everything themselves.
+*

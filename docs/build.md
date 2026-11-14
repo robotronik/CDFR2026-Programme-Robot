@@ -9,6 +9,9 @@
   OpenCV, SQLite, libcamera (ARM) and the `drive_interface.h` / `protocol.h`
   headers. An image is rebuilt automatically when its Dockerfile changes;
   `./build.sh images` forces a rebuild.
+- CI caches the image layers in GHCR: `build.sh` pulls `cdfr-builder-<arch>:cache`
+  and builds with it as `--cache-from`. Only `main` pushes the cache back, so
+  branches read it but can't overwrite it. Set `DOCKER_CACHE_REGISTRY` to use it locally.
 
 ## Outputs
 

@@ -1,44 +1,56 @@
 name: CI
 
-on: [push, pull_request]
+on: push
 
 jobs:
   build-and-test:
+    name: build-and-test (${{ matrix.arch }})
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        arch: [x86_64, arm64]
+    env:
+      DOCKER_CACHE_REGISTRY: ghcr.io/${{ github.repository_owner }}/cdfr2026-programme-robot
     steps:
       - name: Checkout with submodules
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Build Docker images
-        run: ./build.sh images
+      # Cache the image layers in GHCR: build.sh pulls the image pushed by a
+      # previous run and uses it as --cache-from, then the new one is pushed, so
+      # only layers whose input changed are rebuilt. This needs no
+      # Actions-internal credentials, unlike buildx's type=gha backend.
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build x86_64 and arm64
-        run: ./build.sh build
+      - name: Build the ${{ matrix.arch }} image
+        run: ./build.sh images ${{ matrix.arch }}
 
-      - name: Run tests (x86_64)
+      - name: Build the ${{ matrix.arch }} program
+        run: ./build.sh build ${{ matrix.arch }}
+
+      - name: Push the image cache
+        # Only main writes the cache, so branches can't overwrite it; PR runs read it.
+        if: github.ref == 'refs/heads/main'
+        run: docker push "$DOCKER_CACHE_REGISTRY/cdfr-builder-${{ matrix.arch }}:cache"
+
+      - name: Run tests
+        if: matrix.arch == 'x86_64'
         run: ./build.sh test
 
-      - name: Package runtime bundles
+      - name: Package runtime bundle
         run: |
-          for arch in x86_64 arm64; do
-            dir="build/$arch"
-            files="programCDFR html data autoRunInstaller.sh"
-            (cd "$dir" && zip -r "../../programCDFR-$arch.zip" $files)
-          done
+          cd "build/${{ matrix.arch }}"
+          zip -r "../../programCDFR-${{ matrix.arch }}.zip" programCDFR html data autoRunInstaller.sh
 
-      - name: Upload x86_64 bundle
+      - name: Upload bundle
         uses: actions/upload-artifact@v4
         with:
-          name: programCDFR-x86_64
-          path: programCDFR-x86_64.zip
-          if-no-files-found: error
-
-      - name: Upload arm64 bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: programCDFR-arm64
-          path: programCDFR-arm64.zip
+          name: programCDFR-${{ matrix.arch }}
+          path: programCDFR-${{ matrix.arch }}.zip
           if-no-files-found: error

@@ -4,7 +4,8 @@ The program that controls the Robotronik robot for the CDFR (Coupe de France de 
 
 ## 🔧 Prerequisites
 
-- **Docker**, daemon running.
+- **Docker** with BuildKit (the `docker-buildx` package on Linux, bundled with
+  Docker Desktop), daemon running.
   Everything is compiled inside Docker images, so no compiler or library is
   needed on your machine.
 - SSH access to the robot, only to deploy.
@@ -40,7 +41,7 @@ The program that controls the Robotronik robot for the CDFR (Coupe de France de 
 ./build.sh deploy         # Build arm64 and deploy it to the robot
 ./build.sh shell [arm64]  # Interactive shell in the x86_64 (or arm64) image
 ./build.sh clangd         # Language server in the x86_64 image (used by editors)
-./build.sh images         # (Re)build the Docker images
+./build.sh images [arm64] # (Re)build both Docker images (or one)
 ./build.sh clean          # Remove the build/ directory
 ```
 
