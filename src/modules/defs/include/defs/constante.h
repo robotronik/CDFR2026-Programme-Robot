@@ -39,9 +39,10 @@ const position_t OPPONENT_POS_UNKNOWN = { .x = 3000, .y = 0, .a = 0 };
 #define SENSOR_NUM_3         3
 #define LS_TOP_NUM           4
 #define LS_BOTTOM_NUM        5
-#define SENSOR_NUM_6         6
-#define SENSOR_NUM_7         7
-#define SENSOR_NUM_8         1
+// Define the nums of the arduino for the PUMPS
+#define PUMP_3_NUM           6
+#define PUMP_2_NUM           7
+#define PUMP_1_NUM           8
 
 
 #define MAX_WIDTH_TABLE 1000
