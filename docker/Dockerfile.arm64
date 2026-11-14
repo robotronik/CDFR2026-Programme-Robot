@@ -7,42 +7,35 @@ FROM debian:trixie
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Add the Raspberry Pi archive for the libcamera fork that drives the Pi 5 camera.
-# It is marked trusted (not signed-by): its InRelease is SHA1-signed, which
-# trixie's `sqv` refuses. (Debian's own trixie suites already cover arm64.)
+# Add the Raspberry Pi archive: the pinned libcamera below needs its
+# libtensorflow-lite. It is marked trusted (not signed-by): its InRelease is
+# SHA1-signed, which trixie's `sqv` refuses. (Debian's own trixie suites already
+# cover arm64.) Low priority, so Debian wins everywhere it has the package.
 RUN dpkg --add-architecture arm64 \
     && printf '%s\n' \
         'deb [trusted=yes] http://archive.raspberrypi.com/debian/ trixie main' \
-        > /etc/apt/sources.list.d/raspberrypi.list
-
-# Keep the Pi archive at low priority so Debian wins everywhere, and prefer it
-# only for the libcamera stack. Pins must name the foreign architecture
-# explicitly (pkg:arm64) or they do not match; libpisp1 is Multi-Arch: same and
-# also in Debian, so both architectures are pinned to the Pi version so apt can
-# pair arm64 libcamera0.7 with a matching libpisp1.
-RUN printf '%s\n' \
-        'Package: libcamera-dev:arm64 libcamera0.7:arm64 libcamera-ipa:arm64 libpisp1:arm64 libpisp1:amd64 libpisp-common' \
-        'Pin: origin "archive.raspberrypi.com"' \
-        'Pin-Priority: 1000' \
-        '' \
+        > /etc/apt/sources.list.d/raspberrypi.list \
+    && printf '%s\n' \
         'Package: *' \
         'Pin: origin "archive.raspberrypi.com"' \
         'Pin-Priority: 100' \
         > /etc/apt/preferences.d/raspberrypi.pref
 
-# libcamera revision installed on the robot. The archive only indexes the newest
-# ones, so the .debs are downloaded from the pool and checked against
-# docker/libcamera.sha256.
-ARG RPT_LIBCAMERA_VERSION=0.7.2+rpt20260817-1
-ARG RPT_LIBPISP_VERSION=1.7.0-1
-ARG RPI_POOL=http://archive.raspberrypi.com/debian/pool/main
+# The exact libcamera revision installed on the robot (see docs/raspberry-pi.md).
+# The archive only indexes the newest revisions, so the .debs come from its pool.
+ARG RPI_POOL=https://archive.raspberrypi.com/debian/pool/main
+ADD --checksum=sha256:c7dfaadcf9cd3b03fc41f0d457c88736d2638fa79d1cca11fc3637777cdae3c9 ${RPI_POOL}/libc/libcamera/libcamera0.7_0.7.2+rpt20260817-1_arm64.deb /tmp/debs/
+ADD --checksum=sha256:b799340d3f753563f583f705af26411b45d8426b6f13d0b734b4da0872bb3b62 ${RPI_POOL}/libc/libcamera/libcamera-dev_0.7.2+rpt20260817-1_arm64.deb /tmp/debs/
+ADD --checksum=sha256:0de238bc7f0a23bf4ab90604d232c88e92c0b5fa724272d555fdc570ca4d30f4 ${RPI_POOL}/libc/libcamera/libcamera-ipa_0.7.2+rpt20260817-1_arm64.deb /tmp/debs/
+ADD --checksum=sha256:8fa7ecd55730771249c243132a562f43477c513858de2e3b79eef04cbdefc8e1 ${RPI_POOL}/libp/libpisp/libpisp1_1.7.0-1_arm64.deb /tmp/debs/
+ADD --checksum=sha256:d2a97e4e5c9cd182fb1878aefcacb2dee665c012024a046e976876102d0f76ab ${RPI_POOL}/libp/libpisp/libpisp-common_1.7.0-1_all.deb /tmp/debs/
 
-# The apt lists are kept for the pinned install below (same layer series).
+# The headers keep their 2026-08 package date: touch them so ninja recompiles a
+# build/arm64 tree built against another libcamera revision.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         cmake \
         ninja-build \
         git \
-        curl \
         ca-certificates \
         pkg-config \
         gcc-aarch64-linux-gnu \
@@ -50,29 +43,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libsqlite3-dev:arm64 \
         libopencv-dev:arm64 \
         libopencv-contrib-dev:arm64 \
+        /tmp/debs/*.deb \
         rsync \
-        openssh-client
-
-# Checksums come from the build context rather than the network, so a branch (or
-# an unmerged change) builds.
-COPY docker/libcamera.sha256 /tmp/libcamera.sha256
-
-# Headers keep their 2026-08 package date: touch them so ninja recompiles a
-# build/arm64 tree built against another libcamera revision.
-RUN set -eu; \
-    curl -fsSLO "${RPI_POOL}/libc/libcamera/libcamera0.7_${RPT_LIBCAMERA_VERSION}_arm64.deb"; \
-    curl -fsSLO "${RPI_POOL}/libc/libcamera/libcamera-dev_${RPT_LIBCAMERA_VERSION}_arm64.deb"; \
-    curl -fsSLO "${RPI_POOL}/libc/libcamera/libcamera-ipa_${RPT_LIBCAMERA_VERSION}_arm64.deb"; \
-    curl -fsSLO "${RPI_POOL}/libp/libpisp/libpisp1_${RPT_LIBPISP_VERSION}_arm64.deb"; \
-    curl -fsSLO "${RPI_POOL}/libp/libpisp/libpisp-common_${RPT_LIBPISP_VERSION}_all.deb"; \
-    sha256sum -c /tmp/libcamera.sha256; \
-    apt-get install -y --no-install-recommends ./*.deb; \
-    rm -rf /var/lib/apt/lists/* ./*.deb /tmp/libcamera.sha256; \
-    find /usr/include/libcamera -name '*.h' -exec touch {} +
-
-# The robot has 0.7.2 with the Span-based generateConfiguration, not the std::span of 0.8.
-RUN test "$(readlink -f /usr/lib/aarch64-linux-gnu/libcamera.so.0.7)" = /usr/lib/aarch64-linux-gnu/libcamera.so.0.7.2 \
-    && grep -q 'generateConfiguration(Span<const StreamRole>' /usr/include/libcamera/libcamera/camera.h
+        openssh-client \
+    && rm -rf /var/lib/apt/lists/* /tmp/debs \
+    && find /usr/include/libcamera -name '*.h' -exec touch {} +
 
 # External robot repositories: drive/protocol headers used at compile time.
 # Baked into the image so the build is self-contained.

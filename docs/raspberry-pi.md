@@ -23,15 +23,12 @@ sudo apt install -y \
 
 ### Pinned libcamera revision
 
-The arm64 build image installs the libcamera revision installed on the robot.
-The fork keeps the soname (`libcamera.so.0.7`) while changing the C++ signature
-of `Camera::generateConfiguration` (`libcamera::Span` → `std::span`), so a binary
-built against another revision boots, then dies on the first camera call
-(`symbol lookup error`). The archive only indexes newer revisions, so the `.debs`
-come from the pool and are checked against
-[`docker/libcamera.sha256`](../docker/libcamera.sha256). When the robot's
-packages are upgraded, bump `RPT_LIBCAMERA_VERSION` / `RPT_LIBPISP_VERSION` and
-the checksums together.
+The arm64 build image installs the exact libcamera revision installed on the
+robot (`dpkg -s libcamera0.7 | grep Version`). The fork keeps the soname
+(`libcamera.so.0.7`) while changing C++ signatures, so a binary built against
+another revision dies on the first camera call (`symbol lookup error`). When the
+robot's packages are upgraded, update the `.deb` URLs and their checksums in
+[`docker/Dockerfile.arm64`](../docker/Dockerfile.arm64).
 
 Then enable the I2C bus and the UART (used by the actuators and the lidar) in:
 

@@ -1,3 +1,2 @@
-# The Dockerfiles fetch everything themselves, except the pinned checksums.
+# No build step reads the context: the Dockerfiles fetch everything themselves.
 *
-!docker/libcamera.sha256
