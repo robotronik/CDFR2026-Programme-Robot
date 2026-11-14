@@ -25,6 +25,12 @@ double position_length(position_t pos);
 double normalize_angle(double angle);
 position_t position_vector(position_t from, position_t to);
 
+typedef enum {
+    NONE,
+    BLUE,
+    YELLOW
+} colorTeam_t;
+
 typedef struct 
 {
     double angle;
@@ -34,11 +40,33 @@ typedef struct
     bool   onTable;
 } lidarAnalize_t;
 
-typedef enum {
-    NONE,
-    BLUE,
-    YELLOW
-} colorTeam_t;
+typedef enum
+{
+    UNCONSTRUCTED=0,
+    WALL=5,
+    TOWER=5,
+    DOOR=20,
+} constructionType_t;
+
+typedef struct
+{
+    int idx; //index of dropZone
+    position_t pos; // position of dropZone
+    int nb; // nb of rocks in dropZone
+    constructionType_t bestConstruction; //Best construction in zone
+    colorTeam_t colorTeam; // Color of the team that owns the zone
+
+} wallZone_t;
+
+typedef struct
+{
+    int idx; //index of dropZone
+    position_t pos; // position of dropZone
+    int nb; // nb of rocks in dropZone
+    constructionType_t bestConstruction; //Best construction in zone
+    colorTeam_t colorTeam; // Color of the team that owns the zone
+
+} towerZone_t;
 
 // Define serialization for lidarAnalize_t
 void to_json(json& j, const lidarAnalize_t& p);

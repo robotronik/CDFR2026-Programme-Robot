@@ -1,49 +1,15 @@
 #pragma once
-#include "utils/json.hpp" // For handling JSON
+#include "defs/matTypes.hpp"
 
-#include <string>
-#include <vector>
+// Dernière table reçue du mat, sans appel réseau (le thread de fond de mat_api
+// fait les GET). Retourne false si aucune donnée n'est arrivée ou si elle est
+// périmée.
+bool getMapStatus(MatTableData& data);
 
-using json = nlohmann::json;
+// Démarre (une seule fois) le thread de fond du mat ; non bloquant. Retourne
+// true si le mat est connecté à cet instant ; sinon il retente en continu en
+// tâche de fond.
+bool StartMat();
 
-#ifndef MAT_HOST
-#define MAT_HOST "192.168.8.102"
-#endif
-#ifndef MAT_PORT
-#define MAT_PORT 5000
-#endif
-
-extern const std::string MAT_URL;
-
-// Route de l'API du mat exposant l'adversaire et les objets de jeu.
-extern const std::string MAT_LIVE_PATH;
-
-// Un élément de jeu vu par le mat (repère table : mm et degrés).
-struct MatGameElement {
-    int id = 0;
-    std::string label;
-    double x = 0.0;
-    double y = 0.0;
-    double a = 0.0;
-};
-
-// Dernier état de la table reçu du mat (rempli par getMapStatus()).
-struct MatTableData {
-    bool opponentVisible = false;
-    double opponentX = 0.0;
-    double opponentY = 0.0;
-    double opponentA = 0.0;
-    std::vector<MatGameElement> elements;
-};
-
-// Convertit une réponse GET /fleet/live en données exploitables (testable sans réseau).
-MatTableData parseMatTableData(const json& response);
-
-// Dernier état reçu du mat (lu par TableState::updateMapStatus()).
-MatTableData getMatTableData();
-
-// Interroge le mat (GET /fleet/live) et mémorise l'état reçu.
-bool getMapStatus();
-// Démarre (GET /start) puis arrête (GET /stop) la détection du mat.
-bool StartMat(bool& connectionOk);
+// Arrête le thread du mat (et envoie GET /stop).
 void StopMat();

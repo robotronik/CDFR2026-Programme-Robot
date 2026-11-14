@@ -73,25 +73,23 @@ double pathfind_length_mm(position_t start, position_t goal){
 
 void pathfind_setup() {
     astar_initialize_costmap();
-    int RayonRobot=195;
+    int RayonRobot=200; // TODO Make dynamic
 
     // ===== TABLE BORDER ===== 
     place_obstacle_with_margin(    0,-1500,   50, 2000, RayonRobot, false);
     place_obstacle_with_margin(    0, 1500,   50, 2000, RayonRobot, false);
     place_obstacle_with_margin(-1000,    0, 3000,   50, RayonRobot, false);
     place_obstacle_with_margin( 1000,    0, 3000,   50, RayonRobot, false);
-    place_obstacle_with_margin( -775,    0, 1800,  550, RayonRobot, false);
 }
 
 void pathfind_place_border(){
-    int RayonRobot=195;
+    int RayonRobot=200; // TODO Make dynamic
 
     // ===== TABLE BORDER ===== 
     place_obstacle_with_margin(    0,-1500,   50, 2000, RayonRobot, false);
     place_obstacle_with_margin(    0, 1500,   50, 2000, RayonRobot, false);
     place_obstacle_with_margin(-1000,    0, 3000,   50, RayonRobot, false);
     place_obstacle_with_margin( 1000,    0, 3000,   50, RayonRobot, false);
-    place_obstacle_with_margin( -775,    0, 1800,  550, RayonRobot, false);
 }
 
 void pathfind_fill_lidar(Lidar* lidar){

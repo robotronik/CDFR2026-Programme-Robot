@@ -88,9 +88,7 @@ different version). Internally the container runs as root — needed so that
 the files it writes (the `log/` directory) are owned by root on the host.
 
 Local x86_64 builds have no hardware, so they use the emulated I2C, disable the
-lidar, and run the API in test mode; the **MAT is disabled** as well (it is the
-robot's vision server) — the ARM build keeps it enabled. Override with
-`-DCDFR_ENABLE_MAT=ON` when needed.
+lidar, and run the API in test mode.
 
 ### 🏃 Running on the host
 
@@ -125,6 +123,16 @@ shipped alongside the executable (`html/`, `data/`, `tests/lidar` and
 - The two images are defined in [`docker/Dockerfile.x86_64`](docker/Dockerfile.x86_64)
   and [`docker/Dockerfile.arm64`](docker/Dockerfile.arm64); rebuild them with
   `./build.sh images` after changing their contents.
+- The arm64 image pins the Raspberry Pi libcamera stack to the revision installed
+  on the robot. The fork keeps the soname (`libcamera.so.0.7`) between rebuilds
+  while changing the C++ signature of `Camera::generateConfiguration`
+  (`libcamera::Span` → `std::span`), so a binary built against another revision
+  still links and boots, then dies on the first camera call with
+  `symbol lookup error: undefined symbol` — and systemd restarts it into `INIT`.
+  The pinned `.debs` are fetched from the Pi pool and their sha256, plus the
+  installed `libcamera*.so.0.7.2` checksums, are asserted at build time. When the
+  robot's packages are upgraded, bump `RPT_LIBCAMERA_VERSION` / `RPT_LIBPISP_VERSION`
+  and the checksums together.
 - VS Code / CLion Dev Container support is available via
   [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json).
 
@@ -160,6 +168,45 @@ Windows-specific notes:
   A passphrase-protected key needs an SSH agent (`ssh-agent` + `ssh-add`).
 - The x86_64 build disables `compile_commands.json` export on Windows because the
   symlink it creates cannot be written reliably on a Windows bind mount.
+
+## 🧠 Editor and IntelliSense (clangd)
+
+Code completion and navigation use **clangd**: the headers it needs (OpenCV,
+SQLite, the DriveControl/Actionneur interfaces, the FetchContent dependencies)
+only exist inside the build image, so a language server running on the host can
+never resolve them. [`scripts/clangd-docker.sh`](scripts/clangd-docker.sh) starts
+clangd *inside* `cdfr-builder-x86_64`, with the repository mounted at its own path
+so the absolute paths in the compilation database stay valid.
+
+Nothing is installed on the host beyond Docker: [`.vscode/settings.json`](.vscode/settings.json)
+points `clangd.path` at the wrapper, disables the Microsoft C/C++ extension's
+IntelliSense so both do not fight over the same files, and turns off CMake Tools'
+automatic configure (see below). Install the
+[clangd extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)
+if VS Code does not prompt for it.
+
+- The database is **not** `build/x86_64/compile_commands.json`. The wrapper
+  configures its own tree in `.cache/clangd-db/` from inside the container, so it
+  is unaffected by `./build.sh clean`, by arm64-only builds, and by anything the
+  host does to `build/`.
+- The wrapper reconfigures that tree when it is missing or older than the CMake
+  files, so after adding a source file (and listing it in its `CMakeLists.txt`)
+  restart clangd with *Clangd: Restart language server*. Sources not listed in any
+  `CMakeLists.txt` have no entry in the database.
+- Shared server settings live in [`.clangd`](.clangd); command-line use works too:
+  `./scripts/clangd-docker.sh --check=src/app/main.cpp`. Delete
+  `.cache/clangd-db/` to force a rebuild of the database.
+- Do not use the CMake Tools extension to configure this project on the host: it
+  would write the host compiler, Ninja and OpenCV into `build/x86_64`, breaking
+  the container build and producing a database clangd cannot use. It is disabled
+  in `.vscode/settings.json`; build with `./build.sh` instead.
+- Inside the dev container the wrapper detects that it already runs in the image
+  and executes clangd directly, so `./build.sh images` must be re-run once to pick
+  up the `clangd` package added to the image.
+- On Windows the wrapper cannot run; `.vscode/settings.json` falls back to a plain
+  `clangd`, so use the [dev container](.devcontainer/devcontainer.json) there.
+- The first start can take a few seconds while clangd indexes; the index is cached
+  in `.cache/clangd/`.
 
 ## 🛠️ Compilation for Raspberry Pi
 
@@ -267,23 +314,15 @@ sudo apt-get update
 sudo apt-get upgrade -y
 ```
 
-Then, install Xorg, Openbox, and Chromium if not already installed:
+Then install the packages and start Chromium in kiosk mode:
 
 ```bash
-sudo apt install libcamera-apps
-sudo apt-get install xorg openbox chromium-browser
-sudo apt install xorg openbox -y
+sudo apt install libcamera-apps xorg openbox chromium-browser
 export DISPLAY=:0
-sudo startx /usr/bin/chromium-browser --noerrdialogs --kiosk http:localhost/robot --incognito --disable-extensions --no-sandbox
+sudo startx /usr/bin/chromium-browser --noerrdialogs --kiosk http://localhost/robot --incognito --disable-extensions --no-sandbox
 ```
 
-Alternatively, use:
-
-```bash
-/usr/bin/chromium-browser --kiosk http:localhost/robot --incognito --disable-extensions
-```
-
-For configuring a long display, edit the configuration file:
+For a portrait display, edit the configuration file:
 
 ```bash
 sudo nano /boot/firmware/config.txt
@@ -308,28 +347,21 @@ max_framebuffers=2
 # disable_fw_kms_setup=1
 ```
 
-If you are running the Raspberry Pi OS with the default desktop, you can add the command to the autostart file so it launches when the X session starts:
+To launch the kiosk automatically at session start:
 
-1. Open (or create if it doesn’t exist) the autostart file:
+**X11 desktop** — add the kiosk command to the autostart file:
 
-   ```bash
-   mkdir -p /home/robotronik/.config/autostart
-   nano /home/robotronik/.config/autostart/kiosk.desktop
-   ```
+```bash
+mkdir -p /home/robotronik/.config/autostart
+nano /home/robotronik/.config/autostart/kiosk.desktop
+```
 
-2. Add the following command:
+```bash
+@/usr/bin/chromium-browser --kiosk http://localhost/robot --incognito --disable-extensions
+```
 
-   ```bash
-   @/usr/bin/chromium-browser --kiosk http://localhost/robot --incognito --disable-extensions
-   ```
+**Debian 13 (GNOME / Wayland)** — create `~/.config/autostart/kiosk.desktop` with:
 
-✅ Correct setup for Debian 13 (GNOME / Wayland)
-
-Create the file:
-
-~/.config/autostart/kiosk.desktop
-
-With this content:
 ```bash
 [Desktop Entry]
 Type=Application
@@ -337,14 +369,12 @@ Name=Kiosk Mode
 Exec=bash -c "sleep 5 && /usr/bin/chromium --kiosk http://localhost/robot --incognito --no-first-run --no-default-browser-check --password-store=basic"
 X-GNOME-Autostart-enabled=true
 ```
-Then:
+
 ```bash
 chmod +x ~/.config/autostart/kiosk.desktop
 ```
-That’s the correct GNOME-compatible autostart format.
 
-
-3. Save the file and reboot the system.
+Then reboot the system.
 
 ## ⚙️ Actions and Actuators
 

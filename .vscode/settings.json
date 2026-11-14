@@ -1,0 +1,10 @@
+{
+    "clangd.path": "${workspaceFolder}/scripts/clangd-docker.sh",
+    "windows": {
+        "clangd.path": "clangd"
+    },
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "cmake.configureOnOpen": false,
+    "cmake.configureOnEdit": false,
+    "cmake.automaticReconfigure": false
+}

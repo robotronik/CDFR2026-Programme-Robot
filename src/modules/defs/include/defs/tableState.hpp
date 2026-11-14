@@ -1,6 +1,7 @@
 #pragma once
 #include "defs/structs.hpp"
-#include "mat/mat.hpp"
+#include "defs/matTypes.hpp"
+#include "defs/constante.h"
 #include "navigation/driveControl.h"
 #include <utils/json.hpp>
 #include <vector>
@@ -28,7 +29,7 @@ class TableState
         void resetCalibrationAge(){ calibrationAge = 0;}
 
         bool mastStatus = false; // Status of mast if exist
-        void updateMapStatus(); // update of tableState relative to data recived by mast
+        void updateMapStatus(const MatTableData& data); // update of tableState relative to data recived by mast
 
         bool m_isPointInsideRectangle(float px, float py, float cx, float cy, float w, float h);
         bool isRobotInArrivalZone(position_t position);
@@ -39,8 +40,19 @@ class TableState
         // l'élément le plus proche du robot.
         std::vector<MatGameElement> elements;
 
+        wallZone_t wallZone[WALL_ZONE_COUNT];
+        towerZone_t towerZone[TOWER_ZONE_COUNT];
+
+        bool remainEmptyWall();
+        bool remainEmptyTower();
+        bool remainEmptyDrop();
+        int needTower();
+        int needWall();
+        bool needDoor();
+
     private:
         DriveControl* drive;
+        void initDropZone();
 };
 
 // Serialize tableState

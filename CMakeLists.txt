@@ -6,8 +6,11 @@ endif()
 
 project(ProgramCDFR LANGUAGES C CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+# C++20 on every target, so the x86_64 and aarch64 builds agree (libcamera's
+# public headers need std::span on the Pi).
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 

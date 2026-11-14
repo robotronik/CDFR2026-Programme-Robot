@@ -1,4 +1,5 @@
 #include "defs/constante.h"
+#include "utils/logger.hpp"
 #include "actions/ActuatorsControl.hpp"
 
 ActuatorsControl::ActuatorsControl(Arduino* arduino, DriveControl* drive) : arduino(arduino), drive(drive) {
@@ -29,6 +30,15 @@ bool ActuatorsControl::moveServoAndWait(int servo, int target, int speed){
     if (!arduino->getServo(servo, s)) return false;
 
     return s == target;
+}
+
+
+// ------------------------------------------------------
+//                  PUMP CONTROL
+// ------------------------------------------------------
+
+bool ActuatorsControl::setPumpState(bool state){
+    return arduino->writeSensor(SENSOR_NUM_8, state);
 }
 
 // ------------------------------------------------------

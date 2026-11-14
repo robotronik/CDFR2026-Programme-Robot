@@ -7,7 +7,7 @@
 #include <vector>
 #include <unistd.h>  // for usleep
 
-#include "utils/logger.hpp" // logger 
+#include "utils/logger.hpp"
 
 //lidar related
 #include "lidar/Lidar.hpp"
@@ -34,6 +34,7 @@
 #include "actions/ActuatorsControl.hpp"
 
 #ifndef __CROSS_COMPILE_ARM__
+    // Desktop Build
     #define DISABLE_LIDAR
     #define TEST_API_ONLY
     #define EMULATE_I2C
@@ -52,7 +53,7 @@ ActuatorsControl actuators(&arduino, &drive);
 TableState tableStatus(&drive);
 
 // Brain Init
-VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus);
+VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus, &actuators);
 
 // Strategies selectable through the REST API
 std::vector<VirtualStrategy*> strategies = { currentStrategy };
@@ -75,11 +76,12 @@ bool initState;
 std::thread api_server_thread;
 
 // REST API
-RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &lidar, &cam1, &strategies);
+RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &sensor, &actuators, &lidar, &cam1, &navigation, &strategies);
 
 // Prototypes
 int StartSequence();
 void GetLidar();
+void GetMat();
 void EndSequence();
 void tests();
 
@@ -87,26 +89,19 @@ void tests();
 bool exit_requested = false;
 void ctrlc(int)
 {
-    LOG_INFO("Stop Signal Recieved");
+    LOG_INFO("Stop Signal Received");
     exit_requested = true;
 }
-void ctrlz(int)
-{
-    LOG_INFO("Termination Signal Recieved");
-    exit(0);
-}
 
-int main(int argc, char *argv[])
+int main()
 {
     LOG_DEBUG("LOG ID : ", log_main_get_id());
     if (StartSequence() != 0)
         return -1;
 
-    // Private counter
-    unsigned long loopStartTime;
     while (!exit_requested)
     {
-        loopStartTime = _millis();
+        const unsigned long loopStartTime = _millis();
 
         // Get Sensor Data
         {
@@ -114,21 +109,13 @@ int main(int argc, char *argv[])
             // The odometry prior helps the feature localiser; the marker
             // localiser ignores it.
             cam1.setPrior(drive.position);
-            //LOG_INFO("x: ", drive.position.x, " y: ", drive.position.y, " a: ", drive.position.a);
 
             if (currentState != INIT && currentState != FIN)
             {
 #ifndef DISABLE_LIDAR
                 GetLidar();
 #endif
-                if (tableStatus.mastStatus) {// TODO make request async to reduce delay issue in case of deconnection
-                    if(getMapStatus()){ // Getting data from mast
-                        tableStatus.updateMapStatus();
-                    }else{
-                        LOG_ERROR("Failed to get map status from mast");
-                        tableStatus.mastStatus = false; // Don't try to get mast information for the rest of the match
-                    }
-                }
+                GetMat();
             }
         }
 
@@ -138,7 +125,6 @@ int main(int argc, char *argv[])
         //****************************************************************
         case INIT:
         {
-            static bool mast = false;
             if (initState)
             {
                 LOG_GREEN_INFO("INIT");
@@ -146,15 +132,7 @@ int main(int argc, char *argv[])
                 tableStatus.reset();
                 arduino.RGB_Rainbow();
             }
-            if(!mast){
-                bool sucess;
-                mast = StartMat(sucess);
-                if(sucess){
-                    tableStatus.mastStatus = true;
-                    LOG_GREEN_INFO("MAT is ready");
-                } 
-            }
-            
+
             update_team_strat();
 
             if (sensor.readButtonSensor() && !sensor.readLatchSensor() && tableStatus.colorTeam != NONE && currentStrategy != nullptr)
@@ -165,7 +143,7 @@ int main(int argc, char *argv[])
         case WAITSTART:
         {
             if (initState){
-                LOG_GREEN_INFO("WAITSTART");  
+                LOG_GREEN_INFO("WAITSTART");
                 actuators.enableActuators();
                 actuators.homeActuators();
                 lidar.startSpin();
@@ -194,8 +172,7 @@ int main(int argc, char *argv[])
             if (initState){
                 LOG_GREEN_INFO("CALIBRATION");
             }
-            tableStatus.pos_opponent.x = 3000.0f;
-            tableStatus.pos_opponent.y = 0;
+            tableStatus.pos_opponent = OPPONENT_POS_UNKNOWN;
 
             tableStatus.startTime = _millis();
             static bool has_calib = false;
@@ -224,7 +201,7 @@ int main(int argc, char *argv[])
             }
             bool finished = action.RunFSM();
 
-            if (_millis() > tableStatus.startTime + 100000 || finished || sensor.readButtonSensor())
+            if (_millis() > tableStatus.startTime + MATCH_DURATION_MS || finished || sensor.readButtonSensor())
                 nextState = FIN;
             break;
         }
@@ -235,14 +212,6 @@ int main(int argc, char *argv[])
                 LOG_GREEN_INFO("TEST");
             }
 
-            if(!tableStatus.mastStatus){
-                bool sucess;
-                StartMat(sucess);
-                if(sucess){
-                    tableStatus.mastStatus = true;
-                    LOG_GREEN_INFO("MAT is ready");
-                } 
-            }
             tests();
             break;
         }
@@ -256,10 +225,10 @@ int main(int argc, char *argv[])
             navigation.go();
 
             // Execute the function as long as it returns false
-                manual_loop();
-                if (!manual_ctrl){
-                    exit_requested = true;
-                }
+            manual_loop();
+            if (!manual_ctrl){
+                exit_requested = true;
+            }
             break;
         }
         //****************************************************************
@@ -272,7 +241,6 @@ int main(int argc, char *argv[])
                 drive.disable();
                 actuators.disableActuators();
                 lidar.stopSpin();
-                StopMat();
             }
 
             if (!sensor.readLatchSensor()){
@@ -283,7 +251,6 @@ int main(int argc, char *argv[])
         }
         //****************************************************************
         default:
-            LOG_GREEN_INFO("default");
             nextState = INIT;
             break;
         }
@@ -314,7 +281,6 @@ int StartSequence()
 {
     signal(SIGTERM, ctrlc);
     signal(SIGINT, ctrlc);
-    // signal(SIGTSTP, ctrlz);
 
     setProgramPriority();
 
@@ -327,6 +293,11 @@ int StartSequence()
         return -1; //TODO handle error
     }
 #endif
+
+    // Start the MAT client: its thread retries in the background until the mat
+    // is reachable (logs the (re)connection), and is only stopped at exit.
+    if (!StartMat())
+        LOG_ERROR("MAT not connected at init, retrying in the background");
 
     // Start the api server in a separate thread
     api_server_thread = std::thread([&]()
@@ -354,9 +325,9 @@ int StartSequence()
 
 void GetLidar()
 {
-    static position_t pos_opponent = {3000,0,0};
+    static position_t pos_opponent = OPPONENT_POS_UNKNOWN;
     double IsDataValid = (fabs(drive.velocity.a) <= 45.0) || (position_distance(drive.position, pos_opponent) < 1000);
-    
+
     if (lidar.getData()){
         convertAngularToAxial(lidar.data, lidar.count, drive.position, 150);
         pathfind_fill_lidar(&lidar);
@@ -366,16 +337,29 @@ void GetLidar()
                 (_millis() - tableStatus.startTime > 1000)){ // Only update opponent position after 1 second from the start to avoid false readings at the beginning
             tableStatus.pos_opponent.x = pos_opponent.x;
             tableStatus.pos_opponent.y = pos_opponent.y;
-            opponentInAction(pos_opponent);            
-            
+            opponentInAction(pos_opponent);
+
         }
     }
+}
+
+void GetMat()
+{
+    // Le thread de fond de mat_api rafraîchit la table : on ne lit que la
+    // dernière donnée, sans bloquer la boucle. Il loggue lui-même la connexion
+    // et sa perte, rien à faire ici si la donnée est absente.
+    MatTableData matData;
+    if (getMapStatus(matData))
+        tableStatus.updateMapStatus(matData);
 }
 
 void EndSequence()
 {
     LOG_GREEN_INFO("Stopping");
-    
+
+    // Stop the MAT thread (sends GET /stop)
+    StopMat();
+
     // Stop the lidar
     lidar.Stop();
     cam1.stop();
@@ -404,9 +388,9 @@ void EndSequence()
 void tests()
 {
     /*
-        * Call test functions here. 
-        * They will be executed in loop until the program is stopped. 
-    */ 
+        * Call test functions here.
+        * They will be executed in loop until the program is stopped.
+    */
 }
 
 // ------------------------------------------------------
@@ -428,15 +412,12 @@ bool returnToHome(){
     return false;
 }
 
-void opponentInAction(position_t position){
-    if (position_equals(position, position_t{.x=0, .y=0, .a=0})){
-        return; // useless code to get rid of warning 
-    }
-    // TODO implement this function
-    /* Detect from position of adversary the action of the adversary */
+// TODO implement this function
+/* Detect from position of adversary the action of the adversary */
+void opponentInAction(position_t /*position*/){
 }
 
-void switchTeamSide(colorTeam_t color){ // TODO moove to tableState
+void switchTeamSide(colorTeam_t color){ // TODO move to tableState
     if (color == NONE) return;
     if (currentState == RUN) return;
     if (color != tableStatus.colorTeam){
@@ -465,14 +446,7 @@ void switchTeamSide(colorTeam_t color){ // TODO moove to tableState
     }
 }
 
-void check(colorTeam_t color, std::string strategy){
-    // Check if the color and strategy are valid
-    if (color == NONE)
-        LOG_ERROR("Invalid color (", color, ") or strategy (", strategy, ")");
-    // TODO add check if necessary
-}
-
-void switchStrategy(std::string strategy){ // TODO moove to tableState
+void switchStrategy(std::string strategy){ // TODO move to tableState
     if (currentState == RUN) return;
 
     if (strategy != action.getStrategy()->getNom()){
@@ -482,9 +456,6 @@ void switchStrategy(std::string strategy){ // TODO moove to tableState
                 selectedStrategy = candidate;
         if (!selectedStrategy) return;
 
-        colorTeam_t color = tableStatus.colorTeam;
-
-        check(color, strategy);
         LOG_INFO("Strategy switch detected");
         tableStatus.strategy = strategy;
         action.setStrategy(selectedStrategy);

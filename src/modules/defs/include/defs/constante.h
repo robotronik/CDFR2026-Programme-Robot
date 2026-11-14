@@ -4,6 +4,12 @@
 
 #define LOOP_TIME_MS 20
 
+// Duration of a match (100 s).
+#define MATCH_DURATION_MS 100000
+
+// Position used before the opponent has been located (off the table).
+const position_t OPPONENT_POS_UNKNOWN = { .x = 3000, .y = 0, .a = 0 };
+
 #define DISTANCESTOP   500
 
 #define RAD_TO_DEG 57.29577951
@@ -35,7 +41,7 @@
 #define LS_BOTTOM_NUM        5
 #define SENSOR_NUM_6         6
 #define SENSOR_NUM_7         7
-#define SENSOR_NUM_8         8
+#define SENSOR_NUM_8         1
 
 
 #define MAX_WIDTH_TABLE 1000
@@ -69,18 +75,42 @@ const int ARUCO_CALIB_POSITIONS_COUNT = sizeof(ARUCO_CALIB_POSITIONS) / sizeof(p
 
 const position_t START_POSITION = { .x = 0, .y = 1250, .a = -90 };
 
+
 const position_t WALL_POSITION[] = {
-    position_t{ .x = 1250, .y = -600, .a = 0 },
-    position_t{ .x = 825, .y = -425, .a = 315 },
-    position_t{ .x = 650, .y = 0, .a = 270},
-    position_t{ .x = 825, .y = 425, .a = 225 },
-    position_t{ .x = 1250, .y = 600, .a = 180}};
+    position_t{ .x = -1250, .y = -600, .a = 180 },
+    position_t{ .x = -1250, .y =  600, .a =   0 },
+    position_t{ .x =  -821, .y = -429, .a = 225 },
+    position_t{ .x =  -821, .y =  429, .a = 315 },
+    position_t{ .x =  -650, .y =    0, .a = 270 },
+    position_t{ .x =  1250, .y = -600, .a =   0 },
+    position_t{ .x =  1250, .y =  600, .a = 180 },
+    position_t{ .x =   821, .y = -429, .a = 315 },
+    position_t{ .x =   821, .y =  429, .a = 225 },
+    position_t{ .x =   650, .y =    0, .a = 270 },
+    };
+    
 
 const position_t TOWER_POSITION[] = {
-    position_t{ .x = 650, .y = -250, .a = 0},
-    position_t{ .x = 650, .y = 250, .a = 0},
-    position_t{ .x = 1000, .y = 600, .a = 0},
-    position_t{ .x = 1000, .y = -600, .a = 0}};
+    position_t{ .x = -1000, .y = -600, .a = 0 },
+    position_t{ .x = -1000, .y =  600, .a = 0 },
+    position_t{ .x =  -650, .y = -250, .a = 0 },
+    position_t{ .x =  -650, .y =  250, .a = 0 },
+    position_t{ .x =  1000, .y = -600, .a = 0 },
+    position_t{ .x =  1000, .y =  600, .a = 0 },
+    position_t{ .x =   650, .y = -250, .a = 0 },
+    position_t{ .x =   650, .y =  250, .a = 0 },
+    };    
+
+const int WALL_ZONE_COUNT = sizeof(WALL_POSITION) / sizeof(position_t);
+const int TOWER_ZONE_COUNT = sizeof(TOWER_POSITION) / sizeof(position_t);
+
+
+// Zone symmetrical to `zone` on the other side of the table (symmetry about
+// x = 0, the line joining the two towers of the middle): x is negated and a
+// heading is mirrored.
+constexpr position_t mirrorZone(const position_t& zone){
+    return position_t{ .x = -zone.x, .y = zone.y, .a = 180.0 - zone.a };
+}
 
 const position_t QUARRY_POSITION[] = {
     position_t{ .x = 800, .y = -950, .a = 0},

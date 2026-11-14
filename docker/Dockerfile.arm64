@@ -1,39 +1,25 @@
-# Build image for the aarch64 (Raspberry Pi) target.
-# Compiles on amd64 using the aarch64-linux-gnu cross toolchain; target
-# libraries (e.g. sqlite3) come from arm64 multiarch packages.
-#
-# The base is Debian 13 (trixie) so the produced binary matches Raspberry Pi OS
-# Trixie: GCC 14 / glibc 2.41 and OpenCV 4.10 (libopencv_*.so.410) come from
-# Debian, while libcamera (libcamera.so.0.7) comes from the Raspberry Pi fork on
-# archive.raspberrypi.com, mirroring the camera stack the Pi itself ships.
+# Build image for the aarch64 (Raspberry Pi) target, cross-compiled on amd64 with
+# the aarch64-linux-gnu toolchain; target libraries come from arm64 multiarch
+# packages. The base is Debian 13 (trixie), matching Raspberry Pi OS Trixie: GCC
+# 14 / glibc 2.41, OpenCV 4.10, and the Pi libcamera fork (libcamera.so.0.7).
 
 FROM debian:trixie
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Enable arm64 packages in addition to the amd64 host packages. Unlike Ubuntu,
-# deb.debian.org serves every architecture from the same suites, so the default
-# trixie sources already cover arm64. The Raspberry Pi archive is then added for
-# the libcamera fork that drives the Pi 5 camera.
-#
-# Its InRelease is still signed with a SHA1-bound key, which trixie's `sqv`
-# verifier refuses ("SHA1 is not considered secure"), so the archive is marked
-# trusted rather than verified with a signed-by keyring. Both architectures are
-# enabled: its packages are Multi-Arch: same, so the amd64 twin has to be
-# installable alongside the arm64 one.
+# Add the Raspberry Pi archive for the libcamera fork that drives the Pi 5 camera.
+# It is marked trusted (not signed-by): its InRelease is SHA1-signed, which
+# trixie's `sqv` refuses. (Debian's own trixie suites already cover arm64.)
 RUN dpkg --add-architecture arm64 \
     && printf '%s\n' \
         'deb [trusted=yes] http://archive.raspberrypi.com/debian/ trixie main' \
         > /etc/apt/sources.list.d/raspberrypi.list
 
-# The Pi archive rebuilds many base libraries with a `+rpt` suffix. Those are
-# Multi-Arch: same, so pulling them for arm64 would clash with the amd64
-# counterparts (which only exist in Debian). Keep the Pi archive at a low
-# priority so Debian wins everywhere, and only prefer it for the libcamera stack.
-# The specific record must name the foreign architecture explicitly (pkg:arm64),
-# otherwise it does not match; libpisp1 is Multi-Arch: same and also exists in
-# Debian, so both architectures must be pinned to the Pi version or apt cannot
-# pair the arm64 libcamera0.7 with a matching libpisp1.
+# Keep the Pi archive at low priority so Debian wins everywhere, and prefer it
+# only for the libcamera stack. Pins must name the foreign architecture
+# explicitly (pkg:arm64) or they do not match; libpisp1 is Multi-Arch: same and
+# also in Debian, so both architectures are pinned to the Pi version so apt can
+# pair arm64 libcamera0.7 with a matching libpisp1.
 RUN printf '%s\n' \
         'Package: libcamera-dev:arm64 libcamera0.7:arm64 libcamera-ipa:arm64 libpisp1:arm64 libpisp1:amd64 libpisp-common' \
         'Pin: origin "archive.raspberrypi.com"' \
@@ -44,10 +30,35 @@ RUN printf '%s\n' \
         'Pin-Priority: 100' \
         > /etc/apt/preferences.d/raspberrypi.pref
 
+# The Pi libcamera fork keeps the soname (libcamera.so.0.7) across rebuilds while
+# changing the C++ signature of libcamera::Camera::generateConfiguration
+# (libcamera::Span up to +rpt20260817, std::span from +rpt20261009). A binary
+# built against another revision links and boots, then dies on the first camera
+# call with "symbol lookup error: undefined symbol", which systemd restarts into
+# INIT. The stack is therefore pinned to the revisions installed on the robot
+# (`raspitronik`, 2026-11-13):
+#
+#     libcamera0.7  libcamera-dev  libcamera-ipa   0.7.2+rpt20260817-1
+#     libpisp1:arm64  libpisp-common               1.7.0-1
+#
+# The archive only indexes the newest revisions, so the .debs are fetched from
+# the pool and verified against the sha256 recorded here.
+#
+# libcamera-dev's headers decide which symbol the firmware calls and libcamera0.7
+# provides the sonames it needs. The other dependencies of these packages
+# (libpisp1 is pinned too, libtensorflow-lite comes from the archive) only make
+# them installable at build time; they are never linked into the binary, which
+# uses the robot's own copies at runtime.
+ARG RPT_LIBCAMERA_VERSION=0.7.2+rpt20260817-1
+ARG RPT_LIBPISP_VERSION=1.7.0-1
+ARG RPI_POOL=http://archive.raspberrypi.com/debian/pool/main
+
+# The apt lists are kept for the pinned install below (same layer series).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         cmake \
         ninja-build \
         git \
+        curl \
         ca-certificates \
         pkg-config \
         gcc-aarch64-linux-gnu \
@@ -55,10 +66,42 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libsqlite3-dev:arm64 \
         libopencv-dev:arm64 \
         libopencv-contrib-dev:arm64 \
-        libcamera-dev:arm64 \
         rsync \
-        openssh-client \
-    && rm -rf /var/lib/apt/lists/*
+        openssh-client
+
+# The headers shipped by these .debs keep the package build date (2026-08), which
+# is older than the objects of an existing build/arm64 tree: touch them so ninja
+# recompiles instead of relinking files built against another libcamera revision.
+RUN set -eux; \
+    mkdir -p /tmp/libcamera-pin; \
+    cd /tmp/libcamera-pin; \
+    curl -fsSLO "${RPI_POOL}/libc/libcamera/libcamera0.7_${RPT_LIBCAMERA_VERSION}_arm64.deb"; \
+    curl -fsSLO "${RPI_POOL}/libc/libcamera/libcamera-dev_${RPT_LIBCAMERA_VERSION}_arm64.deb"; \
+    curl -fsSLO "${RPI_POOL}/libc/libcamera/libcamera-ipa_${RPT_LIBCAMERA_VERSION}_arm64.deb"; \
+    curl -fsSLO "${RPI_POOL}/libp/libpisp/libpisp1_${RPT_LIBPISP_VERSION}_arm64.deb"; \
+    curl -fsSLO "${RPI_POOL}/libp/libpisp/libpisp-common_${RPT_LIBPISP_VERSION}_all.deb"; \
+    { \
+        echo "c7dfaadcf9cd3b03fc41f0d457c88736d2638fa79d1cca11fc3637777cdae3c9  libcamera0.7_${RPT_LIBCAMERA_VERSION}_arm64.deb"; \
+        echo "b799340d3f753563f583f705af26411b45d8426b6f13d0b734b4da0872bb3b62  libcamera-dev_${RPT_LIBCAMERA_VERSION}_arm64.deb"; \
+        echo "0de238bc7f0a23bf4ab90604d232c88e92c0b5fa724272d555fdc570ca4d30f4  libcamera-ipa_${RPT_LIBCAMERA_VERSION}_arm64.deb"; \
+        echo "8fa7ecd55730771249c243132a562f43477c513858de2e3b79eef04cbdefc8e1  libpisp1_${RPT_LIBPISP_VERSION}_arm64.deb"; \
+        echo "d2a97e4e5c9cd182fb1878aefcacb2dee665c012024a046e976876102d0f76ab  libpisp-common_${RPT_LIBPISP_VERSION}_all.deb"; \
+    } > SHA256SUMS; \
+    sha256sum -c SHA256SUMS; \
+    apt-get install -y --no-install-recommends /tmp/libcamera-pin/*.deb; \
+    rm -rf /var/lib/apt/lists/* /tmp/libcamera-pin; \
+    find /usr/include/libcamera -name '*.h' -exec touch {} +
+
+# Guard the pin: the installed libraries must be byte-identical to the ones on
+# the robot (same bytes = same ABI), and the headers must still declare the
+# libcamera::Span overload the firmware is compiled against.
+RUN printf '%s\n' \
+        '5ea0d7c3247452fa4602bfcb9815212062456b93f26d3e154b5c3cd31bef00c6  /usr/lib/aarch64-linux-gnu/libcamera.so.0.7.2' \
+        '3654f347be798d188f6f1ff77d603d03dd381de0ea076122babbc5eed1d1358b  /usr/lib/aarch64-linux-gnu/libcamera-base.so.0.7.2' \
+        > /tmp/robot-libcamera.sha256 \
+    && sha256sum -c /tmp/robot-libcamera.sha256 \
+    && grep -q 'generateConfiguration(Span<const StreamRole>' /usr/include/libcamera/libcamera/camera.h \
+    && rm /tmp/robot-libcamera.sha256
 
 # External robot repositories: drive/protocol headers used at compile time.
 # Baked into the image so the build is self-contained.
@@ -74,9 +117,8 @@ RUN mkdir -p /opt/cdfr \
     && rm -rf /opt/cdfr/*/.git
 
 # Debian has no non-root user, so create `ubuntu` (uid/gid 1000) like the old
-# Ubuntu base did: files created in the mounted workspace stay user-owned, and
-# build.sh's --user "$(id -u):$(id -g)" and the $HOME/.ssh bind mount have a
-# home to land in.
+# Ubuntu base: workspace files stay user-owned, and build.sh's --user and the
+# $HOME/.ssh bind mount have a home.
 RUN groupadd -g 1000 ubuntu \
     && useradd -m -u 1000 -g 1000 -s /bin/bash ubuntu
 ENV HOME=/home/ubuntu

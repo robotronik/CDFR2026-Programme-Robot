@@ -1,5 +1,5 @@
-#ifndef MANAL_MODE_H
-#define MANAL_MODE_H
+#ifndef MANUAL_MODE_H
+#define MANUAL_MODE_H
 
 #include <stdbool.h>
 
@@ -8,7 +8,6 @@ extern "C" {
 #endif
 
 extern bool manual_ctrl;
-extern bool (*manual_currentFunc)();
 
 void manual_init();
 void manual_loop();
@@ -18,4 +17,9 @@ void manual_clearFunc();
 }
 #endif
 
-#endif // MANAL_MODE_H
+#ifdef __cplusplus
+#include <functional>
+extern std::function<bool()> manual_currentFunc;
+#endif
+
+#endif // MANUAL_MODE_H

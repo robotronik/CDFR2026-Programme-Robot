@@ -14,6 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libsqlite3-dev \
         libopencv-dev \
         libopencv-contrib-dev \
+        clangd-18 \
+    && ln -s /usr/lib/llvm-18/bin/clangd /usr/bin/clangd \
     && rm -rf /var/lib/apt/lists/*
 
 # External robot repositories: drive/protocol headers used at compile time.
@@ -29,9 +31,8 @@ RUN mkdir -p /opt/cdfr \
         /opt/cdfr/cdfr2024-programme-Actionneur \
     && rm -rf /opt/cdfr/*/.git
 
-# Reuse the base image's non-root `ubuntu` user (uid/gid 1000) so files created
-# in the mounted workspace stay user-owned. Dev Containers remaps its uid to the
-# host user, and build.sh runs with --user "$(id -u):$(id -g)".
+# Reuse the base image's non-root `ubuntu` user (uid/gid 1000) so workspace files
+# stay user-owned (Dev Containers remaps the uid; build.sh passes --user).
 ENV HOME=/home/ubuntu
 
 WORKDIR /workspace

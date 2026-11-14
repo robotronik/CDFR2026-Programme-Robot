@@ -11,7 +11,10 @@ class TableState;
 class Arduino;
 class Lidar;
 class Cam;
+class Navigation;
 class VirtualStrategy;
+class SensorControl;
+class ActuatorsControl;
 
 class RestAPI {
     public:
@@ -20,8 +23,11 @@ class RestAPI {
                 DriveControl* drive,
                 TableState* tableStatus,
                 Arduino* arduino,
+                SensorControl* sensor,
+                ActuatorsControl* actuators,
                 Lidar* lidar,
                 Cam* cam,
+                Navigation* navigation,
                 std::vector<VirtualStrategy*>* strategies);
         ~RestAPI() = default;
 
@@ -38,8 +44,11 @@ class RestAPI {
         DriveControl* drive;
         TableState* tableStatus;
         Arduino* arduino;
+        SensorControl* sensor;
+        ActuatorsControl* actuators;
         Lidar* lidar;
         Cam* cam;
+        Navigation* navigation;
         std::vector<VirtualStrategy*>* strategies;
 
         bool hasColorRequest = false;

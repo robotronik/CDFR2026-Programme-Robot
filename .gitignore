@@ -15,7 +15,7 @@
 tmp/
 *.tmp
 
-# Base SQLite des durées d'action (cf. src/db/ActionDurationDB.cpp)
+# Base SQLite des durées d'action (cf. src/modules/db/src/ActionDurationDB.cpp)
 *.db
 *.db-journal
 *.db-wal
@@ -31,6 +31,7 @@ Thumbs.db
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/c_cpp_properties.json
+!.vscode/settings.json
 
 .cache/*
 /compile_commands.json
