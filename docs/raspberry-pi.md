@@ -21,17 +21,6 @@ sudo apt install -y \
 `libopencv-objdetect410` provides ArUco; `libcamera0.8` comes from
 `archive.raspberrypi.com`.
 
-The binary links against `libcamera.so.0.8`, so the Pi must have it (and the
-matching `libcamera-ipa`/`libpisp1`) installed, not the older `libcamera0.7`.
-After upgrading an existing robot, check with:
-
-```bash
-ldd /home/robotronik/CDFR/arm_bin/programCDFR | grep libcamera
-```
-
-It must print `libcamera.so.0.8`; if it still prints `.0.7`, the old revision is
-still installed and the service will fail at startup.
-
 Then enable the I2C bus and the UART (used by the actuators and the lidar) in:
 
 ```bash
