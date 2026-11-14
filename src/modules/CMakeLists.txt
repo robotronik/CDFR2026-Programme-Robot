@@ -10,18 +10,7 @@ add_subdirectory(actions)
 add_subdirectory(restAPI)
 
 # Combined static library for the entire robot software
-add_library(robot_core STATIC
-    $<TARGET_OBJECTS:utils>
-    $<TARGET_OBJECTS:db>
-    $<TARGET_OBJECTS:mat>
-    $<TARGET_OBJECTS:vision>
-    $<TARGET_OBJECTS:defs>
-    $<TARGET_OBJECTS:i2c>
-    $<TARGET_OBJECTS:lidar>
-    $<TARGET_OBJECTS:navigation>
-    $<TARGET_OBJECTS:actions>
-    $<TARGET_OBJECTS:restAPI>
-)
+add_library(robot_core STATIC)
 
 target_link_libraries(robot_core PUBLIC
     utils

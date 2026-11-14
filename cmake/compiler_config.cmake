@@ -1,7 +1,5 @@
 add_library(project_compiler_options INTERFACE)
 
-target_compile_features(project_compiler_options INTERFACE cxx_std_20)
-
 target_compile_options(project_compiler_options INTERFACE
     -Wall
     -Wextra
