@@ -21,6 +21,19 @@ sudo apt install -y \
 `libopencv-objdetect410` provides ArUco; `libcamera0.7` comes from
 `archive.raspberrypi.com`.
 
+### Pinned libcamera revision
+
+The arm64 build image pins the libcamera stack to the revision installed on the
+robot. The fork keeps the soname (`libcamera.so.0.7`) between rebuilds while
+changing the C++ signature of `Camera::generateConfiguration`
+(`libcamera::Span` → `std::span`), so a binary built against another revision
+still links and boots, then dies on the first camera call with
+`symbol lookup error: undefined symbol` — and systemd restarts it into `INIT`.
+The pinned `.debs` are fetched from the Pi pool and their sha256, plus the
+installed `libcamera*so.0.7.2` checksums, are asserted at build time. When the
+robot's packages are upgraded, bump `RPT_LIBCAMERA_VERSION` / `RPT_LIBPISP_VERSION`
+and the checksums together.
+
 Then enable the I2C bus and the UART (used by the actuators and the lidar) in:
 
 ```bash
