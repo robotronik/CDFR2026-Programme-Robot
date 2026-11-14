@@ -47,7 +47,7 @@ bool NavHomeAction::available(float &reward){
     // Retour déjà effectué : plus candidate tant qu'elle n'a pas été réarmée.
     if (done) return false;
     double path_length_mm;
-    position_t path[100];
+    position_t path[1024];
     if(!pathfind(drive->getPosition(), homePos, path, path_length_mm)){
         return false;
     }
