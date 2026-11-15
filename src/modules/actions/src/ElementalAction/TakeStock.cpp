@@ -5,8 +5,8 @@
 #include "GoToPositionAction.cpp"
 #include "navigation/navigation.h" // pour nav_return_t & position_t
 
-TakeStock::TakeStock(TableState* tableStatus, DriveControl* drive)
-    : tableState(tableStatus)
+TakeStock::TakeStock(TableState* tableState)
+    : tableState(tableState)
 {
     state = MOVE1;
 }
@@ -17,14 +17,14 @@ bool TakeStock::getBestQuarry(const position_t& from, position_t& target) {
     }
 
     position_t closest = QUARRY_POSITION[0];
-    double minDistance = position_distance(from, {QUARRY_POSITION[0].x, QUARRY_POSITION[0].y, QUARRY_POSITION[0].a});
-    //TODO implement A* (pathfind a la place de position_distance)
+    double minDistance ;
+    position_t path[100]; // Assuming a maximum path length
+    pathfind(from, {QUARRY_POSITION[0].x, QUARRY_POSITION[0].y, QUARRY_POSITION[0].a}, path, minDistance);
     int maxstone = tableState->isQuarryAvailable(0) ;
-    
     int taille = sizeof(tableState->quarry);
-
     for (int i = 0; i < taille;i++ ) {
-        double distance = position_distance(from, {QUARRY_POSITION[i].x,QUARRY_POSITION[i].y ,QUARRY_POSITION[i].a });
+        double distance; 
+        pathfind(from, {QUARRY_POSITION[0].x, QUARRY_POSITION[0].y, QUARRY_POSITION[0].a}, path, distance);
         int stone = tableState->isQuarryAvailable(i);
         if (distance < minDistance  && stone>=maxstone) {
             minDistance = distance;
@@ -60,7 +60,7 @@ position_t TakeStock::BestPositionToTake(const position_t& from, position_t& tar
         }
         
     }
-    // TODO il reste target.a a modifié mais il depend de la face voulue et diffpos a, et prendre en compte le decalage des pompes par rapport au centre du robot
+    // TODO il reste target.a e(et offset) a modifié mais il depend de la face voulue et diffpos a, et prendre en compte le decalage des pompes par rapport au centre du robot
 
     return diffpos;
 
@@ -74,8 +74,8 @@ ReturnFSM_t TakeStock::run(){
     getBestQuarry(drive->getPosition(), target);
     const position_t etape = BestPositionToTake(drive->getPosition(), target);
 
-    switch (MOVE) {
-        case MOVE1:
+    switch (state) {
+        case MOVE1: {
             nav_return_t res1 = navigation.goTo(target, true, false, false);
             switch (res1) {
                 case NAV_PAUSED:
@@ -86,11 +86,14 @@ ReturnFSM_t TakeStock::run(){
                     errorManagement();
                     return FSM_RETURN_ERROR;
                 case NAV_DONE:
-                    return MOVE1;
+                    state = MOVE2;
+                    break;
                 case NAV_IN_PROCESS:
                     moving = true;
                     break;
             }
+            break;
+        }
         case MOVE2:
             //allume les pompes 
             nav_return_t res2 = navigation.goTo(etape, true, true, true);//TODO fast mode
@@ -104,14 +107,14 @@ ReturnFSM_t TakeStock::run(){
                     return FSM_RETURN_ERROR;
                 case NAV_DONE:
                     successManagement();
+                    state = MOVE1;
                     return FSM_RETURN_DONE;
                 case NAV_IN_PROCESS:
                     moving = true;
                     break;
 
-        }
-        
-        
+            } 
+            break;      
     }
     return FSM_RETURN_WORKING;
 
