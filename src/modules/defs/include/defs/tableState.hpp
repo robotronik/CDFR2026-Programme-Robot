@@ -53,6 +53,16 @@ class TableState
         int needWall();
         bool needDoor();
 
+        wallZone_t wallZone[WALL_ZONE_COUNT];
+        towerZone_t towerZone[TOWER_ZONE_COUNT];
+
+        bool remainEmptyWall();
+        bool remainEmptyTower();
+        bool remainEmptyDrop();
+        int needTower();
+        int needWall();
+        bool needDoor();
+
     private:
         DriveControl* drive;
         void initQuarry();
