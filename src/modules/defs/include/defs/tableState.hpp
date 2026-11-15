@@ -55,6 +55,7 @@ class TableState
 
     private:
         DriveControl* drive;
+        void initQuarry();
         void initDropZone();
 };
 
