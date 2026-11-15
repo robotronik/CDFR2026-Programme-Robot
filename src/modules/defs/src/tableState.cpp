@@ -17,6 +17,8 @@ void TableState::reset(){
     resetCalibrationAge();
     /* reset of specific The legend of Camelot */
     elements.clear();
+    initQuarry();
+    initDropZone();
 }
 
 // Function to check if a point (px, py) lies inside the rectangle
@@ -113,6 +115,30 @@ bool TableState::needDoor(){
     return true;
 }
 
+void TableState::initQuarry(){
+    for(int i = 0; i < QUARRY_ZONE_COUNT; i++) {
+        quarry[i].pos = QUARRY_POSITION[i];
+        quarry[i].nb = 0;
+        quarry[i].idx = i;
+        quarry[i].trustFactor = 1.0f;
+    }
+}
+
+int TableState::isQuarryAvailable(int idx) {
+    return quarry[idx].nb;
+}
+
+bool TableState::remainQuarry()
+{
+    for (int i = 0; i < 10; i++)
+    {
+        if (isQuarryAvailable(i))
+        {
+            return true;
+        }
+    }
+    return false;
+}
 // Serialize tableState
 void to_json(json& j, const TableState& ts) {
     j = json{
