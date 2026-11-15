@@ -2,7 +2,7 @@
 #include <fstream>
 #include <utils/json.hpp>
 #include "lidar/lidarAnalize.h"
-//#include "lidar/Lidar.hpp"
+#include "lidar/Lidar.hpp"
 #include "defs/structs.hpp"
 #include "defs/constante.h"
 #include "utils/logger.hpp"
