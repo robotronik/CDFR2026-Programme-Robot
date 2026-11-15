@@ -27,8 +27,8 @@ using json = nlohmann::json;
 
 #define API_PORT 80
 
-RestAPI::RestAPI(main_State_t* currentState,
-                 main_State_t* nextState,
+RestAPI::RestAPI(MainState* currentState,
+                 MainState* nextState,
                  DriveControl* drive,
                  TableState* tableStatus,
                  Arduino* arduino,
@@ -51,7 +51,7 @@ RestAPI::RestAPI(main_State_t* currentState,
       strategies(strategies){
 }
 
-bool RestAPI::consumeColorRequest(colorTeam_t& color){
+bool RestAPI::consumeColorRequest(ColorTeam& color){
     if (!hasColorRequest) return false;
     color = requestedColor;
     hasColorRequest = false;
@@ -188,7 +188,7 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/get_status")
     ([this](){
         json response;
-        response["status"] = *currentState;
+        response["status"] = static_cast<int>(*currentState);
 
         return crow::response(response.dump(4));
     });
@@ -215,7 +215,7 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/get_global")
     ([this](){
         json response;
-        response["status"] = *currentState;
+        response["status"] = static_cast<int>(*currentState);
         response["table"] = *tableStatus;
         response["score"] = tableStatus->getScore();
         
@@ -257,8 +257,8 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/get_robot")
     ([this](){
         json response;
-        response["status"] = *currentState;
-        response["team"] = tableStatus->colorTeam;
+        response["status"] = static_cast<int>(*currentState);
+        response["team"] = static_cast<int>(tableStatus->colorTeam);
         response["score"] = tableStatus->getScore();
         response["time"] = (tableStatus->startTime == 0) ? 0 : (_millis() - tableStatus->startTime);
         response["strategy"] = tableStatus->strategy;
@@ -458,12 +458,13 @@ void RestAPI::start(){
         if (!parseBody(req, req_data))
             return jsonError(400, "Invalid JSON");
 
-        main_State_t req_state = req_data["state"];
+        MainState req_state = static_cast<MainState>(req_data["state"].get<int>());
 
         // MANUAL and CALIBRATION are entered by the state machine itself, and the
         // enum has gaps (1, 2): only accept the states the switch handles.
-        if (req_state != INIT && req_state != WAITSTART && req_state != RUN &&
-            req_state != FIN && req_state != TEST)
+        if (req_state != MainState::Init && req_state != MainState::WaitStart &&
+            req_state != MainState::Run && req_state != MainState::Fin &&
+            req_state != MainState::Test)
             return jsonError(400, "Requested state out of borders!");
 
         *nextState = req_state;
@@ -476,11 +477,13 @@ void RestAPI::start(){
         if (!parseBody(req, req_data))
             return jsonError(400, "Invalid JSON");
 
-        colorTeam_t req_color = req_data["color"];
+        const int req_color_value = req_data["color"].get<int>();
 
-        if (req_color < 0 || req_color > YELLOW)
+        if (req_color_value < static_cast<int>(ColorTeam::None) ||
+            req_color_value > static_cast<int>(ColorTeam::Yellow))
             return jsonError(400, "Invalid Request Color");
-        if (*currentState == RUN)
+        const ColorTeam req_color = static_cast<ColorTeam>(req_color_value);
+        if (*currentState == MainState::Run)
             return jsonError(400, "Cannot change the color in the current state");
 
         requestedColor = req_color;
@@ -499,7 +502,7 @@ void RestAPI::start(){
 
         if (!isKnownStrategy(strategies, req_strat))
             return jsonError(400, "Invalid Strategy Request");
-        if (*currentState == RUN)
+        if (*currentState == MainState::Run)
             return jsonError(400, "Cannot change the strategy in the current state");
 
         requestedStrategy = req_strat;
@@ -515,9 +518,9 @@ void RestAPI::start(){
             return jsonError(400, "Invalid JSON");
 
         bool req_value = req_data["value"];
-        if (req_value && *currentState != WAITSTART)
+        if (req_value && *currentState != MainState::WaitStart)
             return jsonError(400, "Cannot enter manual mode when not in WAITSTART");
-        if (!req_value && *currentState != MANUAL)
+        if (!req_value && *currentState != MainState::Manual)
             return jsonError(400, "Cannot exit manual mode when not in MANUAL");
 
         manual_ctrl = req_value;
@@ -530,7 +533,7 @@ void RestAPI::start(){
         if (!parseBody(req, req_data))
             return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL)
+        if (*currentState != MainState::Manual)
             return jsonError(400, "Cannot change the coordinates when not in MANUAL mode");
 
         const position_t pos = readRequestedPosition(req_data, drive->position);
@@ -546,7 +549,7 @@ void RestAPI::start(){
         if (!parseBody(req, req_data))
             return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL)
+        if (*currentState != MainState::Manual)
             return jsonError(400, "Cannot change the coordinates when not in MANUAL mode");
 
         const position_t pos = readRequestedPosition(req_data, drive->position);
@@ -562,7 +565,7 @@ void RestAPI::start(){
         if (!parseBody(req, req_data))
             return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL)
+        if (*currentState != MainState::Manual)
             return jsonError(400, "Cannot change the coordinates when not in MANUAL mode");
 
         const position_t pos = readRequestedPosition(req_data, drive->position);
@@ -578,7 +581,7 @@ void RestAPI::start(){
         if (!parseBody(req, req_data))
             return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL)
+        if (*currentState != MainState::Manual)
             return jsonError(400, "Cannot move when not in MANUAL mode");
 
         double req_value = req_data["value"];
@@ -600,7 +603,7 @@ void RestAPI::start(){
         if (!parseBody(req, req_data))
             return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL)
+        if (*currentState != MainState::Manual)
             return jsonError(400, "Cannot rotate when not in MANUAL mode");
 
         int req_value = req_data["value"];
@@ -620,7 +623,7 @@ void RestAPI::start(){
         if (!parseBody(req, req_data))
             return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL)
+        if (*currentState != MainState::Manual)
             return jsonError(400, "Cannot rotate servo when not in MANUAL mode");
 
         int req_value = req_data["value"];
@@ -641,7 +644,7 @@ void RestAPI::start(){
         if (!parseBody(req, req_data))
             return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL)
+        if (*currentState != MainState::Manual)
             return jsonError(400, "Cannot rotate stepper when not in MANUAL mode");
 
         int req_value = req_data["value"];
@@ -658,7 +661,7 @@ void RestAPI::start(){
         if (!parseBody(req, req_data))
             return jsonError(400, "Invalid JSON");
 
-        if (*currentState != MANUAL)
+        if (*currentState != MainState::Manual)
             return jsonError(400, "Cannot test actions when not in MANUAL mode");
         if (manual_currentFunc != nullptr)
             return jsonError(400, "Another action is currently running, cannot execute the requested action");
@@ -680,7 +683,7 @@ void RestAPI::start(){
 
         // Apply the value
         //exit_requested = true;
-        *nextState = FIN;
+        *nextState = MainState::Fin;
 
         return jsonMessage("Successful");
     });

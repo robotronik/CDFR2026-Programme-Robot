@@ -4,7 +4,7 @@
 TableState::TableState(DriveControl* drive){
     this->drive = drive;
     pos_opponent.x = 3000; pos_opponent.y = 0; //si on detect pas l'adversaire, on se mettrait en slow mode proche de 0,0
-    colorTeam = NONE;
+    colorTeam = ColorTeam::None;
     strategy = "";
     startTime = 0;
     calibrationAge = 0;
@@ -32,7 +32,7 @@ bool TableState::isRobotInArrivalZone(position_t position){
     int w = 450;
     int h = 600;
     int c_x = -550 - w/2;
-    int c_y = colorTeam == BLUE ? (900 + h/2) : (-900 - h/2);
+    int c_y = colorTeam == ColorTeam::Blue ? (900 + h/2) : (-900 - h/2);
     return m_isPointInsideRectangle(position.x, position.y, c_x, c_y, w + 2*robotSmallRadius, h + 2*robotSmallRadius);
 }
 
@@ -49,16 +49,16 @@ void TableState::initDropZone(){
     for(int i = 0; i < WALL_ZONE_COUNT; i++) {
         wallZone[i].pos = WALL_POSITION[i];
         wallZone[i].nb = 0;
-        wallZone[i].bestConstruction = UNCONSTRUCTED;
+        wallZone[i].bestConstruction = ConstructionType::Unconstructed;
         wallZone[i].idx = i;
-        wallZone[i].colorTeam = i < WALL_ZONE_COUNT / 2 ? BLUE : YELLOW;
+        wallZone[i].colorTeam = i < WALL_ZONE_COUNT / 2 ? ColorTeam::Blue : ColorTeam::Yellow;
     }
     for(int i = 0; i < TOWER_ZONE_COUNT; i++) {
         towerZone[i].pos = TOWER_POSITION[i];
         towerZone[i].nb = 0;
-        towerZone[i].bestConstruction = UNCONSTRUCTED;
+        towerZone[i].bestConstruction = ConstructionType::Unconstructed;
         towerZone[i].idx = i;
-        towerZone[i].colorTeam = i < TOWER_ZONE_COUNT / 2 ? BLUE : YELLOW;
+        towerZone[i].colorTeam = i < TOWER_ZONE_COUNT / 2 ? ColorTeam::Blue : ColorTeam::Yellow;
     }
 }
 
@@ -87,7 +87,7 @@ bool TableState::remainEmptyWall(){
 int TableState::needTower(){
     int count = 4;
     for(towerZone_t tower : towerZone) {
-        if (tower.bestConstruction == TOWER) {
+        if (tower.bestConstruction == ConstructionType::Tower) {
             count--;
         }
     }
@@ -97,7 +97,7 @@ int TableState::needTower(){
 int TableState::needWall(){
     int count = 5;
     for(wallZone_t wall : wallZone) {
-        if (wall.bestConstruction == WALL) {
+        if (wall.bestConstruction == ConstructionType::Wall) {
             count--;
         }
     }
@@ -106,7 +106,7 @@ int TableState::needWall(){
 
 bool TableState::needDoor(){
     for(wallZone_t wall : wallZone) {
-        if (wall.bestConstruction == DOOR) {
+        if (wall.bestConstruction == ConstructionType::Door) {
             return false;
         }
     }
@@ -118,7 +118,7 @@ void to_json(json& j, const TableState& ts) {
     j = json{
         {"pos_opponent", ts.pos_opponent},
         {"startTime", ts.startTime},
-        {"colorTeam", ts.colorTeam},
+        {"colorTeam", static_cast<int>(ts.colorTeam)},
         {"strategy", ts.strategy}
     };
 }

@@ -18,8 +18,8 @@ class ActuatorsControl;
 
 class RestAPI {
     public:
-        RestAPI(main_State_t* currentState,
-                main_State_t* nextState,
+        RestAPI(MainState* currentState,
+                MainState* nextState,
                 DriveControl* drive,
                 TableState* tableStatus,
                 Arduino* arduino,
@@ -35,12 +35,12 @@ class RestAPI {
         void stop();
 
         // Requests received through the REST API, applied by the main loop
-        bool consumeColorRequest(colorTeam_t& color);
+        bool consumeColorRequest(ColorTeam& color);
         bool consumeStrategyRequest(std::string& strategy);
 
     private:
-        main_State_t* currentState;
-        main_State_t* nextState;
+        MainState* currentState;
+        MainState* nextState;
         DriveControl* drive;
         TableState* tableStatus;
         Arduino* arduino;
@@ -52,7 +52,7 @@ class RestAPI {
         std::vector<VirtualStrategy*>* strategies;
 
         bool hasColorRequest = false;
-        colorTeam_t requestedColor = NONE;
+        ColorTeam requestedColor = ColorTeam::None;
         bool hasStrategyRequest = false;
         std::string requestedStrategy;
 };

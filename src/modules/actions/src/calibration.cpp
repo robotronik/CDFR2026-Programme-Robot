@@ -11,7 +11,7 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
     static bool state = false; // Used to alternate between two positions
 
     // Aruco tags are at pos (+/-400, +/-900)
-    nav_return_t ret;
+    NavReturn ret;
 
     switch (step){
     case 0:{
@@ -29,12 +29,12 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
             pos1.a += 70.0;
         else
             pos1.a -= 70.0;
-        if (tableStatus->colorTeam == YELLOW)
+        if (tableStatus->colorTeam == ColorTeam::Yellow)
             position_robot_flip(pos1);
 
         ret = navigation.goTo(pos1, false, false, true);
 
-        if (ret == NAV_DONE){
+        if (ret == NavReturn::Done){
             if (!has_prev_measure){
                 prev_pos = navigation.prev_final_pos_cam;
                 prev_pos_otos = navigation.prev_final_pos_otos;
@@ -110,11 +110,11 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
         position_t pos1 = {0.0f, 1250.0f, -90.0f};
         pos1.x += state ? 400.0 : -400.0;
 
-        if (tableStatus->colorTeam == YELLOW)
+        if (tableStatus->colorTeam == ColorTeam::Yellow)
             position_robot_flip(pos1);
         ret = navigation.goTo(pos1, false, false, true);
 
-        if (ret == NAV_DONE){
+        if (ret == NavReturn::Done){
             if (!has_prev_measure){
                 prev_nav_prev_final_pos_cam = navigation.prev_final_pos_cam;
                 prev_nav_prev_final_pos_otos = navigation.prev_final_pos_otos;
@@ -188,11 +188,11 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
     case 2:{
         // Calibrate using a code close to init pos
         position_t pos = {-400, 1250, -90.0};
-        if (tableStatus->colorTeam == YELLOW)
+        if (tableStatus->colorTeam == ColorTeam::Yellow)
             position_robot_flip(pos);
             
         ret = navigation.goTo(pos, false, true, true);
-        if (ret == NAV_DONE){
+        if (ret == NavReturn::Done){
             step++;
             LOG_GREEN_INFO("OTOS calibration done, moving to step 3");
         }
@@ -201,7 +201,7 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
         // goto home
         position_t pos = startPos;
         ret = navigation.goTo(pos, false, true, true);
-        if (ret == NAV_DONE){
+        if (ret == NavReturn::Done){
             LOG_GREEN_INFO("OTOS calibration done, returned to home position");
             step = 0; // Reset for next time            
             return true;
