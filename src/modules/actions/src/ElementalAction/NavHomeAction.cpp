@@ -1,6 +1,6 @@
 #include "actions/ElementalAction/NavHomeAction.hpp"
 #include "utils/logger.hpp"
-#include "navigation/navigation.h" //For nav_return_t & position_t
+#include "navigation/navigation.h" //For NavReturn & position_t
 #include "navigation/pathfind.h"
 
 NavHomeAction::NavHomeAction(TableState* tableState, DriveControl* drive){
@@ -10,17 +10,17 @@ NavHomeAction::NavHomeAction(TableState* tableState, DriveControl* drive){
     this->drive = drive;
 }
 
-ReturnFSM_t NavHomeAction::run(){
-    nav_return_t res = navigation.goTo(homePos, true);
-    if (res == NAV_ERROR){
+ReturnFSM NavHomeAction::run(){
+    NavReturn res = navigation.goTo(homePos, true);
+    if (res == NavReturn::Error){
         errorManagement();
     }
-    if (res == NAV_DONE){
+    if (res == NavReturn::Done){
         successManagement();
         done = true;
-        return FSM_RETURN_DONE;
+        return ReturnFSM::Done;
     }
-    return FSM_RETURN_WORKING;
+    return ReturnFSM::Working;
 }
 
 bool NavHomeAction::errorManagement(){

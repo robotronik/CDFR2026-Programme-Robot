@@ -1,7 +1,7 @@
 #include "actions/ElementalAction/GoToPositionAction.hpp"
 #include "defs/tableState.hpp"
 #include "utils/logger.hpp"
-#include "navigation/navigation.h" // pour nav_return_t & position_t
+#include "navigation/navigation.h" // pour NavReturn & position_t
 #include "navigation/pathfind.h"
 
 GoToPositionAction::GoToPositionAction(const std::string& name, position_t target, DriveControl* drive)
@@ -54,30 +54,30 @@ bool GoToPositionAction::resolveTarget(){
     return true;
 }
 
-ReturnFSM_t GoToPositionAction::run(){
+ReturnFSM GoToPositionAction::run(){
     if (!resolveTarget()){
         LOG_WARNING("GoToPositionAction: aucun élément de jeu connu pour ", nom.c_str());
-        return FSM_RETURN_ERROR;
+        return ReturnFSM::Error;
     }
 
-    nav_return_t res = navigation.goTo(target, true);
+    NavReturn res = navigation.goTo(target, true);
 
     switch (res) {
-        case NAV_PAUSED:
+        case NavReturn::Paused:
             LOG_DEBUG("GoToPositionAction: nav is paused");
             moving = false;
             break;
-        case NAV_ERROR:
+        case NavReturn::Error:
             errorManagement();
-            return FSM_RETURN_ERROR;
-        case NAV_DONE:
+            return ReturnFSM::Error;
+        case NavReturn::Done:
             successManagement();
-            return FSM_RETURN_DONE;
-        case NAV_IN_PROCESS:
+            return ReturnFSM::Done;
+        case NavReturn::InProcess:
             moving = true;
             break;
     }
-    return FSM_RETURN_WORKING;
+    return ReturnFSM::Working;
 }
 
 bool GoToPositionAction::errorManagement(){

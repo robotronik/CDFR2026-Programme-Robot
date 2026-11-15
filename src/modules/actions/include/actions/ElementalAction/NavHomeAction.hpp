@@ -12,7 +12,7 @@ class NavHomeAction : public VirtualAction {
         NavHomeAction(TableState* tableState, DriveControl* drive);
         ~NavHomeAction() override = default;
 
-        ReturnFSM_t run() override;
+        ReturnFSM run() override;
         bool stop() override;
         void reset() override;
         bool available(float &reward) override;

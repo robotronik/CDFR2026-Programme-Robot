@@ -18,7 +18,7 @@ class GoToPositionAction : public VirtualAction {
         GoToPositionAction(const std::string& name, TableState* tableState, DriveControl* drive);
         ~GoToPositionAction() override = default;
 
-        ReturnFSM_t run() override;
+        ReturnFSM run() override;
         bool stop() override;
         void reset() override;
         bool available(float &reward) override;

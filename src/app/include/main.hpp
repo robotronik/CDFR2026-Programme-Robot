@@ -7,7 +7,7 @@ bool returnToHome();
 
 void opponentInAction(position_t position);
 
-void switchTeamSide(colorTeam_t color);
+void switchTeamSide(ColorTeam color);
 
 void switchStrategy(std::string strategy);
 
