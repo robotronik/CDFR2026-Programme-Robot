@@ -1,5 +1,4 @@
 #include "defs/constante.h"
-#include "utils/logger.hpp"
 #include "actions/ActuatorsControl.hpp"
 
 ActuatorsControl::ActuatorsControl(Arduino* arduino, DriveControl* drive) : arduino(arduino), drive(drive) {
@@ -8,7 +7,8 @@ ActuatorsControl::ActuatorsControl(Arduino* arduino, DriveControl* drive) : ardu
 // ------------------------------------------------------
 //                   BASIC FSM CONTROL
 // ------------------------------------------------------
-
+// TODD USELESS ?
+// TODD USELESS ?
 /* Code for basic FSM (elemental actions)*/
 
 // ------------------------------------------------------
@@ -37,10 +37,13 @@ bool ActuatorsControl::moveServoAndWait(int servo, int target, int speed){
 //                  PUMP CONTROL
 // ------------------------------------------------------
 
-bool ActuatorsControl::setPumpState(bool state){
-    return arduino->writeSensor(PUMP_1_NUM, state);
+bool ActuatorsControl::setPumpState(bool state, int pumpIdx){
+    return arduino->writeSensor(PUMP_1_NUM, state); //TODO : Change to pumpIdx when multiple pumps are used
 }
 
+bool ActuatorsControl::setElectroState(bool state, int electroIdx){
+    return arduino->writeSensor(1, state); //TODO : Change to eletroIdx when multiple pumps are used
+}
 // ------------------------------------------------------
 //                   STEPPER CONTROL
 // ------------------------------------------------------
@@ -99,4 +102,36 @@ void ActuatorsControl::disableActuators(){
     // TODO Disable Pumps
     arduino->disableServos();
     drive->disable();
+}
+
+// ------------------------------------------------------
+//                   FACE PALM CONTROL
+// ------------------------------------------------------
+
+bool Wall::wDrop(){
+    //actuator->setElectroState(true, idx) TODO add electro use
+    return actuator->setPumpState(false, pumpIdx[0]);
+}
+
+bool Wall::wTake(){
+    return actuator->setPumpState(true, pumpIdx[0]);
+}
+
+bool Tower::tDrop(int idx){
+    return actuator->setPumpState(pumpIdx[idx],false);
+}
+
+bool Tower::rotate(bool dir){
+    if (dir)
+        return actuator->moveServoAndWait(servo, 180, 50); // TODO :Modifier position et speed
+    else
+        return actuator->moveServoAndWait(servo, 0, 50); // TODO :Modifier position et speed
+}
+
+bool Door::dDrop(){ //Version très expérimentale
+    tDrop(0); 
+    tDrop(1); 
+    rotate(false);
+    tDrop(2);
+    return true;
 }

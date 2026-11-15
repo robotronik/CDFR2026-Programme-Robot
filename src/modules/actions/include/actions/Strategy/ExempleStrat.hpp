@@ -4,7 +4,7 @@
 
 #include "navigation/driveControl.h"
 #include "defs/tableState.hpp"
-#include "actions/ActuatorsControl.hpp"
+#include "actions/RobotControl.hpp"
 /*
     ExempleStrat
     ------------
@@ -20,7 +20,7 @@
 */
 class ExempleStrat : public VirtualStrategy {
 public:
-    ExempleStrat(DriveControl* dc, TableState* ts, ActuatorsControl* ac);
+    ExempleStrat(DriveControl* dc, TableState* ts, RobotControl* rc);
     ~ExempleStrat() override = default;
 
     /*
@@ -62,5 +62,5 @@ private:
     std::unique_ptr<VirtualAction> waitAction;
     DriveControl* drive;
     TableState* tableStatus;
-    ActuatorsControl* actuators;
+    RobotControl* robot;
 };

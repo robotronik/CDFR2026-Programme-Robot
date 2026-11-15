@@ -7,6 +7,7 @@
 #include <vector>
 #include <unistd.h>  // for usleep
 
+#include "actions/RobotControl.hpp"
 #include "utils/logger.hpp"
 #include "utils/debugSound.hpp"
 
@@ -49,12 +50,12 @@ Lidar lidar = Lidar(&arduino);
 // control of hardware
 SensorControl sensor(&arduino);
 ActuatorsControl actuators(&arduino, &drive);
-
+RobotControl robot(&actuators, &drive);
 // status of table
 TableState tableStatus(&drive);
 
 // Brain Init
-VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus, &actuators);
+VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus, &robot);
 
 // Strategies selectable through the REST API
 std::vector<VirtualStrategy*> strategies = { currentStrategy };
@@ -77,7 +78,7 @@ bool initState;
 std::thread api_server_thread;
 
 // REST API
-RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &sensor, &actuators, &lidar, &cam1, &navigation, &strategies);
+RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &sensor, &actuators, &robot, &lidar, &cam1, &navigation, &strategies);
 
 // Prototypes
 int StartSequence();

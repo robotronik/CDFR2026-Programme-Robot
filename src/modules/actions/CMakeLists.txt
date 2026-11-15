@@ -9,6 +9,7 @@ target_sources(actions
         src/ElementalAction/DropAction.cpp
         src/Strategy/ExempleStrategy.cpp
         src/ActuatorsControl.cpp
+        src/RobotControl.cpp
         src/MainActionFSM.cpp
         src/SensorControl.cpp
         src/calibration.cpp
