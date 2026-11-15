@@ -3,10 +3,10 @@
 
 //#include "utils/logger.hpp"
 
-DropAction::DropAction(TableState* state, DriveControl* drive, ActuatorsControl* actuators) {
+DropAction::DropAction(TableState* state, DriveControl* drive, RobotControl* robot) {
     this->tableState = state;
     this->drive = drive;
-    this->actuators = actuators;
+    this->robot = robot;
     this->nom = "DropAction";
     reset();
 }
@@ -17,7 +17,7 @@ ReturnFSM DropAction::run() {
             {
             NavReturn nav_result = navigation.goTo(target, true);
             if(nav_result == NavReturn::Done) {
-                actuators->setPumpState(false);
+                robot->wall1.wDrop();
                 return ReturnFSM::Done;
             }else if (nav_result == NavReturn::Error) {
                 return ReturnFSM::Error;

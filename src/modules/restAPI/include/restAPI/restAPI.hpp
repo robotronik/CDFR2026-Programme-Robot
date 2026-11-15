@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "actions/RobotControl.hpp"
 #include "defs/mainState.hpp"
 #include "defs/structs.hpp"
 
@@ -25,6 +26,7 @@ class RestAPI {
                 Arduino* arduino,
                 SensorControl* sensor,
                 ActuatorsControl* actuators,
+                RobotControl* robot,
                 Lidar* lidar,
                 Cam* cam,
                 Navigation* navigation,
@@ -49,6 +51,7 @@ class RestAPI {
         Lidar* lidar;
         Cam* cam;
         Navigation* navigation;
+        RobotControl* robot;
         std::vector<VirtualStrategy*>* strategies;
 
         bool hasColorRequest = false;
