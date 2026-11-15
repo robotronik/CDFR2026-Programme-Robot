@@ -31,7 +31,7 @@ class TakeStock : public VirtualAction {
         ~TakeStock() override = default;
 
 
-        ReturnFSM_t run() override;
+        ReturnFSM run() override;
         bool stop() override;
         void reset() override;
         bool available(float &reward) override;

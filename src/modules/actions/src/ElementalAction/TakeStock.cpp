@@ -67,45 +67,45 @@ float TakeStock::BestTake(const position_t& from) {
     return getBestQuarry(from);//TODO ajouter le vole des bloques ou la recuperation des bloques hors carriere
 }
 
-ReturnFSM_t TakeStock::run(){
+ReturnFSM TakeStock::run(){
     switch (state) {
         case MOVE1: {
-            nav_return_t res1 = navigation.goTo(target, true, false, false);
+            NavReturn res1 = navigation.goTo(target, true, false, false);
             switch (res1) {
-                case NAV_PAUSED:
+                case NavReturn::Paused:
                     LOG_DEBUG("TakeStock: nav is paused");
                     break;
-                case NAV_ERROR:
+                case NavReturn::Error:
                     errorManagement();
-                    return FSM_RETURN_ERROR;
-                case NAV_DONE:
+                    return ReturnFSM::Error;
+                case NavReturn::Done:
                     state = MOVE2;
                     break;
-                case NAV_IN_PROCESS:
+                case NavReturn::InProcess:
                     break;
             }
             break;
         }
         case MOVE2:
             //TODO allume les pompes 
-            nav_return_t res2 = navigation.goTo(diffpos, true, true, true);//TODO fast mode
+            NavReturn res2 = navigation.goTo(diffpos, true, true, true);//TODO fast mode
             switch (res2) {
-                case NAV_PAUSED:
+                case NavReturn::Paused:
                     LOG_DEBUG("TakeStock: nav is paused");
                     break;
-                case NAV_ERROR:
+                case NavReturn::Error:
                     errorManagement();
-                    return FSM_RETURN_ERROR;
-                case NAV_DONE:
+                    return ReturnFSM::Error;
+                case NavReturn::Done:
                     successManagement();
-                    return FSM_RETURN_DONE;
-                case NAV_IN_PROCESS:
+                    return ReturnFSM::Done;
+                case NavReturn::InProcess:
                     break;
 
             } 
             break;      
     }
-    return FSM_RETURN_WORKING;
+    return ReturnFSM::Working;
 
 }
 
