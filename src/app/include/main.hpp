@@ -3,8 +3,6 @@
 #include "defs/structs.hpp"
 
 
-bool returnToHome();
-
 void opponentInAction(position_t position);
 
 void switchTeamSide(ColorTeam color);
