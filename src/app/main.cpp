@@ -10,11 +10,11 @@
 #include "utils/logger.hpp"
 #include "utils/debugSound.hpp"
 
-//lidar related
+// Lidar
 #include "lidar/Lidar.hpp"
 #include "lidar/lidarAnalize.h"
 
-//navigation related
+// Navigation
 #include "navigation/navigation.h"
 #include "navigation/pathfind.h"
 #include "actions/calibration.h"
@@ -25,11 +25,11 @@
 #include "vision/Cam.hpp"
 #include "mat/mat.hpp"
 
-//brain include
+// Actions
 #include "actions/MainActionFSM.hpp"
 #include "actions/Strategy/ExempleStrat.hpp"
 
-//Arduino
+// Arduino
 #include "i2c/Arduino.hpp"
 #include "actions/SensorControl.hpp"
 #include "actions/ActuatorsControl.hpp"
@@ -44,7 +44,7 @@
 // Hardware init
 DriveControl drive;
 Arduino arduino;
-Lidar lidar= Lidar(&arduino);
+Lidar lidar = Lidar(&arduino);
 
 // control of hardware
 SensorControl sensor(&arduino);
@@ -403,21 +403,6 @@ void tests()
 // ------------------------------------------------------
 //                        OTHER
 // ------------------------------------------------------
-
-bool returnToHome(){
-
-    static position_t homePos;
-    NavReturn res = navigation.goTo(homePos, true);
-    if (res == NavReturn::Error){
-        LOG_ERROR("RETURN_TO_HOME: Navigation error");
-        homePos.y += (tableStatus.colorTeam == ColorTeam::Blue) ? 50 : -50; // recule un peu et retente
-    }
-    if (res == NavReturn::Done){
-        LOG_GREEN_INFO("RETURN_TO_HOME: Done");
-        return true;
-    }
-    return false;
-}
 
 // TODO implement this function
 /* Detect from position of adversary the action of the adversary */
