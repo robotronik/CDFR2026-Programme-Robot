@@ -1,6 +1,7 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
 #include "defs/tableState.hpp"
+#include "drive_interface.h"
 #include "navigation/driveControl.h"
 
 typedef enum
@@ -13,18 +14,22 @@ class TakeStock : public VirtualAction {
     private:
         TableState* tableState;
         DriveControl* drive;
-        position_t target;
-        bool moving;
-        bool needsTarget = false;
-        bool done = false;
-        int value;
+
+        const position_t OFFSET_TARGET = {150, 150, 0};
+        int value = 23; // TODO change to be max value of points adv can make with 3 rocks
         takeStockState_t state;
+
+        position_t target;
+        position_t diffpos;
+
+        float BestTake(const position_t& from);
+        float getBestQuarry(const position_t& from);
+        void BestPositionToTake(const position_t&  from);
         bool resolveTarget();
     public:
         TakeStock(TableState* tableState);
         ~TakeStock() override = default;
 
-        position_t BestPositionToTake(const position_t&  from, position_t& target);
 
         ReturnFSM_t run() override;
         bool stop() override;
@@ -36,6 +41,4 @@ class TakeStock : public VirtualAction {
     protected:
         bool errorManagement();
         bool successManagement();
-        bool BestTake(const position_t& from, position_t& target);
-        bool getBestQuarry(const position_t& from, position_t& target);
 };

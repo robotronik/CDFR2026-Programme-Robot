@@ -40,7 +40,7 @@ class TableState
         std::vector<MatGameElement> elements;
         quarry_t quarry[10];
         bool remainQuarry();
-        bool isQuarryAvailable(int idx);
+        int isQuarryAvailable(int idx);
 
     private:
         DriveControl* drive;

@@ -44,8 +44,8 @@ int TableState::getScore()
     return totalScore;
 }
 
-bool TableState::isQuarryAvailable(int idx) {
-    return !quarry[idx].nb;
+int TableState::isQuarryAvailable(int idx) {
+    return quarry[idx].nb;
 }
 
 bool TableState::remainQuarry()

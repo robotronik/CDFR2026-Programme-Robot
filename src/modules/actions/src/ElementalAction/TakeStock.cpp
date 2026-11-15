@@ -1,7 +1,6 @@
 #include "actions/ElementalAction/TakeStock.hpp"
 #include "defs/tableState.hpp"
 #include "navigation/driveControl.h" // pour position_t
-#include "defs/constante.h"
 #include "GoToPositionAction.cpp"
 #include "navigation/navigation.h" // pour nav_return_t & position_t
 
@@ -11,76 +10,70 @@ TakeStock::TakeStock(TableState* tableState)
     state = MOVE1;
 }
 
-bool TakeStock::getBestQuarry(const position_t& from, position_t& target) {
+float TakeStock::getBestQuarry(const position_t& from) {
     if (tableState->remainQuarry()) {
-        return false;
+        return -1;
     }
 
-    position_t closest = QUARRY_POSITION[0];
-    double minDistance ;
-    position_t path[100]; // Assuming a maximum path length
-    pathfind(from, {QUARRY_POSITION[0].x, QUARRY_POSITION[0].y, QUARRY_POSITION[0].a}, path, minDistance);
-    int maxstone = tableState->isQuarryAvailable(0) ;
-    int taille = sizeof(tableState->quarry);
-    for (int i = 0; i < taille;i++ ) {
+    quarry_t closest = tableState->quarry[0];
+    double minDistance;
+
+    position_t path[1024]; // Assuming a maximum path length
+    if(!pathfind(from, {closest.pos.x, closest.pos.y, closest.pos.a}, path, minDistance)) {
+        minDistance = INFINITY;
+    }
+    for (quarry_t quarry : tableState->quarry) {
         double distance; 
-        pathfind(from, {QUARRY_POSITION[0].x, QUARRY_POSITION[0].y, QUARRY_POSITION[0].a}, path, distance);
-        int stone = tableState->isQuarryAvailable(i);
-        if (distance < minDistance  && stone>=maxstone) {
+        if(!pathfind(from, {quarry.pos.x, quarry.pos.y, quarry.pos.a}, path, distance)) {
+            distance = INFINITY;
+        }
+        if (distance < minDistance  && quarry.nb>=closest.nb) {
             minDistance = distance;
-            closest = QUARRY_POSITION[i];
-            maxstone = stone;
+            closest = quarry;
         }
     }
-
-    target.x = closest.x;
-    target.y = closest.y;
-    target.a = closest.a;
-    return true;
-    
+    if (minDistance != INFINITY) {
+        target = closest.pos;
+        return (float)minDistance;
+    }
+    return -1;
 }
 
-position_t TakeStock::BestPositionToTake(const position_t& from, position_t& target) {
-    position_t diffpos = {target.x, target.y, from.a};
+void TakeStock::BestPositionToTake(const position_t& from) {
+    diffpos = {target.x, target.y, from.a}; //TODO add offset
     //pour les quarry pour prendre autre part il faut faire autrement
     if (target.y == 950) {
-        target.y = 800;
+        target.y -= OFFSET_TARGET.y;
     }
     else if (target.y == -950)
     {
-        target.y = -800;
+        target.y += OFFSET_TARGET.y;
     }
     else {
         if (from.x >= 0) {
-            target.x = 150;
+            target.x = OFFSET_TARGET.x;
         }
         else if (from.x < 0)
         {
-            target.x = -150;
+            target.x = -OFFSET_TARGET.x;
         }
         
     }
     // TODO il reste target.a e(et offset) a modifié mais il depend de la face voulue et diffpos a, et prendre en compte le decalage des pompes par rapport au centre du robot
 
-    return diffpos;
-
 }
 
-bool TakeStock::BestTake(const position_t& from, position_t& target) {
-    return getBestQuarry(from, target);//TODO ajouter le vole des bloques ou la recuperation des bloques hors carriere
+float TakeStock::BestTake(const position_t& from) {
+    return getBestQuarry(from);//TODO ajouter le vole des bloques ou la recuperation des bloques hors carriere
 }
 
 ReturnFSM_t TakeStock::run(){
-    getBestQuarry(drive->getPosition(), target);
-    const position_t etape = BestPositionToTake(drive->getPosition(), target);
-
     switch (state) {
         case MOVE1: {
             nav_return_t res1 = navigation.goTo(target, true, false, false);
             switch (res1) {
                 case NAV_PAUSED:
                     LOG_DEBUG("TakeStock: nav is paused");
-                    moving = false;
                     break;
                 case NAV_ERROR:
                     errorManagement();
@@ -89,28 +82,24 @@ ReturnFSM_t TakeStock::run(){
                     state = MOVE2;
                     break;
                 case NAV_IN_PROCESS:
-                    moving = true;
                     break;
             }
             break;
         }
         case MOVE2:
-            //allume les pompes 
-            nav_return_t res2 = navigation.goTo(etape, true, true, true);//TODO fast mode
+            //TODO allume les pompes 
+            nav_return_t res2 = navigation.goTo(diffpos, true, true, true);//TODO fast mode
             switch (res2) {
                 case NAV_PAUSED:
                     LOG_DEBUG("TakeStock: nav is paused");
-                    moving = false;
                     break;
                 case NAV_ERROR:
                     errorManagement();
                     return FSM_RETURN_ERROR;
                 case NAV_DONE:
                     successManagement();
-                    state = MOVE1;
                     return FSM_RETURN_DONE;
                 case NAV_IN_PROCESS:
-                    moving = true;
                     break;
 
             } 
@@ -122,9 +111,8 @@ ReturnFSM_t TakeStock::run(){
 
 
 bool TakeStock::stop(){
-    if(moving){
+    if(drive->velocity.a != 0 || drive->velocity.x != 0 || drive->velocity.y != 0){
         drive->stopMotion();
-        moving = false;
     }
     return true;
 }
@@ -137,41 +125,26 @@ bool TakeStock::errorManagement(){
 
 bool TakeStock::successManagement(){
     LOG_GREEN_INFO("TakeStock: arrivé à ", nom.c_str());
-    moving = false;
-    done = true;
+    reset();
     return true;
 }
 
 void TakeStock::reset(){
     stop();
-    done = false;                  // l'action redevient candidate
-    needsTarget = (tableState != nullptr); // re-cible l'élément le plus proche
+    value = 23; // TODO change to be max value of points adv can make with 3 rocks
+    state = MOVE1;
+
+    target = {0, 0, 0};
+    diffpos = {0, 0, 0};
 }
 
 bool TakeStock::available(float &reward){
-    // Déplacement déjà terminé (succès ou échec) : plus candidate tant
-    // qu'elle n'a pas été réarmée par reset().
-    if (done) return false;
-    // Cible dynamique : sans élément connu, l'action n'est pas jouable.
-    if (!resolveTarget()) return false;
-    double path_length_mm;
-    position_t path[100]; // Assuming a maximum path length
-    if(!pathfind(drive->getPosition(), target, path, path_length_mm)){
-        return false;
+    float dist = BestTake(drive->getPosition());
+    if (dist != -1) {
+        reward = value/dist;
+        return true;
     }
-    reward = value/path_length_mm;
-    return true;
-}
-
-bool TakeStock::resolveTarget(){
-    if (!needsTarget) {
-        return true; // cible fixe, ou déjà résolue pour cette exécution
-    }
-    if (!BestTake(drive->getPosition(), target)) {
-        return false; // aucun élément de jeu connu
-    }
-    needsTarget = false;
-    return true;
+    return false;
 }
 
 bool TakeStock::fullBlock(){
@@ -179,5 +152,5 @@ bool TakeStock::fullBlock(){
 }
 
 bool TakeStock::mouvementBlock(){
-    return moving;
+    return true; //the action always blocks the movement of adversary
 }
