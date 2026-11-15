@@ -9,13 +9,13 @@ WaitAction::WaitAction(unsigned long tps){
     startTime = 0;
 }
 
-ReturnFSM_t WaitAction::run(){
+ReturnFSM WaitAction::run(){
     if (startTime == 0) startTime = _millis();
     if (_millis() - startTime > WAIT_DURATION_MS){
         startTime = 0;
-        return FSM_RETURN_DONE;
+        return ReturnFSM::Done;
     }
-    return FSM_RETURN_WORKING;
+    return ReturnFSM::Working;
 }
 
 bool WaitAction::successManagement(){

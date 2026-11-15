@@ -3,7 +3,7 @@
 
 /*
     Action d'attente simple : temporise pendant WAIT_DURATION_MS
-    puis rend la main (FSM_RETURN_DONE) pour permettre au FSM
+    puis rend la main (ReturnFSM::Done) pour permettre au FSM
     de recalculer la meilleure action à effectuer.
 */
 class WaitAction : public VirtualAction {
@@ -11,7 +11,7 @@ class WaitAction : public VirtualAction {
         WaitAction(unsigned long wait = WAIT_DURATION_MS);
         ~WaitAction() override = default;
 
-        ReturnFSM_t run() override;
+        ReturnFSM run() override;
         bool stop() override;
         void reset() override;
         bool available(float &reward) override;

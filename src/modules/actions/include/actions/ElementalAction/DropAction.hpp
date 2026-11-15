@@ -4,7 +4,7 @@
 #include "defs/structs.hpp"
 #include "utils/utils.h"
 #include "drive_interface.h"
-#include "navigation/navigation.h" // pour nav_return_t & position_t
+#include "navigation/navigation.h" // pour NavReturn & position_t
 #include "defs/tableState.hpp"
 #include "navigation/pathfind.h"
 #include "actions/ActuatorsControl.hpp"
@@ -12,7 +12,7 @@
 
 /*
     Action d'attente simple : temporise pendant WAIT_DURATION_MS
-    puis rend la main (FSM_RETURN_DONE) pour permettre au FSM
+    puis rend la main (ReturnFSM::Done) pour permettre au FSM
     de recalculer la meilleure action à effectuer.
 */
 class DropAction : public VirtualAction {
@@ -20,7 +20,7 @@ class DropAction : public VirtualAction {
         DropAction(TableState* state, DriveControl* drive, ActuatorsControl* actuators);
         ~DropAction() override = default;
 
-        ReturnFSM_t run() override;
+        ReturnFSM run() override;
         bool stop() override;
         void reset() override;
         bool available(float &reward) override;
@@ -43,14 +43,14 @@ class DropAction : public VirtualAction {
         bool getBestDropZone();
         bool toBestDropPosition();
 
-        typedef enum {
-            DROP_STATE_MOVING,
-        } dropState_t;
+        enum class DropState {
+            Moving,
+        };
 
         const position_t DROP_OFFSET = {0, 0, 120};
         position_t target;
         double best_path_length;
-        dropState_t state;
+        DropState state;
 
 
 };

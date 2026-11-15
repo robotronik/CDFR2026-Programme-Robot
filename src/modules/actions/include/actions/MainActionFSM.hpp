@@ -39,7 +39,7 @@ class ActionFSM{
         VirtualAction* currentAction = nullptr;
 
         /************  BASE DES DURÉES D'ACTION ************/
-        // Enregistre, pour chaque action menée à son terme (FSM_RETURN_DONE),
+        // Enregistre, pour chaque action menée à son terme (ReturnFSM::Done),
         // le temps qu'elle a réellement mis à s'exécuter.
         ActionDurationDB durationDB{ACTION_DB_PATH};
         // Instant (_millis()) du début de l'exécution de currentAction.

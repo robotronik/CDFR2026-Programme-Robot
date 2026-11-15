@@ -8,7 +8,7 @@
 CalibrationAction::CalibrationAction(DriveControl* drive, TableState* tableState){
     nom = "Calibration";
     duree = 1000;
-    calibrationState = FSM_CALCULATION;
+    calibrationState = StateCalibration::CalcCalculation;
     this->drive = drive;
     this->tableState = tableState;
 }
@@ -18,43 +18,43 @@ bool CalibrationAction::stop(){
 }
 
 void CalibrationAction::reset(){
-    calibrationState = FSM_CALCULATION;
+    calibrationState = StateCalibration::CalcCalculation;
 }
 
-ReturnFSM_t CalibrationAction::run(){
+ReturnFSM CalibrationAction::run(){
     switch (calibrationState){
-        case FSM_CALCULATION:
+        case StateCalibration::CalcCalculation:
             calibrationTarget_ = calculateClosestArucoPosition(drive->getPosition());
-            calibrationState = FSM_CALIBRATION_NAV;
+            calibrationState = StateCalibration::CalibrationNav;
             break;
-        case FSM_CALIBRATION_NAV:
+        case StateCalibration::CalibrationNav:
         {
             // Look towards the closest aruco marker to recalibrate the position
             nav_ret = navigation.goTo(calibrationTarget_, true);
-            if (nav_ret == NAV_DONE){
+            if (nav_ret == NavReturn::Done){
                 LOG_EXTENDED_DEBUG("FSM_CALIBRATION_NAV: Nav done");
                 if (tableState->calibrationAge){
                     // Si calibrationAge != 0 la calibration a échoué
-                    errorManagement(NAV_DONE);
-                    return FSM_RETURN_ERROR;
+                    errorManagement(NavReturn::Done);
+                    return ReturnFSM::Error;
                 }
-                return FSM_RETURN_DONE;
+                return ReturnFSM::Done;
             }
-            else if (nav_ret == NAV_ERROR){
-                errorManagement(NAV_ERROR);
-                return FSM_RETURN_ERROR;
+            else if (nav_ret == NavReturn::Error){
+                errorManagement(NavReturn::Error);
+                return ReturnFSM::Error;
             }
             break;
         }
     }
-    return FSM_RETURN_WORKING;
+    return ReturnFSM::Working;
 }
 
-bool CalibrationAction::errorManagement(nav_return_t error_code){
+bool CalibrationAction::errorManagement(NavReturn error_code){
     tableState->calibrationAge -= 1;
-    if (error_code == NAV_DONE){
+    if (error_code == NavReturn::Done){
         LOG_WARNING("ACTION_CALIBRATION: Failed nav to calibration action");
-    }else if (error_code == NAV_ERROR)
+    }else if (error_code == NavReturn::Error)
     {
         LOG_WARNING("ACTION_CALIBRATION: Failed calibration action on aruco scan");
     }

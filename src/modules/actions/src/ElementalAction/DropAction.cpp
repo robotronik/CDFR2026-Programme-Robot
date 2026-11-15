@@ -11,21 +11,21 @@ DropAction::DropAction(TableState* state, DriveControl* drive, ActuatorsControl*
     reset();
 }
 
-ReturnFSM_t DropAction::run() {
+ReturnFSM DropAction::run() {
     switch (state) {
-        case DROP_STATE_MOVING:
+        case DropState::Moving:
             {
-            nav_return_t nav_result = navigation.goTo(target, true);
-            if(nav_result == NAV_DONE) {
+            NavReturn nav_result = navigation.goTo(target, true);
+            if(nav_result == NavReturn::Done) {
                 actuators->setPumpState(false);
-                return FSM_RETURN_DONE;
-            }else if (nav_result == NAV_ERROR) {
-                return FSM_RETURN_ERROR;
+                return ReturnFSM::Done;
+            }else if (nav_result == NavReturn::Error) {
+                return ReturnFSM::Error;
             }
             break;
             }
     }
-    return FSM_RETURN_WORKING;
+    return ReturnFSM::Working;
 }
 
 
@@ -42,7 +42,7 @@ void DropAction::reset() {
 bool DropAction::available(float &reward) {
     reset();
     if (getBestDropZone()) {
-        reward = (float)(WALL + 3)/best_path_length;
+        reward = (float)static_cast<int>(ConstructionType::Wall)/best_path_length;
     }else{
         reward = 0.0f;
     }
@@ -72,7 +72,7 @@ bool DropAction::getBestDropZone(){
     for(int i = 0; i < WALL_ZONE_COUNT; i++) {
         if (tableState->wallZone[i].nb == 0) {
             wallZone_t zone = tableState->wallZone[i];
-            if((tableState->colorTeam == BLUE ? 1 : -1) * zone.pos.y > (tableState->colorTeam == BLUE ? 1 : -1) * bestZone.pos.y
+            if((tableState->colorTeam == ColorTeam::Blue ? 1 : -1) * zone.pos.y > (tableState->colorTeam == ColorTeam::Blue ? 1 : -1) * bestZone.pos.y
                 && pathfind(robot_pos, zone.pos, path, best_path_length)) {
                 bestZone = zone;
                 valid = true;

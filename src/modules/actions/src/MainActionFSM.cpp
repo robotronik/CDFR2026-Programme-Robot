@@ -62,16 +62,16 @@ bool ActionFSM::RunFSM(){
         return false;
     }
 
-    ReturnFSM_t ret = currentAction->run();
+    ReturnFSM ret = currentAction->run();
 
-    if (ret == FSM_RETURN_DONE){
+    if (ret == ReturnFSM::Done){
         // Action menée à son terme : on enregistre le temps qu'elle a
         // réellement pris.
         durationDB.record(currentAction->getNom(), _millis() - actionStartTime);
         currentAction = SetBestAction();
         actionStartTime = _millis();
     }
-    else if (ret == FSM_RETURN_ERROR){
+    else if (ret == ReturnFSM::Error){
         currentAction = SetBestAction();
         actionStartTime = _millis();
     }

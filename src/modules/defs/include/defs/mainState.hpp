@@ -1,11 +1,11 @@
 #pragma once
 
-typedef enum {
-    INIT = 0,
-    WAITSTART = 3,
-    RUN = 4,
-    FIN = 5,
-    TEST = 6,
-    MANUAL = 7,
-    CALIBRATION = 8
-} main_State_t;
+enum class MainState {
+    Init = 0,
+    WaitStart = 3,
+    Run = 4,
+    Fin = 5,
+    Test = 6,
+    Manual = 7,
+    Calibration = 8
+};
