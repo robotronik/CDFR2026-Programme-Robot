@@ -1,5 +1,4 @@
 #include "defs/constante.h"
-#include "utils/logger.hpp"
 #include "actions/ActuatorsControl.hpp"
 
 ActuatorsControl::ActuatorsControl(Arduino* arduino, DriveControl* drive) : arduino(arduino), drive(drive) {
@@ -110,26 +109,23 @@ void ActuatorsControl::disableActuators(){
 // ------------------------------------------------------
 
 bool Wall::wDrop(){
-    for(int idx: pumpIdx){
-        actuator->setPumpState(idx,false); // TODO check if sucessfull
-    }
+    //actuator->setElectroState(true, idx) TODO add electro use
+    return actuator->setPumpState(false, pumpIdx[0]);
 }
 
 bool Wall::wTake(){
-    for(int idx: pumpIdx){
-        actuator->setPumpState(idx,true);
-    }
+    return actuator->setPumpState(true, pumpIdx[0]);
 }
 
 bool Tower::tDrop(int idx){
-    actuator->setPumpState(pumpIdx[idx],false);
+    return actuator->setPumpState(pumpIdx[idx],false);
 }
 
 bool Tower::rotate(bool dir){
     if (dir)
-        actuator->moveServoAndWait(servo, 180, 50); // TODO :Modifier position et speed
+        return actuator->moveServoAndWait(servo, 180, 50); // TODO :Modifier position et speed
     else
-        actuator->moveServoAndWait(servo, 0, 50); // TODO :Modifier position et speed
+        return actuator->moveServoAndWait(servo, 0, 50); // TODO :Modifier position et speed
 }
 
 bool Door::dDrop(){ //Version très expérimentale
@@ -137,4 +133,5 @@ bool Door::dDrop(){ //Version très expérimentale
     tDrop(1); 
     rotate(false);
     tDrop(2);
+    return true;
 }

@@ -7,7 +7,7 @@
 #include "navigation/navigation.h" // pour NavReturn & position_t
 #include "defs/tableState.hpp"
 #include "navigation/pathfind.h"
-#include "actions/ActuatorsControl.hpp"
+#include "actions/RobotControl.hpp"
 #include <cmath>
 
 /*
@@ -17,7 +17,7 @@
 */
 class DropAction : public VirtualAction {
     public:
-        DropAction(TableState* state, DriveControl* drive, ActuatorsControl* actuators);
+        DropAction(TableState* state, DriveControl* drive, RobotControl* robot);
         ~DropAction() override = default;
 
         ReturnFSM run() override;
@@ -38,7 +38,7 @@ class DropAction : public VirtualAction {
     private:
         TableState* tableState;
         DriveControl* drive;
-        ActuatorsControl* actuators;
+        RobotControl* robot;
 
         bool getBestDropZone();
         bool toBestDropPosition();

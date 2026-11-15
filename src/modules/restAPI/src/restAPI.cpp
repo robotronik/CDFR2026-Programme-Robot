@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <net/if.h>
 
+#include "actions/RobotControl.hpp"
 #include "utils/logger.hpp"
 #include "defs/mainState.hpp"
 #include "defs/tableState.hpp"
@@ -34,6 +35,7 @@ RestAPI::RestAPI(MainState* currentState,
                  Arduino* arduino,
                  SensorControl* sensor,
                  ActuatorsControl* actuators,
+                 RobotControl* robot,
                  Lidar* lidar,
                  Cam* cam,
                  Navigation* navigation,
@@ -45,6 +47,7 @@ RestAPI::RestAPI(MainState* currentState,
       arduino(arduino),
       sensor(sensor),
       actuators(actuators),
+      robot(robot),
       lidar(lidar),
       cam(cam),
       navigation(navigation),
@@ -669,9 +672,9 @@ void RestAPI::start(){
         std::string req_value = req_data["value"];
 
         if(req_value == "PumpOn")
-            manual_currentFunc = [this]{ return actuators->setPumpState(true); };
+            manual_currentFunc = [this]{ return robot->wall1.wTake(); };
         else if(req_value == "PumpOff")
-            manual_currentFunc = [this]{ return actuators->setPumpState(false); };
+            manual_currentFunc = [this]{ return robot->wall1.wDrop(); };
         else if (req_value != "Test")
             return jsonError(400, "Invalid action requested");
 
