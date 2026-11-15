@@ -44,6 +44,21 @@ int TableState::getScore()
     return totalScore;
 }
 
+bool TableState::isQuarryAvailable(int idx) {
+    return !quarry[idx].nb;
+}
+
+bool TableState::remainQuarry()
+{
+    for (int i = 0; i < 10; i++)
+    {
+        if (isQuarryAvailable(i))
+        {
+            return true;
+        }
+    }
+    return false;
+}
 // Serialize tableState
 void to_json(json& j, const TableState& ts) {
     j = json{

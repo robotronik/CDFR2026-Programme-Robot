@@ -38,6 +38,9 @@ class TableState
         // Les stratégies (ex: GoToPositionAction) les utilisent pour viser
         // l'élément le plus proche du robot.
         std::vector<MatGameElement> elements;
+        quarry_t quarry[10];
+        bool remainQuarry();
+        bool isQuarryAvailable(int idx);
 
     private:
         DriveControl* drive;
