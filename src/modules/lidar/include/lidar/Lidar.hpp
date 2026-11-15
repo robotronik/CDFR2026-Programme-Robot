@@ -6,6 +6,8 @@
 #include "defs/constante.h"
 #include "i2c/Arduino.hpp"
 
+#define SIZEDATALIDAR 15000
+
 #define _countof(_Array) (int)(sizeof(_Array) / sizeof(_Array[0]))
 
 using namespace sl;
