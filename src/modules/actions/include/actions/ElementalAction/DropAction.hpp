@@ -1,14 +1,10 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
-#include "defs/constante.h"
-#include "defs/structs.hpp"
-#include "utils/utils.h"
 #include "drive_interface.h"
 #include "navigation/navigation.h" // pour NavReturn & position_t
 #include "defs/tableState.hpp"
 #include "navigation/pathfind.h"
 #include "actions/RobotControl.hpp"
-#include <cmath>
 
 /*
     Action d'attente simple : temporise pendant WAIT_DURATION_MS
