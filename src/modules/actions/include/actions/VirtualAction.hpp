@@ -1,12 +1,12 @@
 #pragma once
 #include <string>
 
-typedef enum
+enum class ReturnFSM
 {
-    FSM_RETURN_WORKING =0x0,
-    FSM_RETURN_DONE    =0x1,
-    FSM_RETURN_ERROR   =0x2
-} ReturnFSM_t;
+    Working =0x0,
+    Done    =0x1,
+    Error   =0x2
+};
 
 class VirtualAction {
 protected:
@@ -21,14 +21,14 @@ protected:
         This prototype could be modify in subclasses but 
         error management & sucess management should not be given to main loop
     */
-    //virtual bool errorManagement(nav_return_t error_code) = 0;
+    //virtual bool errorManagement(NavReturn error_code) = 0;
     /*Manages the sucessful completion of the action*/
     //virtual bool successManagement() = 0;
 
 public:
     virtual ~VirtualAction() = default;
 
-    virtual ReturnFSM_t run() = 0;
+    virtual ReturnFSM run() = 0;
     /* Return true if the action is stopped, false otherwise
     * This anticipate the case of asynchronous cancellation */
     virtual bool stop() = 0;

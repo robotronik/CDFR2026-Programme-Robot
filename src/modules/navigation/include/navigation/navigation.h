@@ -9,12 +9,12 @@ class TableState;
 class Cam;
 
 // Navigation return type
-typedef enum {
-    NAV_IN_PROCESS,
-    NAV_DONE,
-    NAV_PAUSED, // In case the opponent is in front
-    NAV_ERROR,  // If locked for too long, for example
-} nav_return_t;
+enum class NavReturn {
+    InProcess,
+    Done,
+    Paused, // In case the opponent is in front
+    Error,  // If locked for too long, for example
+};
 
 class Navigation {
     public:
@@ -26,14 +26,14 @@ class Navigation {
         position_t prev_final_pos_otos = {0, 0, 0};
 
         // Go to a position, returns the navigation state
-        nav_return_t goTo(position_t pos, bool useAStar = false, bool slow_mode = false, bool complete_stop = true);
-        nav_return_t go();
+        NavReturn goTo(position_t pos, bool useAStar = false, bool slow_mode = false, bool complete_stop = true);
+        NavReturn go();
 
         // Serialize the current navigation path
         void pathJson(json& j);
 
     private:
-        nav_return_t driveStep();
+        NavReturn driveStep();
         void opponentDetection();
 
         DriveControl* drive;

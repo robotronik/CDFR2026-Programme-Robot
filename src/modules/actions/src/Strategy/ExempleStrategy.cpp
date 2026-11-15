@@ -34,7 +34,7 @@ position_t ExempleStrat::StratStartingPos(){
     // Returns the starting position of the robot
     position_t pos = START_POSITION;
 
-    if (tableStatus->colorTeam == YELLOW)
+    if (tableStatus->colorTeam == ColorTeam::Yellow)
         position_robot_flip(pos);
     return pos;
 }

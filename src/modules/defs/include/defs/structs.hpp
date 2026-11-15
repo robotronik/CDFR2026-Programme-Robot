@@ -25,11 +25,11 @@ double position_length(position_t pos);
 double normalize_angle(double angle);
 position_t position_vector(position_t from, position_t to);
 
-typedef enum {
-    NONE,
-    BLUE,
-    YELLOW
-} colorTeam_t;
+enum class ColorTeam {
+    None,
+    Blue,
+    Yellow
+};
 
 typedef struct 
 {
@@ -40,21 +40,21 @@ typedef struct
     bool   onTable;
 } lidarAnalize_t;
 
-typedef enum
+enum class ConstructionType
 {
-    UNCONSTRUCTED=0,
-    WALL=5,
-    TOWER=5,
-    DOOR=20,
-} constructionType_t;
+    Unconstructed=0,
+    Wall=8,
+    Tower=6,
+    Door=20,
+};
 
 typedef struct
 {
     int idx; //index of dropZone
     position_t pos; // position of dropZone
     int nb; // nb of rocks in dropZone
-    constructionType_t bestConstruction; //Best construction in zone
-    colorTeam_t colorTeam; // Color of the team that owns the zone
+    ConstructionType bestConstruction; //Best construction in zone
+    ColorTeam colorTeam; // Color of the team that owns the zone
 
 } wallZone_t;
 
@@ -63,8 +63,8 @@ typedef struct
     int idx; //index of dropZone
     position_t pos; // position of dropZone
     int nb; // nb of rocks in dropZone
-    constructionType_t bestConstruction; //Best construction in zone
-    colorTeam_t colorTeam; // Color of the team that owns the zone
+    ConstructionType bestConstruction; //Best construction in zone
+    ColorTeam colorTeam; // Color of the team that owns the zone
 
 } towerZone_t;
 

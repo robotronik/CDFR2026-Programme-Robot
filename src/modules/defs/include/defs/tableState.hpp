@@ -21,7 +21,7 @@ class TableState
         /* common data */
         position_t pos_opponent;
         unsigned long startTime;
-        colorTeam_t colorTeam;
+        ColorTeam colorTeam;
         std::string strategy;
 
         /* Cam calibration related*/

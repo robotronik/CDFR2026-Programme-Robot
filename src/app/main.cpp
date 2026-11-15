@@ -70,8 +70,8 @@ Cam cam1(-1, "", "");
 // Navigation
 Navigation navigation(&drive, &tableStatus, &cam1);
 
-main_State_t currentState;
-main_State_t nextState;
+MainState currentState;
+MainState nextState;
 bool initState;
 
 std::thread api_server_thread;
@@ -111,7 +111,7 @@ int main()
             // localiser ignores it.
             cam1.setPrior(drive.position);
 
-            if (currentState != INIT && currentState != FIN)
+            if (currentState != MainState::Init && currentState != MainState::Fin)
             {
 #ifndef DISABLE_LIDAR
                 GetLidar();
@@ -124,7 +124,7 @@ int main()
         switch (currentState)
         {
         //****************************************************************
-        case INIT:
+        case MainState::Init:
         {
             if (initState)
             {
@@ -136,12 +136,12 @@ int main()
 
             update_team_strat();
 
-            if (sensor.readButtonSensor() && !sensor.readLatchSensor() && tableStatus.colorTeam != NONE && currentStrategy != nullptr)
-                nextState = WAITSTART;
+            if (sensor.readButtonSensor() && !sensor.readLatchSensor() && tableStatus.colorTeam != ColorTeam::None && currentStrategy != nullptr)
+                nextState = MainState::WaitStart;
             break;
         }
         //****************************************************************
-        case WAITSTART:
+        case MainState::WaitStart:
         {
             if (initState){
                 LOG_GREEN_INFO("WAITSTART");
@@ -150,7 +150,7 @@ int main()
                 lidar.startSpin();
                 cam1.start();
 
-                if (tableStatus.colorTeam == NONE)
+                if (tableStatus.colorTeam == ColorTeam::None)
                     arduino.RGB_Blinking(255, 0, 0); // Red Blinking
                 tableStatus.calibrationAge = -1;
             }
@@ -158,17 +158,17 @@ int main()
             if (tableStatus.calibrationAge == -1){
                 navigation.go();
             } else{
-                //nextState = CALIBRATION;
+                //nextState = MainState::Calibration;
             }
 
-            if (sensor.readLatchSensor() && tableStatus.colorTeam != NONE)
-                nextState = RUN;
+            if (sensor.readLatchSensor() && tableStatus.colorTeam != ColorTeam::None)
+                nextState = MainState::Run;
             if (manual_ctrl)
-                nextState = MANUAL;
+                nextState = MainState::Manual;
             break;
         }
         //****************************************************************
-        case CALIBRATION:
+        case MainState::Calibration:
         {
             if (initState){
                 LOG_GREEN_INFO("CALIBRATION");
@@ -184,14 +184,14 @@ int main()
                 }
             }
 
-            if (sensor.readLatchSensor() && tableStatus.colorTeam != NONE)
-                nextState = RUN;
+            if (sensor.readLatchSensor() && tableStatus.colorTeam != ColorTeam::None)
+                nextState = MainState::Run;
             if (manual_ctrl)
-                nextState = MANUAL;
+                nextState = MainState::Manual;
             break;
         }
         //****************************************************************
-        case RUN:
+        case MainState::Run:
         {
             if (initState){
                 LOG_GREEN_INFO("RUN");
@@ -203,11 +203,11 @@ int main()
             bool finished = action.RunFSM();
 
             if (_millis() > tableStatus.startTime + MATCH_DURATION_MS || finished || sensor.readButtonSensor())
-                nextState = FIN;
+                nextState = MainState::Fin;
             break;
         }
         //****************************************************************
-        case TEST:
+        case MainState::Test:
         {
             if (initState){
                 LOG_GREEN_INFO("TEST");
@@ -217,7 +217,7 @@ int main()
             break;
         }
         //****************************************************************
-        case MANUAL:
+        case MainState::Manual:
         {
             if (initState){
                 LOG_GREEN_INFO("MANUAL");
@@ -233,7 +233,7 @@ int main()
             break;
         }
         //****************************************************************
-        case FIN:
+        case MainState::Fin:
         {
             if (initState){
                 LOG_GREEN_INFO("FIN");
@@ -253,7 +253,7 @@ int main()
         }
         //****************************************************************
         default:
-            nextState = INIT;
+            nextState = MainState::Init;
             break;
         }
 
@@ -307,11 +307,11 @@ int StartSequence()
 
 #ifdef TEST_API_ONLY
     LOG_GREEN_INFO("Running in API test mode only");
-    currentState = TEST;
-    nextState = TEST;
+    currentState = MainState::Test;
+    nextState = MainState::Test;
 #else
-    currentState = INIT;
-    nextState = INIT;
+    currentState = MainState::Init;
+    nextState = MainState::Init;
 #endif // TEST_API_ONLY
 
     initState = true;
@@ -336,7 +336,7 @@ void GetLidar()
         pathfind_fill_lidar(&lidar);
         // Only update opponent position if the robot is not moving too fast to avoid noise
         if (IsDataValid && position_opponentV2(lidar.data, lidar.count, drive.position, pos_opponent) &&
-                (currentState == RUN || currentState == MANUAL) &&
+                (currentState == MainState::Run || currentState == MainState::Manual) &&
                 (_millis() - tableStatus.startTime > 1000)){ // Only update opponent position after 1 second from the start to avoid false readings at the beginning
             tableStatus.pos_opponent.x = pos_opponent.x;
             tableStatus.pos_opponent.y = pos_opponent.y;
@@ -405,12 +405,12 @@ void tests()
 bool returnToHome(){
 
     static position_t homePos;
-    nav_return_t res = navigation.goTo(homePos, true);
-    if (res == NAV_ERROR){
+    NavReturn res = navigation.goTo(homePos, true);
+    if (res == NavReturn::Error){
         LOG_ERROR("RETURN_TO_HOME: Navigation error");
-        homePos.y += (tableStatus.colorTeam == BLUE) ? 50 : -50; // recule un peu et retente
+        homePos.y += (tableStatus.colorTeam == ColorTeam::Blue) ? 50 : -50; // recule un peu et retente
     }
-    if (res == NAV_DONE){
+    if (res == NavReturn::Done){
         LOG_GREEN_INFO("RETURN_TO_HOME: Done");
         return true;
     }
@@ -422,20 +422,20 @@ bool returnToHome(){
 void opponentInAction(position_t /*position*/){
 }
 
-void switchTeamSide(colorTeam_t color){ // TODO move to tableState
-    if (color == NONE) return;
-    if (currentState == RUN) return;
+void switchTeamSide(ColorTeam color){ // TODO move to tableState
+    if (color == ColorTeam::None) return;
+    if (currentState == MainState::Run) return;
     if (color != tableStatus.colorTeam){
         LOG_INFO("Color switch detected");
         tableStatus.colorTeam = color;
 
         switch (color)
         {
-        case BLUE:
+        case ColorTeam::Blue:
             LOG_INFO("Switching to BLUE");
             arduino.RGB_Blinking(0, 0, 255);
             break;
-        case YELLOW:
+        case ColorTeam::Yellow:
             LOG_INFO("Switching to YELLOW");
             arduino.RGB_Blinking(255, 56, 0);
             break;
@@ -452,7 +452,7 @@ void switchTeamSide(colorTeam_t color){ // TODO move to tableState
 }
 
 void switchStrategy(std::string strategy){ // TODO move to tableState
-    if (currentState == RUN) return;
+    if (currentState == MainState::Run) return;
 
     if (strategy != action.getStrategy()->getNom()){
         VirtualStrategy* selectedStrategy = nullptr;
@@ -473,7 +473,7 @@ void switchStrategy(std::string strategy){ // TODO move to tableState
 }
 
 void update_team_strat(){
-    colorTeam_t requestedColor;
+    ColorTeam requestedColor;
     if (api.consumeColorRequest(requestedColor))
         switchTeamSide(requestedColor);
 

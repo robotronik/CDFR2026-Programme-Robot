@@ -10,14 +10,14 @@ Navigation::Navigation(DriveControl* drive, TableState* tableStatus, Cam* cam)
     : drive(drive), tableStatus(tableStatus), cam(cam){
 }
 
-nav_return_t Navigation::driveStep(){
+NavReturn Navigation::driveStep(){
     // Calculate the path
     if (current_use_astar){
         double len;
         currentPathLength = pathfind(drive->position, current_pos_target, currentPath, len);
         if (currentPathLength <= 0){
             LOG_ERROR("No path found");
-            return NAV_ERROR;
+            return NavReturn::Error;
         }
     }
     else{
@@ -25,15 +25,15 @@ nav_return_t Navigation::driveStep(){
         currentPath[0] = current_pos_target;
     }
     bool done = drive->drive(currentPath, currentPathLength, current_slow_mode, current_complete_stop);
-    if (done) return NAV_DONE;
+    if (done) return NavReturn::Done;
     opponentDetection(); // Check if its safe
-    return NAV_IN_PROCESS;
+    return NavReturn::InProcess;
 }
 
-nav_return_t Navigation::go(){
+NavReturn Navigation::go(){
     // FSM which does drive and calibration
     if (driving){
-        nav_return_t result = driveStep();
+        NavReturn result = driveStep();
 
         double dist = position_distance(drive->position, current_pos_target);
         double move = position_distance(drive->position, last_pos);
@@ -46,7 +46,7 @@ nav_return_t Navigation::go(){
                 LOG_ERROR("NAV: Robot stuck");
                 drive->stopMotion();
                 stuck_start = 0;
-                return NAV_ERROR;
+                return NavReturn::Error;
             }
         }else{
             stuck_start = 0;
@@ -54,7 +54,7 @@ nav_return_t Navigation::go(){
 
         last_pos = drive->position;
 
-        if (result == NAV_DONE){
+        if (result == NavReturn::Done){
             LOG_EXTENDED_DEBUG("Navigation drive completed");
             if (current_complete_stop){ // If came to a complete stop, calibrate using camera, else nav is done
                 driving = false;
@@ -63,18 +63,18 @@ nav_return_t Navigation::go(){
             else {
                 stuck_start = 0;
                 prev_final_pos_otos = drive->position;
-                return NAV_DONE;
+                return NavReturn::Done;
             }
-        } else if (result == NAV_ERROR){
+        } else if (result == NavReturn::Error){
             LOG_ERROR("Navigation drive error");
-            return NAV_ERROR;
+            return NavReturn::Error;
         }
         if (is_robot_stalled && (_millis() - robot_stall_start_time > 1000)){
             LOG_WARNING("Robot has been stalled for more than 1 second, returning NAV_ERROR");
-            return NAV_ERROR; // We are stuck for too long
+            return NavReturn::Error; // We are stuck for too long
         }
         else if (is_robot_stalled)
-            return NAV_PAUSED;
+            return NavReturn::Paused;
     } else {
         // Calibrate using camera. An emulated camera has no fix, so skip.
         position_t camera_pos = {0.0, 0.0, 0.0};
@@ -91,12 +91,12 @@ nav_return_t Navigation::go(){
         driving = true;
         //drive->setBrakeState(false);
         stuck_start = 0;
-        return NAV_DONE;
+        return NavReturn::Done;
     }
-    return NAV_IN_PROCESS;
+    return NavReturn::InProcess;
 }
 
-nav_return_t Navigation::goTo(position_t pos, bool useAStar, bool slow_mode, bool complete_stop){
+NavReturn Navigation::goTo(position_t pos, bool useAStar, bool slow_mode, bool complete_stop){
     if (current_pos_target.x != pos.x ||
         current_pos_target.y != pos.y ||
         current_pos_target.a != pos.a ||
