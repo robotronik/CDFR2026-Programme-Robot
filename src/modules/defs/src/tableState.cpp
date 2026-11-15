@@ -119,7 +119,8 @@ void to_json(json& j, const TableState& ts) {
         {"pos_opponent", ts.pos_opponent},
         {"startTime", ts.startTime},
         {"colorTeam", static_cast<int>(ts.colorTeam)},
-        {"strategy", ts.strategy}
+        {"strategy", ts.strategy},
+        {"mastStatus", ts.mastStatus}
     };
 }
 

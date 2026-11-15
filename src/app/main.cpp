@@ -349,8 +349,10 @@ void GetMat()
     // dernière donnée, sans bloquer la boucle. Il loggue lui-même la connexion
     // et sa perte, rien à faire ici si la donnée est absente.
     MatTableData matData;
-    if (getMapStatus(matData))
+    const bool mastReachable = getMapStatus(matData);
+    if (mastReachable)
         tableStatus.updateMapStatus(matData);
+    tableStatus.mastStatus = mastReachable;
 }
 
 void EndSequence()
