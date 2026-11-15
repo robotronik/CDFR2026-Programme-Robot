@@ -28,7 +28,7 @@ class TableState
         int calibrationAge; // Age of calibration by Camera if exist
         void resetCalibrationAge(){ calibrationAge = 0;}
 
-        bool mastStatus = false; // Status of mast if exist
+        bool mastStatus = false; // True while the mast is reachable and publishing
         void updateMapStatus(const MatTableData& data); // update of tableState relative to data recived by mast
 
         bool m_isPointInsideRectangle(float px, float py, float cx, float cy, float w, float h);
