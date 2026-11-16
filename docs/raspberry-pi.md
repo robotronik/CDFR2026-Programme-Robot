@@ -29,10 +29,10 @@ sudo raspi-config
 
 ## Deploy
 
-The target is set in [`cmake/deploy.cmake`](../cmake/deploy.cmake):
+The target is set at the top of [`cmake/deploy.cmake`](../cmake/deploy.cmake):
 `robotronik@192.168.8.108` by default, installed to
-`/home/robotronik/CDFR/arm_bin` (cache variables `PI_USER`, `PI_HOST`, `PI_DIR`,
-`PI_DEST`). Copy your SSH key to the robot, then deploy:
+`/home/robotronik/CDFR/arm_bin` (`PI_USER`, `PI_HOST`, `PI_DIR`, `PI_DEST` —
+edit them in that file). Copy your SSH key to the robot, then deploy:
 
 ```bash
 ssh-copy-id robotronik@192.168.8.108
