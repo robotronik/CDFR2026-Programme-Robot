@@ -23,7 +23,7 @@ float TakeStock::getBestQuarry(const position_t& from) {
     }
 
     quarry_t* closest = &tableState->quarry[0];
-    double minDistance;
+    double minDistance=INFINITY;
 
     position_t path[1024]; // Assuming a maximum path length
     if(!pathfind(from, {closest->pos.x, closest->pos.y, closest->pos.a}, path, minDistance)) {
