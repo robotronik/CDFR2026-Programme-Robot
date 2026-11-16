@@ -3,11 +3,13 @@
 
 //#include "utils/logger.hpp"
 
-DropAction::DropAction(TableState* state, RobotControl* robot) {
-    reset();
-    this->tableState = state;
+DropAction::DropAction(TableState* tableState, RobotControl* robot) {
+    this->tableState = tableState;
     this->robot = robot;
     this->nom = "DropAction";
+    // reset() s'appuie sur robot/tableState : il doit être appelé après
+    // l'affectation des membres.
+    reset();
 }
 
 ReturnFSM DropAction::run() {
@@ -35,6 +37,7 @@ bool DropAction::stop() {
 }
 
 void DropAction::reset() {
+    state = DropState::Moving;
     target = {0, 0, 0};
     best_path_length = 1e6;
     selected_face = &robot->wall1;// TODO implement a way to chose face

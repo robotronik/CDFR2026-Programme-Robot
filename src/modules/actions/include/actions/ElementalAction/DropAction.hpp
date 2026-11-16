@@ -14,7 +14,7 @@
 */
 class DropAction : public VirtualAction {
     public:
-        DropAction(TableState* state, RobotControl* robot);
+        DropAction(TableState* tableState, RobotControl* robot);
         ~DropAction() override = default;
 
         ReturnFSM run() override;
@@ -48,7 +48,7 @@ class DropAction : public VirtualAction {
         wallZone_t* selected_drop;
         position_t target;
         double best_path_length;
-        DropState state;
+        DropState state = DropState::Moving;
 
 
 };
