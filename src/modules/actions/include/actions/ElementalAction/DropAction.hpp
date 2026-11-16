@@ -1,5 +1,6 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
+#include "defs/structs.hpp"
 #include "drive_interface.h"
 #include "navigation/navigation.h" // pour NavReturn & position_t
 #include "defs/tableState.hpp"
@@ -43,6 +44,8 @@ class DropAction : public VirtualAction {
         };
 
         const position_t DROP_OFFSET = {0, 0, 120};
+        Wall* selected_face;
+        wallZone_t* selected_drop;
         position_t target;
         double best_path_length;
         DropState state;

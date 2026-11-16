@@ -1,4 +1,6 @@
 #include "actions/ElementalAction/TakeStock.hpp"
+#include "defs/constante.h"
+#include "defs/structs.hpp"
 #include "defs/tableState.hpp"
 #include "actions/RobotControl.hpp"
 #include "navigation/driveControl.h" // pour position_t
@@ -9,6 +11,8 @@ TakeStock::TakeStock(TableState* tableState, RobotControl* robot)
     : tableState(tableState), robot(robot)
 {
     state = MOVE1;
+    selected_face = &robot->wall1;
+    quarry = nullptr;
 }
 
 float TakeStock::getBestQuarry(const position_t& from) {
@@ -16,25 +20,27 @@ float TakeStock::getBestQuarry(const position_t& from) {
         return -1;
     }
 
-    quarry_t closest = tableState->quarry[0];
+    quarry_t* closest = &tableState->quarry[0];
     double minDistance;
 
     position_t path[1024]; // Assuming a maximum path length
-    if(!pathfind(from, {closest.pos.x, closest.pos.y, closest.pos.a}, path, minDistance)) {
+    if(!pathfind(from, {closest->pos.x, closest->pos.y, closest->pos.a}, path, minDistance)) {
         minDistance = INFINITY;
     }
-    for (quarry_t quarry : tableState->quarry) {
+    for (int i = 0; i < QUARRY_ZONE_COUNT; i++) {
+        quarry_t* quarry = &tableState->quarry[i];
         double distance; 
-        if(!pathfind(from, {quarry.pos.x, quarry.pos.y, quarry.pos.a}, path, distance)) {
+        if(!pathfind(from, {quarry->pos.x, quarry->pos.y, quarry->pos.a}, path, distance)) {
             distance = INFINITY;
         }
-        if (distance < minDistance  && quarry.nb>=closest.nb) {
+        if (distance < minDistance  && quarry->nb>=closest->nb) {
             minDistance = distance;
             closest = quarry;
         }
     }
     if (minDistance != INFINITY) {
-        target = closest.pos;
+        quarry = closest;
+        target = closest->pos;
         return (float)minDistance;
     }
     return -1;
@@ -88,7 +94,7 @@ ReturnFSM TakeStock::run(){
             break;
         }
         case MOVE2:
-            //TODO allume les pompes 
+            selected_face->wTake(); //TODO need to implement face selection
             NavReturn res2 = navigation.goTo(diffpos, true, true, true);//TODO fast mode
             switch (res2) {
                 case NavReturn::Paused:
@@ -126,6 +132,8 @@ bool TakeStock::errorManagement(){
 
 bool TakeStock::successManagement(){
     LOG_GREEN_INFO("TakeStock: arrivé à ", nom.c_str());
+    quarry->nb = 0;
+    selected_face->rocks = 3;
     reset();
     return true;
 }
@@ -140,6 +148,7 @@ void TakeStock::reset(){
 }
 
 bool TakeStock::available(float &reward){
+    if(selected_face->rocks!=0) return false;
     float dist = BestTake(robot->drive.getPosition());
     if (dist != -1) {
         reward = value/dist;
