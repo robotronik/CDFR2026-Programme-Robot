@@ -101,7 +101,7 @@ void ActuatorsControl::disableActuators(){
     for (int i = 0; i < 4; i++){
         arduino->disableStepper(i);
     }
-    // TODO Disable Pumps
+    setPumpState(false, 0);
     arduino->disableServos();
     drive->disable();
 }

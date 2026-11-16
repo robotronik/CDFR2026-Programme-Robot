@@ -39,7 +39,7 @@ const position_t OPPONENT_POS_UNKNOWN = { .x = 3000, .y = 0, .a = 0 };
 // Define the nums of the arduino for the PUMPS
 #define PUMP_3_NUM           6
 #define PUMP_2_NUM           7
-#define PUMP_1_NUM           8
+#define PUMP_1_NUM           1 //TODO change with push on arduino
 
 
 #define TABLE_X_MAX 1000
