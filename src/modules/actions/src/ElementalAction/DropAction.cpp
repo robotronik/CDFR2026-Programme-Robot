@@ -4,10 +4,10 @@
 //#include "utils/logger.hpp"
 
 DropAction::DropAction(TableState* state, RobotControl* robot) {
+    reset();
     this->tableState = state;
     this->robot = robot;
     this->nom = "DropAction";
-    reset();
 }
 
 ReturnFSM DropAction::run() {
@@ -17,6 +17,7 @@ ReturnFSM DropAction::run() {
             NavReturn nav_result = navigation.goTo(target, true);
             if(nav_result == NavReturn::Done) {
                 robot->wall1.wDrop();
+                selected_face->rocks = 0;
                 return ReturnFSM::Done;
             }else if (nav_result == NavReturn::Error) {
                 return ReturnFSM::Error;
@@ -36,10 +37,13 @@ bool DropAction::stop() {
 void DropAction::reset() {
     target = {0, 0, 0};
     best_path_length = 1e6;
+    selected_face = &robot->wall1;// TODO implement a way to chose face
+    selected_drop = nullptr;
 }
 
 bool DropAction::available(float &reward) {
     reset();
+    if(selected_face->rocks == 0) return false;
     if (getBestDropZone()) {
         reward = (float)static_cast<int>(ConstructionType::Wall)/best_path_length;
     }else{
@@ -63,43 +67,43 @@ bool DropAction::getBestDropZone(){
     if (!tableState->remainEmptyWall()) return false;
     if(!tableState->needWall()) return false;
     position_t robot_pos = robot->drive.getPosition();
-    wallZone_t bestZone = tableState->wallZone[0];
+    selected_drop = &tableState->wallZone[0];
 
     best_path_length = 1e6;
     position_t path[1024];
     bool valid = false;
     for(int i = 0; i < WALL_ZONE_COUNT; i++) {
         if (tableState->wallZone[i].nb == 0) {
-            wallZone_t zone = tableState->wallZone[i];
-            if((tableState->colorTeam == ColorTeam::Blue ? 1 : -1) * zone.pos.y > (tableState->colorTeam == ColorTeam::Blue ? 1 : -1) * bestZone.pos.y
-                && pathfind(robot_pos, zone.pos, path, best_path_length)) {
-                bestZone = zone;
+            wallZone_t* zone = &tableState->wallZone[i];
+            if((tableState->colorTeam == ColorTeam::Blue ? 1 : -1) * zone->pos.y > (tableState->colorTeam == ColorTeam::Blue ? 1 : -1) * selected_drop->pos.y
+                && pathfind(robot_pos, zone->pos, path, best_path_length)) {
+                selected_drop = zone;
                 valid = true;
-            }else if(zone.pos.y == bestZone.pos.y) {
+            }else if(zone->pos.y == selected_drop->pos.y) {
                 double zone_path_length;
-                if(!pathfind(robot_pos, zone.pos, path, zone_path_length)){
+                if(!pathfind(robot_pos, zone->pos, path, zone_path_length)){
                     zone_path_length = 1e6;
                 }
-                if(!valid && !pathfind(robot_pos, bestZone.pos, path, best_path_length)){
+                if(!valid && !pathfind(robot_pos, selected_drop->pos, path, best_path_length)){
                     best_path_length = 1e6;
                 }
                 if(zone_path_length < best_path_length && zone_path_length != 1e6) {
-                    bestZone = zone;
+                    selected_drop = zone;
                     valid = true;
                     best_path_length = zone_path_length;
                 }else if(best_path_length != 1e6){
                     valid = true;
                 }
             }else if(!valid){
-                if(pathfind(robot_pos, zone.pos, path, best_path_length)){
-                    bestZone = zone;
+                if(pathfind(robot_pos, zone->pos, path, best_path_length)){
+                    selected_drop = zone;
                     valid = true;
                 }
             }
         }
     }
     if(valid){
-        target = bestZone.pos;
+        target = selected_drop->pos;
     }
     return valid;
 }

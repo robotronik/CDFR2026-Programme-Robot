@@ -1,5 +1,7 @@
 #pragma once
+#include "actions/ActuatorsControl.hpp"
 #include "actions/VirtualAction.hpp"
+#include "defs/structs.hpp"
 #include "defs/tableState.hpp"
 #include "drive_interface.h"
 
@@ -20,6 +22,8 @@ class TakeStock : public VirtualAction {
         int value = 23; // TODO change to be max value of points adv can make with 3 rocks
         takeStockState_t state;
 
+        quarry_t* quarry;
+        Wall* selected_face;
         position_t target;
         position_t diffpos;
 

@@ -10,6 +10,7 @@
 #include "actions/ElementalAction/NavHomeAction.hpp"
 #include "actions/ElementalAction/GoToPositionAction.hpp"
 #include "actions/ElementalAction/DropAction.hpp"
+#include "actions/ElementalAction/TakeStock.hpp"
 
 /*
     ============================================================
@@ -75,8 +76,9 @@ void ExempleStrat::buildPossibleActions(){
     addAction(0.0f, std::make_unique<NavHomeAction>(tableStatus, robot));
     // Cible dynamique : l'élément de jeu le plus proche connu de tableStatus,
     // fixé au démarrage de l'action (cf. GoToPositionAction::getClosestElement()).
-    addAction(1.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, robot));
+    addAction(0.5f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, robot));
     addAction(1.0f, std::make_unique<DropAction>(tableStatus, robot));
+    addAction(1.0f, std::make_unique<TakeStock>(tableStatus, robot));
 }
 
 VirtualAction* ExempleStrat::tempAction(){
