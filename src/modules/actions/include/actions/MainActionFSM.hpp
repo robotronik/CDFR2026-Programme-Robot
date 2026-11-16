@@ -1,7 +1,7 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
 #include "actions/VirtualStrategy.hpp"
-#include "db/ActionDurationDB.hpp"
+//#include "db/ActionDurationDB.hpp"
 #include "defs/tableState.hpp"
 
 class RobotControl;
@@ -42,7 +42,7 @@ class ActionFSM{
         /************  BASE DES DURÉES D'ACTION ************/
         // Enregistre, pour chaque action menée à son terme (ReturnFSM::Done),
         // le temps qu'elle a réellement mis à s'exécuter.
-        ActionDurationDB durationDB{ACTION_DB_PATH};
+        //ActionDurationDB durationDB{ACTION_DB_PATH};
         // Instant (_millis()) du début de l'exécution de currentAction.
         unsigned long actionStartTime = 0;
 };

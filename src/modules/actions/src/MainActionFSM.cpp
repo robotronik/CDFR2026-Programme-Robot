@@ -67,7 +67,7 @@ bool ActionFSM::RunFSM(){
     if (ret == ReturnFSM::Done){
         // Action menée à son terme : on enregistre le temps qu'elle a
         // réellement pris.
-        durationDB.record(currentAction->getNom(), _millis() - actionStartTime);
+        //durationDB.record(currentAction->getNom(), _millis() - actionStartTime);
         currentAction = SetBestAction();
         actionStartTime = _millis();
     }

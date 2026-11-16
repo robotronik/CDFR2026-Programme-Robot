@@ -1,6 +1,5 @@
 #include "actions/Strategy/ExempleStrat.hpp"
 #include "actions/VirtualAction.hpp"
-#include "navigation/driveControl.h"
 #include "utils/logger.hpp"
 #include "navigation/pathfind.h"
 #include "defs/constante.h"
@@ -71,13 +70,13 @@ void ExempleStrat::buildPossibleActions(){
         }
     };
 
-    addAction(1.0f, std::make_unique<WaitAction>(400));
+    //addAction(0.0f, std::make_unique<WaitAction>(400));
     //addAction(1.0f, std::make_unique<CalibrationAction>(robot, tableStatus));
-    addAction(0.0f, std::make_unique<NavHomeAction>(tableStatus, robot));
+    //addAction(0.0f, std::make_unique<NavHomeAction>(tableStatus, robot));
     // Cible dynamique : l'élément de jeu le plus proche connu de tableStatus,
     // fixé au démarrage de l'action (cf. GoToPositionAction::getClosestElement()).
-    addAction(0.5f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, robot));
-    addAction(1.0f, std::make_unique<DropAction>(tableStatus, robot));
+    //addAction(0.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, robot));
+    //addAction(0.0f, std::make_unique<DropAction>(tableStatus, robot));
     addAction(1.0f, std::make_unique<TakeStock>(tableStatus, robot));
 }
 
