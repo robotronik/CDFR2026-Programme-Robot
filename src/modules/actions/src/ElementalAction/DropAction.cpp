@@ -49,10 +49,11 @@ bool DropAction::available(float &reward) {
     if(selected_face->rocks == 0) return false;
     if (getBestDropZone()) {
         reward = (float)static_cast<int>(ConstructionType::Wall)/best_path_length;
+        return true;
     }else{
         reward = 0.0f;
+        return false;
     }
-    return true;
 }
 
 bool DropAction::fullBlock() {
