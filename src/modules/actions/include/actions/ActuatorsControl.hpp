@@ -28,7 +28,7 @@ class Wall{
             pumpIdx[1] = idx[1];
             pumpIdx[2] = idx[2];
         };
-        int rocks; // number of rocks on the face
+        int rocks=0; // number of rocks on the face
         bool wDrop();
         bool wTake();
     protected:

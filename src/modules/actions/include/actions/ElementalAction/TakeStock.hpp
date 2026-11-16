@@ -18,7 +18,7 @@ class TakeStock : public VirtualAction {
         TableState* tableState;
         RobotControl* robot;
 
-        const position_t OFFSET_TARGET = {150, 150, 0};
+        const position_t OFFSET_TARGET = {350, 350, 0};
         int value = 23; // TODO change to be max value of points adv can make with 3 rocks
         takeStockState_t state;
 

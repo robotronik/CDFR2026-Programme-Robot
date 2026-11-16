@@ -18,7 +18,7 @@ TakeStock::TakeStock(TableState* tableState, RobotControl* robot)
 }
 
 float TakeStock::getBestQuarry(const position_t& from) {
-    if (tableState->remainQuarry()) {
+    if (!tableState->remainQuarry()) {
         return -1;
     }
 
@@ -59,12 +59,11 @@ void TakeStock::BestPositionToTake(const position_t& from) {
         target.y += OFFSET_TARGET.y;
     }
     else {
-        if (from.x >= 0) {
-            target.x = OFFSET_TARGET.x;
+        if (from.y >= 0){
+            target.y = OFFSET_TARGET.y;
         }
-        else if (from.x < 0)
-        {
-            target.x = -OFFSET_TARGET.x;
+        else{
+            target.y = -OFFSET_TARGET.y;
         }
         
     }
