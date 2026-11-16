@@ -117,14 +117,17 @@ function Build-Arch([string]$Arch) {
 function Deploy {
     $spec = Get-ArchSpec 'arm64'
     Ensure-Image $spec.Image $spec.Dockerfile
-    # The container runs as root, so ssh reads /root/.ssh; mounting the Windows
-    # key directory there authenticates the rsync/ssh deploy without an agent.
     $dockerArgs = @()
+    $deployCommand = 'exec cmake --build --preset arm64 --target deploy'
     $sshDir = Join-Path $HOME '.ssh'
-    if (Test-Path $sshDir) { $dockerArgs += @('-v', "${sshDir}:/root/.ssh:ro") }
+    if (Test-Path $sshDir) {
+        # Windows bind-mount permissions are too open for OpenSSH; fix a private copy.
+        $dockerArgs += @('-v', "${sshDir}:/ssh-source:ro")
+        $deployCommand = 'umask 077 && mkdir -p /root/.ssh && cp -R /ssh-source/. /root/.ssh/ && chmod -R go-rwx /root/.ssh && ' + $deployCommand
+    }
     Write-Log 'Deploying to robot'
-    Invoke-Container -Image $spec.Image -DockerArgs $dockerArgs -CommandArgs @('cmake', '--preset', 'arm64')
-    Invoke-Container -Image $spec.Image -DockerArgs $dockerArgs -CommandArgs @('cmake', '--build', '--preset', 'arm64', '--target', 'deploy')
+    Invoke-Container -Image $spec.Image -CommandArgs @('cmake', '--preset', 'arm64')
+    Invoke-Container -Image $spec.Image -DockerArgs $dockerArgs -CommandArgs @('sh', '-c', $deployCommand)
 }
 
 function Run-Program([string[]]$ProgramArgs) {
