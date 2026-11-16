@@ -100,8 +100,10 @@ VirtualAction* ExempleStrat::bestAction(){
     for (const auto& [key, weightedAction] : possible_actions){
         float reward;
         bool available = weightedAction.second->available(reward);
-        if (!available) continue; // action non disponible
-
+        if (!available){
+            LOG_WARNING("ExempleStrat: sélection de l'action ", key.c_str(), " impossible");    
+            continue; // action non disponible
+        }
         float score = weightedAction.first * reward;
         if (score > bestScore){
             bestScore = score;

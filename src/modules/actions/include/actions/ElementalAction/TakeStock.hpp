@@ -7,29 +7,33 @@
 
 class RobotControl;
 
-typedef enum
-{
-    MOVE1 =0x0,
-    MOVE2 =0x1,
-} takeStockState_t;
+
 
 class TakeStock : public VirtualAction {
     private:
         TableState* tableState;
         RobotControl* robot;
 
+        enum class TakeStockState
+        {
+            MOVE1,
+            MOVE2,
+        };
+        
         const position_t OFFSET_TARGET = {350, 350, 0};
         int value = 23; // TODO change to be max value of points adv can make with 3 rocks
-        takeStockState_t state;
+        TakeStockState state;
 
         quarry_t* quarry;
         Wall* selected_face;
         position_t target;
         position_t diffpos;
 
+        
         float BestTake(const position_t& from);
         float getBestQuarry(const position_t& from);
-        void BestPositionToTake(const position_t&  from);
+        position_t getFacePosition(const position_t& stock) const;
+        int BestPositionToTake(const position_t& stock, position_t targets[2]) const;
         bool resolveTarget();
     public:
         TakeStock(TableState* tableState, RobotControl* robot);

@@ -11,9 +11,6 @@
 TakeStock::TakeStock(TableState* tableState, RobotControl* robot)
     : tableState(tableState), robot(robot)
 {
-    state = MOVE1;
-    selected_face = &robot->wall1;
-    quarry = nullptr;
     nom = "TakeStock";
 }
 
@@ -22,53 +19,69 @@ float TakeStock::getBestQuarry(const position_t& from) {
         return -1;
     }
 
-    quarry_t* closest = &tableState->quarry[0];
-    double minDistance=INFINITY;
+    quarry_t* best = nullptr;
+    position_t bestTarget{0, 0, 0};
+    int bestRocks = -1;
+    double minDistance = INFINITY;
 
     position_t path[1024]; // Assuming a maximum path length
-    if(!pathfind(from, {closest->pos.x, closest->pos.y, closest->pos.a}, path, minDistance)) {
-        minDistance = INFINITY;
-    }
     for (int i = 0; i < QUARRY_ZONE_COUNT; i++) {
-        quarry_t* quarry = &tableState->quarry[i];
-        double distance; 
-        if(!pathfind(from, {quarry->pos.x, quarry->pos.y, quarry->pos.a}, path, distance)) {
-            distance = INFINITY;
+        quarry_t* candidate = &tableState->quarry[i];
+        if (!candidate->nb) {
+            continue;
         }
-        if (distance < minDistance  && quarry->nb>=closest->nb) {
-            minDistance = distance;
-            closest = quarry;
+
+        position_t targets[2];
+        const int targetCount = BestPositionToTake(candidate->pos, targets);
+        for (int j = 0; j < targetCount; j++) {
+            double distance;
+            if (!pathfind(from, targets[j], path, distance)) {
+                continue;
+            }
+            if (distance < minDistance && candidate->nb >= bestRocks) {
+                minDistance = distance;
+                best = candidate;
+                bestTarget = targets[j];
+                bestRocks = candidate->nb;
+            }
         }
     }
-    if (minDistance != INFINITY) {
-        quarry = closest;
-        target = closest->pos;
+
+    if (best != nullptr) {
+        quarry = best;
+        target = bestTarget;
+        diffpos = getFacePosition(best->pos);
         return (float)minDistance;
     }
     return -1;
 }
 
-void TakeStock::BestPositionToTake(const position_t& from) {
-    const position_t stock = target;
+position_t TakeStock::getFacePosition(const position_t& stock) const {
     const position_t offset = selected_face->getOffset();
-    diffpos.a = stock.a - offset.a;
-    const double angle = diffpos.a * DEG_TO_RAD;
-    diffpos.x = stock.x - offset.x * cos(angle) + offset.y * sin(angle);
-    diffpos.y = stock.y - offset.x * sin(angle) - offset.y * cos(angle);
+    position_t face;
+    face.a = stock.a - offset.a;
+    const double angle = face.a * DEG_TO_RAD;
+    face.x = stock.x - offset.x * cos(angle) + offset.y * sin(angle);
+    face.y = stock.y - offset.x * sin(angle) - offset.y * cos(angle);
+    return face;
+}
 
-    target = diffpos;
+int TakeStock::BestPositionToTake(const position_t& stock, position_t targets[2]) const {
+    const position_t face = getFacePosition(stock);
+
+    targets[0] = face;
     if (stock.x == 950) {
-        target.x -= OFFSET_TARGET.x;
+        targets[0].x -= OFFSET_TARGET.x;
+        return 1;
     }
-    else if (stock.x == -950) {
-        target.x += OFFSET_TARGET.x;
+    if (stock.x == -950) {
+        targets[0].x += OFFSET_TARGET.x;
+        return 1;
     }
-    else if (from.y >= stock.y) {
-        target.y += OFFSET_TARGET.y;
-    }
-    else {
-        target.y -= OFFSET_TARGET.y;
-    }
+    targets[0].y += OFFSET_TARGET.y;
+    targets[1] = face;
+    targets[1].y -= OFFSET_TARGET.y;
+    return 2;
 }
 
 float TakeStock::BestTake(const position_t& from) {
@@ -77,7 +90,7 @@ float TakeStock::BestTake(const position_t& from) {
 
 ReturnFSM TakeStock::run(){
     switch (state) {
-        case MOVE1: {
+        case TakeStockState::MOVE1: {
             NavReturn res1 = navigation.goTo(target, true, false, false);
             switch (res1) {
                 case NavReturn::Paused:
@@ -87,14 +100,14 @@ ReturnFSM TakeStock::run(){
                     errorManagement();
                     return ReturnFSM::Error;
                 case NavReturn::Done:
-                    state = MOVE2;
+                    state = TakeStockState::MOVE2;
                     break;
                 case NavReturn::InProcess:
                     break;
             }
             break;
         }
-        case MOVE2:
+        case TakeStockState::MOVE2:
             selected_face->wTake(); //TODO need to implement face selection
             NavReturn res2 = navigation.goTo(diffpos, true, true, true);//TODO fast mode
             switch (res2) {
@@ -119,9 +132,7 @@ ReturnFSM TakeStock::run(){
 
 
 bool TakeStock::stop(){
-    if(robot->drive.velocity.a != 0 || robot->drive.velocity.x != 0 || robot->drive.velocity.y != 0){
-        robot->drive.stopMotion();
-    }
+    robot->drive.stopMotion();
     return true;
 }
 
@@ -141,9 +152,10 @@ bool TakeStock::successManagement(){
 
 void TakeStock::reset(){
     stop();
+    selected_face = &robot->wall1;
     value = 23; // TODO change to be max value of points adv can make with 3 rocks
-    state = MOVE1;
-
+    state = TakeStockState::MOVE1;
+    quarry = nullptr;
     target = {0, 0, 0};
     diffpos = {0, 0, 0};
 }
@@ -151,7 +163,6 @@ void TakeStock::reset(){
 bool TakeStock::available(float &reward){
     if(selected_face->rocks!=0) return false;
     float dist = BestTake(robot->drive.getPosition());
-    BestPositionToTake(robot->drive.getPosition());
     if (dist != -1) {
         reward = value/dist;
         return true;
