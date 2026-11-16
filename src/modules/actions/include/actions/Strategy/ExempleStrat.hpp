@@ -20,7 +20,7 @@
 */
 class ExempleStrat : public VirtualStrategy {
 public:
-    ExempleStrat(DriveControl* dc, TableState* ts, RobotControl* rc);
+    ExempleStrat(TableState* ts, RobotControl* rc);
     ~ExempleStrat() override = default;
 
     /*
@@ -60,7 +60,6 @@ private:
     // hors du pool (cf. reset()) et n'en sort jamais, le FSM n'en obtient
     // qu'un pointeur via tempAction().
     std::unique_ptr<VirtualAction> waitAction;
-    DriveControl* drive;
     TableState* tableStatus;
     RobotControl* robot;
 };

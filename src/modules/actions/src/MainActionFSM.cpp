@@ -4,14 +4,14 @@
 #include "actions/VirtualStrategy.hpp"
 #include "utils/logger.hpp"
 
-ActionFSM::ActionFSM(DriveControl* drive, TableState* tableState)
-    : driveControl(drive), tableState(tableState)
+ActionFSM::ActionFSM(RobotControl* robot, TableState* tableState)
+    : robotControl(robot), tableState(tableState)
 {
     Reset();
 }
 
-ActionFSM::ActionFSM(VirtualStrategy* strategy, DriveControl* drive, TableState* tableState)
-    : driveControl(drive), tableState(tableState), currentStrategy(strategy)
+ActionFSM::ActionFSM(VirtualStrategy* strategy, RobotControl* robot, TableState* tableState)
+    : robotControl(robot), tableState(tableState), currentStrategy(strategy)
 {
     Reset();
 }

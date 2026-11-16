@@ -1,6 +1,8 @@
 #pragma once
-#include "i2c/Arduino.hpp"
-#include "navigation/driveControl.h"
+#include "drive_interface.h"
+
+class Arduino;
+class DriveControl;
 
 class ActuatorsControl {
     public:

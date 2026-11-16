@@ -1,5 +1,7 @@
 #include "defs/constante.h"
 #include "actions/ActuatorsControl.hpp"
+#include "i2c/Arduino.hpp"
+#include "navigation/driveControl.h"
 
 ActuatorsControl::ActuatorsControl(Arduino* arduino, DriveControl* drive) : arduino(arduino), drive(drive) {
     // Constructor implementation

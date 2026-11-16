@@ -4,17 +4,18 @@
 #include "navigation/pathfind.h"
 #include "navigation/driveControl.h"
 #include "defs/tableState.hpp"
+#include "actions/RobotControl.hpp"
 #include "vision/Cam.hpp"
 
-Navigation::Navigation(DriveControl* drive, TableState* tableStatus, Cam* cam)
-    : drive(drive), tableStatus(tableStatus), cam(cam){
+Navigation::Navigation(RobotControl* robot, TableState* tableStatus, Cam* cam)
+    : robot(robot), tableStatus(tableStatus), cam(cam){
 }
 
 NavReturn Navigation::driveStep(){
     // Calculate the path
     if (current_use_astar){
         double len;
-        currentPathLength = pathfind(drive->position, current_pos_target, currentPath, len);
+        currentPathLength = pathfind(robot->drive.position, current_pos_target, currentPath, len);
         if (currentPathLength <= 0){
             LOG_ERROR("No path found");
             return NavReturn::Error;
@@ -24,7 +25,7 @@ NavReturn Navigation::driveStep(){
         currentPathLength = 1;
         currentPath[0] = current_pos_target;
     }
-    bool done = drive->drive(currentPath, currentPathLength, current_slow_mode, current_complete_stop);
+    bool done = robot->drive.drive(currentPath, currentPathLength, current_slow_mode, current_complete_stop);
     if (done) return NavReturn::Done;
     opponentDetection(); // Check if its safe
     return NavReturn::InProcess;
@@ -35,8 +36,8 @@ NavReturn Navigation::go(){
     if (driving){
         NavReturn result = driveStep();
 
-        double dist = position_distance(drive->position, current_pos_target);
-        double move = position_distance(drive->position, last_pos);
+        double dist = position_distance(robot->drive.position, current_pos_target);
+        double move = position_distance(robot->drive.position, last_pos);
         if (dist > 20 && move < 4){
             if (stuck_start == 0) stuck_start = _millis();
             if (_millis() - stuck_start > 500.0)
@@ -44,7 +45,7 @@ NavReturn Navigation::go(){
 
             if (_millis() - stuck_start > 1600){
                 LOG_ERROR("NAV: Robot stuck");
-                drive->stopMotion();
+                robot->drive.stopMotion();
                 stuck_start = 0;
                 return NavReturn::Error;
             }
@@ -52,17 +53,17 @@ NavReturn Navigation::go(){
             stuck_start = 0;
         }
 
-        last_pos = drive->position;
+        last_pos = robot->drive.position;
 
         if (result == NavReturn::Done){
             LOG_EXTENDED_DEBUG("Navigation drive completed");
             if (current_complete_stop){ // If came to a complete stop, calibrate using camera, else nav is done
                 driving = false;
-                //drive->setBrakeState(true);
+                //robot->drive.setBrakeState(true);
             }
             else {
                 stuck_start = 0;
-                prev_final_pos_otos = drive->position;
+                prev_final_pos_otos = robot->drive.position;
                 return NavReturn::Done;
             }
         } else if (result == NavReturn::Error){
@@ -83,13 +84,13 @@ NavReturn Navigation::go(){
             // The camera is not the robot: convert to the robot's frame.
             const position_t robot_pos = cameraToRobot(camera_pos);
             prev_final_pos_cam = robot_pos;
-            prev_final_pos_otos = drive->position;
-            drive->setCoordinates(robot_pos);
+            prev_final_pos_otos = robot->drive.position;
+            robot->drive.setCoordinates(robot_pos);
             tableStatus->resetCalibrationAge();
             LOG_GREEN_INFO("Camera calibration during move successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
         }
         driving = true;
-        //drive->setBrakeState(false);
+        //robot->drive.setBrakeState(false);
         stuck_start = 0;
         return NavReturn::Done;
     }
@@ -117,7 +118,7 @@ NavReturn Navigation::goTo(position_t pos, bool useAStar, bool slow_mode, bool c
 
 void Navigation::pathJson(json& j){
     j = json::array();
-    j.push_back({{"x", drive->position.x}, {"y", drive->position.y}});
+    j.push_back({{"x", robot->drive.position.x}, {"y", robot->drive.position.y}});
     for (int i = 0; i < currentPathLength; i++){
         j.push_back({{"x", currentPath[i].x}, {"y", currentPath[i].y}});
     }
@@ -126,7 +127,7 @@ void Navigation::pathJson(json& j){
 void Navigation::opponentDetection(){
     bool isCloseToEnnemy = false;
     // Check if the opponent is in the way
-    isCloseToEnnemy = opponent_is_close(tableStatus->pos_opponent, drive->position, 800); // If opponent is closer than 800mm, we consider it close and activate slow mode
+    isCloseToEnnemy = opponent_is_close(tableStatus->pos_opponent, robot->drive.position, 800); // If opponent is closer than 800mm, we consider it close and activate slow mode
 
     if (isCloseToEnnemy && !forced_slow_mode){
         LOG_WARNING("Opponent is close to us, activating slow mode");

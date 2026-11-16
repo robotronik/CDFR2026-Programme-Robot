@@ -22,9 +22,8 @@
     mesure qu'elles deviennent la plus prioritaire.
 */
 
-ExempleStrat::ExempleStrat(DriveControl* dc, TableState* ts, RobotControl* rc){
+ExempleStrat::ExempleStrat(TableState* ts, RobotControl* rc){
     nom = "ExempleStrat";
-    drive = dc;
     tableStatus = ts;
     robot = rc;
     reset();
@@ -72,12 +71,12 @@ void ExempleStrat::buildPossibleActions(){
     };
 
     addAction(1.0f, std::make_unique<WaitAction>(400));
-    //addAction(1.0f, std::make_unique<CalibrationAction>(drive, tableStatus));
-    addAction(0.0f, std::make_unique<NavHomeAction>(tableStatus, drive));
+    //addAction(1.0f, std::make_unique<CalibrationAction>(robot, tableStatus));
+    addAction(0.0f, std::make_unique<NavHomeAction>(tableStatus, robot));
     // Cible dynamique : l'élément de jeu le plus proche connu de tableStatus,
     // fixé au démarrage de l'action (cf. GoToPositionAction::getClosestElement()).
-    addAction(1.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, drive));
-    addAction(1.0f, std::make_unique<DropAction>(tableStatus, drive, robot));
+    addAction(1.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, robot));
+    addAction(1.0f, std::make_unique<DropAction>(tableStatus, robot));
 }
 
 VirtualAction* ExempleStrat::tempAction(){

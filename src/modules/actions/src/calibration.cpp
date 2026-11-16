@@ -1,10 +1,11 @@
 #include "actions/calibration.h"
+#include "actions/RobotControl.hpp"
 #include "navigation/navigation.h"
 #include "utils/logger.hpp"
 #include <numeric>
 #include <vector>
 
-bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t startPos) {
+bool calibrate_otos(TableState* tableStatus, RobotControl* robot, position_t startPos) {
     // Function called continuously from the main loop to calibrate the otosensors
     // Returns true when calibration is done
     static int step = 1; // We skip angle calib
@@ -85,9 +86,9 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
                 }
 
                 if (within_variance){
-                    float current_scalar = drive->getAngularScalar();
+                    float current_scalar = robot->drive.getAngularScalar();
                     float new_scalar = current_scalar * mean;
-                    drive->setAngularScalar(new_scalar);
+                    robot->drive.setAngularScalar(new_scalar);
                     step = 1;
                     scalar_angle_samples.clear();
                     skip_first_scalar = true;
@@ -170,9 +171,9 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
                 }
 
                 if (within_variance){
-                    float current_scalar = drive->getLinearScalar();
+                    float current_scalar = robot->drive.getLinearScalar();
                     float new_scalar = current_scalar * mean;
-                    drive->setLinearScalar(new_scalar); // TODO Bugfix needed, this causes the OTOS to crash
+                    robot->drive.setLinearScalar(new_scalar); // TODO Bugfix needed, this causes the OTOS to crash
                     LOG_GREEN_INFO("OTOS calibration done with mean = ", new_scalar);
                     scalar_dist_samples.clear();
                     skip_first_scalar = true;

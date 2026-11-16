@@ -1,11 +1,12 @@
 #include "actions/ElementalAction/TakeStock.hpp"
 #include "defs/tableState.hpp"
+#include "actions/RobotControl.hpp"
 #include "navigation/driveControl.h" // pour position_t
 #include "GoToPositionAction.cpp"
 #include "navigation/navigation.h" // pour nav_return_t & position_t
 
-TakeStock::TakeStock(TableState* tableState)
-    : tableState(tableState)
+TakeStock::TakeStock(TableState* tableState, RobotControl* robot)
+    : tableState(tableState), robot(robot)
 {
     state = MOVE1;
 }
@@ -111,8 +112,8 @@ ReturnFSM TakeStock::run(){
 
 
 bool TakeStock::stop(){
-    if(drive->velocity.a != 0 || drive->velocity.x != 0 || drive->velocity.y != 0){
-        drive->stopMotion();
+    if(robot->drive.velocity.a != 0 || robot->drive.velocity.x != 0 || robot->drive.velocity.y != 0){
+        robot->drive.stopMotion();
     }
     return true;
 }
@@ -139,7 +140,7 @@ void TakeStock::reset(){
 }
 
 bool TakeStock::available(float &reward){
-    float dist = BestTake(drive->getPosition());
+    float dist = BestTake(robot->drive.getPosition());
     if (dist != -1) {
         reward = value/dist;
         return true;

@@ -13,7 +13,7 @@
 */
 class DropAction : public VirtualAction {
     public:
-        DropAction(TableState* state, DriveControl* drive, RobotControl* robot);
+        DropAction(TableState* state, RobotControl* robot);
         ~DropAction() override = default;
 
         ReturnFSM run() override;
@@ -33,7 +33,6 @@ class DropAction : public VirtualAction {
         
     private:
         TableState* tableState;
-        DriveControl* drive;
         RobotControl* robot;
 
         bool getBestDropZone();

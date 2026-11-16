@@ -7,7 +7,6 @@
 #include "defs/mainState.hpp"
 #include "defs/structs.hpp"
 
-class DriveControl;
 class TableState;
 class Arduino;
 class Lidar;
@@ -15,18 +14,15 @@ class Cam;
 class Navigation;
 class VirtualStrategy;
 class SensorControl;
-class ActuatorsControl;
 
 class RestAPI {
     public:
         RestAPI(MainState* currentState,
                 MainState* nextState,
-                DriveControl* drive,
+                RobotControl* robot,
                 TableState* tableStatus,
                 Arduino* arduino,
                 SensorControl* sensor,
-                ActuatorsControl* actuators,
-                RobotControl* robot,
                 Lidar* lidar,
                 Cam* cam,
                 Navigation* navigation,
@@ -43,15 +39,13 @@ class RestAPI {
     private:
         MainState* currentState;
         MainState* nextState;
-        DriveControl* drive;
+        RobotControl* robot;
         TableState* tableStatus;
         Arduino* arduino;
         SensorControl* sensor;
-        ActuatorsControl* actuators;
         Lidar* lidar;
         Cam* cam;
         Navigation* navigation;
-        RobotControl* robot;
         std::vector<VirtualStrategy*>* strategies;
 
         bool hasColorRequest = false;

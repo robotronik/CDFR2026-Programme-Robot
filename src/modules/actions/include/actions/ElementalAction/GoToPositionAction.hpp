@@ -2,6 +2,7 @@
 #include "actions/VirtualAction.hpp"
 #include "navigation/driveControl.h" // pour position_t
 
+class RobotControl;
 class TableState;
 
 /*
@@ -14,8 +15,8 @@ class TableState;
 */
 class GoToPositionAction : public VirtualAction {
     public:
-        GoToPositionAction(const std::string& name, position_t target, DriveControl* drive);
-        GoToPositionAction(const std::string& name, TableState* tableState, DriveControl* drive);
+        GoToPositionAction(const std::string& name, position_t target, RobotControl* robot);
+        GoToPositionAction(const std::string& name, TableState* tableState, RobotControl* robot);
         ~GoToPositionAction() override = default;
 
         ReturnFSM run() override;
@@ -38,7 +39,7 @@ class GoToPositionAction : public VirtualAction {
         bool resolveTarget();
 
         position_t target;
-        DriveControl* drive;
+        RobotControl* robot;
         // Source des cibles dynamiques (non possédée). Nul pour une cible fixe.
         TableState* tableState = nullptr;
         // Vrai tant que la cible dynamique doit être (re)calculée.

@@ -1,15 +1,16 @@
 #include <math.h>
 #include "actions/ElementalAction/CalibrationAction.hpp"
+#include "actions/RobotControl.hpp"
 #include "utils/logger.hpp"
 #include "navigation/pathfind.h"
 #include "defs/constante.h"
 #include "vision/Cam.hpp" // for OFFSET_CAM_A
 
-CalibrationAction::CalibrationAction(DriveControl* drive, TableState* tableState){
+CalibrationAction::CalibrationAction(RobotControl* robot, TableState* tableState){
     nom = "Calibration";
     duree = 1000;
     calibrationState = StateCalibration::CalcCalculation;
-    this->drive = drive;
+    this->robot = robot;
     this->tableState = tableState;
 }
 
@@ -24,7 +25,7 @@ void CalibrationAction::reset(){
 ReturnFSM CalibrationAction::run(){
     switch (calibrationState){
         case StateCalibration::CalcCalculation:
-            calibrationTarget_ = calculateClosestArucoPosition(drive->getPosition());
+            calibrationTarget_ = calculateClosestArucoPosition(robot->drive.getPosition());
             calibrationState = StateCalibration::CalibrationNav;
             break;
         case StateCalibration::CalibrationNav:
