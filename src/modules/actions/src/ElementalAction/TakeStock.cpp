@@ -14,6 +14,7 @@ TakeStock::TakeStock(TableState* tableState, RobotControl* robot)
     state = MOVE1;
     selected_face = &robot->wall1;
     quarry = nullptr;
+    nom = "TakeStock";
 }
 
 float TakeStock::getBestQuarry(const position_t& from) {
@@ -151,6 +152,7 @@ void TakeStock::reset(){
 bool TakeStock::available(float &reward){
     if(selected_face->rocks!=0) return false;
     float dist = BestTake(robot->drive.getPosition());
+    BestPositionToTake(robot->drive.getPosition());
     if (dist != -1) {
         reward = value/dist;
         return true;
