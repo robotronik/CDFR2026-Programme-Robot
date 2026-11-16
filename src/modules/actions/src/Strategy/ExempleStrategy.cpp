@@ -76,7 +76,7 @@ void ExempleStrat::buildPossibleActions(){
     // Cible dynamique : l'élément de jeu le plus proche connu de tableStatus,
     // fixé au démarrage de l'action (cf. GoToPositionAction::getClosestElement()).
     //addAction(0.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, robot));
-    //addAction(0.0f, std::make_unique<DropAction>(tableStatus, robot));
+    addAction(1.0f, std::make_unique<DropAction>(tableStatus, robot));
     addAction(1.0f, std::make_unique<TakeStock>(tableStatus, robot));
 }
 
