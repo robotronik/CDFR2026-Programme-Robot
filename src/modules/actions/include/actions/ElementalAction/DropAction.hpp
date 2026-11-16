@@ -29,7 +29,6 @@ class DropAction : public VirtualAction {
         /*
             Error management and sucess management not used but still could bin in the future
             bool errorManagement();
-            bool successManagement();
         */
         
     private:
@@ -38,12 +37,12 @@ class DropAction : public VirtualAction {
 
         bool getBestDropZone();
         bool toBestDropPosition();
+        bool successManagement();
 
         enum class DropState {
             Moving,
         };
 
-        const position_t DROP_OFFSET = {0, 0, 120};
         Wall* selected_face;
         wallZone_t* selected_drop;
         position_t target;

@@ -1,14 +1,14 @@
 #include "actions/ElementalAction/DropAction.hpp"
+#include "utils/logger.hpp"
+#include <cmath>
 
 
 //#include "utils/logger.hpp"
 
-DropAction::DropAction(TableState* tableState, RobotControl* robot) {
-    this->tableState = tableState;
-    this->robot = robot;
+DropAction::DropAction(TableState* tableState, RobotControl* robot)
+    : tableState(tableState), robot(robot) 
+{
     this->nom = "DropAction";
-    // reset() s'appuie sur robot/tableState : il doit être appelé après
-    // l'affectation des membres.
     reset();
 }
 
@@ -18,10 +18,12 @@ ReturnFSM DropAction::run() {
             {
             NavReturn nav_result = navigation.goTo(target, true);
             if(nav_result == NavReturn::Done) {
-                robot->wall1.wDrop();
-                selected_face->rocks = 0;
+                successManagement();
+                LOG_GREEN_INFO("Drop Success");
                 return ReturnFSM::Done;
             }else if (nav_result == NavReturn::Error) {
+                LOG_ERROR("Drop Error");
+                reset();
                 return ReturnFSM::Error;
             }
             break;
@@ -30,16 +32,23 @@ ReturnFSM DropAction::run() {
     return ReturnFSM::Working;
 }
 
+bool DropAction::successManagement(){
+    robot->wall1.wDrop();
+    selected_face->rocks = 0;
+    selected_drop->nb = 3;
+    return true;
+}
 
 bool DropAction::stop() {
-    reset();
+    robot->drive.stopMotion();
     return true;
 }
 
 void DropAction::reset() {
+    stop();
     state = DropState::Moving;
     target = {0, 0, 0};
-    best_path_length = 1e6;
+    best_path_length = INFINITY;
     selected_face = &robot->wall1;// TODO implement a way to chose face
     selected_drop = nullptr;
 }
@@ -48,6 +57,7 @@ bool DropAction::available(float &reward) {
     reset();
     if(selected_face->rocks == 0) return false;
     if (getBestDropZone()) {
+        toBestDropPosition();
         reward = (float)static_cast<int>(ConstructionType::Wall)/best_path_length;
         return true;
     }else{
@@ -73,7 +83,7 @@ bool DropAction::getBestDropZone(){
     position_t robot_pos = robot->drive.getPosition();
     selected_drop = &tableState->wallZone[0];
 
-    best_path_length = 1e6;
+    best_path_length = INFINITY;
     position_t path[1024];
     bool valid = false;
     for(int i = 0; i < WALL_ZONE_COUNT; i++) {
@@ -86,16 +96,16 @@ bool DropAction::getBestDropZone(){
             }else if(zone->pos.y == selected_drop->pos.y) {
                 double zone_path_length;
                 if(!pathfind(robot_pos, zone->pos, path, zone_path_length)){
-                    zone_path_length = 1e6;
+                    zone_path_length = INFINITY;
                 }
                 if(!valid && !pathfind(robot_pos, selected_drop->pos, path, best_path_length)){
-                    best_path_length = 1e6;
+                    best_path_length = INFINITY;
                 }
-                if(zone_path_length < best_path_length && zone_path_length != 1e6) {
+                if(zone_path_length < best_path_length && zone_path_length != INFINITY) {
                     selected_drop = zone;
                     valid = true;
                     best_path_length = zone_path_length;
-                }else if(best_path_length != 1e6){
+                }else if(best_path_length != INFINITY){
                     valid = true;
                 }
             }else if(!valid){
@@ -115,8 +125,8 @@ bool DropAction::getBestDropZone(){
 bool DropAction::toBestDropPosition(){
     // TODO change for proper offset depending on actuator
     // TODO 2 placement in area should be more dependent on strategy and not fix
-    target.x = target.x + DROP_OFFSET.x * cos(target.a * DEG_TO_RAD) - DROP_OFFSET.y * sin(target.a * DEG_TO_RAD);
-    target.y = target.y + DROP_OFFSET.x * sin(target.a * DEG_TO_RAD) + DROP_OFFSET.y * cos(target.a * DEG_TO_RAD);
-    target.a = target.a + DROP_OFFSET.a;
+    target.a = target.a - selected_face->getOffset().a;
+    target.x = target.x - selected_face->getOffset().x * cos(target.a * DEG_TO_RAD) + selected_face->getOffset().y * sin(target.a * DEG_TO_RAD);
+    target.y = target.y - selected_face->getOffset().x * sin(target.a * DEG_TO_RAD) - selected_face->getOffset().y * cos(target.a * DEG_TO_RAD);
     return true;
 }
