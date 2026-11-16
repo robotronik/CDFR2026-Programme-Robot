@@ -49,26 +49,26 @@ float TakeStock::getBestQuarry(const position_t& from) {
 }
 
 void TakeStock::BestPositionToTake(const position_t& from) {
-    diffpos = {target.x, target.y, from.a}; //TODO add offset
-    //pour les quarry pour prendre autre part il faut faire autrement
-    if (target.y == 950) {
-        target.y -= OFFSET_TARGET.y;
+    const position_t stock = target;
+    const position_t offset = selected_face->getOffset();
+    diffpos.a = stock.a - offset.a;
+    const double angle = diffpos.a * DEG_TO_RAD;
+    diffpos.x = stock.x - offset.x * cos(angle) + offset.y * sin(angle);
+    diffpos.y = stock.y - offset.x * sin(angle) - offset.y * cos(angle);
+
+    target = diffpos;
+    if (stock.x == 950) {
+        target.x -= OFFSET_TARGET.x;
     }
-    else if (target.y == -950)
-    {
+    else if (stock.x == -950) {
+        target.x += OFFSET_TARGET.x;
+    }
+    else if (from.y >= stock.y) {
         target.y += OFFSET_TARGET.y;
     }
     else {
-        if (from.y >= 0){
-            target.y = OFFSET_TARGET.y;
-        }
-        else{
-            target.y = -OFFSET_TARGET.y;
-        }
-        
+        target.y -= OFFSET_TARGET.y;
     }
-    // TODO il reste target.a e(et offset) a modifié mais il depend de la face voulue et diffpos a, et prendre en compte le decalage des pompes par rapport au centre du robot
-
 }
 
 float TakeStock::BestTake(const position_t& from) {

@@ -31,6 +31,7 @@ class Wall{
         int rocks=0; // number of rocks on the face
         bool wDrop();
         bool wTake();
+        position_t getOffset() const { return offset; }
     protected:
         int pumpIdx[3]; // index of the pump for the face
         ActuatorsControl* actuator;

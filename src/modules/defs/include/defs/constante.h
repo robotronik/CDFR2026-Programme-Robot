@@ -98,15 +98,15 @@ const position_t TOWER_POSITION[] = {
 const int TOWER_ZONE_COUNT = sizeof(TOWER_POSITION) / sizeof(position_t);
 
 const position_t QUARRY_POSITION[] = {
-    position_t{ .x = -950, .y =  750, .a =   0}, // 0
-    position_t{ .x = -950, .y =  250, .a =   0}, // 1
-    position_t{ .x = -950, .y = -250, .a =   0}, // 2
-    position_t{ .x = -950, .y = -750, .a =   0}, // 3
+    position_t{ .x = -950, .y =  750, .a =   180}, // 0
+    position_t{ .x = -950, .y =  250, .a =   180}, // 1
+    position_t{ .x = -950, .y = -250, .a =   180}, // 2
+    position_t{ .x = -950, .y = -750, .a =   180}, // 3
     position_t{ .x = -500, .y =    0, .a = 270}, // 4
-    position_t{ .x =  950, .y =  750, .a = 180}, // 5
-    position_t{ .x =  950, .y =  250, .a = 180}, // 6
-    position_t{ .x =  950, .y = -250, .a = 180}, // 7
-    position_t{ .x =  950, .y = -750, .a = 180}, // 8
+    position_t{ .x =  950, .y =  750, .a =   0}, // 5
+    position_t{ .x =  950, .y =  250, .a =   0}, // 6
+    position_t{ .x =  950, .y = -250, .a =   0}, // 7
+    position_t{ .x =  950, .y = -750, .a =   0}, // 8
     position_t{ .x =  500, .y =    0, .a = 270}  // 9
 };
 const int QUARRY_ZONE_COUNT = sizeof(QUARRY_POSITION) / sizeof(position_t);
