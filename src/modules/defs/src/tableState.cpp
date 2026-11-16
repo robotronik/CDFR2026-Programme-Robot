@@ -119,7 +119,7 @@ bool TableState::needDoor(){
 void TableState::initQuarry(){
     for(int i = 0; i < QUARRY_ZONE_COUNT; i++) {
         quarry[i].pos = QUARRY_POSITION[i];
-        quarry[i].nb = 0;
+        quarry[i].nb = 3;
         quarry[i].idx = i;
         quarry[i].trustFactor = 1.0f;
     }
