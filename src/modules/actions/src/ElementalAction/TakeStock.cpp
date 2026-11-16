@@ -4,8 +4,9 @@
 #include "defs/tableState.hpp"
 #include "actions/RobotControl.hpp"
 #include "navigation/driveControl.h" // pour position_t
-#include "GoToPositionAction.cpp"
 #include "navigation/navigation.h" // pour nav_return_t & position_t
+#include "navigation/pathfind.h"
+#include "utils/logger.hpp"
 
 TakeStock::TakeStock(TableState* tableState, RobotControl* robot)
     : tableState(tableState), robot(robot)
