@@ -4,7 +4,7 @@
 #include <utils/json.hpp>
 using json = nlohmann::json;
 
-class DriveControl;
+class RobotControl;
 class TableState;
 class Cam;
 
@@ -18,7 +18,7 @@ enum class NavReturn {
 
 class Navigation {
     public:
-        Navigation(DriveControl* drive, TableState* tableStatus, Cam* cam);
+        Navigation(RobotControl* robot, TableState* tableStatus, Cam* cam);
         ~Navigation() = default;
 
         // Positions recorded during the last camera calibration
@@ -36,7 +36,7 @@ class Navigation {
         NavReturn driveStep();
         void opponentDetection();
 
-        DriveControl* drive;
+        RobotControl* robot;
         TableState* tableStatus;
         Cam* cam;
 

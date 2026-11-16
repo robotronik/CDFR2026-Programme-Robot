@@ -13,7 +13,6 @@
 #include "defs/tableState.hpp"
 #include "i2c/Arduino.hpp"
 #include "actions/SensorControl.hpp"
-#include "actions/ActuatorsControl.hpp"
 #include "lidar/Lidar.hpp"
 #include "lidar/lidarAnalize.h" //for static variable
 #include "navigation/navigation.h"
@@ -30,24 +29,20 @@ using json = nlohmann::json;
 
 RestAPI::RestAPI(MainState* currentState,
                  MainState* nextState,
-                 DriveControl* drive,
+                 RobotControl* robot,
                  TableState* tableStatus,
                  Arduino* arduino,
                  SensorControl* sensor,
-                 ActuatorsControl* actuators,
-                 RobotControl* robot,
                  Lidar* lidar,
                  Cam* cam,
                  Navigation* navigation,
                  std::vector<VirtualStrategy*>* strategies)
     : currentState(currentState),
       nextState(nextState),
-      drive(drive),
+      robot(robot),
       tableStatus(tableStatus),
       arduino(arduino),
       sensor(sensor),
-      actuators(actuators),
-      robot(robot),
       lidar(lidar),
       cam(cam),
       navigation(navigation),
@@ -200,7 +195,7 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/get_pos")
     ([this](){
         json response;
-        response["pos"] = (position_t)drive->position;
+        response["pos"] = (position_t)robot->drive.position;
 
         return crow::response(response.dump(4));
     });
@@ -233,8 +228,8 @@ void RestAPI::start(){
         navigation->pathJson(current_navigation_path);
         response["navigation"] = current_navigation_path;
         
-        response["target_pos"] = (position_t)drive->target;
-        response["pos"] = (position_t)drive->position;
+        response["target_pos"] = (position_t)robot->drive.target;
+        response["pos"] = (position_t)robot->drive.position;
         // Costmap
         response["costmap"] = astar_get_costmap_json();
 
@@ -348,7 +343,7 @@ void RestAPI::start(){
     ([this](){
         position_t camera_pos = {0.0, 0.0, 0.0};
         if (!cam->getLocalisation(camera_pos)){
-            camera_pos = robotToCamera(drive->position);
+            camera_pos = robotToCamera(robot->drive.position);
         }
         const std::vector<GameElement> elements = cam->getGameElements(camera_pos);
         json objects = json::array();
@@ -539,8 +534,8 @@ void RestAPI::start(){
         if (*currentState != MainState::Manual)
             return jsonError(400, "Cannot change the coordinates when not in MANUAL mode");
 
-        const position_t pos = readRequestedPosition(req_data, drive->position);
-        drive->setCoordinates(pos);
+        const position_t pos = readRequestedPosition(req_data, robot->drive.position);
+        robot->drive.setCoordinates(pos);
         navigation->goTo(pos, false);
 
         return jsonMessage("Successful");
@@ -555,7 +550,7 @@ void RestAPI::start(){
         if (*currentState != MainState::Manual)
             return jsonError(400, "Cannot change the coordinates when not in MANUAL mode");
 
-        const position_t pos = readRequestedPosition(req_data, drive->position);
+        const position_t pos = readRequestedPosition(req_data, robot->drive.position);
         LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", pos.x, " y=", pos.y, " a=", pos.a);
         navigation->goTo(pos, false);
 
@@ -571,7 +566,7 @@ void RestAPI::start(){
         if (*currentState != MainState::Manual)
             return jsonError(400, "Cannot change the coordinates when not in MANUAL mode");
 
-        const position_t pos = readRequestedPosition(req_data, drive->position);
+        const position_t pos = readRequestedPosition(req_data, robot->drive.position);
         LOG_INFO("Manual ctrl : Requested set_target_coordinates_Astart, x=", pos.x, " y=", pos.y, " a=", pos.a);
         navigation->goTo(pos, true);
 
@@ -589,12 +584,12 @@ void RestAPI::start(){
 
         double req_value = req_data["value"];
 
-        double newXvalue = drive->position.x + cos(drive->position.a * DEG_TO_RAD) * req_value;
-        double newYvalue = drive->position.y + sin(drive->position.a * DEG_TO_RAD) * req_value;
+        double newXvalue = robot->drive.position.x + cos(robot->drive.position.a * DEG_TO_RAD) * req_value;
+        double newYvalue = robot->drive.position.y + sin(robot->drive.position.a * DEG_TO_RAD) * req_value;
 
         LOG_INFO("Manual ctrl : Requested set_move, value=", req_value);
 
-        position_t pos = {newXvalue, newYvalue, drive->position.a};
+        position_t pos = {newXvalue, newYvalue, robot->drive.position.a};
         navigation->goTo(pos);
 
         return jsonMessage("Successful");
@@ -612,7 +607,7 @@ void RestAPI::start(){
         int req_value = req_data["value"];
 
         // TODO
-        position_t pos = {drive->position.x, drive->position.y, drive->position.a + req_value};
+        position_t pos = {robot->drive.position.x, robot->drive.position.y, robot->drive.position.a + req_value};
         navigation->goTo(pos);
 
         LOG_INFO("Manual ctrl : Requested set_rotate, value=", req_value);

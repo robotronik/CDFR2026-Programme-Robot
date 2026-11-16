@@ -1,19 +1,20 @@
 #include "actions/ElementalAction/GoToPositionAction.hpp"
+#include "actions/RobotControl.hpp"
 #include "defs/tableState.hpp"
 #include "utils/logger.hpp"
 #include "navigation/navigation.h" // pour NavReturn & position_t
 #include "navigation/pathfind.h"
 
-GoToPositionAction::GoToPositionAction(const std::string& name, position_t target, DriveControl* drive)
-    : target(target), drive(drive), moving(false)
+GoToPositionAction::GoToPositionAction(const std::string& name, position_t target, RobotControl* robot)
+    : target(target), robot(robot), moving(false)
 {
     nom = name;
     value = 100;
     duree = 20; // durée estimée, à ajuster
 }
 
-GoToPositionAction::GoToPositionAction(const std::string& name, TableState* tableState, DriveControl* drive)
-    : target({0, 0, 0}), drive(drive), tableState(tableState), needsTarget(true), moving(false)
+GoToPositionAction::GoToPositionAction(const std::string& name, TableState* tableState, RobotControl* robot)
+    : target({0, 0, 0}), robot(robot), tableState(tableState), needsTarget(true), moving(false)
 {
     nom = name;
     value = 100;
@@ -47,7 +48,7 @@ bool GoToPositionAction::resolveTarget(){
     if (!needsTarget) {
         return true; // cible fixe, ou déjà résolue pour cette exécution
     }
-    if (!getClosestElement(drive->getPosition(), target)) {
+    if (!getClosestElement(robot->drive.getPosition(), target)) {
         return false; // aucun élément de jeu connu
     }
     needsTarget = false;
@@ -95,7 +96,7 @@ bool GoToPositionAction::successManagement(){
 
 bool GoToPositionAction::stop(){
     if(moving){
-        drive->stopMotion();
+        robot->drive.stopMotion();
         moving = false;
     }
     return true;
@@ -115,7 +116,7 @@ bool GoToPositionAction::available(float &reward){
     if (!resolveTarget()) return false;
     double path_length_mm;
     position_t path[1024]; // Assuming a maximum path length
-    if(!pathfind(drive->getPosition(), target, path, path_length_mm)){
+    if(!pathfind(robot->drive.getPosition(), target, path, path_length_mm)){
         return false;
     }
     reward = value/path_length_mm;

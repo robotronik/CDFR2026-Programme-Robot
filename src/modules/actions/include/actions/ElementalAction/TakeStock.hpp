@@ -2,7 +2,8 @@
 #include "actions/VirtualAction.hpp"
 #include "defs/tableState.hpp"
 #include "drive_interface.h"
-#include "navigation/driveControl.h"
+
+class RobotControl;
 
 typedef enum
 {
@@ -13,7 +14,7 @@ typedef enum
 class TakeStock : public VirtualAction {
     private:
         TableState* tableState;
-        DriveControl* drive;
+        RobotControl* robot;
 
         const position_t OFFSET_TARGET = {150, 150, 0};
         int value = 23; // TODO change to be max value of points adv can make with 3 rocks
@@ -27,7 +28,7 @@ class TakeStock : public VirtualAction {
         void BestPositionToTake(const position_t&  from);
         bool resolveTarget();
     public:
-        TakeStock(TableState* tableState);
+        TakeStock(TableState* tableState, RobotControl* robot);
         ~TakeStock() override = default;
 
 

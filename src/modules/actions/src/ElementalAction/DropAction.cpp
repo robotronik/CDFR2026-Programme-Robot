@@ -3,9 +3,8 @@
 
 //#include "utils/logger.hpp"
 
-DropAction::DropAction(TableState* state, DriveControl* drive, RobotControl* robot) {
+DropAction::DropAction(TableState* state, RobotControl* robot) {
     this->tableState = state;
-    this->drive = drive;
     this->robot = robot;
     this->nom = "DropAction";
     reset();
@@ -63,7 +62,7 @@ bool DropAction::getBestDropZone(){
     // TODO check if has block to drop
     if (!tableState->remainEmptyWall()) return false;
     if(!tableState->needWall()) return false;
-    position_t robot_pos = drive->getPosition();
+    position_t robot_pos = robot->drive.getPosition();
     wallZone_t bestZone = tableState->wallZone[0];
 
     best_path_length = 1e6;

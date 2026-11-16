@@ -1,10 +1,23 @@
 #pragma once
 #include "actions/ActuatorsControl.hpp"
 #include "defs/constante.h"
+#include "navigation/driveControl.h"
 
+class Arduino;
+
+/*
+    Point d'entrée unique sur le matériel du robot : possède le contrôle du
+    châssis (DriveControl) et des actionneurs (ActuatorsControl), et expose les
+    éléments de jeu construits par le robot. Les modules qui ont besoin du
+    matériel ne reçoivent que cette instance.
+*/
 class RobotControl {
     public:
-        RobotControl(ActuatorsControl* actuators, DriveControl* drive);
+        explicit RobotControl(Arduino* arduino);
+
+        DriveControl drive;
+        ActuatorsControl actuators;
+
         Wall wall1;
         Wall wall2;
         Wall wall3;
@@ -19,6 +32,4 @@ class RobotControl {
 
         int door1Tab[3] = {0, 0, 0};
         int door2Tab[3] = {0, 0, 0};
-        ActuatorsControl* actuators;
-        DriveControl* drive;
 };

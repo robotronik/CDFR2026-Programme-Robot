@@ -2,17 +2,18 @@
 #include "defs/structs.hpp"
 #include "defs/matTypes.hpp"
 #include "defs/constante.h"
-#include "navigation/driveControl.h"
 #include <utils/json.hpp>
 #include <vector>
 
 using json = nlohmann::json;
 
+class RobotControl;
+
 class TableState
 {
     public:
 
-        TableState(DriveControl* drive);
+        explicit TableState(RobotControl* robot);
         ~TableState();
 
         void reset();
@@ -54,7 +55,7 @@ class TableState
         bool needDoor();
 
     private:
-        DriveControl* drive;
+        RobotControl* robot;
         void initQuarry();
         void initDropZone();
 };

@@ -1,8 +1,9 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
 #include "defs/tableState.hpp"
-#include "navigation/driveControl.h"
 #include "navigation/navigation.h" //For NavReturn & position_t
+
+class RobotControl;
 
 /*
     Action de calibration : force la calibration en se tournant vers
@@ -12,7 +13,7 @@
 */
 class CalibrationAction : public VirtualAction {
     public:
-        CalibrationAction(DriveControl* drive, TableState* tableState);
+        CalibrationAction(RobotControl* robot, TableState* tableState);
         ~CalibrationAction() override = default;
 
         ReturnFSM run() override;
@@ -33,7 +34,7 @@ class CalibrationAction : public VirtualAction {
             CalibrationNav,
         };
 
-        DriveControl* drive;
+        RobotControl* robot;
         TableState* tableState;
 
         StateCalibration calibrationState;

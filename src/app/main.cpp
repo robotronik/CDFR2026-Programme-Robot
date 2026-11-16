@@ -32,7 +32,6 @@
 // Arduino
 #include "i2c/Arduino.hpp"
 #include "actions/SensorControl.hpp"
-#include "actions/ActuatorsControl.hpp"
 
 #ifndef __CROSS_COMPILE_ARM__
     // Desktop Build
@@ -42,24 +41,22 @@
 #endif
 
 // Hardware init
-DriveControl drive;
 Arduino arduino;
 Lidar lidar = Lidar(&arduino);
 
 // control of hardware
 SensorControl sensor(&arduino);
-ActuatorsControl actuators(&arduino, &drive);
-RobotControl robot(&actuators, &drive);
+RobotControl robot(&arduino);
 // status of table
-TableState tableStatus(&drive);
+TableState tableStatus(&robot);
 
 // Brain Init
-VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus, &robot);
+VirtualStrategy* currentStrategy = new ExempleStrat(&tableStatus, &robot);
 
 // Strategies selectable through the REST API
 std::vector<VirtualStrategy*> strategies = { currentStrategy };
 
-ActionFSM action(currentStrategy, &drive, &tableStatus);
+ActionFSM action(currentStrategy, &robot, &tableStatus);
 
 #ifndef EMULATE_CAM
 Cam cam1 = Cam(0, "data/OV9281_1280_800.yaml", "data/table.png");
@@ -68,7 +65,7 @@ Cam cam1(-1, "", "");
 #endif
 
 // Navigation
-Navigation navigation(&drive, &tableStatus, &cam1);
+Navigation navigation(&robot, &tableStatus, &cam1);
 
 MainState currentState;
 MainState nextState;
@@ -77,7 +74,7 @@ bool initState;
 std::thread api_server_thread;
 
 // REST API
-RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &sensor, &actuators, &robot, &lidar, &cam1, &navigation, &strategies);
+RestAPI api(&currentState, &nextState, &robot, &tableStatus, &arduino, &sensor, &lidar, &cam1, &navigation, &strategies);
 
 // Prototypes
 int StartSequence();
@@ -106,10 +103,10 @@ int main()
 
         // Get Sensor Data
         {
-            drive.update();
+            robot.drive.update();
             // The odometry prior helps the feature localiser; the marker
             // localiser ignores it.
-            cam1.setPrior(drive.position);
+            cam1.setPrior(robot.drive.position);
 
             if (currentState != MainState::Init && currentState != MainState::Fin)
             {
@@ -129,7 +126,7 @@ int main()
             if (initState)
             {
                 LOG_GREEN_INFO("INIT");
-                actuators.disableActuators();
+                robot.actuators.disableActuators();
                 tableStatus.reset();
                 arduino.RGB_Rainbow();
             }
@@ -145,8 +142,8 @@ int main()
         {
             if (initState){
                 LOG_GREEN_INFO("WAITSTART");
-                actuators.enableActuators();
-                actuators.homeActuators();
+                robot.actuators.enableActuators();
+                robot.actuators.homeActuators();
                 lidar.startSpin();
                 cam1.start();
 
@@ -178,7 +175,7 @@ int main()
             tableStatus.startTime = _millis();
             static bool has_calib = false;
             if (!has_calib){
-                if (calibrate_otos(&tableStatus, &drive, action.getStrategy()->StratStartingPos())){
+                if (calibrate_otos(&tableStatus, &robot, action.getStrategy()->StratStartingPos())){
                     LOG_GREEN_INFO("Calibration successful");
                     has_calib = true;
                 }
@@ -239,13 +236,13 @@ int main()
                 LOG_GREEN_INFO("FIN");
                 arduino.RGB_Solid(0, 255, 0);
                 manual_clearFunc();
-                drive.disable();
-                actuators.disableActuators();
+                robot.drive.disable();
+                robot.actuators.disableActuators();
                 lidar.stopSpin();
             }
 
             if (!sensor.readLatchSensor()){
-                actuators.enableActuators();
+                robot.actuators.enableActuators();
                 exit_requested = true;
             }
             break;
@@ -318,7 +315,7 @@ int StartSequence()
 
     pathfind_setup();
 
-    drive.reset();
+    robot.drive.reset();
 
     LOG_GREEN_INFO("Init sequence done");
     return 0;
@@ -327,13 +324,13 @@ int StartSequence()
 void GetLidar()
 {
     static position_t pos_opponent = OPPONENT_POS_UNKNOWN;
-    double IsDataValid = (fabs(drive.velocity.a) <= 45.0) || (position_distance(drive.position, pos_opponent) < 1000);
+    double IsDataValid = (fabs(robot.drive.velocity.a) <= 45.0) || (position_distance(robot.drive.position, pos_opponent) < 1000);
 
     if (lidar.getData()){
-        convertAngularToAxial(lidar.data, lidar.count, drive.position, 150);
+        convertAngularToAxial(lidar.data, lidar.count, robot.drive.position, 150);
         pathfind_fill_lidar(&lidar);
         // Only update opponent position if the robot is not moving too fast to avoid noise
-        if (IsDataValid && position_opponentV2(lidar.data, lidar.count, drive.position, pos_opponent) &&
+        if (IsDataValid && position_opponentV2(lidar.data, lidar.count, robot.drive.position, pos_opponent) &&
                 (currentState == MainState::Run || currentState == MainState::Manual) &&
                 (_millis() - tableStatus.startTime > 1000)){ // Only update opponent position after 1 second from the start to avoid false readings at the beginning
             tableStatus.pos_opponent.x = pos_opponent.x;
@@ -368,16 +365,16 @@ void EndSequence()
     cam1.stop();
 
 #ifndef EMULATE_I2C
-    drive.disable();
+    robot.drive.disable();
 
     arduino.RGB_Solid(0, 0, 0); // OFF
 
     for(int i = 0; i < 60; i++){
-        if (actuators.homeActuators())
+        if (robot.actuators.homeActuators())
             break;
         delay(100);
     };
-    actuators.disableActuators();
+    robot.actuators.disableActuators();
 #endif // EMULATE_I2C
 
     // Stop the API server
@@ -429,7 +426,7 @@ void switchTeamSide(ColorTeam color){ // TODO move to tableState
         position_t pos = action.getStrategy()->StratStartingPos();
         LOG_INFO("Stratégie '", action.getStrategy()->getNom(),
                  "', départ : x=", pos.x, " y=", pos.y, " a=", pos.a);
-        drive.setCoordinates(pos);
+        robot.drive.setCoordinates(pos);
         navigation.goTo(pos, true, true); // Go to starting pos with A* and slow mode to avoid collisions during the switch
     }
 }
@@ -448,7 +445,7 @@ void switchStrategy(std::string strategy){ // TODO move to tableState
         tableStatus.strategy = strategy;
         action.setStrategy(selectedStrategy);
         position_t pos = action.getStrategy()->StratStartingPos();
-        drive.setCoordinates(pos);
+        robot.drive.setCoordinates(pos);
     }
     else {
         LOG_INFO("Stratégie '", strategy, "' déjà active");

@@ -1,13 +1,14 @@
 #include "actions/ElementalAction/NavHomeAction.hpp"
+#include "actions/RobotControl.hpp"
 #include "utils/logger.hpp"
 #include "navigation/navigation.h" //For NavReturn & position_t
 #include "navigation/pathfind.h"
 
-NavHomeAction::NavHomeAction(TableState* tableState, DriveControl* drive){
+NavHomeAction::NavHomeAction(TableState* tableState, RobotControl* robot){
     nom = "NavHome";
     duree = 2000.0f;
     this->tableState = tableState;
-    this->drive = drive;
+    this->robot = robot;
 }
 
 ReturnFSM NavHomeAction::run(){
@@ -34,7 +35,7 @@ bool NavHomeAction::successManagement(){
 }
 
 bool NavHomeAction::stop(){
-    drive->stopMotion();
+    robot->drive.stopMotion();
     return true;
 }
 
@@ -47,7 +48,7 @@ bool NavHomeAction::available(float &reward){
     if (done) return false;
     double path_length_mm;
     position_t path[1024];
-    if(!pathfind(drive->getPosition(), homePos, path, path_length_mm)){
+    if(!pathfind(robot->drive.getPosition(), homePos, path, path_length_mm)){
         return false;
     }
     reward = (float)value/(float)path_length_mm;
