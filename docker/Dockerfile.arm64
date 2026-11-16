@@ -1,7 +1,7 @@
 # Build image for the aarch64 (Raspberry Pi) target, cross-compiled on amd64 with
 # the aarch64-linux-gnu toolchain; target libraries come from arm64 multiarch
 # packages. The base is Debian 13 (trixie), matching Raspberry Pi OS Trixie: GCC
-# 14 / glibc 2.41, OpenCV 4.10, and the Pi libcamera fork (libcamera.so.0.7).
+# 14 / glibc 2.41, OpenCV 4.10, and the Pi libcamera fork (libcamera.so.0.8).
 
 FROM debian:trixie
 
@@ -19,9 +19,9 @@ RUN dpkg --add-architecture arm64 \
 # only for the libcamera stack. Pins must name the foreign architecture
 # explicitly (pkg:arm64) or they do not match; libpisp1 is Multi-Arch: same and
 # also in Debian, so both architectures are pinned to the Pi version so apt can
-# pair arm64 libcamera0.7 with a matching libpisp1.
+# pair arm64 libcamera0.8 with a matching libpisp1.
 RUN printf '%s\n' \
-        'Package: libcamera-dev:arm64 libcamera0.7:arm64 libcamera-ipa:arm64 libpisp1:arm64 libpisp1:amd64 libpisp-common' \
+        'Package: libcamera-dev:arm64 libcamera0.8:arm64 libcamera-ipa:arm64 libpisp1:arm64 libpisp1:amd64 libpisp-common' \
         'Pin: origin "archive.raspberrypi.com"' \
         'Pin-Priority: 1000' \
         '' \
