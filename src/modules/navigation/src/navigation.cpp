@@ -47,7 +47,6 @@ NavReturn Navigation::go(){
                 //robot->drive.setBrakeState(true);
             }
             else {
-                prev_final_pos_otos = robot->drive.position;
                 return NavReturn::Done;
             }
         } else if (result == NavReturn::Error){
@@ -65,9 +64,6 @@ NavReturn Navigation::go(){
             camera_fix_attempts = 0;
             // Convert to the robot's frame.
             const position_t robot_pos = cameraToRobot(camera_pos);
-            // These are used for calibration
-            prev_final_pos_cam = robot_pos;
-            prev_final_pos_otos = robot->drive.position;
             // Apply the new position
             robot->drive.setCoordinates(robot_pos);
             tableStatus->resetCalibrationAge();

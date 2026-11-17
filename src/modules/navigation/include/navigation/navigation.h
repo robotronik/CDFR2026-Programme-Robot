@@ -21,10 +21,6 @@ class Navigation {
         Navigation(RobotControl* robot, TableState* tableStatus, Cam* cam);
         ~Navigation() = default;
 
-        // Positions recorded during the last camera calibration
-        position_t prev_final_pos_cam = {0, 0, 0};
-        position_t prev_final_pos_otos = {0, 0, 0};
-
         // Go to a position, returns the navigation state
         NavReturn goTo(position_t pos, bool useAStar = false, bool slow_mode = false, bool complete_stop = true);
         NavReturn go();
