@@ -174,7 +174,7 @@ int main()
                 }
             } else if (!has_calib){
                 // Move to the calibration poses, then back to the strategy starting position
-                if (calibrate_otos(&tableStatus, &robot, action.getStrategy()->StratStartingPos())){
+                if (calibrate_otos(&tableStatus, &robot, &cam1, action.getStrategy()->StratStartingPos())){
                     LOG_GREEN_INFO("Calibration successful");
                     has_calib = true;
                 }
