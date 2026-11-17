@@ -30,7 +30,15 @@ RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
         libopencv-objdetect410 \
         clangd \
     && cd /tmp/opencv-dev \
-    && apt-get download libopencv-core-dev libopencv-imgproc-dev libopencv-imgcodecs-dev libopencv-videoio-dev libopencv-calib3d-dev libopencv-features2d-dev libopencv-flann-dev libopencv-objdetect-dev \
+    && apt-get download \
+        libopencv-core-dev \
+        libopencv-imgproc-dev \
+        libopencv-imgcodecs-dev \
+        libopencv-videoio-dev \
+        libopencv-calib3d-dev \
+        libopencv-features2d-dev \
+        libopencv-flann-dev \
+        libopencv-objdetect-dev \
     && for d in libopencv-*-dev_*_amd64.deb; do dpkg-deb --fsys-tarfile "$d" | tar -x -C / --wildcards './usr/include/*' './usr/lib/*/*.so'; done
 
 # External robot repositories: drive/protocol headers used at compile time.

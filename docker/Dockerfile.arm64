@@ -55,7 +55,15 @@ RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
         rsync \
         openssh-client \
     && cd /tmp/opencv-dev \
-    && apt-get download libopencv-core-dev:arm64 libopencv-imgproc-dev:arm64 libopencv-imgcodecs-dev:arm64 libopencv-videoio-dev:arm64 libopencv-calib3d-dev:arm64 libopencv-features2d-dev:arm64 libopencv-flann-dev:arm64 libopencv-objdetect-dev:arm64 \
+    && apt-get download \
+        libopencv-core-dev:arm64 \
+        libopencv-imgproc-dev:arm64 \
+        libopencv-imgcodecs-dev:arm64 \
+        libopencv-videoio-dev:arm64 \
+        libopencv-calib3d-dev:arm64 \
+        libopencv-features2d-dev:arm64 \
+        libopencv-flann-dev:arm64 \
+        libopencv-objdetect-dev:arm64 \
     && for d in libopencv-*-dev_*_arm64.deb; do dpkg-deb --fsys-tarfile "$d" | tar -x -C / --wildcards './usr/include/*' './usr/lib/*/*.so'; done
 
 # External robot repositories: drive/protocol headers used at compile time.
