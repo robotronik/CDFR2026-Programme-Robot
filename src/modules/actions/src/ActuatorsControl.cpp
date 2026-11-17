@@ -2,6 +2,7 @@
 #include "actions/ActuatorsControl.hpp"
 #include "i2c/Arduino.hpp"
 #include "navigation/driveControl.h"
+#include "utils/logger.hpp"
 
 ActuatorsControl::ActuatorsControl(Arduino* arduino, DriveControl* drive) : arduino(arduino), drive(drive) {
     // Constructor implementation
@@ -40,6 +41,7 @@ bool ActuatorsControl::moveServoAndWait(int servo, int target, int speed){
 // ------------------------------------------------------
 
 bool ActuatorsControl::setPumpState(bool state, int pumpIdx){
+    LOG_ERROR("Setting pump ", pumpIdx, " to ", state);
     return arduino->writeSensor(PUMP_1_NUM, state); //TODO : Change to pumpIdx when multiple pumps are used
 }
 
@@ -121,7 +123,7 @@ bool Wall::wTake(){
 }
 
 bool Tower::tDrop(int idx){
-    return actuator->setPumpState(pumpIdx[idx],false);
+    return actuator->setPumpState(false, pumpIdx[idx]);
 }
 
 bool Tower::rotate(bool dir){

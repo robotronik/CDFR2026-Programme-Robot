@@ -41,6 +41,7 @@ class DropAction : public VirtualAction {
 
         enum class DropState {
             Moving,
+            Releasing,
         };
 
         Wall* selected_face;
@@ -48,6 +49,8 @@ class DropAction : public VirtualAction {
         position_t target;
         double best_path_length;
         DropState state = DropState::Moving;
+        unsigned long releaseStartTime = 0;
+        static constexpr unsigned long RELEASE_WAIT_MS = 4000;
 
 
 };
