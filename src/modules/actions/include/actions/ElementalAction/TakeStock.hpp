@@ -20,7 +20,7 @@ class TakeStock : public VirtualAction {
             MOVE2,
         };
         
-        const position_t OFFSET_TARGET = {350, 350, 0};
+        const position_t OFFSET_TARGET = {250, 250, 0};
         int value = 23; // TODO change to be max value of points adv can make with 3 rocks
         TakeStockState state;
         unsigned long approachStartTime = 0;
