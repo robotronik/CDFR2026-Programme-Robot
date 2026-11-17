@@ -163,6 +163,8 @@ int main()
         //****************************************************************
         case MainState::Calibration:
         {
+            static bool has_calib = false;
+
             if (initState){
                 LOG_GREEN_INFO("CALIBRATION");
                 startMatchHardware();
@@ -172,16 +174,19 @@ int main()
 
             if (tableStatus.calibrationAge == -1){
                 // Get a camera fix; the OTOS calibration compares its moves against it.
-                // Navigation reports Done even when it gives up on localising, so the
-                // still-untouched calibration age is what tells us the fix failed.
-                navigation.go();
-                if (tableStatus.calibrationAge == -1){
+                // Navigation reports Done even when it gives up on localising, so a Done
+                // that left the calibration age untouched means there is no camera fix.
+                if (navigation.go() == NavReturn::Done && tableStatus.calibrationAge == -1){
                     LOG_WARNING("Calibration skipped: no camera localisation");
                     nextState = MainState::WaitStart;
                 }
-            } else if (calibrate_otos(&tableStatus, &robot, &cam1, action.getStrategy()->StratStartingPos())){
+            } else if (!has_calib){
                 // Move to the calibration poses, then back to the strategy starting position
-                LOG_GREEN_INFO("Calibration successful");
+                if (calibrate_otos(&tableStatus, &robot, &cam1, action.getStrategy()->StratStartingPos())){
+                    LOG_GREEN_INFO("Calibration successful");
+                    has_calib = true;
+                }
+            } else {
                 nextState = MainState::WaitStart;
             }
             break;
