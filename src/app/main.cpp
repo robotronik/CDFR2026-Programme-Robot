@@ -178,9 +178,6 @@ int main()
             } else {
                 nextState = MainState::WaitStart;
             }
-
-            if (manual_ctrl)
-                nextState = MainState::Manual;
             break;
         }
         //****************************************************************
