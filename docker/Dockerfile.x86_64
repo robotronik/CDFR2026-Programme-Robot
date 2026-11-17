@@ -1,20 +1,37 @@
 # Build image for the x86_64 target (native compilation inside the container).
+# Same Debian 13 (trixie) base as the arm64 image, so both build with OpenCV 4.10
+# (ArUco in objdetect, no contrib).
+# OpenCV: install only the runtime libraries of the modules the code uses, then
+# unpack just the headers and .so links from their -dev packages. libopencv-dev
+# pulls every module (VTK, Qt, ...), and even the module -dev packages pull
+# highgui, Qt5, mesa and the FFmpeg -dev packages (~130 MB).
 
-FROM ubuntu:24.04
+FROM debian:trixie-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=tmpfs,target=/tmp/opencv-dev \
+    apt-get update && apt-get install -y --no-install-recommends \
         g++ \
         cmake \
         ninja-build \
         git \
         ca-certificates \
         libsqlite3-dev \
-        libopencv-dev \
-        libopencv-contrib-dev \
+        libopencv-core410 \
+        libopencv-imgproc410 \
+        libopencv-imgcodecs410 \
+        libopencv-videoio410 \
+        libopencv-calib3d410 \
+        libopencv-features2d410 \
+        libopencv-flann410 \
+        libopencv-objdetect410 \
         clangd \
-    && rm -rf /var/lib/apt/lists/*
+    && cd /tmp/opencv-dev \
+    && apt-get download libopencv-core-dev libopencv-imgproc-dev libopencv-imgcodecs-dev libopencv-videoio-dev libopencv-calib3d-dev libopencv-features2d-dev libopencv-flann-dev libopencv-objdetect-dev \
+    && for d in libopencv-*-dev_*_amd64.deb; do dpkg-deb --fsys-tarfile "$d" | tar -x -C / --wildcards './usr/include/*' './usr/lib/*/*.so'; done
 
 # External robot repositories: drive/protocol headers used at compile time.
 # Baked into the image so the build is self-contained.
@@ -24,8 +41,10 @@ ARG ACTIONNEUR_REF=master
 ADD https://github.com/robotronik/CDFR2026-Program-DriveControl.git#${DRIVE_CONTROL_REF} /opt/cdfr/CDFR2026-Program-DriveControl
 ADD https://github.com/robotronik/cdfr2024-programme-Actionneur.git#${ACTIONNEUR_REF} /opt/cdfr/cdfr2024-programme-Actionneur
 
-# Reuse the base image's non-root `ubuntu` user (uid/gid 1000) so workspace files
+# Debian has no non-root user, so create `ubuntu` (uid/gid 1000): workspace files
 # stay user-owned (Dev Containers remaps the uid; build.sh passes --user).
+RUN groupadd -g 1000 ubuntu \
+    && useradd -m -u 1000 -g 1000 -s /bin/bash ubuntu
 ENV HOME=/home/ubuntu
 
 WORKDIR /workspace

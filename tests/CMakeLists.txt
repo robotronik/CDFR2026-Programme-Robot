@@ -21,4 +21,4 @@ foreach(group log lidar mat aruco features)
 endforeach()
 # TODO: these fail on main already, so a failure counts as a pass (still run and logged).
 # Once one is fixed it "fails" in CI: fix it, then remove it from this line.
-set_tests_properties(lidar aruco PROPERTIES WILL_FAIL TRUE)
+set_tests_properties(lidar PROPERTIES WILL_FAIL TRUE)
