@@ -5,10 +5,11 @@
 #include <numeric>
 #include <vector>
 
-bool calibrate_otos(TableState* tableStatus, RobotControl* robot, position_t startPos) {
+bool calibrate_otos(TableState* tableStatus, RobotControl* robot, position_t startPos, bool skip_calibration) {
     // Function called continuously from the main loop to calibrate the otosensors
     // Returns true when calibration is done
-    static int step = 1; // We skip angle calib
+
+    static int step = skip_calibration ? 2 : 1;
     static bool state = false; // Used to alternate between two positions
 
     // Aruco tags are at pos (+/-400, +/-900)
