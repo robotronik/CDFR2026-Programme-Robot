@@ -175,6 +175,14 @@ void TakeStock::reset(){
 
 bool TakeStock::available(float &reward){
     if(selected_face->rocks!=0) return false;
+    bool hasDropSpace = false;
+    for (const auto& zone : tableState->wallZone) {
+        if (zone.colorTeam == tableState->colorTeam && zone.nb == 0) {
+            hasDropSpace = true;
+            break;
+        }
+    }
+    if (!hasDropSpace) return false;
     float dist = BestTake(robot->drive.getPosition());
     if (dist != -1) {
         reward = value/dist;
