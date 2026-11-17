@@ -154,13 +154,8 @@ ArucoDetector::ArucoDetector() {
     auto params = cv::makePtr<cv::aruco::DetectorParameters>();
     configureParameters(*params);
 
-#if ARUCO_OPENCV_NEW_API
     detector_ = cv::makePtr<cv::aruco::ArucoDetector>(
         cv::aruco::getPredefinedDictionary(kPredefinedDictionary), *params);
-#else
-    dictionary_ = cv::aruco::getPredefinedDictionary(kPredefinedDictionary);
-    parameters_ = params;
-#endif
 }
 
 ArucoDetector::~ArucoDetector() {
@@ -382,11 +377,7 @@ std::vector<DetectionResult> ArucoDetector::detect(const cv::Mat& frame) {
     std::vector<std::vector<cv::Point2f>> markerCorners;
     std::vector<int> ids;
 
-#if ARUCO_OPENCV_NEW_API
     detector_->detectMarkers(frame, markerCorners, ids);
-#else
-    cv::aruco::detectMarkers(frame, dictionary_, markerCorners, ids, parameters_);
-#endif
 
     results.reserve(ids.size());
     for (size_t i = 0; i < ids.size(); ++i) {

@@ -7,22 +7,13 @@
 #include <vector>
 
 #include <opencv2/core.hpp>
-#include <opencv2/core/version.hpp>
 #include <opencv2/videoio.hpp>
 
 #ifdef CAMERA_USE_LIBCAMERA
 #  include "vision/LibcameraCamera.hpp"
 #endif
 
-// OpenCV 4.7 moved ArUco into `objdetect` (cv::aruco::ArucoDetector); older
-// releases (e.g. on the Raspberry Pi) expose the legacy free functions.
-#if (CV_VERSION_MAJOR > 4) || (CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR >= 7)
-#  define ARUCO_OPENCV_NEW_API 1
-#  include <opencv2/objdetect/aruco_detector.hpp>
-#else
-#  define ARUCO_OPENCV_NEW_API 0
-#  include <opencv2/aruco.hpp>
-#endif
+#include <opencv2/objdetect/aruco_detector.hpp>
 
 namespace vision {
 
@@ -74,12 +65,7 @@ public:
     std::vector<DetectionResult> detect(const cv::Mat& frame);
 
 private:
-#if ARUCO_OPENCV_NEW_API
     cv::Ptr<cv::aruco::ArucoDetector> detector_;
-#else
-    cv::Ptr<cv::aruco::Dictionary> dictionary_;
-    cv::Ptr<cv::aruco::DetectorParameters> parameters_;
-#endif
 
     cv::Mat cameraMatrix_;
     cv::Mat distCoeffs_;
