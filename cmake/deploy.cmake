@@ -1,8 +1,8 @@
-# Target device, overridable via -DPI_HOST=... or the cache variables below.
-set(PI_USER "robotronik" CACHE STRING "Target device SSH username")
-set(PI_HOST "192.168.8.108" CACHE STRING "Target device IP or hostname")
-set(PI_DIR  "/home/${PI_USER}/CDFR" CACHE STRING "Target installation base directory")
-set(PI_DEST "arm_bin" CACHE STRING "Target installation subdirectory")
+# Target device; edit these values directly.
+set(PI_USER "robotronik")
+set(PI_HOST "192.168.8.108")
+set(PI_DIR  "/home/${PI_USER}/CDFR")
+set(PI_DEST "arm_bin")
 
 find_program(SSH_CMD ssh)
 find_program(RSYNC_CMD rsync)
