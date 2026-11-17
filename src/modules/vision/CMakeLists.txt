@@ -23,7 +23,7 @@ target_include_directories(vision
 # only the module packages (no OpenCVConfig.cmake), so find the headers and link
 # the modules by name.
 find_path(OpenCV_INCLUDE_DIR opencv2/core.hpp PATH_SUFFIXES opencv4 REQUIRED)
-target_include_directories(vision PUBLIC ${OpenCV_INCLUDE_DIR})
+target_include_directories(vision SYSTEM PUBLIC ${OpenCV_INCLUDE_DIR})
 
 target_link_libraries(vision
     PUBLIC
