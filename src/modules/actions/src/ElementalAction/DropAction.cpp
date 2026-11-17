@@ -91,45 +91,28 @@ bool DropAction::getBestDropZone(){
     if (!tableState->remainEmptyWall()) return false;
     if(!tableState->needWall()) return false;
     position_t robot_pos = robot->drive.getPosition();
-    selected_drop = &tableState->wallZone[0];
+    selected_drop = nullptr;
 
     best_path_length = INFINITY;
     position_t path[1024];
-    bool valid = false;
+    const int side = tableState->colorTeam == ColorTeam::Blue ? 1 : -1;
     for(int i = 0; i < WALL_ZONE_COUNT; i++) {
-        if (tableState->wallZone[i].nb == 0) {
-            wallZone_t* zone = &tableState->wallZone[i];
-            if((tableState->colorTeam == ColorTeam::Blue ? 1 : -1) * zone->pos.y > (tableState->colorTeam == ColorTeam::Blue ? 1 : -1) * selected_drop->pos.y
-                && pathfind(robot_pos, zone->pos, path, best_path_length)) {
-                selected_drop = zone;
-                valid = true;
-            }else if(zone->pos.y == selected_drop->pos.y) {
-                double zone_path_length;
-                if(!pathfind(robot_pos, zone->pos, path, zone_path_length)){
-                    zone_path_length = INFINITY;
-                }
-                if(!valid && !pathfind(robot_pos, selected_drop->pos, path, best_path_length)){
-                    best_path_length = INFINITY;
-                }
-                if(zone_path_length < best_path_length && zone_path_length != INFINITY) {
-                    selected_drop = zone;
-                    valid = true;
-                    best_path_length = zone_path_length;
-                }else if(best_path_length != INFINITY){
-                    valid = true;
-                }
-            }else if(!valid){
-                if(pathfind(robot_pos, zone->pos, path, best_path_length)){
-                    selected_drop = zone;
-                    valid = true;
-                }
-            }
+        wallZone_t* zone = &tableState->wallZone[i];
+        if (zone->nb != 0 || zone->colorTeam != tableState->colorTeam) continue;
+
+        double zone_path_length;
+        if (!pathfind(robot_pos, zone->pos, path, zone_path_length)) continue;
+
+        if (selected_drop == nullptr || side * zone->pos.y > side * selected_drop->pos.y ||
+            (zone->pos.y == selected_drop->pos.y && zone_path_length < best_path_length)) {
+            selected_drop = zone;
+            best_path_length = zone_path_length;
         }
     }
-    if(valid){
+    if(selected_drop != nullptr){
         target = selected_drop->pos;
     }
-    return valid;
+    return selected_drop != nullptr;
 }
 
 bool DropAction::toBestDropPosition(){
