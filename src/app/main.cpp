@@ -91,6 +91,21 @@ void ctrlc(int)
     exit_requested = true;
 }
 
+// Bring the robot up for a match: actuators enabled and homed, lidar spinning, camera running.
+// Idempotent; Init and Fin tear the hardware down and clear the flag.
+// TODO: move this into class Robot (hardware bring-up does not belong in the app state machine).
+static bool hw_ready = false;
+static void startMatchHardware()
+{
+    if (hw_ready)
+        return;
+    robot.actuators.enableActuators();
+    robot.actuators.homeActuators();
+    lidar.startSpin();
+    cam1.start();
+    hw_ready = true;
+}
+
 int main()
 {
     LOG_DEBUG("LOG ID : ", log_main_get_id());
@@ -127,6 +142,7 @@ int main()
             {
                 LOG_GREEN_INFO("INIT");
                 robot.actuators.disableActuators();
+                hw_ready = false;
                 tableStatus.reset();
                 arduino.RGB_Rainbow();
             }
@@ -134,7 +150,36 @@ int main()
             update_team_strat();
 
             if (sensor.readButtonSensor() && !sensor.readLatchSensor() && tableStatus.colorTeam != ColorTeam::None && currentStrategy != nullptr)
+                nextState = MainState::Calibration;
+            break;
+        }
+        //****************************************************************
+        case MainState::Calibration:
+        {
+            static bool has_calib = false;
+
+            if (initState){
+                LOG_GREEN_INFO("CALIBRATION");
+                startMatchHardware();
+                tableStatus.pos_opponent = OPPONENT_POS_UNKNOWN;
+                tableStatus.calibrationAge = -1; // Force a fresh camera localisation
+            }
+
+            if (tableStatus.calibrationAge == -1){
+                // Get a camera fix; the OTOS calibration compares its moves against it
+                navigation.go();
+            } else if (!has_calib){
+                // Move to the calibration poses, then back to the strategy starting position
+                if (calibrate_otos(&tableStatus, &robot, action.getStrategy()->StratStartingPos())){
+                    LOG_GREEN_INFO("Calibration successful");
+                    has_calib = true;
+                }
+            } else {
                 nextState = MainState::WaitStart;
+            }
+
+            if (manual_ctrl)
+                nextState = MainState::Manual;
             break;
         }
         //****************************************************************
@@ -142,44 +187,15 @@ int main()
         {
             if (initState){
                 LOG_GREEN_INFO("WAITSTART");
-                robot.actuators.enableActuators();
-                robot.actuators.homeActuators();
-                lidar.startSpin();
-                cam1.start();
+                // Already up when coming from Calibration, but a WaitStart forced through
+                // the REST API skips calibration, so make sure the hardware is ready.
+                startMatchHardware();
 
                 if (tableStatus.colorTeam == ColorTeam::None)
                     arduino.RGB_Blinking(255, 0, 0); // Red Blinking
-                tableStatus.calibrationAge = -1;
             }
 
-            if (tableStatus.calibrationAge == -1){
-                navigation.go();
-            } else {
-                nextState = MainState::Calibration;
-            }
-
-            if (sensor.readLatchSensor() && tableStatus.colorTeam != ColorTeam::None)
-                nextState = MainState::Run;
-            if (manual_ctrl)
-                nextState = MainState::Manual;
-            break;
-        }
-        //****************************************************************
-        case MainState::Calibration:
-        {
-            if (initState){
-                LOG_GREEN_INFO("CALIBRATION");
-            }
-            tableStatus.pos_opponent = OPPONENT_POS_UNKNOWN;
-
-            static bool has_calib = false;
-            if (!has_calib){
-                if (calibrate_otos(&tableStatus, &robot, action.getStrategy()->StratStartingPos())){
-                    LOG_GREEN_INFO("Calibration successful");
-                    has_calib = true;
-                }
-            }
-
+            // Calibrated and at the starting position: wait for the latch to start the match
             if (sensor.readLatchSensor() && tableStatus.colorTeam != ColorTeam::None)
                 nextState = MainState::Run;
             if (manual_ctrl)
@@ -238,6 +254,7 @@ int main()
                 robot.drive.disable();
                 robot.actuators.disableActuators();
                 lidar.stopSpin();
+                hw_ready = false;
             }
 
             if (!sensor.readLatchSensor()){
