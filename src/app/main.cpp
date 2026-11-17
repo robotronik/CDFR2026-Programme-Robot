@@ -100,6 +100,12 @@ static void startMatchHardware()
     if (hw_ready)
         return;
     robot.actuators.enableActuators();
+    // The wheels start at the strategy's starting position: set both the
+    // robot's odometry position and its target there, and initialise the
+    // navigation target so the first move starts from the right pose.
+    const position_t startPos = action.getStrategy()->StratStartingPos();
+    robot.drive.setCoordinates(startPos);
+    navigation.goTo(startPos);
     robot.actuators.homeActuators();
     lidar.startSpin();
     cam1.start();
