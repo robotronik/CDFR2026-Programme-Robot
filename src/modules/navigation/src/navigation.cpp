@@ -108,7 +108,8 @@ NavReturn Navigation::goTo(position_t pos, bool useAStar, bool slow_mode, bool c
         stuck_start = 0;
     }
     current_slow_mode = slow_mode;
-    if (forced_slow_mode || (_millis() - tableStatus->startTime > 90000))
+    // startTime == 0 means the match clock is not armed (pre-match states): the endgame rule does not apply.
+    if (forced_slow_mode || (tableStatus->startTime != 0 && _millis() - tableStatus->startTime > 90000))
         current_slow_mode = true;
 
     current_complete_stop = complete_stop;

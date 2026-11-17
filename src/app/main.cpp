@@ -154,8 +154,8 @@ int main()
 
             if (tableStatus.calibrationAge == -1){
                 navigation.go();
-            } else{
-                //nextState = MainState::Calibration;
+            } else {
+                nextState = MainState::Calibration;
             }
 
             if (sensor.readLatchSensor() && tableStatus.colorTeam != ColorTeam::None)
@@ -172,7 +172,6 @@ int main()
             }
             tableStatus.pos_opponent = OPPONENT_POS_UNKNOWN;
 
-            tableStatus.startTime = _millis();
             static bool has_calib = false;
             if (!has_calib){
                 if (calibrate_otos(&tableStatus, &robot, action.getStrategy()->StratStartingPos())){
