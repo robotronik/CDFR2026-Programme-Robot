@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <utility>
 #include <string.h> // memset
 #include "utils/logger.hpp"
 
@@ -70,6 +71,7 @@ void astar_initialize_costmap(){
 int astar_pathfind(position_int_t start, position_int_t goal, position_int_t path[]) {
     if (is_position_int_invalid(start)) return -1;
     if (is_position_int_invalid(goal)) return -1;
+    if (costmap[goal.x][goal.y] == OBSTACLE_COST) return 0;
 
     // Initialize nodes
     for (int x = 0; x < AS_HEIGHT; x++) {
@@ -81,13 +83,13 @@ int astar_pathfind(position_int_t start, position_int_t goal, position_int_t pat
         }
     }
 
-    // Start search from the goal
-    nodes[goal.x][goal.y].g = 0;
-    nodes[goal.x][goal.y].f = heuristic(goal, start);
+    // Search forwards so a blocked start can leave its obstacle without re-entering one.
+    nodes[start.x][start.y].g = 0;
+    nodes[start.x][start.y].f = heuristic(start, goal);
 
     position_int_t open[AS_HEIGHT * AS_WIDTH];
     int open_size = 0;
-    open[open_size++] = goal;
+    open[open_size++] = start;
     int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
     while (open_size > 0) {
@@ -100,7 +102,7 @@ int astar_pathfind(position_int_t start, position_int_t goal, position_int_t pat
 
         position_int_t curr = open[best];
         open[best] = open[--open_size];
-        if (is_position_int_equal(curr, start)) break;
+        if (is_position_int_equal(curr, goal)) break;
 
         nodes[curr.x][curr.y].visited = true;
 
@@ -115,7 +117,8 @@ int astar_pathfind(position_int_t start, position_int_t goal, position_int_t pat
             // --- Cost logic ---
             int extra = 1;
             if (costmap[next.x][next.y] == OBSTACLE_COST) {
-                extra = 100; // Very costly, but not blocking
+                if (costmap[curr.x][curr.y] != OBSTACLE_COST) continue;
+                extra = 100;
             } else if (costmap[next.x][next.y] == MARGIN_COST) {
                 extra = 10;  // Intermediate cost
             }
@@ -131,11 +134,13 @@ int astar_pathfind(position_int_t start, position_int_t goal, position_int_t pat
         }
     }
 
-    // Reconstruct the path (no reversal needed)
-    int len = 0;
-    position_int_t p = start;
+    if (nodes[goal.x][goal.y].g == INT_MAX) return 0;
 
-    while (!is_position_int_invalid(p) && !is_position_int_equal(p, goal)) {
+    // Reconstruct from goal to start, then reverse for the drive controller.
+    int len = 0;
+    position_int_t p = goal;
+
+    while (!is_position_int_invalid(p) && !is_position_int_equal(p, start)) {
         path[len++] = p;
         if (len >= MAX_PATH_LEN) {
             printf("Path exceeds maximum length\n");
@@ -144,9 +149,13 @@ int astar_pathfind(position_int_t start, position_int_t goal, position_int_t pat
         p = nodes[p.x][p.y].parent;
     }
 
-    // Add the goal to the path
+    // Add the start to the path
     if (len < MAX_PATH_LEN) {
-        path[len++] = goal;
+        path[len++] = start;
+    }
+
+    for (int i = 0; i < len / 2; i++) {
+        std::swap(path[i], path[len - 1 - i]);
     }
 
     return len;
@@ -252,7 +261,7 @@ int coarse_smooth_path(position_int_t in[], int in_len, position_int_t out[]){
             position_int_t a = in[i];
             //position_int_t b = in[i+1];
             position_int_t c = in[i+2];
-            if (abs(a.x - c.x) == 1 && abs(a.y - c.y) == 1){
+            if (abs(a.x - c.x) == 1 && abs(a.y - c.y) == 1 && is_line_clear(a, c)){
                 // Zig-zag corner: skip middle point if direct segment is clear
                 i++;
             }
