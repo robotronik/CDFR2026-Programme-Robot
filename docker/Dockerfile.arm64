@@ -2,8 +2,9 @@
 # the aarch64-linux-gnu toolchain; target libraries come from arm64 multiarch
 # packages. The base is Debian 13 (trixie), matching Raspberry Pi OS Trixie: GCC
 # 14 / glibc 2.41, OpenCV 4.10, and the Pi libcamera fork (libcamera.so.0.8).
+# OpenCV is installed as runtime libraries plus -dev headers (see Dockerfile.x86_64).
 
-FROM debian:trixie
+FROM debian:trixie-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -30,7 +31,10 @@ RUN printf '%s\n' \
         'Pin-Priority: 100' \
         > /etc/apt/preferences.d/raspberrypi.pref
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=tmpfs,target=/tmp/opencv-dev \
+    apt-get update && apt-get install -y --no-install-recommends \
         cmake \
         ninja-build \
         git \
@@ -39,12 +43,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         gcc-aarch64-linux-gnu \
         g++-aarch64-linux-gnu \
         libsqlite3-dev:arm64 \
-        libopencv-dev:arm64 \
-        libopencv-contrib-dev:arm64 \
+        libopencv-core410:arm64 \
+        libopencv-imgproc410:arm64 \
+        libopencv-imgcodecs410:arm64 \
+        libopencv-videoio410:arm64 \
+        libopencv-calib3d410:arm64 \
+        libopencv-features2d410:arm64 \
+        libopencv-flann410:arm64 \
+        libopencv-objdetect410:arm64 \
         libcamera-dev:arm64 \
         rsync \
         openssh-client \
-    && rm -rf /var/lib/apt/lists/*
+    && cd /tmp/opencv-dev \
+    && apt-get download libopencv-core-dev:arm64 libopencv-imgproc-dev:arm64 libopencv-imgcodecs-dev:arm64 libopencv-videoio-dev:arm64 libopencv-calib3d-dev:arm64 libopencv-features2d-dev:arm64 libopencv-flann-dev:arm64 libopencv-objdetect-dev:arm64 \
+    && for d in libopencv-*-dev_*_arm64.deb; do dpkg-deb --fsys-tarfile "$d" | tar -x -C / --wildcards './usr/include/*' './usr/lib/*/*.so'; done
 
 # External robot repositories: drive/protocol headers used at compile time.
 # Baked into the image so the build is self-contained.

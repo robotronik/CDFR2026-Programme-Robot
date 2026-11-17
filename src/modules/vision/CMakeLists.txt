@@ -19,8 +19,11 @@ target_include_directories(vision
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# OpenCV: native ArUco marker detection and frame handling.
-find_package(OpenCV REQUIRED CONFIG)
+# OpenCV: native ArUco marker detection and frame handling. The images install
+# only the module packages (no OpenCVConfig.cmake), so find the headers and link
+# the modules by name.
+find_path(OpenCV_INCLUDE_DIR opencv2/core.hpp PATH_SUFFIXES opencv4 REQUIRED)
+target_include_directories(vision PUBLIC ${OpenCV_INCLUDE_DIR})
 
 target_link_libraries(vision
     PUBLIC
@@ -28,7 +31,13 @@ target_link_libraries(vision
         external_robot_interfaces
         project_compiler_options
         Threads::Threads
-        ${OpenCV_LIBS}
+        opencv_core
+        opencv_imgproc
+        opencv_imgcodecs
+        opencv_videoio
+        opencv_calib3d
+        opencv_features2d
+        opencv_objdetect
 )
 
 # libcamera: native capture on the Raspberry Pi 5 (OV9281 behind the PiSP ISP,
