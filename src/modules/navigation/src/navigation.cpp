@@ -7,10 +7,6 @@
 #include "actions/RobotControl.hpp"
 #include "vision/Cam.hpp"
 
-// The camera localisation is retried this many times before giving up.
-// A failed calibration is not critical, so keep it short.
-constexpr int kMaxCameraFixAttempts = 5;
-
 Navigation::Navigation(RobotControl* robot, TableState* tableStatus, Cam* cam)
     : robot(robot), tableStatus(tableStatus), cam(cam){
 }
@@ -55,32 +51,20 @@ NavReturn Navigation::go(){
             return NavReturn::Error;
         }
     } else {
-        // Calibrate using camera. An emulated camera has no fix, so skip.
+        // Single camera fix attempt. A failure is not fatal: the robot did reach its target,
+        // it just keeps its odometry estimate and the caller can ask again.
         position_t camera_pos = {0.0, 0.0, 0.0};
-        // If position found, update the robot position and reset the calibration age
         if (cam->getLocalisation(camera_pos)){
-            camera_fix_attempts = 0;
-            // Convert to the robot's frame.
+            // Convert to the robot's frame and apply the new position
             const position_t robot_pos = cameraToRobot(camera_pos);
-            // Apply the new position
             robot->drive.setCoordinates(robot_pos);
             tableStatus->resetCalibrationAge();
             LOG_GREEN_INFO("Camera calibration during move successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
-            driving = true;
-            return NavReturn::Done;
+        } else {
+            LOG_WARNING("Camera localisation failed, keeping the odometry estimate");
         }
-
-        camera_fix_attempts++;
-        if (camera_fix_attempts >= kMaxCameraFixAttempts){
-            // A failed camera fix is not fatal: the robot did reach its target, it just keeps
-            // its odometry estimate. Report Done and give the next call a fresh budget.
-            LOG_WARNING("Camera localisation failed ", kMaxCameraFixAttempts, " times, giving up for now");
-            camera_fix_attempts = 0;
-            return NavReturn::Done;
-        }
-
-        LOG_INFO("Camera localisation failed (", camera_fix_attempts, "/", kMaxCameraFixAttempts, "), retrying");
-        return NavReturn::InProcess;
+        driving = true;
+        return NavReturn::Done;
     }
     return NavReturn::InProcess;
 }
@@ -93,8 +77,6 @@ NavReturn Navigation::goTo(position_t pos, bool useAStar, bool slow_mode, bool c
         LOG_INFO("New navigation target: { x = ", pos.x, " y = ", pos.y, " a = ", pos.a, " }, useAStar = ", useAStar);
         current_pos_target = pos;
         current_use_astar = useAStar;
-        // A new target is a new occasion to localise: restart the attempts
-        camera_fix_attempts = 0;
     }
     current_slow_mode = slow_mode;
     // startTime == 0 means the match clock is not armed (pre-match states): the endgame rule does not apply.

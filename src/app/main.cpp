@@ -174,12 +174,9 @@ int main()
 
             if (tableStatus.calibrationAge == -1){
                 // Get a camera fix; the OTOS calibration compares its moves against it.
-                // Navigation reports Done even when it gives up on localising, so a Done
-                // that left the calibration age untouched means there is no camera fix.
-                if (navigation.go() == NavReturn::Done && tableStatus.calibrationAge == -1){
-                    LOG_WARNING("Calibration skipped: no camera localisation");
-                    nextState = MainState::WaitStart;
-                }
+                // Navigation only tries once per call and reports Done either way, so keep
+                // asking until the fix lands (which resets the calibration age).
+                navigation.go();
             } else if (!has_calib){
                 // Move to the calibration poses, then back to the strategy starting position
                 if (calibrate_otos(&tableStatus, &robot, &cam1, action.getStrategy()->StratStartingPos())){

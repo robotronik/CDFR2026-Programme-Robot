@@ -46,8 +46,6 @@ class Navigation {
         position_t currentPath[1024];
         int currentPathLength = 0;
 
-        int camera_fix_attempts = 0;      // Failed camera localisations: reset on a success, a give-up or a new target
-
         bool driving = true;
 };
 
