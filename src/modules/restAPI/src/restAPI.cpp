@@ -448,27 +448,6 @@ void RestAPI::start(){
 
     // ------------------------------- POST Routes -------------------------------
 
-    // Define a route for a POST request that accepts JSON data and responds with a message
-    CROW_ROUTE(app, "/post_status").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
-        LOG_INFO("Request body is " + req.body);
-
-        json req_data;
-        if (!parseBody(req, req_data))
-            return jsonError(400, "Invalid JSON");
-
-        MainState req_state = static_cast<MainState>(req_data["state"].get<int>());
-
-        // MANUAL and CALIBRATION are entered by the state machine itself, and the
-        // enum has gaps (1, 2): only accept the states the switch handles.
-        if (req_state != MainState::Init && req_state != MainState::WaitStart &&
-            req_state != MainState::Run && req_state != MainState::Fin &&
-            req_state != MainState::Test)
-            return jsonError(400, "Requested state out of borders!");
-
-        *nextState = req_state;
-        return jsonMessage("Successful");
-    });
-
     // Define a route for a POST request that accepts a color as JSON data (0:None, 1:Blue, 2:Yellow)
     CROW_ROUTE(app, "/set_color").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         json req_data;
