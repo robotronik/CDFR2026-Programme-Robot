@@ -22,6 +22,7 @@ float TakeStock::getBestQuarry(const position_t& from) {
 
     quarry_t* best = nullptr;
     position_t bestTarget{0, 0, 0};
+    int bestApproach = 0;
     int bestRocks = -1;
     double minDistance = INFINITY;
 
@@ -43,6 +44,7 @@ float TakeStock::getBestQuarry(const position_t& from) {
                 minDistance = distance;
                 best = candidate;
                 bestTarget = targets[j];
+                bestApproach = j;
                 bestRocks = candidate->nb;
             }
         }
@@ -51,7 +53,9 @@ float TakeStock::getBestQuarry(const position_t& from) {
     if (best != nullptr) {
         quarry = best;
         target = bestTarget;
-        diffpos = getFacePosition(best->pos);
+        position_t stock = best->pos;
+        if (bestApproach == 1) stock.a -= 180;
+        diffpos = getFacePosition(stock);
         return (float)minDistance;
     }
     return -1;
@@ -80,7 +84,9 @@ int TakeStock::BestPositionToTake(const position_t& stock, position_t targets[2]
         return 1;
     }
     targets[0].y += OFFSET_TARGET.y;
-    targets[1] = face;
+    position_t oppositeStock = stock;
+    oppositeStock.a -= 180;
+    targets[1] = getFacePosition(oppositeStock);
     targets[1].y -= OFFSET_TARGET.y;
     return 2;
 }
