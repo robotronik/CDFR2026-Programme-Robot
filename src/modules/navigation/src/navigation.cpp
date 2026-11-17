@@ -8,7 +8,7 @@
 #include "vision/Cam.hpp"
 
 // The camera localisation is retried this many times before giving up.
-constexpr int kMaxCameraFixAttempts = 5;
+constexpr int kMaxCameraFixAttempts = 50;
 
 Navigation::Navigation(RobotControl* robot, TableState* tableStatus, Cam* cam)
     : robot(robot), tableStatus(tableStatus), cam(cam){
