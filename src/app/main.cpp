@@ -163,8 +163,6 @@ int main()
         //****************************************************************
         case MainState::Calibration:
         {
-            static bool has_calib = false;
-
             if (initState){
                 LOG_GREEN_INFO("CALIBRATION");
                 startMatchHardware();
@@ -178,13 +176,9 @@ int main()
                     LOG_WARNING("Calibration skipped: no camera localisation");
                     nextState = MainState::WaitStart;
                 }
-            } else if (!has_calib){
+            } else if (calibrate_otos(&tableStatus, &robot, &cam1, action.getStrategy()->StratStartingPos())){
                 // Move to the calibration poses, then back to the strategy starting position
-                if (calibrate_otos(&tableStatus, &robot, &cam1, action.getStrategy()->StratStartingPos())){
-                    LOG_GREEN_INFO("Calibration successful");
-                    has_calib = true;
-                }
-            } else {
+                LOG_GREEN_INFO("Calibration successful");
                 nextState = MainState::WaitStart;
             }
             break;
