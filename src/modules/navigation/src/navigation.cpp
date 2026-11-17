@@ -8,7 +8,8 @@
 #include "vision/Cam.hpp"
 
 // The camera localisation is retried this many times before giving up.
-constexpr int kMaxCameraFixAttempts = 50;
+// A failed calibration is not critical, so keep it short.
+constexpr int kMaxCameraFixAttempts = 5;
 
 Navigation::Navigation(RobotControl* robot, TableState* tableStatus, Cam* cam)
     : robot(robot), tableStatus(tableStatus), cam(cam){
@@ -54,9 +55,6 @@ NavReturn Navigation::go(){
             return NavReturn::Error;
         }
     } else {
-        if (camera_fix_failed)
-            return NavReturn::Error; // Already gave up: no new attempt, no new log
-
         // Calibrate using camera. An emulated camera has no fix, so skip.
         position_t camera_pos = {0.0, 0.0, 0.0};
         // If position found, update the robot position and reset the calibration age
@@ -74,9 +72,11 @@ NavReturn Navigation::go(){
 
         camera_fix_attempts++;
         if (camera_fix_attempts >= kMaxCameraFixAttempts){
-            LOG_WARNING("Camera localisation failed ", kMaxCameraFixAttempts, " times, giving up until the next navigation target");
-            camera_fix_failed = true;
-            return NavReturn::Error;
+            // A failed camera fix is not fatal: the robot did reach its target, it just keeps
+            // its odometry estimate. Report Done and give the next call a fresh budget.
+            LOG_WARNING("Camera localisation failed ", kMaxCameraFixAttempts, " times, giving up for now");
+            camera_fix_attempts = 0;
+            return NavReturn::Done;
         }
 
         LOG_INFO("Camera localisation failed (", camera_fix_attempts, "/", kMaxCameraFixAttempts, "), retrying");
@@ -95,7 +95,6 @@ NavReturn Navigation::goTo(position_t pos, bool useAStar, bool slow_mode, bool c
         current_use_astar = useAStar;
         // A new target is a new occasion to localise: restart the attempts
         camera_fix_attempts = 0;
-        camera_fix_failed = false;
     }
     current_slow_mode = slow_mode;
     // startTime == 0 means the match clock is not armed (pre-match states): the endgame rule does not apply.
