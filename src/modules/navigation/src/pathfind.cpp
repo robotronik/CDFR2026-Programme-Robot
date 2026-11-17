@@ -1,6 +1,7 @@
 #include "navigation/pathfind.h"
 #include "navigation/astar.h"
 #include "utils/logger.hpp"
+#include "defs/tableState.hpp"
 #include "math.h" // round()
 
 position_t convert_from_astar(position_int_t k){
@@ -16,9 +17,9 @@ position_int_t smooth_path_arr[MAX_PATH_LEN];
 void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int RayonRobot, bool traversable = true, bool square = true)
 {
     position_int_t c = convert_to_astar(position_t{cx, cy, 0.0});
-    int w = w_mm / SCALE;
-    int h = h_mm / SCALE;
-    int margin = RayonRobot / SCALE;
+    int w = (w_mm + SCALE - 1) / SCALE;
+    int h = (h_mm + SCALE - 1) / SCALE;
+    int margin = (RayonRobot + SCALE - 1) / SCALE;
     return astar_place_obstacle_with_margin(c, w, h, margin, traversable, square);
 }
 
@@ -71,15 +72,26 @@ double pathfind_length_mm(position_t start, position_t goal){
     return(astar_path_length(smooth_path_arr, smooth_len) * SCALE);
 }
 
-void pathfind_setup() {
+void pathfind_setup(const TableState& tableState) {
     astar_initialize_costmap();
-    int RayonRobot=200; // TODO Make dynamic
-
-    // ===== TABLE BORDER ===== 
-    place_obstacle_with_margin(    0,-1500,   50, 2000, RayonRobot, false);
-    place_obstacle_with_margin(    0, 1500,   50, 2000, RayonRobot, false);
-    place_obstacle_with_margin(-1000,    0, 3000,   50, RayonRobot, false);
-    place_obstacle_with_margin( 1000,    0, 3000,   50, RayonRobot, false);
+    // Stocks : 110 mm sur X et 320 mm sur Y, inverses pour les stocks du milieu.
+    for (const auto& stock : tableState.quarry) {
+        if (stock.nb <= 0) continue;
+        const bool horizontal = stock.pos.a == 270;
+        const int sizeX = horizontal ? 320 : 110;
+        const int sizeY = horizontal ? 110 : 320;
+        place_obstacle_with_margin(stock.pos.x, stock.pos.y, sizeY, sizeX, ROBOT_WIDTH / 2, false);
+    }
+    // Le helper ne tourne pas les rectangles : les depots diagonaux sont encadres par un carre.
+    for (const auto& zone : tableState.wallZone) {
+        if (zone.nb <= 0) continue;
+        const bool horizontal = fabs(zone.pos.a) == 90;
+        const bool diagonal = fabs(zone.pos.a) == 45 || fabs(zone.pos.a) == 135;
+        const int sizeX = horizontal || diagonal ? 320 : 110;
+        const int sizeY = horizontal ? 110 : 320;
+        place_obstacle_with_margin(zone.pos.x, zone.pos.y, sizeY, sizeX, ROBOT_WIDTH / 2, false);
+    }
+    pathfind_place_border();
 }
 
 void pathfind_place_border(){
@@ -92,10 +104,8 @@ void pathfind_place_border(){
     place_obstacle_with_margin( 1000,    0, 3000,   50, RayonRobot, false);
 }
 
-void pathfind_fill_lidar(Lidar* lidar){
-    astar_initialize_costmap();
-    // TODO place Camelot specific obstacle on the map
-
+void pathfind_fill_lidar(Lidar* lidar, const TableState& tableState){
+    pathfind_setup(tableState);
 
     /* Place adversary on the map */
     for (int i = 0; i < lidar->count; i++){

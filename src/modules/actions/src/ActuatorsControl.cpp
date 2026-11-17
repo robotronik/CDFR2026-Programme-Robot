@@ -41,7 +41,6 @@ bool ActuatorsControl::moveServoAndWait(int servo, int target, int speed){
 // ------------------------------------------------------
 
 bool ActuatorsControl::setPumpState(bool state, int pumpIdx){
-    LOG_ERROR("Setting pump ", pumpIdx, " to ", state);
     return arduino->writeSensor(PUMP_1_NUM, state); //TODO : Change to pumpIdx when multiple pumps are used
 }
 

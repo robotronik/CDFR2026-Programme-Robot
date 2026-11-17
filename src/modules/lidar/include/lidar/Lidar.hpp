@@ -18,7 +18,7 @@ public:
     ~Lidar();
 
     lidarAnalize_t data[SIZEDATALIDAR];
-    int count;
+    int count = 0;
 
     bool setup(const char* serialPort, int baudrate);
 
