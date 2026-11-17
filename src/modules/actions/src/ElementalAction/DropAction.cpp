@@ -1,5 +1,6 @@
 #include "actions/ElementalAction/DropAction.hpp"
 #include "utils/logger.hpp"
+#include "utils/utils.h"
 #include <cmath>
 
 
@@ -18,9 +19,10 @@ ReturnFSM DropAction::run() {
             {
             NavReturn nav_result = navigation.goTo(target, true);
             if(nav_result == NavReturn::Done) {
-                successManagement();
-                LOG_GREEN_INFO("Drop Success");
-                return ReturnFSM::Done;
+                stop();
+                robot->wall1.wDrop();
+                releaseStartTime = _millis();
+                state = DropState::Releasing;
             }else if (nav_result == NavReturn::Error) {
                 LOG_ERROR("Drop Error");
                 reset();
@@ -28,12 +30,19 @@ ReturnFSM DropAction::run() {
             }
             break;
             }
+        case DropState::Releasing:
+            // Wait for the release to complete
+            if (_millis() - releaseStartTime >= RELEASE_WAIT_MS) {
+                successManagement();
+                LOG_GREEN_INFO("Drop Success");
+                return ReturnFSM::Done;
+            }
+            break;
     }
     return ReturnFSM::Working;
 }
 
 bool DropAction::successManagement(){
-    robot->wall1.wDrop();
     selected_face->rocks = 0;
     selected_drop->nb = 3;
     return true;
@@ -47,6 +56,7 @@ bool DropAction::stop() {
 void DropAction::reset() {
     stop();
     state = DropState::Moving;
+    releaseStartTime = 0;
     target = {0, 0, 0};
     best_path_length = INFINITY;
     selected_face = &robot->wall1;// TODO implement a way to chose face

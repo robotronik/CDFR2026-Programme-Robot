@@ -110,7 +110,7 @@ ReturnFSM TakeStock::run(){
             break;
         }
         case TakeStockState::MOVE2:
-            if (_millis() - approachStartTime >= 1000UL) {
+            if (_millis() - approachStartTime >= 2000UL) {
                 successManagement();
                 return ReturnFSM::Done;
             }
