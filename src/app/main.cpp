@@ -191,13 +191,10 @@ int main()
                 // Already up when coming from Calibration, but a WaitStart forced through
                 // the REST API skips calibration, so make sure the hardware is ready.
                 startMatchHardware();
-
-                if (tableStatus.colorTeam == ColorTeam::None)
-                    arduino.RGB_Blinking(255, 0, 0); // Red Blinking
             }
 
             // Calibrated and at the starting position: wait for the latch to start the match
-            if (sensor.readLatchSensor() && tableStatus.colorTeam != ColorTeam::None)
+            if (sensor.readLatchSensor())
                 nextState = MainState::Run;
             if (manual_ctrl)
                 nextState = MainState::Manual;
@@ -256,20 +253,17 @@ int main()
                 robot.drive.disable();
                 robot.actuators.disableActuators();
                 lidar.stopSpin();
+                cam1.stop();
                 hw_ready = false;
             }
 
+            // Wait for the operator to release the latch, then quit
             if (!sensor.readLatchSensor()){
-                robot.actuators.enableActuators();
                 exit_requested = true;
             }
             break;
         }
-        //****************************************************************
-        default:
-            nextState = MainState::Init;
-            break;
-        }
+        } // switch (currentState)
 
         initState = false;
         if (currentState != nextState)
@@ -351,7 +345,9 @@ void GetLidar()
         // Only update opponent position if the robot is not moving too fast to avoid noise
         if (IsDataValid && position_opponentV2(lidar.data, lidar.count, robot.drive.position, pos_opponent) &&
                 (currentState == MainState::Run || currentState == MainState::Manual) &&
-                (_millis() - tableStatus.startTime > 1000)){ // Only update opponent position after 1 second from the start to avoid false readings at the beginning
+                // No match clock yet (startTime == 0): nothing to wait for. Otherwise ignore
+                // the first second of the match to avoid false readings at the beginning.
+                (tableStatus.startTime == 0 || _millis() - tableStatus.startTime > 1000)){
             tableStatus.pos_opponent.x = pos_opponent.x;
             tableStatus.pos_opponent.y = pos_opponent.y;
             opponentInAction(pos_opponent);
