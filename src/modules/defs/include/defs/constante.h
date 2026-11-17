@@ -71,17 +71,18 @@ const int ARUCO_CALIB_POSITIONS_COUNT = sizeof(ARUCO_CALIB_POSITIONS) / sizeof(p
 // Blue start position
 const position_t START_POSITION = { .x = 0, .y = 1250, .a = -90 };
 
+// La face de depot pointe vers l'exterieur pour garder le robot cote centre du chateau.
 const position_t WALL_POSITION[] = {
-    position_t{ .x = -600, .y =  1250, .a =   0 }, // 0
-    position_t{ .x = -429, .y =   821, .a =  45 }, // 1
-    position_t{ .x =    0, .y =   650, .a =  90 }, // 2
-    position_t{ .x =  429, .y =   821, .a = 135 }, // 3
-    position_t{ .x =  600, .y =  1250, .a = 180 }, // 4
-    position_t{ .x = -600, .y = -1250, .a =   0 }, // 5
-    position_t{ .x = -429, .y =  -821, .a = -45 }, // 6
-    position_t{ .x =    0, .y =  -650, .a = -90 }, // 7
-    position_t{ .x =  429, .y =  -821, .a =-135 }, // 8
-    position_t{ .x =  600, .y = -1250, .a = 180 }  // 9
+    position_t{ .x = -600, .y =  1250, .a = 180 }, // 0
+    position_t{ .x = -429, .y =   821, .a =-135 }, // 1
+    position_t{ .x =    0, .y =   650, .a = -90 }, // 2
+    position_t{ .x =  429, .y =   821, .a = -45 }, // 3
+    position_t{ .x =  600, .y =  1250, .a =   0 }, // 4
+    position_t{ .x = -600, .y = -1250, .a = 180 }, // 5
+    position_t{ .x = -429, .y =  -821, .a = 135 }, // 6
+    position_t{ .x =    0, .y =  -650, .a =  90 }, // 7
+    position_t{ .x =  429, .y =  -821, .a =  45 }, // 8
+    position_t{ .x =  600, .y = -1250, .a =   0 }  // 9
 };
 const int WALL_ZONE_COUNT = sizeof(WALL_POSITION) / sizeof(position_t);
 

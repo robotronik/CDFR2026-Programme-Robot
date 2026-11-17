@@ -12,6 +12,7 @@ TakeStock::TakeStock(TableState* tableState, RobotControl* robot)
     : tableState(tableState), robot(robot)
 {
     nom = "TakeStock";
+    reset();
 }
 
 float TakeStock::getBestQuarry(const position_t& from) {
@@ -100,6 +101,7 @@ ReturnFSM TakeStock::run(){
                     errorManagement();
                     return ReturnFSM::Error;
                 case NavReturn::Done:
+                    approachStartTime = _millis();
                     state = TakeStockState::MOVE2;
                     break;
                 case NavReturn::InProcess:
@@ -108,8 +110,12 @@ ReturnFSM TakeStock::run(){
             break;
         }
         case TakeStockState::MOVE2:
+            if (_millis() - approachStartTime >= 1000UL) {
+                successManagement();
+                return ReturnFSM::Done;
+            }
             selected_face->wTake(); //TODO need to implement face selection
-            NavReturn res2 = navigation.goTo(diffpos, true, true, true);//TODO fast mode
+            NavReturn res2 = navigation.goTo(diffpos, false, true, true);//TODO fast mode
             switch (res2) {
                 case NavReturn::Paused:
                     LOG_DEBUG("TakeStock: nav is paused");
@@ -124,7 +130,7 @@ ReturnFSM TakeStock::run(){
                     break;
 
             } 
-            break;      
+            break;
     }
     return ReturnFSM::Working;
 
@@ -155,6 +161,7 @@ void TakeStock::reset(){
     selected_face = &robot->wall1;
     value = 23; // TODO change to be max value of points adv can make with 3 rocks
     state = TakeStockState::MOVE1;
+    approachStartTime = 0;
     quarry = nullptr;
     target = {0, 0, 0};
     diffpos = {0, 0, 0};

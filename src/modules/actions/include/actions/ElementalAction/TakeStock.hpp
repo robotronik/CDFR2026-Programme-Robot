@@ -23,6 +23,7 @@ class TakeStock : public VirtualAction {
         const position_t OFFSET_TARGET = {350, 350, 0};
         int value = 23; // TODO change to be max value of points adv can make with 3 rocks
         TakeStockState state;
+        unsigned long approachStartTime = 0;
 
         quarry_t* quarry;
         Wall* selected_face;
