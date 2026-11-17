@@ -10,7 +10,7 @@ bool calibrate_otos(TableState* tableStatus, RobotControl* robot, Cam* cam, posi
     // Function called continuously from the main loop to calibrate the otosensors
     // Returns true when calibration is done
 
-    static int step = skip_calibration ? 2 : 1;
+    static int step = 0; // Entry step: it picks where this run starts, so skip_calibration is always honoured
     static bool state = false; // Used to alternate between two positions
 
     // Aruco tags are at pos (+/-400, +/-900)
@@ -18,6 +18,10 @@ bool calibrate_otos(TableState* tableStatus, RobotControl* robot, Cam* cam, posi
 
     switch (step){
     case 0:{
+        // Pick the entry point of this calibration run (1: full, 4: straight home)
+        step = skip_calibration ? 4 : 1;
+    } break;
+    case 1:{
         // Angle compensation test
         // New Scalar = Current Scalar * (Actual Angle / Reported Angle)
         static bool has_prev_measure = false;
@@ -100,7 +104,7 @@ bool calibrate_otos(TableState* tableStatus, RobotControl* robot, Cam* cam, posi
                     float current_scalar = robot->drive.getAngularScalar();
                     float new_scalar = current_scalar * mean;
                     robot->drive.setAngularScalar(new_scalar);
-                    step = 1;
+                    step = 2;
                     scalar_angle_samples.clear();
                     skip_first_scalar = true;
                     LOG_GREEN_INFO("OTOS calibration done with mean = ", new_scalar);
@@ -108,7 +112,7 @@ bool calibrate_otos(TableState* tableStatus, RobotControl* robot, Cam* cam, posi
             }
         }
     } break;
-    case 1:{
+    case 2:{
         // Position compensation test, also compensate for otos angle
         // New Scalar = Current Scalar * (Actual Distance / Reported Distance)
         constexpr int kCalibrationRuns = 2;
@@ -207,25 +211,25 @@ bool calibrate_otos(TableState* tableStatus, RobotControl* robot, Cam* cam, posi
             }
         }
     } break;
-    case 2:{
+    case 3:{
         // Calibrate using a code close to init pos
-        position_t pos = {-400, 1250, -90.0};
+        position_t pos = {0, 1250, -45.0};
         if (tableStatus->colorTeam == ColorTeam::Yellow)
             position_robot_flip(pos);
             
         ret = navigation.goTo(pos, false, true, true);
         if (ret == NavReturn::Done){
             step++;
-            LOG_GREEN_INFO("OTOS calibration done, moving to step 3");
+            LOG_GREEN_INFO("OTOS calibration done, moving to home position");
         }
     }break;
-    case 3:{
+    case 4:{
         // goto home
         position_t pos = startPos;
         ret = navigation.goTo(pos, false, true, true);
         if (ret == NavReturn::Done){
             LOG_GREEN_INFO("OTOS calibration done, returned to home position");
-            step = 0; // Reset for next time            
+            step = 0; // Reset for next time: the entry step re-applies skip_calibration
             return true;
         }
     }break;
