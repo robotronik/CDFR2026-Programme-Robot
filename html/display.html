@@ -87,17 +87,17 @@
                 if (robotStatus == 0)
                     stateLabel.innerHTML = "Robot State : Init";
                 else if (robotStatus == 1)
-                    stateLabel.innerHTML = "Robot State : Initialize";
-                else if (robotStatus == 3)
+                    stateLabel.innerHTML = "Robot State : Calibration";
+                else if (robotStatus == 2)
                     stateLabel.innerHTML = "Robot State : Waiting for Start";
-                else if (robotStatus == 4)
+                else if (robotStatus == 3)
                     stateLabel.innerHTML = "Robot State : Running";
-                else if (robotStatus == 5)
+                else if (robotStatus == 4)
                     stateLabel.innerHTML = "Robot State : Fin";
+                else if (robotStatus == 5)
+                    stateLabel.innerHTML = "Robot State : Manual";
                 else if (robotStatus == 6)
                     stateLabel.innerHTML = "Robot State : Local Test";
-                else if (robotStatus == 7)
-                    stateLabel.innerHTML = "Robot State : Manual";
                 else
                     stateLabel.innerHTML = "Robot State : Undefined";
                 
