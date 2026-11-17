@@ -7,6 +7,9 @@
 #include "actions/RobotControl.hpp"
 #include "vision/Cam.hpp"
 
+// The camera localisation is retried this many times before giving up.
+constexpr int kMaxCameraFixAttempts = 5;
+
 Navigation::Navigation(RobotControl* robot, TableState* tableStatus, Cam* cam)
     : robot(robot), tableStatus(tableStatus), cam(cam){
 }
@@ -33,27 +36,9 @@ NavReturn Navigation::driveStep(){
 
 NavReturn Navigation::go(){
     // FSM which does drive and calibration
+    // TODO: NavReturn::Paused is not a return value because it wasnt used
     if (driving){
         NavReturn result = driveStep();
-
-        double dist = position_distance(robot->drive.position, current_pos_target);
-        double move = position_distance(robot->drive.position, last_pos);
-        if (dist > 20 && move < 4){
-            if (stuck_start == 0) stuck_start = _millis();
-            if (_millis() - stuck_start > 500.0)
-                LOG_WARNING("NAV: Robot might be stuck, distance to target: ", dist, "mm, movement since last check: ", move, "mm, time stuck: ", _millis() - stuck_start, "ms");
-
-            if (_millis() - stuck_start > 1600){
-                LOG_ERROR("NAV: Robot stuck");
-                robot->drive.stopMotion();
-                stuck_start = 0;
-                return NavReturn::Error;
-            }
-        }else{
-            stuck_start = 0;
-        }
-
-        last_pos = robot->drive.position;
 
         if (result == NavReturn::Done){
             LOG_EXTENDED_DEBUG("Navigation drive completed");
@@ -62,7 +47,6 @@ NavReturn Navigation::go(){
                 //robot->drive.setBrakeState(true);
             }
             else {
-                stuck_start = 0;
                 prev_final_pos_otos = robot->drive.position;
                 return NavReturn::Done;
             }
@@ -70,29 +54,37 @@ NavReturn Navigation::go(){
             LOG_ERROR("Navigation drive error");
             return NavReturn::Error;
         }
-        if (is_robot_stalled && (_millis() - robot_stall_start_time > 1000)){
-            LOG_WARNING("Robot has been stalled for more than 1 second, returning NAV_ERROR");
-            return NavReturn::Error; // We are stuck for too long
-        }
-        else if (is_robot_stalled)
-            return NavReturn::Paused;
     } else {
+        if (camera_fix_failed)
+            return NavReturn::Error; // Already gave up: no new attempt, no new log
+
         // Calibrate using camera. An emulated camera has no fix, so skip.
         position_t camera_pos = {0.0, 0.0, 0.0};
         // If position found, update the robot position and reset the calibration age
         if (cam->getLocalisation(camera_pos)){
-            // The camera is not the robot: convert to the robot's frame.
+            camera_fix_attempts = 0;
+            // Convert to the robot's frame.
             const position_t robot_pos = cameraToRobot(camera_pos);
+            // These are used for calibration
             prev_final_pos_cam = robot_pos;
             prev_final_pos_otos = robot->drive.position;
+            // Apply the new position
             robot->drive.setCoordinates(robot_pos);
             tableStatus->resetCalibrationAge();
             LOG_GREEN_INFO("Camera calibration during move successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
+            driving = true;
+            return NavReturn::Done;
         }
-        driving = true;
-        //robot->drive.setBrakeState(false);
-        stuck_start = 0;
-        return NavReturn::Done;
+
+        camera_fix_attempts++;
+        if (camera_fix_attempts >= kMaxCameraFixAttempts){
+            LOG_WARNING("Camera localisation failed ", kMaxCameraFixAttempts, " times, giving up until the next navigation target");
+            camera_fix_failed = true;
+            return NavReturn::Error;
+        }
+
+        LOG_INFO("Camera localisation failed (", camera_fix_attempts, "/", kMaxCameraFixAttempts, "), retrying");
+        return NavReturn::InProcess;
     }
     return NavReturn::InProcess;
 }
@@ -105,7 +97,9 @@ NavReturn Navigation::goTo(position_t pos, bool useAStar, bool slow_mode, bool c
         LOG_INFO("New navigation target: { x = ", pos.x, " y = ", pos.y, " a = ", pos.a, " }, useAStar = ", useAStar);
         current_pos_target = pos;
         current_use_astar = useAStar;
-        stuck_start = 0;
+        // A new target is a new occasion to localise: restart the attempts
+        camera_fix_attempts = 0;
+        camera_fix_failed = false;
     }
     current_slow_mode = slow_mode;
     // startTime == 0 means the match clock is not armed (pre-match states): the endgame rule does not apply.

@@ -40,10 +40,7 @@ class Navigation {
         TableState* tableStatus;
         Cam* cam;
 
-        bool is_robot_stalled = false;  // Because of opponent in direction of movement
-        unsigned long robot_stall_start_time = 0;
         bool forced_slow_mode = false;
-        unsigned long stuck_start = 0;
 
         position_t current_pos_target = {0, 0, 0};
         bool current_use_astar = false;
@@ -53,8 +50,10 @@ class Navigation {
         position_t currentPath[1024];
         int currentPathLength = 0;
 
+        int camera_fix_attempts = 0;      // Consecutive failed camera localisations
+        bool camera_fix_failed = false;   // Gave up until the next target
+
         bool driving = true;
-        position_t last_pos = {0, 0, 0};
 };
 
 // Global navigation instance, created in main.cpp
