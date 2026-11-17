@@ -171,8 +171,11 @@ int main()
             }
 
             if (tableStatus.calibrationAge == -1){
-                // Get a camera fix; the OTOS calibration compares its moves against it
-                if (navigation.go() == NavReturn::Error){
+                // Get a camera fix; the OTOS calibration compares its moves against it.
+                // Navigation reports Done even when it gives up on localising, so the
+                // still-untouched calibration age is what tells us the fix failed.
+                navigation.go();
+                if (tableStatus.calibrationAge == -1){
                     LOG_WARNING("Calibration skipped: no camera localisation");
                     nextState = MainState::WaitStart;
                 }
