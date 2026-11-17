@@ -442,8 +442,6 @@ void switchTeamSide(ColorTeam color){ // TODO move to tableState
         position_t pos = action.getStrategy()->StratStartingPos();
         LOG_INFO("Stratégie '", action.getStrategy()->getNom(),
                  "', départ : x=", pos.x, " y=", pos.y, " a=", pos.a);
-        robot.drive.setCoordinates(pos);
-        navigation.goTo(pos, true, true); // Go to starting pos with A* and slow mode to avoid collisions during the switch
     }
 }
 
@@ -460,8 +458,6 @@ void switchStrategy(std::string strategy){ // TODO move to tableState
         LOG_INFO("Strategy switch detected");
         tableStatus.strategy = strategy;
         action.setStrategy(selectedStrategy);
-        position_t pos = action.getStrategy()->StratStartingPos();
-        robot.drive.setCoordinates(pos);
     }
     else {
         LOG_INFO("Stratégie '", strategy, "' déjà active");
