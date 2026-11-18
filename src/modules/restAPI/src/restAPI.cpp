@@ -16,7 +16,7 @@
 #include "lidar/Lidar.hpp"
 #include "lidar/lidarAnalize.h" //for static variable
 #include "navigation/navigation.h"
-#include "navigation/astar.h" //for static variable
+#include "navigation/pathfind.hpp"
 #include "actions/VirtualStrategy.hpp" // for the strategy list
 #include "vision/Cam.hpp" //for vision fuction
 #include "restAPI/manual_mode.h" // for manual mode functions
@@ -230,8 +230,10 @@ void RestAPI::start(){
         
         response["target_pos"] = (position_t)robot->drive.target;
         response["pos"] = (position_t)robot->drive.position;
-        // Costmap
-        response["costmap"] = astar_get_costmap_json();
+        // Obstacles and the planned path, for the web display.
+        json pathfinding;
+        pathfindToJson(pathfinding);
+        response["pathfinding"] = pathfinding;
 
         return crow::response(response.dump());
     });
@@ -327,10 +329,11 @@ void RestAPI::start(){
         return crow::response(response.dump(4));
     });
 
-    CROW_ROUTE(app, "/get_costmap")
+    // Obstacles and the last planned path (replaces the old grid costmap).
+    CROW_ROUTE(app, "/get_pathfinding")
     ([this](){
         json response;
-        response["costmap"] = astar_get_costmap_json();
+        pathfindToJson(response);
         return crow::response(response.dump());
     });
 

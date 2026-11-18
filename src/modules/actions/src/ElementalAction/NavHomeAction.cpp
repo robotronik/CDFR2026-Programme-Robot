@@ -2,7 +2,7 @@
 #include "actions/RobotControl.hpp"
 #include "utils/logger.hpp"
 #include "navigation/navigation.h" //For NavReturn & position_t
-#include "navigation/pathfind.h"
+#include "navigation/pathfind.hpp"
 
 NavHomeAction::NavHomeAction(TableState* tableState, RobotControl* robot, position_t homePos)
     : homePos(homePos) {

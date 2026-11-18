@@ -1,101 +1,148 @@
-#include "navigation/pathfind.h"
-#include "navigation/astar.h"
-#include "utils/logger.hpp"
+#include "navigation/pathfind.hpp"
+
+#include <cmath>
+
 #include "defs/tableState.hpp"
-#include "math.h" // round()
+#include "lidar/Lidar.hpp"
+#include "navigation/convexPathfind.hpp"
+#include "utils/logger.hpp"
 
-position_t convert_from_astar(position_int_t k) {
-    position_t p;
-    p.x = k.x * SCALE - 1000.0;
-    p.y = k.y * SCALE - 1500.0;
-    return p;
+namespace {
+
+using cdfr::ObstacleInput;
+using cdfr::ObstacleKind;
+using cdfr::PlanInput;
+using cdfr::PlanOutput;
+using cdfr::Polygon;
+using cdfr::Vec;
+
+constexpr double OPPONENT_RADIUS = 225.0; // 450 mm diameter
+
+// A stone is 110 mm wide and 320 mm long. Its stored heading is the long axis
+// measured from +x, so at 0 deg it extends 320 mm along y.
+constexpr double BLOCK_LENGTH = 320.0;
+constexpr double BLOCK_WIDTH = 110.0;
+
+// Corner protected zones: 300 mm along x and 200 mm along y, at every corner of
+// the table. The robot may never touch them.
+constexpr double CORNER_SIZE_X = 300.0;
+constexpr double CORNER_SIZE_Y = 200.0;
+
+// Clearance added to the exact hull. It only keeps the path off a hairline
+// contact so the controller has room to correct, nothing more: the heading is
+// fixed for a move, so there is no drift to absorb. Kept small, because the
+// sharp corners of the real polygon are what allow tight gaps.
+constexpr double ROBOT_CLEARANCE = 5.0;
+
+// The robot hull in its own frame: an equilateral triangle with 400 mm sides,
+// one vertex pointing forward (+x). One convex part is what lets the planner
+// use the exact shape instead of a circle.
+// TODO read the real dimensions from a single source of truth.
+Polygon buildRobotPolygon() {
+    const Vec hull[] = {
+        {-250.0, -125.0},
+        {150.0, -125.0},
+        {250.0, 0.0},
+        {150.0, 125.0},
+        {-250.0, 125.0},
+    };
+    return Polygon::from_points(hull, 5);
 }
 
-position_int_t astar_path[MAX_PATH_LEN];
-position_int_t smooth_path_arr[MAX_PATH_LEN];
+// Kept between calls so a new target does not rebuild the static obstacles.
+struct PlannerState {
+        PlanInput input;
+        PlanOutput last;
+        bool hasOpponent = false;
+};
 
-void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int RayonRobot, bool traversable = true, bool square = true) {
-    position_int_t c = convert_to_astar(position_t{cx, cy, 0.0});
-    int w = (w_mm + SCALE - 1) / SCALE;
-    int h = (h_mm + SCALE - 1) / SCALE;
-    int margin = (RayonRobot + SCALE - 1) / SCALE;
-    return astar_place_obstacle_with_margin(c, w, h, margin, traversable, square);
+PlannerState planner;
+
+void resetInput() {
+    planner.input = PlanInput{};
+    planner.input.robot = buildRobotPolygon();
+    // The robot reference point stays inside the table, so paths never leave
+    // the field.
+    planner.input.use_border = true;
+    planner.input.table_half_x = 1000.0;
+    planner.input.table_half_y = 1500.0;
+    planner.input.margin = 0.0;
 }
+
+bool addObstacle(position_t center, double length, double width, double angleDeg) {
+    if (planner.input.obstacle_count >= cdfr::kMaxShapes - 1) {
+        LOG_WARNING("Pathfinding: too many obstacles");
+        return false;
+    }
+    ObstacleInput& slot = planner.input.obstacles[planner.input.obstacle_count++];
+    slot.kind = ObstacleKind::Poly;
+    slot.poly = Polygon::rectangle(center.x, center.y, length, width, angleDeg);
+    return true;
+}
+
+void addOpponent(Vec center) {
+    if (planner.input.obstacle_count >= cdfr::kMaxShapes) return;
+    ObstacleInput& slot = planner.input.obstacles[planner.input.obstacle_count++];
+    slot.kind = ObstacleKind::Circle;
+    slot.center = center;
+    slot.radius = OPPONENT_RADIUS;
+    planner.hasOpponent = true;
+}
+
+// The opponent is always the last obstacle, see addOpponent().
+void moveOpponent(Vec center) {
+    planner.input.obstacles[planner.input.obstacle_count - 1].center = center;
+}
+
+json polygonToJson(const Polygon& poly) {
+    json points = json::array();
+    for (int i = 0; i < poly.n; i++) {
+        points.push_back({{"x", poly.pts[i].x}, {"y", poly.pts[i].y}});
+    }
+    return points;
+}
+
+void removeOpponent() {
+    if (planner.input.obstacle_count > 0) planner.input.obstacle_count--;
+    planner.hasOpponent = false;
+}
+
+} // namespace
 
 int pathfind(position_t start, position_t goal, position_t path[], double& path_length_mm) {
-    //LOG_INFO("Original start : ", start.x, " / ", start.y, " goal : ", goal.x, " / ", goal.y);
-    path_length_mm = 1e6; // In case of early exit
-    position_int_t k_start = convert_to_astar(start);
-    position_int_t k_goal = convert_to_astar(goal);
+    path_length_mm = 1e6;
 
-    if (get_cost(k_goal) > MARGIN_COST) {
-        LOG_WARNING("Goal unreachable because of goal cost");
+    planner.input.start = Vec{start.x, start.y};
+    planner.input.goal = Vec{goal.x, goal.y};
+
+    planner.last = cdfr::plan_path(planner.input);
+    if (!planner.last.found || planner.last.point_count <= 0) {
+        LOG_WARNING("Pathfinding: no path to the target");
+        return 0;
+    }
+    if (planner.last.point_count > PATHFIND_MAX_POINTS) {
+        LOG_WARNING("Pathfinding: path has ", planner.last.point_count, " points, too many");
         return 0;
     }
 
-    int len = astar_pathfind(k_start, k_goal, astar_path);
-    if (len <= 0) {
-        LOG_WARNING("Goal unreachable, printing costmap with path:");
-        //print_costmap_with_path(astar_path, len, k_start, k_goal);
-        return 0;
+    for (int i = 0; i < planner.last.point_count; i++) {
+        path[i] = {planner.last.points[i].x, planner.last.points[i].y, goal.a};
     }
-
-    //int smooth_len = smooth_path(astar_path, len, smooth_path_arr);
-    int smooth_len = coarse_smooth_path(astar_path, len, smooth_path_arr);
-    //print_costmap_with_path(smooth_path_arr, smooth_len, k_start, k_goal);
-    // Compute pathlength
-    path_length_mm = astar_path_length(smooth_path_arr, smooth_len) * SCALE;
-
-    // Convert path to position_t coordinates
-    for (int i = 0; i < smooth_len; i++) {
-        path[i] = convert_from_astar(smooth_path_arr[i]);
-        path[i].a = goal.a;
-    }
-    path[smooth_len] = goal;
-    smooth_len++;
-
-    return smooth_len;
+    path_length_mm = planner.last.length;
+    return planner.last.point_count;
 }
 
-void pathfind_setup(const TableState& tableState) {
-    astar_initialize_costmap();
-    // Stones : 110 mm sur X et 320 mm sur Y, inverses pour les stones du milieu.
-    for (const auto& stone : tableState.quarry) {
-        if (stone.nb <= 0) continue;
-        const bool horizontal = stone.pos.a == 270;
-        const int sizeX = horizontal ? 320 : 110;
-        const int sizeY = horizontal ? 110 : 320;
-        place_obstacle_with_margin(stone.pos.x, stone.pos.y, sizeY, sizeX, ROBOT_WIDTH / 2, false);
+void pathfindSetup(const TableState& tableState) {
+    const bool hadOpponent = planner.hasOpponent;
+    Vec opponent{0.0, 0.0};
+    if (hadOpponent && planner.input.obstacle_count > 0) {
+        opponent = planner.input.obstacles[planner.input.obstacle_count - 1].center;
     }
-    // Le helper ne tourne pas les rectangles : les depots diagonaux sont encadres par un carre.
-    for (const auto& zone : tableState.wallZone) {
-        if (zone.nb <= 0) continue;
-        const bool horizontal = fabs(zone.pos.a) == 90;
-        const bool diagonal = fabs(zone.pos.a) == 45 || fabs(zone.pos.a) == 135;
-        const int sizeX = horizontal || diagonal ? 320 : 110;
-        const int sizeY = horizontal ? 110 : 320;
-        place_obstacle_with_margin(zone.pos.x, zone.pos.y, sizeY, sizeX, ROBOT_WIDTH / 2, false);
-    }
-    pathfind_place_border();
-}
 
-void pathfind_place_border() {
-    int RayonRobot = 200; // TODO Make dynamic
+    resetInput();
 
-    // ===== TABLE BORDER =====
-    place_obstacle_with_margin(0, -1500, 50, 2000, RayonRobot, false);
-    place_obstacle_with_margin(0, 1500, 50, 2000, RayonRobot, false);
-    place_obstacle_with_margin(-1000, 0, 3000, 50, RayonRobot, false);
-    place_obstacle_with_margin(1000, 0, 3000, 50, RayonRobot, false);
-}
-
-void pathfind_fill_lidar(Lidar* lidar, const TableState& tableState) {
-    pathfind_setup(tableState);
-
-    /* Place opponent on the map */
-    for (int i = 0; i < lidar->count; i++) {
-        if (!lidar->data[i].onTable) continue;
-        place_obstacle_with_margin(lidar->data[i].x, lidar->data[i].y, 400, 400, 230, false, false);
-    }
-    pathfind_place_border();
-}
+    // Stones are 320 x 110; the middle quarries store them rotated by 90 degrees.
+    for (const auto& quarry : tableState.quarry) {
+        if (quarry.nb <= 0) continue;
+        const bool rotated = std::fabs(quarry.pos.a - 270.0) < 1.0;
+        addObstacle(quarry.pos, rotated ? 110.0 : 320.0, rotated ? 320.0 : 110.0, 0.0);

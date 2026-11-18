@@ -3,7 +3,7 @@
 #include "defs/tableState.hpp"
 #include "utils/logger.hpp"
 #include "navigation/navigation.h" // pour NavReturn & position_t
-#include "navigation/pathfind.h"
+#include "navigation/pathfind.hpp"
 
 GoToPositionAction::GoToPositionAction(const std::string& name, position_t target, RobotControl* robot)
     : target(target), robot(robot), isMoving(false) {

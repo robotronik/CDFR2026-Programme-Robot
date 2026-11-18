@@ -17,7 +17,7 @@
 
 // Navigation
 #include "navigation/navigation.h"
-#include "navigation/pathfind.h"
+#include "navigation/pathfind.hpp"
 #include "actions/calibration.h"
 
 #include "utils/utils.h"
@@ -330,7 +330,7 @@ int StartSequence()
     initState = true;
     manual_init();
 
-    pathfind_setup(tableStatus);
+    pathfindSetup(tableStatus);
 
     robot.drive.reset();
 
@@ -346,7 +346,7 @@ void GetLidar()
 
     if (lidar.getData()){
         convertAngularToAxial(lidar.data, lidar.count, robot.drive.position, 150);
-            pathfind_fill_lidar(&lidar, tableStatus);
+            pathfindUpdateOpponent(&lidar, tableStatus);
         // Only update opponent position if the robot is not moving too fast to avoid noise
         if (IsDataValid && position_opponentV2(lidar.data, lidar.count, robot.drive.position, pos_opponent) &&
                 (currentState == MainState::Run || currentState == MainState::Manual) &&
@@ -407,12 +407,73 @@ void EndSequence()
 }
 
 
+namespace {
+
+// Local preview: the table is re-randomized every 500 ms so the web display
+// shows a freshly planned path each time.
+unsigned long lastRandomizeMs = 0;
+
+double randomRange(double lo, double hi) {
+    return lo + (hi - lo) * (rand() / double(RAND_MAX));
+}
+
+void randomizeTableAndPlan() {
+    position_t start = {0.0, 1300.0, 0.0};
+    position_t goal = {0.0, -1300.0, 0.0};
+
+    pathfindClear();
+    for (int i = 0; i < 5; i++) {
+        position_t stone;
+        stone.a = randomRange(0.0, 180.0);
+        // Keep the middle corridor free so a path usually exists. A 320 mm
+        // stone may be rotated, so its half-extent along x reaches 160 mm.
+        do {
+            stone.x = randomRange(-700.0, 700.0);
+        } while (std::fabs(stone.x) < 280.0);
+        stone.y = randomRange(-1000.0, 1000.0);
+        pathfindAddObstacle(stone, 320.0, 110.0, stone.a);
+    }
+
+    // The opponent is a circle, fed through the table state so the display and
+    // the planner see the same position.
+    position_t opponent;
+    opponent.x = randomRange(-800.0, 800.0);
+    opponent.y = randomRange(-1000.0, 1000.0);
+    opponent.a = 0.0;
+    tableStatus.pos_opponent = opponent;
+    pathfindUpdateOpponent(&lidar, tableStatus);
+
+    // The robot and its target move and turn too, so the path changes each time.
+    // The hull is convex and the planner is holonomic, so the random heading is
+    // only visual: it shows that the robot keeps its orientation while it
+    // strafes along the path.
+    start.x = randomRange(-500.0, 500.0);
+    start.a = randomRange(-180.0, 180.0);
+    goal.x = randomRange(-500.0, 500.0);
+    goal.a = randomRange(-180.0, 180.0);
+    robot.drive.setCoordinates(start);
+    robot.drive.target = goal;
+
+    position_t path[PATHFIND_MAX_POINTS];
+    double length = 0.0;
+    if (pathfind(start, goal, path, length) > 0) {
+        LOG_INFO("Test: path with ", int(length), " mm");
+    } else {
+        LOG_WARNING("Test: no path for this random table");
+    }
+}
+
+}  // namespace
+
 void tests()
 {
     /*
         * Call test functions here.
         * They will be executed in loop until the program is stopped.
     */
+    if (_millis() - lastRandomizeMs < 500) return;
+    lastRandomizeMs = _millis();
+    randomizeTableAndPlan();
 }
 
 // ------------------------------------------------------
