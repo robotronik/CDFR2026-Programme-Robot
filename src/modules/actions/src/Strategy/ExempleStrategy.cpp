@@ -35,6 +35,17 @@ position_t ExempleStrat::StratStartingPos(){
 
     if (tableStatus->colorTeam == ColorTeam::Yellow)
         position_robot_flip(pos);
+
+    return pos;
+}
+
+position_t ExempleStrat::StratFinishingPos(){
+    // Returns the finishing position of the robot
+    position_t pos = FINAL_POSITION;
+
+    if (tableStatus->colorTeam == ColorTeam::Yellow)
+        position_robot_flip(pos);
+        
     return pos;
 }
 
@@ -72,7 +83,7 @@ void ExempleStrat::buildPossibleActions(){
 
     //addAction(0.0f, std::make_unique<WaitAction>(400));
     //addAction(1.0f, std::make_unique<CalibrationAction>(robot, tableStatus));
-    //addAction(0.0f, std::make_unique<NavHomeAction>(tableStatus, robot));
+    addAction(0.1f, std::make_unique<NavHomeAction>(tableStatus, robot, StratFinishingPos()));
     // Cible dynamique : l'élément de jeu le plus proche connu de tableStatus,
     // fixé au démarrage de l'action (cf. GoToPositionAction::getClosestElement()).
     //addAction(0.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, robot));

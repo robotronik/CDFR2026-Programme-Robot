@@ -70,6 +70,7 @@ const int ARUCO_CALIB_POSITIONS_COUNT = sizeof(ARUCO_CALIB_POSITIONS) / sizeof(p
 
 // Blue start position
 const position_t START_POSITION = { .x = 0, .y = 1250, .a = -90 };
+const position_t FINAL_POSITION = { .x = 0, .y = 1250, .a = -90 };
 
 // La face de depot pointe vers l'exterieur pour garder le robot cote centre du chateau.
 const position_t WALL_POSITION[] = {
