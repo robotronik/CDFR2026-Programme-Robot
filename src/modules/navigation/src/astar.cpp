@@ -200,30 +200,10 @@ int AStar::findPath(position_t start, position_t goal, std::span<position_t> pat
     std::priority_queue<Entry, std::vector<Entry>, std::greater<Entry>> open;
     const auto heuristic = [&](int index) {
         const int dx = std::abs(index / COLS - last / COLS), dy = std::abs(index % COLS - last % COLS);
-        return SCALE * std::hypot(dx, dy);
+        return SCALE * (std::max(dx, dy) + (std::sqrt(2.0) - 1) * std::min(dx, dy));
     };
     nodes[first].g = 0;
-    if (cost(first / COLS, first % COLS) == 1) {
-        open.push({heuristic(first), first});
-    } else {
-        // Price the actual straight exit before choosing it, so it remains a single target.
-        for (int index = 0; index < CELL_COUNT; ++index) {
-            if (index == first) continue;
-            const int row = index / COLS, col = index % COLS;
-            bool boundary = false;
-            if (cost(row, col) == 1) {
-                for (int dr = -1; dr <= 1 && !boundary; ++dr)
-                    for (int dc = -1; dc <= 1; ++dc)
-                        if (cost(row + dr, col + dc) > 1) boundary = true;
-            }
-            if (!boundary && index != last) continue;
-            const double g = lineCost(start, cellPosition(index, goal.a));
-            if (!std::isfinite(g)) continue;
-            nodes[index].g = g;
-            nodes[index].parent = first;
-            open.push({g + heuristic(index), index});
-        }
-    }
+    open.push({heuristic(first), first});
     while (!open.empty()) {
         const int current = open.top().second;
         open.pop();
@@ -240,21 +220,10 @@ int AStar::findPath(position_t start, position_t goal, std::span<position_t> pat
                 if (dr && dc && (cost(row + dr, col) < 0 || cost(row, col + dc) < 0)) continue;
                 const double stepCost = current == first ? lineCost(start, cellPosition(next, goal.a))
                                                         : SCALE * (dr && dc ? std::sqrt(2.0) : 1) * (cost(row, col) + weight) / 2.0;
-                double nextG = nodes[current].g + stepCost;
-                int nextParent = current;
-                const int parent = nodes[current].parent;
-                // Keep a cheaper direct segment instead of adding another grid turn.
-                if (parent >= 0) {
-                    const position_t parentPosition = parent == first ? start : cellPosition(parent, goal.a);
-                    const double directG = nodes[parent].g + lineCost(parentPosition, cellPosition(next, goal.a));
-                    if (directG < nextG) {
-                        nextG = directG;
-                        nextParent = parent;
-                    }
-                }
+                const double nextG = nodes[current].g + stepCost;
                 if (nextG >= nodes[next].g) continue;
                 nodes[next].g = nextG;
-                nodes[next].parent = nextParent;
+                nodes[next].parent = current;
                 open.push({nextG + heuristic(next), next});
             }
         }
@@ -279,24 +248,16 @@ int AStar::findPath(position_t start, position_t goal, std::span<position_t> pat
     path[count++] = waypoints.front();
     while (current + 1 < waypoints.size()) {
         size_t next = current + 1;
-        const int index = cellIndex(waypoints[current]);
-        if (current != 0 || cost(index / COLS, index % COLS) == 1) {
-            for (size_t candidate = waypoints.size() - 1; candidate > current; --candidate) {
-                if (lineCost(waypoints[current], waypoints[candidate]) <= accumulated[candidate] - accumulated[current] + 1e-8) {
-                    next = candidate;
-                    break;
-                }
+        for (size_t candidate = waypoints.size() - 1; candidate > current; --candidate) {
+            if (lineCost(waypoints[current], waypoints[candidate]) <= accumulated[candidate] - accumulated[current] + 1e-8) {
+                next = candidate;
+                break;
             }
         }
         if (!std::isfinite(lineCost(waypoints[current], waypoints[next]))) return 0;
         if (count == path.size()) return 0;
         path[count++] = waypoints[next];
-        if (current == 0 && cost(index / COLS, index % COLS) > 1) path[count - 1].a = start.a;
         current = next;
-    }
-    if (path[count - 1].a != goal.a) {
-        if (count == path.size()) return 0;
-        path[count++] = goal;
     }
     length = 0;
     for (size_t i = 1; i < count; ++i)
