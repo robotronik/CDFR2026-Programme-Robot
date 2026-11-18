@@ -30,6 +30,7 @@ class AStar {
         bool setRobotRadius(double radius);
         bool setObstacles(Layer layer, std::vector<Obstacle> obstacles);
         int findPath(position_t start, position_t goal, std::span<position_t> path, double& length);
+        double pathCost(std::span<const position_t> path) const;
         json mapJson(const std::string& knownSession = "",
                      const std::array<uint64_t, 3>& knownVersions = {UINT64_MAX, UINT64_MAX, UINT64_MAX}) const;
         json costmapJson() const;
