@@ -3,6 +3,7 @@
 #include "defs/structs.hpp"
 #include "defs/tableState.hpp"
 #include "actions/RobotControl.hpp"
+#include "drive_interface.h"
 #include "navigation/driveControl.h" // pour position_t
 #include "navigation/navigation.h" // pour nav_return_t & position_t
 #include "navigation/pathfind.h"
@@ -55,24 +56,41 @@ float TakeStock::getBestQuarry(const position_t& from) {
         target = bestTarget;
         position_t stock = best->pos;
         if (bestApproach == 1) stock.a -= 180;
-        diffpos = getFacePosition(stock);
+        diffpos =RobotPosSuctionCupOffset (RobotTakeOffset(stock, from));//J'ai le droit
         return (float)minDistance;
     }
     return -1;
 }
 
-position_t TakeStock::getFacePosition(const position_t& stock) const {
-    const position_t offset = selected_face->getOffset();
+//TODO ajouter offset de 5.5cm du bloc fait
+
+position_t TakeStock::RobotTakeOffset(const  position_t stock, const position_t& from) const {
+    const int offsetBlock = -150;//offset a regler
+    position_t block;
+    double angle;
+    if( stock.y == 0 ) {
+        angle = (stock.a + 180) * DEG_TO_RAD;
+    }
+    else {
+        angle = stock.a * DEG_TO_RAD;
+    }
+    block.a = stock.a;
+    block.x = stock.x - offsetBlock * cos(angle);
+    block.y = stock.y + offsetBlock * sin(angle);
+    return block;
+}
+position_t TakeStock::RobotPosSuctionCupOffset(const position_t& stock) const {
+    const position_t offsetface = selected_face->getOffset();
     position_t face;
-    face.a = stock.a - offset.a;
+    face.a = stock.a - offsetface.a;
     const double angle = face.a * DEG_TO_RAD;
-    face.x = stock.x - offset.x * cos(angle) + offset.y * sin(angle);
-    face.y = stock.y - offset.x * sin(angle) - offset.y * cos(angle);
+    face.x = stock.x - offsetface.x * cos(angle) + offsetface.y * sin(angle);
+    face.y = stock.y - offsetface.x * sin(angle) - offsetface.y * cos(angle);
     return face;
 }
 
 int TakeStock::BestPositionToTake(const position_t& stock, position_t targets[2]) const {
-    const position_t face = getFacePosition(stock);
+    const position_t face = RobotPosSuctionCupOffset(stock);
 
     targets[0] = face;
     if (stock.x == 950) {
@@ -83,12 +101,14 @@ int TakeStock::BestPositionToTake(const position_t& stock, position_t targets[2]
         targets[0].x += OFFSET_TARGET.x;
         return 1;
     }
-    targets[0].y += OFFSET_TARGET.y;
-    position_t oppositeStock = stock;
-    oppositeStock.a -= 180;
-    targets[1] = getFacePosition(oppositeStock);
-    targets[1].y -= OFFSET_TARGET.y;
-    return 2;
+    else {
+       targets[0].y += OFFSET_TARGET.y;
+        position_t oppositeStock = stock;
+        oppositeStock.a -= 180;
+        targets[1] = RobotPosSuctionCupOffset(oppositeStock);
+        targets[1].y -= OFFSET_TARGET.y;
+        return 2;  
+    }
 }
 
 float TakeStock::BestTake(const position_t& from) {

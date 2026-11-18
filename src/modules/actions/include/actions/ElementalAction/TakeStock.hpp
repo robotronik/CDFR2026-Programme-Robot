@@ -33,8 +33,9 @@ class TakeStock : public VirtualAction {
         
         float BestTake(const position_t& from);
         float getBestQuarry(const position_t& from);
-        position_t getFacePosition(const position_t& stock) const;
-        int BestPositionToTake(const position_t& stock, position_t targets[2]) const;
+        position_t RobotPosSuctionCupOffset(const position_t& stock) const;
+        int BestPositionToTake(const position_t& stock, position_t targets[2]) const;//offset pour avoir la bonne face sur le block
+        position_t RobotTakeOffset(position_t stock, const position_t& from) const;//offset centre/face block
         bool resolveTarget();
     public:
         TakeStock(TableState* tableState, RobotControl* robot);
