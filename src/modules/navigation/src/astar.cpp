@@ -200,7 +200,7 @@ int AStar::findPath(position_t start, position_t goal, std::span<position_t> pat
     std::priority_queue<Entry, std::vector<Entry>, std::greater<Entry>> open;
     const auto heuristic = [&](int index) {
         const int dx = std::abs(index / COLS - last / COLS), dy = std::abs(index % COLS - last % COLS);
-        return SCALE * (std::max(dx, dy) + (std::sqrt(2.0) - 1) * std::min(dx, dy));
+        return SCALE * std::hypot(dx, dy);
     };
     nodes[first].g = 0;
     if (cost(first / COLS, first % COLS) == 1) {
@@ -238,10 +238,23 @@ int AStar::findPath(position_t start, position_t goal, std::span<position_t> pat
                 const int weight = cost(row + dr, col + dc);
                 if (nodes[next].closed || weight < 0) continue;
                 if (dr && dc && (cost(row + dr, col) < 0 || cost(row, col + dc) < 0)) continue;
-                const double nextG = nodes[current].g + SCALE * (dr && dc ? std::sqrt(2.0) : 1) * (cost(row, col) + weight) / 2.0;
+                const double stepCost = current == first ? lineCost(start, cellPosition(next, goal.a))
+                                                        : SCALE * (dr && dc ? std::sqrt(2.0) : 1) * (cost(row, col) + weight) / 2.0;
+                double nextG = nodes[current].g + stepCost;
+                int nextParent = current;
+                const int parent = nodes[current].parent;
+                // Keep a cheaper direct segment instead of adding another grid turn.
+                if (parent >= 0) {
+                    const position_t parentPosition = parent == first ? start : cellPosition(parent, goal.a);
+                    const double directG = nodes[parent].g + lineCost(parentPosition, cellPosition(next, goal.a));
+                    if (directG < nextG) {
+                        nextG = directG;
+                        nextParent = parent;
+                    }
+                }
                 if (nextG >= nodes[next].g) continue;
                 nodes[next].g = nextG;
-                nodes[next].parent = current;
+                nodes[next].parent = nextParent;
                 open.push({nextG + heuristic(next), next});
             }
         }
@@ -251,10 +264,8 @@ int AStar::findPath(position_t start, position_t goal, std::span<position_t> pat
     for (int index = last; index != -1; index = nodes[index].parent)
         waypoints.push_back(cellPosition(index, goal.a));
     std::reverse(waypoints.begin(), waypoints.end());
-    if (cost(first / COLS, first % COLS) == 1 && (start.x != waypoints.front().x || start.y != waypoints.front().y))
-        waypoints.insert(waypoints.begin(), start);
-    else
-        waypoints.front() = start;
+    // Targeting the start cell's centre can stall within the drive's stopping dead zone.
+    waypoints.front() = start;
     if (goal.x != waypoints.back().x || goal.y != waypoints.back().y)
         waypoints.push_back(goal);
     else
@@ -291,6 +302,15 @@ int AStar::findPath(position_t start, position_t goal, std::span<position_t> pat
     for (size_t i = 1; i < count; ++i)
         length += std::hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y);
     return int(count);
+}
+
+double AStar::pathCost(std::span<const position_t> path) const {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (path.empty() || !pointClear(path.front())) return std::numeric_limits<double>::infinity();
+    double total = 0;
+    for (size_t i = 1; i < path.size(); ++i)
+        total += lineCost(path[i - 1], path[i]);
+    return total;
 }
 
 json AStar::mapJson(const std::string& knownSession, const std::array<uint64_t, 3>& knownVersions) const {
