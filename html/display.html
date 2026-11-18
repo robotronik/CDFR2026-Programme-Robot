@@ -129,16 +129,18 @@
             // Dont draw the grid
             //ctx.drawImage(svgGrid, topLeftX, topLeftY, 3000, 2000);
 
-            if (data["costmap"]) {
-                drawCostmap(data["costmap"]);
+            if (data["pathfinding"]) {
+                drawInflated(data["pathfinding"]);
+                drawPathfinding(data["pathfinding"]);
             }
 
             // Draw robot
             ctx.lineWidth = 4;
             ctx.strokeStyle = 'white';
-            drawRobot(ctx, data["pos"]["y"], 
+            drawRobot(ctx, data["pos"]["y"],
                             data["pos"]["x"],
-                            data["pos"]["a"]);
+                            data["pos"]["a"],
+                            data["pathfinding"] ? data["pathfinding"]["robot"] : null);
 
             //Draws an arrow of the target position
             drawArrow(ctx, data["target_pos"]["y"], data["target_pos"]["x"], data["target_pos"]["a"]);
@@ -185,36 +187,59 @@
         }
 
         //Screen coords, relative to center
-        function drawRobot(ctx, x, y, angleDeg) {
-            // Convert angle from degrees to radians
+        // Draws the robot hull at (x, y) rotated by angleDeg. The hull comes
+        // from the API (`pathfinding.robot`) so the drawing matches what the
+        // planner actually inflates; the hardcoded shape is only a fallback
+        // for an older backend.
+        function drawRobot(ctx, x, y, angleDeg, hull) {
             const angleRad = angleDeg * Math.PI / 180;
-
-            // Calculate corner points relative to the center of the square
-            const points = [
-                { x: -200, y: -115 },
-                { x: 0, y: 231 },
-                { x: 200, y: -115 },
-                { x: -200, y: -115 },
-                { x: 0, y: -50 },
-                { x: 200, y: -115 }
+            const fallback = [
+                { x: -250, y: -125 }, { x: 150, y: -125 }, { x: 250, y: 0 },
+                { x: 150, y: 125 }, { x: -250, y: 125 }
             ];
+            const local = (hull && hull.length >= 3) ? hull : fallback;
 
-            // Rotate points around the center
-            const rotatedPoints = points.map(point => {
-                return {
-                    x: x + centerX + point.x * Math.cos(angleRad) - point.y * Math.sin(angleRad),
-                    y: y + centerY - point.x * Math.sin(angleRad) - point.y * Math.cos(angleRad)
-                };
-            });
-
-            // Set line width
-            // Draw the rotated square
             ctx.beginPath();
-            for (let i = 0; i < rotatedPoints.length; i++) {
-                ctx.lineTo(rotatedPoints[i].x, rotatedPoints[i].y);
-            }
+            local.forEach((point, i) => {
+                const px = x + centerX + point.x * Math.cos(angleRad) - point.y * Math.sin(angleRad);
+                const py = y + centerY - point.x * Math.sin(angleRad) - point.y * Math.cos(angleRad);
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            });
             ctx.closePath();
             ctx.stroke();
+        }
+
+        // Translucent layer showing the inflated obstacles, i.e. the region the
+        // robot's reference point may not enter. This is C_obs = obstacle (+)
+        // (-robot), so it already accounts for the robot's real shape.
+        function drawInflated(pathfinding) {
+            const shapes = pathfinding["inflated"] || [];
+            ctx.lineWidth = 2;
+
+            shapes.forEach(shape => {
+                const points = shape["corners"] || shape;
+                if (points.length < 3) return;
+
+                ctx.beginPath();
+                points.forEach((p, i) => {
+                    const px = p["y"] + centerX;
+                    const py = p["x"] + centerY;
+                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                });
+                ctx.closePath();
+
+                if (shape["border"]) {
+                    // The table walls cover the whole field, so filling them
+                    // would hide everything. Only their inner edge matters.
+                    ctx.strokeStyle = 'rgba(90, 100, 120, 0.45)';
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = 'rgba(120, 130, 150, 0.28)';
+                    ctx.strokeStyle = 'rgba(90, 100, 120, 0.5)';
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            });
         }
         
         //Screen coords, relative to center
@@ -278,14 +303,47 @@
             canvas.style.height = (window.innerWidth * ratio) + 'px';
         }
 
-        function drawCostmap(costmap) {
-            const scale = 25;
+        // Obstacles and the planned path, in table millimetres.
+        // The canvas uses (0, 0) at its centre with the two axes swapped, and
+        // one millimetre is one pixel, so every point maps as (y, x).
+        function drawPathfinding(pathfinding) {
+            const obstacles = pathfinding["obstacles"] || [];
 
-            costmap.forEach(cell => {
-                const { x, y, cost } = cell;
-                ctx.fillStyle = `rgba(100, 0, 0, ${cost / 300})`;
-                ctx.fillRect(145 + x * scale, 145 + y * scale, scale, scale);
+            obstacles.forEach(ob => {
+                if (ob["kind"] === "opponent") {
+                    ctx.fillStyle = 'rgba(220, 60, 60, 0.35)';
+                    ctx.strokeStyle = 'rgba(160, 20, 20, 0.9)';
+                    ctx.beginPath();
+                    ctx.arc(ob["y"] + centerX, ob["x"] + centerY, ob["r"], 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = 'rgba(200, 90, 0, 0.55)';
+                    ctx.strokeStyle = 'rgba(120, 50, 0, 0.9)';
+                    ctx.beginPath();
+                    ob["corners"].forEach((c, i) => {
+                        const px = c["y"] + centerX;
+                        const py = c["x"] + centerY;
+                        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                    });
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                }
             });
+
+            // Planned path, drawn on top of the obstacles.
+            const path = pathfinding["path"] || [];
+            if (path.length < 2) return;
+            ctx.strokeStyle = pathfinding["found"] ? 'rgba(30, 100, 255, 0.9)' : 'rgba(150, 150, 150, 0.9)';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            path.forEach((p, i) => {
+                const px = p["y"] + centerX;
+                const py = p["x"] + centerY;
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            });
+            ctx.stroke();
         }
 
         // Call the function to resize initially

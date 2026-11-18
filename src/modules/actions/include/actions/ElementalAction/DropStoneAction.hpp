@@ -4,7 +4,7 @@
 #include "drive_interface.h"
 #include "navigation/navigation.h" // pour NavReturn & position_t
 #include "defs/tableState.hpp"
-#include "navigation/pathfind.h"
+#include "navigation/pathfind.hpp"
 #include "actions/RobotControl.hpp"
 
 /*

@@ -1,7 +1,7 @@
 #include "navigation/navigation.h"
 #include "utils/logger.hpp"
 #include "lidar/lidarAnalize.h"
-#include "navigation/pathfind.h"
+#include "navigation/pathfind.hpp"
 #include "navigation/driveControl.h"
 #include "defs/tableState.hpp"
 #include "vision/Cam.hpp"

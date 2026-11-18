@@ -6,7 +6,7 @@
 #include "drive_interface.h"
 #include "navigation/driveControl.h" // pour position_t
 #include "navigation/navigation.h" // pour nav_return_t & position_t
-#include "navigation/pathfind.h"
+#include "navigation/pathfind.hpp"
 #include "utils/logger.hpp"
 
 TakeStoneAction::TakeStoneAction(TableState* tableState, RobotControl* robot)
