@@ -34,7 +34,13 @@
 
     <!-- Canvas element where we will draw shapes and images -->
     <canvas id="displayCanvas" width="3300" height="2300" class="mt-3 justify-content-center align-items-center"></canvas>
-
+    <p class="m-2" aria-label="Légende de la carte">
+        <span style="color:#64748b">■ Bords</span> ·
+        <span style="color:#f59e0b">■ Éléments de jeu</span> ·
+        <span style="color:#ef4444">■ Adversaires</span> ·
+        <span style="color:#06b6d4">○ Enveloppe du robot</span>
+        — zones colorées : positions interdites au centre du robot
+    </p>
 
     <h3 class="m-2" id="stateLabel">Robot State : </h3>
     <h3 class="m-2" id="scoreLabel">Score : </h3>
@@ -62,6 +68,10 @@
 
         let topLeftX = centerX - 3000/2;
         let topLeftY = centerY - 2000/2;
+        let costmapSession = null;
+        let costmapInfo = null;
+        const costmapLayers = {};
+        const layerColors = {border: '#64748b', game: '#f59e0b', opponent: '#ef4444'};
         
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
@@ -77,11 +87,19 @@
 
         async function getData() {
             try {
-                let response = await fetch('/get_global');
+                const parameters = new URLSearchParams();
+                if (costmapSession !== null) {
+                    parameters.set('map_session', costmapSession);
+                    for (const [name, layer] of Object.entries(costmapLayers)) {
+                        parameters.set(name + '_version', layer.version);
+                    }
+                }
+                let response = await fetch('/get_global?' + parameters.toString());
                 if (!response.ok) {
                     throw new Error('Network response was not ok ' + response.statusText);
                 }
                 let data = await response.json();
+                updateCostmap(data.costmap);
                 draw(data); // Pass the fetched data
                 let robotStatus = data["status"];
                 if (robotStatus == 0)
@@ -129,8 +147,16 @@
             // Dont draw the grid
             //ctx.drawImage(svgGrid, topLeftX, topLeftY, 3000, 2000);
 
-            if (data["costmap"]) {
-                drawCostmap(data["costmap"]);
+            if (costmapInfo) {
+                drawCostmap();
+                ctx.save();
+                ctx.strokeStyle = '#06b6d4';
+                ctx.lineWidth = 4;
+                ctx.setLineDash([14, 10]);
+                ctx.beginPath();
+                ctx.arc(data.pos.y + centerX, data.pos.x + centerY, costmapInfo.robot_radius_mm, 0, 2 * Math.PI);
+                ctx.stroke();
+                ctx.restore();
             }
 
             // Draw robot
@@ -170,7 +196,7 @@
             
             // Draw the current robot's path
             ctx.lineWidth = 6;
-            ctx.strokeStyle = 'blue';
+            ctx.strokeStyle = '#2563eb';
             ctx.beginPath();
             data["navigation"].forEach(point => {
                 ctx.lineTo(point.y + centerX, point.x + centerY);
@@ -278,14 +304,66 @@
             canvas.style.height = (window.innerWidth * ratio) + 'px';
         }
 
-        function drawCostmap(costmap) {
-            const scale = 25;
+        function updateCostmap(costmap) {
+            if (!costmap) return;
+            if (costmap.session !== costmapSession) {
+                for (const name of Object.keys(costmapLayers)) delete costmapLayers[name];
+                costmapSession = costmap.session;
+            }
+            costmapInfo = costmap;
+            for (const [name, layer] of Object.entries(costmap.layers)) {
+                if (!Object.hasOwn(layer, 'cells')) continue;
+                // Cache at grid resolution: three full-size canvases would use about 90 MB.
+                const image = document.createElement('canvas');
+                image.width = costmap.cols;
+                image.height = costmap.rows;
+                const imageContext = image.getContext('2d');
+                imageContext.fillStyle = layerColors[name];
+                for (const [start, count] of layer.cells) {
+                    let index = start;
+                    const end = start + count;
+                    while (index < end) {
+                        const row = Math.floor(index / costmap.cols);
+                        const col = index % costmap.cols;
+                        const width = Math.min(end - index, costmap.cols - col);
+                        imageContext.fillRect(col, row, width, 1);
+                        index += width;
+                    }
+                }
+                costmapLayers[name] = {version: layer.version, image, obstacles: layer.obstacles};
+            }
+        }
 
-            costmap.forEach(cell => {
-                const { x, y, cost } = cell;
-                ctx.fillStyle = `rgba(100, 0, 0, ${cost / 300})`;
-                ctx.fillRect(145 + x * scale, 145 + y * scale, scale, scale);
-            });
+        function drawCostmap() {
+            const {scale, origin, cols, rows} = costmapInfo;
+            ctx.save();
+            ctx.globalAlpha = 0.32;
+            ctx.imageSmoothingEnabled = false;
+            for (const name of Object.keys(layerColors)) {
+                const layer = costmapLayers[name];
+                if (!layer) continue;
+                ctx.drawImage(layer.image, origin.y + centerX - scale / 2, origin.x + centerY - scale / 2,
+                              cols * scale, rows * scale);
+            }
+            ctx.restore();
+            // Physical contours distinguish the obstacles from their rounded safety margin.
+            for (const name of ['border', 'game']) {
+                const layer = costmapLayers[name];
+                if (!layer) continue;
+                for (const obstacle of layer.obstacles) {
+                    const angle = obstacle.angle * Math.PI / 180;
+                    ctx.save();
+                    ctx.translate(obstacle.y + centerX, obstacle.x + centerY);
+                    ctx.transform(Math.sin(angle), Math.cos(angle), Math.cos(angle), -Math.sin(angle), 0, 0);
+                    ctx.strokeStyle = layerColors[name];
+                    ctx.fillStyle = layerColors[name];
+                    ctx.globalAlpha = 0.8;
+                    ctx.lineWidth = 5;
+                    ctx.fillRect(-obstacle.width / 2, -obstacle.height / 2, obstacle.width, obstacle.height);
+                    ctx.strokeRect(-obstacle.width / 2, -obstacle.height / 2, obstacle.width, obstacle.height);
+                    ctx.restore();
+                }
+            }
         }
 
         // Call the function to resize initially

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "defs/structs.hpp"
+#include "navigation/astar.h"
 #include <utils/json.hpp>
 using json = nlohmann::json;
 
@@ -27,6 +28,9 @@ class Navigation {
 
         // Serialize the current navigation path
         void pathJson(json& j);
+        void updatePathfinder();
+        bool setRobotRadius(double radius);
+        AStar& getPathfinder() { return planner; }
 
     private:
         NavReturn driveStep();
@@ -47,6 +51,8 @@ class Navigation {
         int currentPathLength = 0;
 
         bool driving = true;
+        AStar planner;
+        double chassisRadius = ROBOT_WIDTH / 2.0;
 };
 
 // Global navigation instance, created in main.cpp

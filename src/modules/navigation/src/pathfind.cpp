@@ -1,101 +1,44 @@
 #include "navigation/pathfind.h"
 #include "navigation/astar.h"
-#include "utils/logger.hpp"
+#include "navigation/navigation.h"
+#include "defs/constante.h"
 #include "defs/tableState.hpp"
-#include "math.h" // round()
+#include "lidar/Lidar.hpp"
+#include <cmath>
 
-position_t convert_from_astar(position_int_t k) {
-    position_t p;
-    p.x = k.x * SCALE - 1000.0;
-    p.y = k.y * SCALE - 1500.0;
-    return p;
+int pathfind(position_t start, position_t goal, std::span<position_t> path, double& pathLengthMm) {
+    navigation.updatePathfinder();
+    return navigation.getPathfinder().findPath(start, goal, path, pathLengthMm);
 }
 
-position_int_t astar_path[MAX_PATH_LEN];
-position_int_t smooth_path_arr[MAX_PATH_LEN];
-
-void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int RayonRobot, bool traversable = true, bool square = true) {
-    position_int_t c = convert_to_astar(position_t{cx, cy, 0.0});
-    int w = (w_mm + SCALE - 1) / SCALE;
-    int h = (h_mm + SCALE - 1) / SCALE;
-    int margin = (RayonRobot + SCALE - 1) / SCALE;
-    return astar_place_obstacle_with_margin(c, w, h, margin, traversable, square);
+void updateGameObstacles(AStar& planner, const TableState& tableState) {
+    std::vector<AStar::Obstacle> obstacles;
+    for (const quarry_t& stone : tableState.quarry) {
+        if (stone.nb > 0) obstacles.push_back({stone.pos.x, stone.pos.y, GAME_ELEMENT_DEPTH_MM, GAME_ELEMENT_WIDTH_MM, stone.pos.a});
+    }
+    for (const wallZone_t& zone : tableState.wallZone) {
+        if (zone.nb > 0) obstacles.push_back({zone.pos.x, zone.pos.y, GAME_ELEMENT_DEPTH_MM, GAME_ELEMENT_WIDTH_MM, zone.pos.a});
+    }
+    planner.setObstacles(AStar::Layer::Game, std::move(obstacles));
 }
 
-int pathfind(position_t start, position_t goal, position_t path[], double& path_length_mm) {
-    //LOG_INFO("Original start : ", start.x, " / ", start.y, " goal : ", goal.x, " / ", goal.y);
-    path_length_mm = 1e6; // In case of early exit
-    position_int_t k_start = convert_to_astar(start);
-    position_int_t k_goal = convert_to_astar(goal);
-
-    if (get_cost(k_goal) > MARGIN_COST) {
-        LOG_WARNING("Goal unreachable because of goal cost");
-        return 0;
+void updateOpponentObstacles(AStar& planner, const Lidar& lidar) {
+    std::vector<AStar::Obstacle> obstacles;
+    std::array<bool, AStar::CELL_COUNT> occupied{};
+    for (int i = 0; i < lidar.count; ++i) {
+        const lidarAnalize_t& point = lidar.data[i];
+        if (!point.onTable || !std::isfinite(point.x) || !std::isfinite(point.y) ||
+            point.x < -1000 || point.x > 1000 || point.y < -1500 || point.y > 1500) continue;
+        const int row = int(std::round((point.x + 1000) / AStar::SCALE));
+        const int col = int(std::round((point.y + 1500) / AStar::SCALE));
+        if (occupied[row * AStar::COLS + col]) continue;
+        occupied[row * AStar::COLS + col] = true;
     }
-
-    int len = astar_pathfind(k_start, k_goal, astar_path);
-    if (len <= 0) {
-        LOG_WARNING("Goal unreachable, printing costmap with path:");
-        //print_costmap_with_path(astar_path, len, k_start, k_goal);
-        return 0;
+    // Quantise once per scan, with a margin covering every point in the occupied cell.
+    const double radius = OPPONENT_ROBOT_RADIUS + AStar::SCALE * std::sqrt(2.0) / 2;
+    for (int index = 0; index < AStar::CELL_COUNT; ++index) {
+        if (occupied[index]) obstacles.push_back({double(index / AStar::COLS * AStar::SCALE - 1000),
+                                                  double(index % AStar::COLS * AStar::SCALE - 1500), 0, 0, 0, radius});
     }
-
-    //int smooth_len = smooth_path(astar_path, len, smooth_path_arr);
-    int smooth_len = coarse_smooth_path(astar_path, len, smooth_path_arr);
-    //print_costmap_with_path(smooth_path_arr, smooth_len, k_start, k_goal);
-    // Compute pathlength
-    path_length_mm = astar_path_length(smooth_path_arr, smooth_len) * SCALE;
-
-    // Convert path to position_t coordinates
-    for (int i = 0; i < smooth_len; i++) {
-        path[i] = convert_from_astar(smooth_path_arr[i]);
-        path[i].a = goal.a;
-    }
-    path[smooth_len] = goal;
-    smooth_len++;
-
-    return smooth_len;
-}
-
-void pathfind_setup(const TableState& tableState) {
-    astar_initialize_costmap();
-    // Stones : 110 mm sur X et 320 mm sur Y, inverses pour les stones du milieu.
-    for (const auto& stone : tableState.quarry) {
-        if (stone.nb <= 0) continue;
-        const bool horizontal = stone.pos.a == 270;
-        const int sizeX = horizontal ? 320 : 110;
-        const int sizeY = horizontal ? 110 : 320;
-        place_obstacle_with_margin(stone.pos.x, stone.pos.y, sizeY, sizeX, ROBOT_WIDTH / 2, false);
-    }
-    // Le helper ne tourne pas les rectangles : les depots diagonaux sont encadres par un carre.
-    for (const auto& zone : tableState.wallZone) {
-        if (zone.nb <= 0) continue;
-        const bool horizontal = fabs(zone.pos.a) == 90;
-        const bool diagonal = fabs(zone.pos.a) == 45 || fabs(zone.pos.a) == 135;
-        const int sizeX = horizontal || diagonal ? 320 : 110;
-        const int sizeY = horizontal ? 110 : 320;
-        place_obstacle_with_margin(zone.pos.x, zone.pos.y, sizeY, sizeX, ROBOT_WIDTH / 2, false);
-    }
-    pathfind_place_border();
-}
-
-void pathfind_place_border() {
-    int RayonRobot = 200; // TODO Make dynamic
-
-    // ===== TABLE BORDER =====
-    place_obstacle_with_margin(0, -1500, 50, 2000, RayonRobot, false);
-    place_obstacle_with_margin(0, 1500, 50, 2000, RayonRobot, false);
-    place_obstacle_with_margin(-1000, 0, 3000, 50, RayonRobot, false);
-    place_obstacle_with_margin(1000, 0, 3000, 50, RayonRobot, false);
-}
-
-void pathfind_fill_lidar(Lidar* lidar, const TableState& tableState) {
-    pathfind_setup(tableState);
-
-    /* Place opponent on the map */
-    for (int i = 0; i < lidar->count; i++) {
-        if (!lidar->data[i].onTable) continue;
-        place_obstacle_with_margin(lidar->data[i].x, lidar->data[i].y, 400, 400, 230, false, false);
-    }
-    pathfind_place_border();
+    planner.setObstacles(AStar::Layer::Opponent, std::move(obstacles));
 }
