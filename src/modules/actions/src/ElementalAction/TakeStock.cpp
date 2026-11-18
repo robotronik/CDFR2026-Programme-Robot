@@ -41,6 +41,9 @@ float TakeStock::getBestQuarry(const position_t& from) {
             if (!pathfind(from, targets[j], path, distance)) {
                 continue;
             }
+            position_t stock = candidate->pos;
+            if (j == 1) stock.a -= 180;
+            const position_t approach[] = {targets[j], RobotPosSuctionCupOffset(RobotTakeOffset(stock, from))};
             if (distance < minDistance && candidate->nb >= bestRocks) {
                 minDistance = distance;
                 best = candidate;
