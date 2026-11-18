@@ -3,6 +3,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <charconv>
+#include <cstring>
 #include <ifaddrs.h>
 #include <arpa/inet.h>
 #include <net/if.h>
@@ -16,7 +18,6 @@
 #include "lidar/Lidar.hpp"
 #include "lidar/lidarAnalize.h" //for static variable
 #include "navigation/navigation.h"
-#include "navigation/astar.h" //for static variable
 #include "actions/VirtualStrategy.hpp" // for the strategy list
 #include "vision/Cam.hpp" //for vision fuction
 #include "restAPI/manual_mode.h" // for manual mode functions
@@ -211,7 +212,7 @@ void RestAPI::start(){
 
     // Define a route for a simple GET request that returns all of the information
     CROW_ROUTE(app, "/get_global")
-    ([this](){
+    ([this](const crow::request& request){
         json response;
         response["status"] = static_cast<int>(*currentState);
         response["table"] = *tableStatus;
@@ -231,7 +232,18 @@ void RestAPI::start(){
         response["target_pos"] = (position_t)robot->drive.target;
         response["pos"] = (position_t)robot->drive.position;
         // Costmap
-        response["costmap"] = astar_get_costmap_json();
+        std::array<uint64_t, 3> versions = {UINT64_MAX, UINT64_MAX, UINT64_MAX};
+        constexpr std::array<const char*, 3> parameters = {"border_version", "game_version", "opponent_version"};
+        for (size_t i = 0; i < versions.size(); ++i) {
+            const char* value = request.url_params.get(parameters[i]);
+            if (!value) continue;
+            const char* end = value + std::strlen(value);
+            uint64_t version;
+            const auto result = std::from_chars(value, end, version);
+            if (result.ec == std::errc{} && result.ptr == end) versions[i] = version;
+        }
+        const char* session = request.url_params.get("map_session");
+        response["costmap"] = navigation->getPathfinder().mapJson(session ? session : "", versions);
 
         return crow::response(response.dump());
     });
@@ -330,7 +342,7 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/get_costmap")
     ([this](){
         json response;
-        response["costmap"] = astar_get_costmap_json();
+        response["costmap"] = navigation->getPathfinder().costmapJson();
         return crow::response(response.dump());
     });
 

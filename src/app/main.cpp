@@ -138,6 +138,7 @@ int main()
                 GetMat();
             }
         }
+        navigation.updatePathfinder();
 
         // State machine
         switch (currentState)
@@ -330,7 +331,7 @@ int StartSequence()
     initState = true;
     manual_init();
 
-    pathfind_setup(tableStatus);
+    navigation.updatePathfinder();
 
     robot.drive.reset();
 
@@ -346,7 +347,7 @@ void GetLidar()
 
     if (lidar.getData()){
         convertAngularToAxial(lidar.data, lidar.count, robot.drive.position, 150);
-            pathfind_fill_lidar(&lidar, tableStatus);
+            updateOpponentObstacles(navigation.getPathfinder(), lidar);
         // Only update opponent position if the robot is not moving too fast to avoid noise
         if (IsDataValid && position_opponentV2(lidar.data, lidar.count, robot.drive.position, pos_opponent) &&
                 (currentState == MainState::Run || currentState == MainState::Manual) &&

@@ -5,12 +5,25 @@
 #include "navigation/driveControl.h"
 #include "defs/tableState.hpp"
 #include "vision/Cam.hpp"
+#include <cmath>
 
 Navigation::Navigation(DriveControl* drive, TableState* tableStatus, Cam* cam)
     : drive(drive), tableStatus(tableStatus), cam(cam) {
 }
 
-NavReturn Navigation::driveStep() {
+bool Navigation::setRobotRadius(double radius) {
+    if (!std::isfinite(radius) || radius <= 0) return false;
+    chassisRadius = radius;
+    updatePathfinder();
+    return true;
+}
+
+void Navigation::updatePathfinder() {
+    planner.setRobotRadius(robot->navigationRadius(chassisRadius));
+    updateGameObstacles(planner, *tableStatus);
+}
+
+NavReturn Navigation::driveStep(){
     // Calculate the path
     if (current_use_astar) {
         double len;
