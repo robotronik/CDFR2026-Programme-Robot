@@ -4,7 +4,7 @@
 #include "navigation/navigation.h" //For NavReturn & position_t
 #include "navigation/pathfind.h"
 
-NavHomeAction::NavHomeAction(TableState* tableState, RobotControl* robot){
+NavHomeAction::NavHomeAction(TableState* tableState, RobotControl* robot, position_t homePos) : homePos(homePos){
     nom = "NavHome";
     duree = 2000.0f;
     this->tableState = tableState;
