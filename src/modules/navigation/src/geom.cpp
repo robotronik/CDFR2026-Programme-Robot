@@ -245,14 +245,6 @@ double circle_polygon_gap(Vec center, double radius, const Polygon& poly) {
     return closest - radius;
 }
 
-double robot_rotation_radius(const Polygon& robot) {
-    double best = 0.0;
-    for (int i = 0; i < robot.n; ++i) {
-        best = std::max(best, robot.pts[i].norm());
-    }
-    return best;
-}
-
 Polygon config_obstacle(const Polygon& obstacle, const Polygon& robot) {
     // C_obs = obstacle (+) (-robot): hull of all pairwise vertex sums.
     //

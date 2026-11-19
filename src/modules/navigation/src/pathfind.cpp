@@ -210,8 +210,7 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     state.input.start = Vec{start.x, start.y};
     state.input.goal = Vec{goal.x, goal.y};
 
-    // Plan with the exact hull at the goal heading, and only fall back to the
-    // swept disc if that finds nothing.
+    // Plan with the exact hull at the goal heading.
     //
     // The drive controller steers towards goal.a, so planning from the live
     // heading made the path a function of the very angle the controller was
@@ -219,29 +218,14 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     // goal.a fixes that, and the exact hull is what lets the robot hug a wall
     // or reach into a quarry.
     //
-    // The caveat is that the plan is only valid while the robot stays near
-    // goal.a. It turns towards that heading as it drives, so the assumption
-    // holds in practice. If the tight hull finds no path the robot still has
-    // to get somewhere, so retry assuming it may end up facing any way -- the
-    // disc is about 50 mm more conservative, which is exactly the margin that
-    // makes a wall-hugging goal unreachable, so it must stay the fallback and
-    // never the first choice.
+    // The plan is only valid while the robot stays near goal.a, which it does
+    // because it turns towards that heading as it drives.
     state.input.robot = planner::rotate_polygon(buildRobotPolygon(), goal.a);
     // inflate_polygon, not grow_polygon: the arc-sampled offset would turn the
     // 3-vertex hull into ~33 vertices and triple the planner's edge tests, and
     // rounding the corners defeats the polygon.
     state.input.robot = planner::inflate_polygon(state.input.robot, ROBOT_CLEARANCE);
-    state.input.margin = 0.0;
     state.last = planner::plan_path(state.input);
-
-    if (!state.last.found) {
-        // Point robot plus a margin of the full reach: the circle the hull
-        // sweeps. Carrying the hull as well would add its reach on top.
-        const Vec one[] = {{0.0, 0.0}};
-        state.input.robot = planner::Polygon::from_points(one, 1);
-        state.input.margin = planner::robot_rotation_radius(buildRobotPolygon()) + ROBOT_CLEARANCE;
-        state.last = planner::plan_path(state.input);
-    }
 
     if (!state.last.found || state.last.point_count <= 0) {
         LOG_WARNING("Pathfinding: no path to the target");
@@ -336,10 +320,4 @@ void pathfindToJson(json& out) {
     out["path"] = path;
     out["found"] = state.last.found;
     out["length_mm"] = state.last.found ? state.last.length : 0.0;
-
-    // How the robot was inflated for this plan. The display draws the exact
-    // hull only when it was actually used; in disc mode the robot may face any
-    // way, so its swept radius is the honest outline.
-    out["disc"] = state.input.margin > 0.0;
-    if (state.input.margin > 0.0) out["sweep_radius_mm"] = state.input.margin;
 }

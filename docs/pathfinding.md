@@ -34,12 +34,11 @@ never used for the robot.
    360 mm slot when the goal heading points it nose-first, but needs 420 mm when
    the goal heading is sideways.
 
-   **Fallback.** The exact hull is always tried first. If it finds no path, the
-   planner retries assuming the robot may end up facing any way, which inflates
-   by the circle the hull sweeps. That fallback is deliberately second: the disc
-   is about 50 mm more conservative, and that margin is exactly what makes a
-   goal flush with a wall, or a block at the back of a quarry, look unreachable
-   when the tight hull could reach it perfectly well.
+   If the start lies inside a configuration obstacle the robot is already
+   colliding there and no path could leave it, so the planner first pushes the
+   start out to the nearest free point. The exit is chosen among the edges that
+   lead somewhere drivable: the corner zones are flush with the table, so their
+   nearest edge points off the field and is skipped.
 
    The hull is grown by a small **5 mm clearance**, purely so the controller has
    room to correct against a hairline contact. It is *not* a heading margin:
