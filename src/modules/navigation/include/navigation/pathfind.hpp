@@ -31,12 +31,6 @@ void pathfindSetup(const TableState& tableState);
 /// new estimate; the tracked position survives the per-call rebuild.
 void pathfindUpdateOpponent(Lidar* lidar, const TableState& tableState);
 
-/// Clears every obstacle, so the next setup starts from an empty table.
-void pathfindClear();
-
-/// Adds a rectangular stone at an arbitrary angle (table millimetres).
-void pathfindAddObstacle(position_t center, double length, double width, double angle_deg);
-
 /// Serializes the obstacles and the last planned path for the web display.
 ///
 /// The frontend draws `obstacles` (rotated rectangles plus one circle for the

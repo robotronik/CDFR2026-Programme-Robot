@@ -212,7 +212,11 @@ In test mode every 500 ms the table is re-randomized (four stones at random
 angles, a random opponent) and the robot and its target move and turn, so a new
 path is planned each time. Open the display page to watch it.
 
-Stones are kept in the central band and away from each other, and the start and
-goal stay clear of the corner protection zones, so the generated tables are
-solvable. A tighter layout is genuinely blocked for a 400 mm-wide robot and
-would only show "no path".
+The random layout is written into the table state rather than pushed straight
+into the planner, because `pathfind()` rebuilds its obstacles from the table on
+every call and would otherwise discard it.
+
+Stones are kept in the central band and the start and goal stay clear of the
+corner protection zones, so most generated tables are solvable. A tighter
+layout is genuinely blocked for a 400 mm-wide robot and would only show
+"no path".

@@ -441,13 +441,19 @@ void randomizeTableAndPlan() {
     position_t start = {0.0, 1200.0, 0.0};
     position_t goal = {0.0, -1200.0, 0.0};
 
-    pathfindClear();
-    for (int placed = 0; placed < kStoneCount; placed++) {
-        position_t stone;
-        stone.a = randomRange(0.0, 180.0);
-        stone.x = randomRange(-260.0, 260.0);
-        stone.y = randomRange(-820.0, 820.0);
-        pathfindAddObstacle(stone, 320.0, 110.0, stone.a);
+    // Stones live in the table state, not in the planner: pathfind() rebuilds
+    // its obstacles from the table on every call, so anything added straight to
+    // the planner would be discarded before planning.
+    for (auto& q : tableStatus.quarry) q.nb = 0;
+    for (auto& w : tableStatus.wallZone) w.nb = 0;
+    int placed = 0;
+    for (auto& q : tableStatus.quarry) {
+        if (placed >= kStoneCount) break;
+        q.pos.a = randomRange(0.0, 180.0);
+        q.pos.x = randomRange(-260.0, 260.0);
+        q.pos.y = randomRange(-820.0, 820.0);
+        q.nb = 1;
+        placed++;
     }
 
     // The opponent is a 400 mm octagon, fed through the table state so the
