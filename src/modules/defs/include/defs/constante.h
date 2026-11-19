@@ -17,7 +17,7 @@ const position_t OPPONENT_POS_UNKNOWN = { .x = 3000, .y = 0, .a = 0 };
 const double TABLE_BORDER_MARGIN_REDUCTION_MM = 50;
 const double GAME_ELEMENT_DEPTH_MM = 110;
 const double GAME_ELEMENT_WIDTH_MM = 320;
-const double GAME_ELEMENT_MARGIN_MM = 0;
+const double GAME_ELEMENT_MARGIN_MM = 50;
 const int GAME_ELEMENT_COST = 1000;
 const int OPPONENT_COST = 10000;
 
