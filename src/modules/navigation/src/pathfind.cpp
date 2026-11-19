@@ -37,6 +37,19 @@ constexpr double CORNER_SIZE_Y = 200.0;
 // sharp corners of the real polygon are what allow tight gaps.
 constexpr double ROBOT_CLEARANCE = 5.0;
 
+// Below this heading error the robot barely turns on the way, so the exact hull
+// at the goal heading is safe. Above it the robot spins, and only the swept disc
+// holds whatever it ends up facing.
+constexpr double HEADING_TOLERANCE_DEG = 10.0;
+
+// Wraps an angle in degrees into (-180, 180].
+double normalize_deg(double deg) {
+    deg = std::fmod(deg, 360.0);
+    if (deg <= -180.0) deg += 360.0;
+    if (deg > 180.0) deg -= 360.0;
+    return deg;
+}
+
 // The robot hull in its own frame: an equilateral triangle with 400 mm sides,
 // one vertex pointing forward (+x). One convex part is what lets the planner
 // use the exact shape instead of a circle.
@@ -210,18 +223,37 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     state.input.start = Vec{start.x, start.y};
     state.input.goal = Vec{goal.x, goal.y};
 
-    // Plan for the heading the robot is steering towards, not the one it
-    // happens to have right now. The drive controller turns towards goal.a
-    // while it follows the path, so planning from the live heading made the
-    // path a function of that same angle: a few degrees of rotation moved the
-    // inflation, the path jumped to the other side of an obstacle, and the
-    // robot oscillated left and right. Planning with the goal heading is the
-    // one the controller is converging on, so the two no longer fight.
-    state.input.robot = planner::rotate_polygon(buildRobotPolygon(), goal.a);
-    // inflate_polygon, not grow_polygon: the arc-sampled offset would turn the
-    // 3-vertex hull into ~33 vertices and triple the planner's edge tests, and
-    // rounding the corners is the opposite of what an asymmetric polygon is for.
-    state.input.robot = planner::inflate_polygon(state.input.robot, ROBOT_CLEARANCE);
+    // Which hull to inflate depends on how far the robot still has to turn.
+    //
+    // The drive controller steers towards goal.a, so planning from the live
+    // heading made the path a function of the very angle the controller was
+    // changing: the path jumped sides and the robot oscillated. Planning at
+    // goal.a fixes that, but a plan made for one heading is only valid while
+    // the robot is near it.
+    //
+    // So: if the robot is already close to goal.a it barely turns, and the
+    // exact hull is safe. If it is far off it has to spin on the way, and only
+    // the disc is safe whatever it ends up facing. At 10 deg the silhouette is
+    // only ~17 mm wider than the hull, and past that the sweep climbs steeply
+    // towards the circumradius, so the crossover is cheap either way.
+    const double headingError = std::fabs(normalize_deg(goal.a - start.a));
+    const bool turnsOnTheWay = headingError >= HEADING_TOLERANCE_DEG;
+
+    if (turnsOnTheWay) {
+        // Any heading is possible, so the footprint is the circle the hull
+        // sweeps. A point robot plus a margin of the full reach gives exactly
+        // that, independent of how the hull happens to be rotated. Carrying the
+        // hull as well would add its own reach on top of the margin.
+        const Vec one[] = {{0.0, 0.0}};
+        state.input.robot = planner::Polygon::from_points(one, 1);
+        state.input.margin = planner::robot_rotation_radius(buildRobotPolygon()) + ROBOT_CLEARANCE;
+    } else {
+        state.input.robot = planner::rotate_polygon(buildRobotPolygon(), goal.a);
+        // inflate_polygon, not grow_polygon: the arc-sampled offset would turn
+        // the 3-vertex hull into ~33 vertices and triple the planner's edge
+        // tests, and rounding the corners defeats the polygon.
+        state.input.robot = planner::inflate_polygon(state.input.robot, ROBOT_CLEARANCE);
+    }
 
     state.last = planner::plan_path(state.input);
     if (!state.last.found || state.last.point_count <= 0) {
@@ -317,4 +349,10 @@ void pathfindToJson(json& out) {
     out["path"] = path;
     out["found"] = state.last.found;
     out["length_mm"] = state.last.found ? state.last.length : 0.0;
+
+    // How the robot was inflated for this plan. The display draws the exact
+    // hull only when it was actually used; in disc mode the robot may face any
+    // way, so its swept radius is the honest outline.
+    out["disc"] = state.input.margin > 0.0;
+    if (state.input.margin > 0.0) out["sweep_radius_mm"] = state.input.margin;
 }

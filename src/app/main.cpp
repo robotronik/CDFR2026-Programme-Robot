@@ -465,17 +465,15 @@ void randomizeTableAndPlan() {
     tableStatus.pos_opponent = opponent;
     pathfindUpdateOpponent(&lidar, tableStatus);
 
-    // The robot turns too, and the planner inflates the hull at the heading it
-    // is given, so a new random heading produces a genuinely different path
-    // (and a visibly different inflation). The goal shares the heading: one
-    // plan is made for one heading, and the real robot replans as it rotates.
+    // Start and goal headings are independent so both inflation modes get
+    // exercised: a small error keeps the exact hull, a large one makes the
+    // planner assume the robot spins and fall back to its swept disc.
     // The x range stays clear of the corner protection zones (|x| >= 450 at
     // the table ends).
-    const double heading = randomRange(-180.0, 180.0);
     start.x = randomRange(-380.0, 380.0);
-    start.a = heading;
+    start.a = randomRange(-180.0, 180.0);
     goal.x = randomRange(-380.0, 380.0);
-    goal.a = heading;
+    goal.a = randomRange(-180.0, 180.0);
     robot.drive.setCoordinates(start);
     robot.drive.target = goal;
 
