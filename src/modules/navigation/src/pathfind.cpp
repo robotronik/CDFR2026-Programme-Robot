@@ -196,18 +196,18 @@ void pathfindSetup(const TableState& tableState) {
 
     resetInput();
 
-    // Stones are 320 x 110; the middle quarries store them rotated by 90 degrees.
+    // Stones are 320 x 110. The quarry heading is the stone's real rotation, so
+    // pass it straight through: hard-coding 0 or 90 put every stone a quarter
+    // turn off from where it actually sits.
     for (const auto& quarry : tableState.quarry) {
         if (quarry.nb <= 0) continue;
-        const bool rotated = std::fabs(quarry.pos.a - 270.0) < 1.0;
-        addObstacle(quarry.pos, rotated ? 110.0 : 320.0, rotated ? 320.0 : 110.0, 0.0);
+        addObstacle(quarry.pos, 320.0, 110.0, quarry.pos.a);
     }
 
     // Wall areas lie along their facing direction.
     for (const auto& zone : tableState.wallZone) {
         if (zone.nb <= 0) continue;
-        const bool rotated = std::fabs(zone.pos.a) > 45.0;
-        addObstacle(zone.pos, rotated ? 110.0 : 320.0, rotated ? 320.0 : 110.0, 0.0);
+        addObstacle(zone.pos, 320.0, 110.0, zone.pos.a);
     }
 
     addCornerZones();
