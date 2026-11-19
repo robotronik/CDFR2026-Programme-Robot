@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace cdfr {
+namespace nav {
 namespace {
 
 // Distance between two segments, and a pair of points realising it.
@@ -379,4 +379,4 @@ PlanOutput plan_path(const PlanInput& input) {
     return result;
 }
 
-} // namespace cdfr
+} // namespace nav
