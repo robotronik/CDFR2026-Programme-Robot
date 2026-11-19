@@ -9,12 +9,12 @@
 
 namespace {
 
-using nav::ObstacleInput;
-using nav::ObstacleKind;
-using nav::PlanInput;
-using nav::PlanOutput;
-using nav::Polygon;
-using nav::Vec;
+using planner::ObstacleInput;
+using planner::ObstacleKind;
+using planner::PlanInput;
+using planner::PlanOutput;
+using planner::Polygon;
+using planner::Vec;
 
 // The opponent is approximated by an octagon inside a 400 x 400 mm footprint:
 // rounder than a square, cheaper than a circle, and the planner handles the
@@ -66,29 +66,29 @@ struct PlannerState {
         int opponentIndex = -1;
 };
 
-PlannerState planner;
+PlannerState state;
 
-// Rebuilds the static obstacles from planner.table, carrying the opponent over.
+// Rebuilds the static obstacles from state.table, carrying the opponent over.
 void rebuildObstacles();
 
 void resetInput() {
-    planner.input = PlanInput{};
-    planner.opponentIndex = -1;
-    planner.input.robot = buildRobotPolygon();
+    state.input = PlanInput{};
+    state.opponentIndex = -1;
+    state.input.robot = buildRobotPolygon();
     // The robot reference point stays inside the table, so paths never leave
     // the field.
-    planner.input.use_border = true;
-    planner.input.table_half_x = 1000.0;
-    planner.input.table_half_y = 1500.0;
-    planner.input.margin = 0.0;
+    state.input.use_border = true;
+    state.input.table_half_x = 1000.0;
+    state.input.table_half_y = 1500.0;
+    state.input.margin = 0.0;
 }
 
 bool addObstacle(position_t center, double length, double width, double angleDeg) {
-    if (planner.input.obstacle_count >= nav::kMaxShapes - 1) {
+    if (state.input.obstacle_count >= planner::kMaxShapes - 1) {
         LOG_WARNING("Pathfinding: too many obstacles");
         return false;
     }
-    ObstacleInput& slot = planner.input.obstacles[planner.input.obstacle_count++];
+    ObstacleInput& slot = state.input.obstacles[state.input.obstacle_count++];
     slot.kind = ObstacleKind::Poly;
     // Polygon::rectangle takes the x extent first, and `length` is the long
     // axis, so the block lies across y at 0 deg.
@@ -110,19 +110,19 @@ Polygon buildOpponentPolygon(Vec center) {
 }
 
 void addOpponent(Vec center) {
-    if (planner.input.obstacle_count >= nav::kMaxShapes) return;
-    ObstacleInput& slot = planner.input.obstacles[planner.input.obstacle_count];
+    if (state.input.obstacle_count >= planner::kMaxShapes) return;
+    ObstacleInput& slot = state.input.obstacles[state.input.obstacle_count];
     slot.kind = ObstacleKind::Poly;
     slot.poly = buildOpponentPolygon(center);
     // rebuildObstacles() carries the opponent over by reading this back, so it
     // has to be set for the polygon opponent too, not just circles.
     slot.center = center;
-    planner.opponentIndex = planner.input.obstacle_count++;
+    state.opponentIndex = state.input.obstacle_count++;
 }
 
 void moveOpponent(Vec center) {
-    if (planner.opponentIndex < 0) return;
-    ObstacleInput& slot = planner.input.obstacles[planner.opponentIndex];
+    if (state.opponentIndex < 0) return;
+    ObstacleInput& slot = state.input.obstacles[state.opponentIndex];
     slot.poly = buildOpponentPolygon(center);
     slot.center = center;
 }
@@ -138,20 +138,20 @@ json polygonToJson(const Polygon& poly) {
 // Removes the opponent by moving the last obstacle into its slot: no other
 // entry shifts, and the array stays contiguous.
 void removeOpponent() {
-    if (planner.opponentIndex < 0) return;
-    const int last = planner.input.obstacle_count - 1;
-    if (planner.opponentIndex != last) {
-        planner.input.obstacles[planner.opponentIndex] = planner.input.obstacles[last];
+    if (state.opponentIndex < 0) return;
+    const int last = state.input.obstacle_count - 1;
+    if (state.opponentIndex != last) {
+        state.input.obstacles[state.opponentIndex] = state.input.obstacles[last];
     }
-    planner.input.obstacle_count = last;
-    planner.opponentIndex = -1;
+    state.input.obstacle_count = last;
+    state.opponentIndex = -1;
 }
 
 // Four protected rectangles, one per table corner. Each is CORNER_SIZE_X wide
 // (along x) and CORNER_SIZE_Y deep (along y), flush with the corner.
 void addCornerZones() {
-    const double halfX = planner.input.table_half_x;
-    const double halfY = planner.input.table_half_y;
+    const double halfX = state.input.table_half_x;
+    const double halfY = state.input.table_half_y;
     const struct { double x, y; } corners[4] = {
         {-1.0, -1.0}, {-1.0, 1.0}, {1.0, -1.0}, {1.0, 1.0}};
     for (const auto& c : corners) {
@@ -164,11 +164,11 @@ void addCornerZones() {
 }
 
 void rebuildObstacles() {
-    if (planner.table == nullptr) return;
-    const TableState& tableState = *planner.table;
-    const bool hadOpponent = planner.opponentIndex >= 0;
+    if (state.table == nullptr) return;
+    const TableState& tableState = *state.table;
+    const bool hadOpponent = state.opponentIndex >= 0;
     Vec opponent{0.0, 0.0};
-    if (hadOpponent) opponent = planner.input.obstacles[planner.opponentIndex].center;
+    if (hadOpponent) opponent = state.input.obstacles[state.opponentIndex].center;
 
     resetInput();
 
@@ -202,8 +202,8 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     // far less than the A* that follows.
     rebuildObstacles();
 
-    planner.input.start = Vec{start.x, start.y};
-    planner.input.goal = Vec{goal.x, goal.y};
+    state.input.start = Vec{start.x, start.y};
+    state.input.goal = Vec{goal.x, goal.y};
 
     // Plan for the heading the robot is steering towards, not the one it
     // happens to have right now. The drive controller turns towards goal.a
@@ -212,32 +212,32 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     // inflation, the path jumped to the other side of an obstacle, and the
     // robot oscillated left and right. Planning with the goal heading is the
     // one the controller is converging on, so the two no longer fight.
-    planner.input.robot = nav::rotate_polygon(buildRobotPolygon(), goal.a);
+    state.input.robot = planner::rotate_polygon(buildRobotPolygon(), goal.a);
     // inflate_polygon, not grow_polygon: the arc-sampled offset would turn the
     // 3-vertex hull into ~33 vertices and triple the planner's edge tests, and
     // rounding the corners is the opposite of what an asymmetric polygon is for.
-    planner.input.robot = nav::inflate_polygon(planner.input.robot, ROBOT_CLEARANCE);
+    state.input.robot = planner::inflate_polygon(state.input.robot, ROBOT_CLEARANCE);
 
-    planner.last = nav::plan_path(planner.input);
-    if (!planner.last.found || planner.last.point_count <= 0) {
+    state.last = planner::plan_path(state.input);
+    if (!state.last.found || state.last.point_count <= 0) {
         LOG_WARNING("Pathfinding: no path to the target");
         return 0;
     }
-    if (planner.last.point_count > PATHFIND_MAX_POINTS) {
-        LOG_WARNING("Pathfinding: path has ", planner.last.point_count, " points, too many");
+    if (state.last.point_count > PATHFIND_MAX_POINTS) {
+        LOG_WARNING("Pathfinding: path has ", state.last.point_count, " points, too many");
         return 0;
     }
 
-    for (int i = 0; i < planner.last.point_count; i++) {
-        path[i] = {planner.last.points[i].x, planner.last.points[i].y, goal.a};
+    for (int i = 0; i < state.last.point_count; i++) {
+        path[i] = {state.last.points[i].x, state.last.points[i].y, goal.a};
     }
-    path_length_mm = planner.last.length;
-    return planner.last.point_count;
+    path_length_mm = state.last.length;
+    return state.last.point_count;
 }
 
 void pathfindSetup(const TableState& tableState) {
     // Remember the table so pathfind() can rebuild from it every call.
-    planner.table = &tableState;
+    state.table = &tableState;
     rebuildObstacles();
 }
 
@@ -255,7 +255,7 @@ void pathfindUpdateOpponent(Lidar* lidar, const TableState& tableState) {
     }
 
     const Vec center{pos.x, pos.y};
-    if (planner.opponentIndex >= 0) {
+    if (state.opponentIndex >= 0) {
         moveOpponent(center);
     } else {
         addOpponent(center);
@@ -267,7 +267,7 @@ void pathfindClear() {
     // The corner protection zones belong to the table, not to the match, so
     // they are part of "an empty table".
     addCornerZones();
-    planner.last = PlanOutput{};
+    state.last = PlanOutput{};
 }
 
 void pathfindAddObstacle(position_t center, double length, double width, double angleDeg) {
@@ -280,9 +280,9 @@ void pathfindToJson(json& out) {
     // Raw obstacles, as physical objects on the table. `kind` tells the
     // opponent apart from the stones for any consumer that wants to style them.
     json obstacles = json::array();
-    for (int i = 0; i < planner.input.obstacle_count; i++) {
-        const ObstacleInput& ob = planner.input.obstacles[i];
-        const bool isOpponent = (i == planner.opponentIndex);
+    for (int i = 0; i < state.input.obstacle_count; i++) {
+        const ObstacleInput& ob = state.input.obstacles[i];
+        const bool isOpponent = (i == state.opponentIndex);
         obstacles.push_back({{"kind", isOpponent ? "opponent" : "stone"},
                              {"corners", polygonToJson(ob.poly)}});
     }
@@ -300,9 +300,9 @@ void pathfindToJson(json& out) {
     // shape per obstacle in order. The border is flagged so the frontend can
     // draw it as a thin edge instead of filling the whole table, and the
     // opponent's shape is flagged so it can be tinted.
-    std::array<Polygon, nav::kMaxShapes> shapes{};
-    const int shapeCount = nav::build_config_shapes(planner.input, shapes);
-    const int borderCount = planner.input.use_border ? 4 : 0;
+    std::array<Polygon, planner::kMaxShapes> shapes{};
+    const int shapeCount = planner::build_config_shapes(state.input, shapes);
+    const int borderCount = state.input.use_border ? 4 : 0;
     json inflated = json::array();
     for (int i = 0; i < shapeCount; i++) {
         // Shape order matches the obstacle order after the border block. The
@@ -310,7 +310,7 @@ void pathfindToJson(json& out) {
         // with no opponent (-1) a missing guard flagged a wall as the opponent.
         const int obstacleIndex = i - borderCount;
         const bool isOpponent =
-            (planner.opponentIndex >= 0 && obstacleIndex == planner.opponentIndex);
+            (state.opponentIndex >= 0 && obstacleIndex == state.opponentIndex);
         inflated.push_back({{"corners", polygonToJson(shapes[i])},
                             {"border", i < borderCount},
                             {"opponent", isOpponent}});
@@ -318,10 +318,10 @@ void pathfindToJson(json& out) {
     out["inflated"] = inflated;
 
     json path = json::array();
-    for (int i = 0; i < planner.last.point_count; i++) {
-        path.push_back({{"x", planner.last.points[i].x}, {"y", planner.last.points[i].y}});
+    for (int i = 0; i < state.last.point_count; i++) {
+        path.push_back({{"x", state.last.points[i].x}, {"y", state.last.points[i].y}});
     }
     out["path"] = path;
-    out["found"] = planner.last.found;
-    out["length_mm"] = planner.last.found ? planner.last.length : 0.0;
+    out["found"] = state.last.found;
+    out["length_mm"] = state.last.found ? state.last.length : 0.0;
 }
