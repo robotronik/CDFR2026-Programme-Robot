@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace nav {
+namespace planner {
 namespace {
 
 // Wrap an angle difference into (-pi, pi]. C++ fmod keeps the sign of its
@@ -371,4 +371,4 @@ Polygon inflate_polygon(const Polygon& poly, double margin) {
     return out;
 }
 
-} // namespace nav
+} // namespace planner

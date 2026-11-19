@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <limits>
 
-namespace nav {
+namespace planner {
 
 inline constexpr double kEps = 1e-9;
 inline constexpr double kInf = std::numeric_limits<double>::infinity();
@@ -135,4 +135,4 @@ Polygon rotate_polygon(const Polygon& poly, double deg);
 // safety margins where the arc detail would cost far more than it is worth.
 Polygon inflate_polygon(const Polygon& poly, double margin);
 
-} // namespace nav
+} // namespace planner
