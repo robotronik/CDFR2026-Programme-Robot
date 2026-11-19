@@ -13,7 +13,7 @@ NavHomeAction::NavHomeAction(TableState* tableState, RobotControl* robot, positi
 }
 
 ReturnFSM NavHomeAction::run() {
-    NavReturn res = navigation.goTo(homePos, true);
+    NavReturn res = navigation.goTo(homePos, false);
     if (res == NavReturn::Error) {
         errorManagement();
     }
