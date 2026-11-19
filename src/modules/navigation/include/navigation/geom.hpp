@@ -108,8 +108,15 @@ double distance_to_polygon(Vec p, const Polygon& poly);
 // True if p lies in the interior (boundary excluded by `tol`).
 bool point_in_polygon(Vec p, const Polygon& poly, double tol = 1e-9);
 
+// Radius of the circle traced by the robot's farthest vertex when it spins
+// about its reference point.
+double robot_rotation_radius(const Polygon& robot);
+
 // C_obs = obstacle (+) (-robot): positions of the robot reference point that
-// collide with `obstacle`. This is the exact, heading-free inflation.
+// collide with `obstacle`, with `robot` taken at its current heading. This is
+// the tight, orientation-dependent inflation: it follows the real silhouette,
+// so the planner can use gaps a circle could not. Callers must pass the robot
+// already rotated to the live heading (add any clearance themselves).
 Polygon config_obstacle(const Polygon& obstacle, const Polygon& robot);
 
 // C_obs for a circular obstacle, as a circumscribing polygon.
@@ -118,5 +125,14 @@ Polygon config_circle(Vec center, double radius, const Polygon& robot);
 // Offset a convex polygon outwards by `margin` (Minkowski sum with a disc,
 // circumscribed so the result never dips below the margin).
 Polygon grow_polygon(const Polygon& poly, double margin);
+
+// Rotate a polygon about the origin by `deg` degrees (counter-clockwise).
+Polygon rotate_polygon(const Polygon& poly, double deg);
+
+// Grow a polygon by `margin` while keeping its vertex count: each vertex is
+// pushed out along its own direction. Unlike grow_polygon this does not bridge
+// corners with arcs, so the shape stays small and cheap. Intended for small
+// safety margins where the arc detail would cost far more than it is worth.
+Polygon inflate_polygon(const Polygon& poly, double margin);
 
 } // namespace cdfr

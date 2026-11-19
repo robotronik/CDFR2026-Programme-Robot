@@ -16,7 +16,10 @@ using cdfr::PlanOutput;
 using cdfr::Polygon;
 using cdfr::Vec;
 
-constexpr double OPPONENT_RADIUS = 225.0; // 450 mm diameter
+// The opponent is approximated by an octagon inside a 400 x 400 mm footprint:
+// rounder than a square, cheaper than a circle, and the planner handles the
+// convex polygon exactly.
+constexpr double OPPONENT_SIZE = 400.0;
 
 // A stone is 110 mm wide and 320 mm long. Its stored heading is the long axis
 // measured from +x, so at 0 deg it extends 320 mm along y.
@@ -28,10 +31,10 @@ constexpr double BLOCK_WIDTH = 110.0;
 constexpr double CORNER_SIZE_X = 300.0;
 constexpr double CORNER_SIZE_Y = 200.0;
 
-// Clearance added to the exact hull. It only keeps the path off a hairline
-// contact so the controller has room to correct, nothing more: the heading is
-// fixed for a move, so there is no drift to absorb. Kept small, because the
-// sharp corners of the real polygon are what allow tight gaps.
+// Clearance added to the exact hull. The path is replanned continuously at the
+// live heading, so this does not absorb heading drift: it only keeps the path
+// off a hairline contact so the controller has room to correct. Kept small,
+// because the sharp corners of the real polygon are what allow tight gaps.
 constexpr double ROBOT_CLEARANCE = 5.0;
 
 // The robot hull in its own frame: an equilateral triangle with 400 mm sides,
@@ -39,27 +42,33 @@ constexpr double ROBOT_CLEARANCE = 5.0;
 // use the exact shape instead of a circle.
 // TODO read the real dimensions from a single source of truth.
 Polygon buildRobotPolygon() {
+    // Circumradius of an equilateral triangle of side s is s / sqrt(3).
+    constexpr double kSide = 400.0;
+    constexpr double kR = kSide / 1.7320508075688772;  // s / sqrt(3)
     const Vec hull[] = {
-        {-250.0, -125.0},
-        {150.0, -125.0},
-        {250.0, 0.0},
-        {150.0, 125.0},
-        {-250.0, 125.0},
+        {kR, 0.0},                                         // nose, forward
+        {-kR / 2.0, kSide / 2.0},                          // rear left
+        {-kR / 2.0, -kSide / 2.0},                         // rear right
     };
-    return Polygon::from_points(hull, 5);
+    return Polygon::from_points(hull, 3);
 }
 
 // Kept between calls so a new target does not rebuild the static obstacles.
 struct PlannerState {
         PlanInput input;
         PlanOutput last;
-        bool hasOpponent = false;
+        // Index of the opponent in `input.obstacles`, or -1. Stored explicitly
+        // instead of assuming it is the last slot: obstacles can be added
+        // before or after the opponent, and writing to the wrong slot silently
+        // turned a stone into the opponent (or the reverse).
+        int opponentIndex = -1;
 };
 
 PlannerState planner;
 
 void resetInput() {
     planner.input = PlanInput{};
+    planner.opponentIndex = -1;
     planner.input.robot = buildRobotPolygon();
     // The robot reference point stays inside the table, so paths never leave
     // the field.
@@ -80,18 +89,30 @@ bool addObstacle(position_t center, double length, double width, double angleDeg
     return true;
 }
 
-void addOpponent(Vec center) {
-    if (planner.input.obstacle_count >= cdfr::kMaxShapes) return;
-    ObstacleInput& slot = planner.input.obstacles[planner.input.obstacle_count++];
-    slot.kind = ObstacleKind::Circle;
-    slot.center = center;
-    slot.radius = OPPONENT_RADIUS;
-    planner.hasOpponent = true;
+Polygon buildOpponentPolygon(Vec center) {
+    constexpr double kHalf = OPPONENT_SIZE / 2.0;
+    // Half-side of the corner cut: kHalf * tan(22.5 deg).
+    constexpr double kCut = kHalf * 0.41421356237309503;
+    const Vec octagon[] = {
+        {kHalf, kCut},   {kCut, kHalf},   {-kCut, kHalf},   {-kHalf, kCut},
+        {-kHalf, -kCut}, {-kCut, -kHalf}, {kCut, -kHalf},   {kHalf, -kCut},
+    };
+    Vec moved[8];
+    for (int i = 0; i < 8; i++) moved[i] = center + octagon[i];
+    return Polygon::from_points(moved, 8);
 }
 
-// The opponent is always the last obstacle, see addOpponent().
+void addOpponent(Vec center) {
+    if (planner.input.obstacle_count >= cdfr::kMaxShapes) return;
+    ObstacleInput& slot = planner.input.obstacles[planner.input.obstacle_count];
+    slot.kind = ObstacleKind::Poly;
+    slot.poly = buildOpponentPolygon(center);
+    planner.opponentIndex = planner.input.obstacle_count++;
+}
+
 void moveOpponent(Vec center) {
-    planner.input.obstacles[planner.input.obstacle_count - 1].center = center;
+    if (planner.opponentIndex < 0) return;
+    planner.input.obstacles[planner.opponentIndex].poly = buildOpponentPolygon(center);
 }
 
 json polygonToJson(const Polygon& poly) {
@@ -102,9 +123,16 @@ json polygonToJson(const Polygon& poly) {
     return points;
 }
 
+// Removes the opponent by moving the last obstacle into its slot: no other
+// entry shifts, and the array stays contiguous.
 void removeOpponent() {
-    if (planner.input.obstacle_count > 0) planner.input.obstacle_count--;
-    planner.hasOpponent = false;
+    if (planner.opponentIndex < 0) return;
+    const int last = planner.input.obstacle_count - 1;
+    if (planner.opponentIndex != last) {
+        planner.input.obstacles[planner.opponentIndex] = planner.input.obstacles[last];
+    }
+    planner.input.obstacle_count = last;
+    planner.opponentIndex = -1;
 }
 
 } // namespace
@@ -114,6 +142,15 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
 
     planner.input.start = Vec{start.x, start.y};
     planner.input.goal = Vec{goal.x, goal.y};
+
+    // Inflation follows the heading the robot will drive with, so the exact
+    // asymmetric silhouette is used instead of a circle around it. This is what
+    // lets the robot take gaps only its nose fits through.
+    planner.input.robot = cdfr::rotate_polygon(buildRobotPolygon(), start.a);
+    // inflate_polygon, not grow_polygon: the arc-sampled offset would turn the
+    // 3-vertex hull into ~33 vertices and triple the planner's edge tests, and
+    // rounding the corners is the opposite of what an asymmetric polygon is for.
+    planner.input.robot = cdfr::inflate_polygon(planner.input.robot, ROBOT_CLEARANCE);
 
     planner.last = cdfr::plan_path(planner.input);
     if (!planner.last.found || planner.last.point_count <= 0) {
@@ -132,12 +169,26 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     return planner.last.point_count;
 }
 
-void pathfindSetup(const TableState& tableState) {
-    const bool hadOpponent = planner.hasOpponent;
-    Vec opponent{0.0, 0.0};
-    if (hadOpponent && planner.input.obstacle_count > 0) {
-        opponent = planner.input.obstacles[planner.input.obstacle_count - 1].center;
+// Four protected rectangles, one per table corner. Each is CORNER_SIZE_X wide
+// (along x) and CORNER_SIZE_Y deep (along y), flush with the corner.
+void addCornerZones() {
+    const double halfX = planner.input.table_half_x;
+    const double halfY = planner.input.table_half_y;
+    const struct { double x, y; } corners[4] = {
+        {-1.0, -1.0}, {-1.0, 1.0}, {1.0, -1.0}, {1.0, 1.0}};
+    for (const auto& c : corners) {
+        position_t zone;
+        zone.x = c.x * (halfX - CORNER_SIZE_X / 2.0);
+        zone.y = c.y * (halfY - CORNER_SIZE_Y / 2.0);
+        zone.a = 0.0;
+        addObstacle(zone, CORNER_SIZE_X, CORNER_SIZE_Y, 0.0);
     }
+}
+
+void pathfindSetup(const TableState& tableState) {
+    const bool hadOpponent = planner.opponentIndex >= 0;
+    Vec opponent{0.0, 0.0};
+    if (hadOpponent) opponent = planner.input.obstacles[planner.opponentIndex].center;
 
     resetInput();
 
@@ -146,3 +197,101 @@ void pathfindSetup(const TableState& tableState) {
         if (quarry.nb <= 0) continue;
         const bool rotated = std::fabs(quarry.pos.a - 270.0) < 1.0;
         addObstacle(quarry.pos, rotated ? 110.0 : 320.0, rotated ? 320.0 : 110.0, 0.0);
+    }
+
+    // Wall areas lie along their facing direction.
+    for (const auto& zone : tableState.wallZone) {
+        if (zone.nb <= 0) continue;
+        const bool rotated = std::fabs(zone.pos.a) > 45.0;
+        addObstacle(zone.pos, rotated ? 110.0 : 320.0, rotated ? 320.0 : 110.0, 0.0);
+    }
+
+    addCornerZones();
+
+    if (hadOpponent) addOpponent(opponent);
+}
+
+void pathfindUpdateOpponent(Lidar* lidar, const TableState& tableState) {
+    if (lidar == nullptr) return;
+
+    // The lidar pipeline already tracks the opponent, so reuse it rather than
+    // clustering the raw scan a second time.
+    const position_t pos = tableState.pos_opponent;
+    const bool known = pos.x < 2000.0; // OPPONENT_POS_UNKNOWN is (3000, 0)
+
+    if (!known) {
+        removeOpponent();
+        return;
+    }
+
+    const Vec center{pos.x, pos.y};
+    if (planner.opponentIndex >= 0) {
+        moveOpponent(center);
+    } else {
+        addOpponent(center);
+    }
+}
+
+void pathfindClear() {
+    resetInput();
+    // The corner protection zones belong to the table, not to the match, so
+    // they are part of "an empty table".
+    addCornerZones();
+    planner.last = PlanOutput{};
+}
+
+void pathfindAddObstacle(position_t center, double length, double width, double angleDeg) {
+    addObstacle(center, length, width, angleDeg);
+}
+
+void pathfindToJson(json& out) {
+    out = json::object();
+
+    // Raw obstacles, as physical objects on the table. `kind` tells the
+    // opponent apart from the stones for any consumer that wants to style them.
+    json obstacles = json::array();
+    for (int i = 0; i < planner.input.obstacle_count; i++) {
+        const ObstacleInput& ob = planner.input.obstacles[i];
+        const bool isOpponent = (i == planner.opponentIndex);
+        obstacles.push_back({{"kind", isOpponent ? "opponent" : "stone"},
+                             {"corners", polygonToJson(ob.poly)}});
+    }
+    out["obstacles"] = obstacles;
+
+    // The robot hull in its own frame, unrotated. The planner inflates a
+    // rotated copy, but the frontend places this one at `pos` and rotates it by
+    // `a` itself, so sending the rotated version would apply the heading twice.
+    out["robot"] = polygonToJson(buildRobotPolygon());
+
+    // The inflated obstacles the planner actually avoids: C_obs = O (+) (-robot).
+    // Drawn as a translucent layer to show why a path keeps its distance.
+    //
+    // build_config_shapes() emits the four table-border walls first, then one
+    // shape per obstacle in order. The border is flagged so the frontend can
+    // draw it as a thin edge instead of filling the whole table, and the
+    // opponent's shape is flagged so it can be tinted.
+    std::array<Polygon, cdfr::kMaxShapes> shapes{};
+    const int shapeCount = cdfr::build_config_shapes(planner.input, shapes);
+    const int borderCount = planner.input.use_border ? 4 : 0;
+    json inflated = json::array();
+    for (int i = 0; i < shapeCount; i++) {
+        // Shape order matches the obstacle order after the border block. The
+        // `>= 0` guard matters: for border shapes the index is negative, and
+        // with no opponent (-1) a missing guard flagged a wall as the opponent.
+        const int obstacleIndex = i - borderCount;
+        const bool isOpponent =
+            (planner.opponentIndex >= 0 && obstacleIndex == planner.opponentIndex);
+        inflated.push_back({{"corners", polygonToJson(shapes[i])},
+                            {"border", i < borderCount},
+                            {"opponent", isOpponent}});
+    }
+    out["inflated"] = inflated;
+
+    json path = json::array();
+    for (int i = 0; i < planner.last.point_count; i++) {
+        path.push_back({{"x", planner.last.points[i].x}, {"y", planner.last.points[i].y}});
+    }
+    out["path"] = path;
+    out["found"] = planner.last.found;
+    out["length_mm"] = planner.last.found ? planner.last.length : 0.0;
+}

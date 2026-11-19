@@ -137,20 +137,16 @@
             // Draw robot
             ctx.lineWidth = 4;
             ctx.strokeStyle = 'white';
+            const hull = data["pathfinding"] ? data["pathfinding"]["robot"] : null;
+            drawHeadingMargin(ctx, data["pos"]["y"], data["pos"]["x"],
+                              data["pos"]["a"], hull);
             drawRobot(ctx, data["pos"]["y"],
                             data["pos"]["x"],
                             data["pos"]["a"],
-                            data["pathfinding"] ? data["pathfinding"]["robot"] : null);
+                            hull);
 
             //Draws an arrow of the target position
             drawArrow(ctx, data["target_pos"]["y"], data["target_pos"]["x"], data["target_pos"]["a"]);
-
-            // Draw opponent
-            ctx.strokeStyle = 'white';
-            ctx.beginPath();
-            ctx.arc(data["table"]["pos_opponent"]["y"] + centerX, data["table"]["pos_opponent"]["x"] + centerY, 150, 0, Math.PI * 2);
-            ctx.closePath();
-            ctx.stroke();
 
             // Draw yellow beacons
             ctx.fillStyle = 'gold';
@@ -194,8 +190,7 @@
         function drawRobot(ctx, x, y, angleDeg, hull) {
             const angleRad = angleDeg * Math.PI / 180;
             const fallback = [
-                { x: -250, y: -125 }, { x: 150, y: -125 }, { x: 250, y: 0 },
-                { x: 150, y: 125 }, { x: -250, y: 125 }
+                { x: 230.94, y: 0 }, { x: -115.47, y: 200 }, { x: -115.47, y: -200 }
             ];
             const local = (hull && hull.length >= 3) ? hull : fallback;
 
@@ -207,6 +202,35 @@
             });
             ctx.closePath();
             ctx.stroke();
+        }
+
+        // The planner rotates the hull to the live heading and adds a small
+        // clearance. Outline it around the robot so the drawn body matches what
+        // was actually planned.
+        function drawHeadingMargin(ctx, x, y, angleDeg, hull) {
+            const local = (hull && hull.length >= 3) ? hull : null;
+            if (!local) return;
+            const margin = 5; // mm, matches ROBOT_CLEARANCE
+            const a = angleDeg * Math.PI / 180;
+            const cos = Math.cos(a), sin = Math.sin(a);
+
+            ctx.save();
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = 'rgba(120, 220, 255, 0.45)';
+            ctx.beginPath();
+            local.forEach((point, i) => {
+                // Push each hull vertex outwards along its own direction.
+                const len = Math.hypot(point.x, point.y) || 1;
+                const px0 = point.x + (point.x / len) * margin;
+                const py0 = point.y + (point.y / len) * margin;
+                const px = x + centerX + px0 * cos - py0 * sin;
+                const py = y + centerY - px0 * sin - py0 * cos;
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            });
+            ctx.closePath();
+            ctx.stroke();
+            ctx.restore();
         }
 
         // Translucent layer showing the inflated obstacles, i.e. the region the
@@ -309,27 +333,18 @@
         function drawPathfinding(pathfinding) {
             const obstacles = pathfinding["obstacles"] || [];
 
+            // Outline only, so the inflated layer and the path stay readable.
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 3;
             obstacles.forEach(ob => {
-                if (ob["kind"] === "opponent") {
-                    ctx.fillStyle = 'rgba(220, 60, 60, 0.35)';
-                    ctx.strokeStyle = 'rgba(160, 20, 20, 0.9)';
-                    ctx.beginPath();
-                    ctx.arc(ob["y"] + centerX, ob["x"] + centerY, ob["r"], 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.stroke();
-                } else {
-                    ctx.fillStyle = 'rgba(200, 90, 0, 0.55)';
-                    ctx.strokeStyle = 'rgba(120, 50, 0, 0.9)';
-                    ctx.beginPath();
-                    ob["corners"].forEach((c, i) => {
-                        const px = c["y"] + centerX;
-                        const py = c["x"] + centerY;
-                        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-                    });
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.stroke();
-                }
+                ctx.beginPath();
+                ob["corners"].forEach((c, i) => {
+                    const px = c["y"] + centerX;
+                    const py = c["x"] + centerY;
+                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                });
+                ctx.closePath();
+                ctx.stroke();
             });
 
             // Planned path, drawn on top of the obstacles.
