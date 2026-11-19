@@ -137,11 +137,18 @@
             // Draw robot
             ctx.lineWidth = 4;
             ctx.strokeStyle = 'white';
-            const hull = data["pathfinding"] ? data["pathfinding"]["robot"] : null;
-            // The planner inflates the hull at the goal heading, not the live
-            // one, so outline it there: the robot rotates towards it as it drives.
-            drawHeadingMargin(ctx, data["pos"]["y"], data["pos"]["x"],
-                              data["target_pos"]["a"], hull);
+            const pf = data["pathfinding"];
+            const hull = pf ? pf["robot"] : null;
+            // The planner uses the exact hull only when the robot barely turns;
+            // otherwise it assumes the robot may face any way and inflates by
+            // the swept radius. Draw whichever it actually used.
+            if (pf && pf["disc"]) {
+                drawSweepRadius(ctx, data["pos"]["y"], data["pos"]["x"],
+                                pf["sweep_radius_mm"]);
+            } else {
+                drawHeadingMargin(ctx, data["pos"]["y"], data["pos"]["x"],
+                                  data["target_pos"]["a"], hull);
+            }
             drawRobot(ctx, data["pos"]["y"],
                             data["pos"]["x"],
                             data["pos"]["a"],
@@ -204,6 +211,19 @@
             });
             ctx.closePath();
             ctx.stroke();
+        }
+
+        // The robot may face any way during the move, so the planner inflated
+        // the obstacles by the radius the hull sweeps. Outline that circle.
+        function drawSweepRadius(ctx, x, y, radius) {
+            ctx.save();
+            ctx.setLineDash([6, 6]);
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = 'rgba(255, 200, 120, 0.55)';
+            ctx.beginPath();
+            ctx.arc(y + centerX, x + centerY, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
         }
 
         // The planner rotates the hull to the goal heading and adds a small
