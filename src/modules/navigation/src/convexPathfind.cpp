@@ -208,8 +208,22 @@ PlanOutput plan_path(const PlanInput& input) {
     std::array<Polygon, kMaxShapes> shapes{};
     const int shape_count = build_config_shapes(input, shapes);
 
+    // If `p` sits inside a configuration obstacle the robot is already
+    // colliding there, and no path can leave it: every segment starting inside
+    // a polygon reads as blocked. Push `p` out to the nearest free point so the
+    // plan starts with the shortest route out of the obstacle.
+    //
+    // Two traps to avoid. The nearest point on the boundary lies *on* the edge,
+    // so segment tests still see it as entering the polygon -- step past it.
+    // And the nearest edge is not always escapable: the corner protection zones
+    // are flush with the table, so their outward normal points off the field.
+    // Try every edge and keep the closest exit that is actually outside all
+    // shapes.
+    constexpr double kEscapeStep = 1.0;  // mm past the boundary
+    constexpr int kEscapeTries = 256;    // clearance steps per candidate
     auto escape_if_blocked = [&](Vec p) {
         if (distance_to_set(p, shapes, shape_count) > 1e-6) return p;
+
         Vec best = p;
         double best_d = kInf;
         for (int s = 0; s < shape_count; ++s) {
@@ -221,9 +235,33 @@ PlanOutput plan_path(const PlanInput& input) {
                 const double t = den < 1e-9 ? 0.0 : std::clamp((p - a).dot(ab) / den, 0.0, 1.0);
                 const Vec q = a + ab * t;
                 const double d = dist(p, q);
-                if (d < best_d && distance_to_set(q, shapes, shape_count) > 1e-6) {
+                if (d >= best_d) continue;
+
+                // Walk out along this edge's normal until the point is clear of
+                // every shape. Borders and neighbouring zones can sit in the
+                // way, so this may take several steps.
+                const Vec n = shapes[s].normals[i];
+                Vec out = q;
+                bool escaped = false;
+                for (int k = 0; k < kEscapeTries; ++k) {
+                    out = out + n * kEscapeStep;
+                    if (distance_to_set(out, shapes, shape_count) > 1e-6) {
+                        escaped = true;
+                        break;
+                    }
+                }
+                // Prefer an exit the robot can actually occupy. The corner
+                // zones sit flush with the table, so their nearest edge leads
+                // straight off the field; a slightly longer exit inward is the
+                // one that can be driven.
+                if (!escaped) continue;
+                const bool off_table = input.use_border &&
+                    (std::fabs(out.x) > input.table_half_x ||
+                     std::fabs(out.y) > input.table_half_y);
+                if (off_table) continue;
+                if (d < best_d) {
                     best_d = d;
-                    best = q;
+                    best = out;
                 }
             }
         }

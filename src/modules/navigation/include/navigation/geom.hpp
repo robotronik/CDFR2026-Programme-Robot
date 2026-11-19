@@ -108,10 +108,6 @@ double distance_to_polygon(Vec p, const Polygon& poly);
 // True if p lies in the interior (boundary excluded by `tol`).
 bool point_in_polygon(Vec p, const Polygon& poly, double tol = 1e-9);
 
-// Radius of the circle traced by the robot's farthest vertex when it spins
-// about its reference point.
-double robot_rotation_radius(const Polygon& robot);
-
 // C_obs = obstacle (+) (-robot): positions of the robot reference point that
 // collide with `obstacle`, with `robot` taken at its current heading. This is
 // the tight, orientation-dependent inflation: it follows the real silhouette,
