@@ -11,7 +11,7 @@ class RobotControl;
 */
 class NavHomeAction : public VirtualAction {
     public:
-        NavHomeAction(TableState* tableState, RobotControl* robot);
+        NavHomeAction(TableState* tableState, RobotControl* robot, position_t homePos);
         ~NavHomeAction() override = default;
 
         ReturnFSM run() override;
@@ -24,11 +24,11 @@ class NavHomeAction : public VirtualAction {
         bool errorManagement();
         bool successManagement();
     private:
-        position_t homePos;
         TableState* tableState;
         RobotControl* robot;
         // valeur de l'action en point
         int value = 10;
+        position_t homePos;
         // Passe à true quand le retour est terminé : l'action n'est alors
         // plus candidate (available() renvoie -1) jusqu'à reset().
         bool done = false;

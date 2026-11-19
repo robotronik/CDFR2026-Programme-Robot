@@ -41,6 +41,7 @@ bool NavHomeAction::stop(){
 
 void NavHomeAction::reset(){
     done = false;
+    homePos = position_t{0, 0, 0};
 }
 
 bool NavHomeAction::available(float &reward){

@@ -52,6 +52,7 @@ public:
 
     // Function to handle the strategy
     position_t StratStartingPos() override;
+    position_t StratFinishingPos() override;
 
 private:
     // (Re)construit le pool possible_actions pour la stratégie courante
