@@ -54,6 +54,87 @@ The table border is added as four walls inflated by the robot, so the path never
 leaves the table. The four corners also carry protected zones, 300 mm along x
 and 200 mm along y, which the robot may never touch.
 
+## Known limitation: the robot does not travel along its heading
+
+The inflation above uses the hull at one heading, `goal.a`, and assumes that
+heading describes the robot for the whole move. That assumption is weaker than
+it looks, in three ways worth writing down before anyone builds on it.
+
+**1. The robot strafes.** It can translate in any direction regardless of where
+its nose points, and the planner never models the direction of travel. A
+segment is only safe if the hull clears the obstacles at *every* translation
+direction the controller might choose, and that is not checked.
+
+**2. There is no single "worst" orientation.** A common assumption is that the
+silhouette is widest at 45 deg. For this hull it is not. Measured width across
+the axis of travel for the 400 mm triangle:
+
+| heading | 0 deg | 30 deg | 45 deg | 60 deg | 90 deg |
+|---|---|---|---|---|---|
+| width (mm) | 346.4 | 400.0 | 386.4 | 346.4 | 400.0 |
+
+The maxima are at 30, 90 and 150 deg, and 45 deg is a local *minimum*. Any
+argument that reasons about "the worst heading" is shape-specific and does not
+generalise.
+
+**3. The shape is not fixed.** The robot grows when carrying stones, so the hull
+is a function of load, not just heading. `buildRobotPolygon()` is still a
+hard-coded triangle with a `TODO` about a single source of truth.
+
+### Options, if this is not good enough
+
+**A. Conservative bounding (the disc).** Inflate by the maximum reach over all
+headings and all travel directions. A disc is isotropic, so a plan made this way
+is safe for any shape, any strafe and any rotation.
+
+It is *safe*, but it is not *usable* on its own. The radius is the circumradius
+(235.9 mm with clearance), which is larger than the hull's reach in most
+directions, so goals that only the real hull fits become unreachable. Measured
+reach toward a wall against the disc radius:
+
+| heading | 0 deg | 30 deg | 45 deg | 60 deg | 75 deg | 90 deg |
+|---|---|---|---|---|---|---|
+| hull reach (mm) | 204.3 | 118.0 | 166.8 | 204.3 | 227.9 | 235.9 |
+| extra the disc demands (mm) | 31.6 | **118.0** | 69.1 | 31.6 | 8.0 | 0.0 |
+
+The overhead is not a fixed amount: it is zero when the nose already points at
+the obstacle and worst when the hull presents its narrow edge, up to 118 mm.
+That is exactly the bug that made this the wrong default -- a goal flush with a
+wall or a stone at the back of a quarry became unreachable. It was implemented
+as a fallback and then removed.
+
+So A is the correct answer to "never collide" and the wrong answer to "get
+anywhere useful". Treat it as a safety net that a real solution falls back to,
+never as the primary planner.
+
+**B. Search over (x, y, theta).** Make orientation part of the search state. Each
+segment is then inflated with the hull at its own heading, and the planner finds
+where to turn instead of being told. Handles strafing because the search does
+not assume travel along the heading. Costs roughly 8x the nodes; at 15 deg steps
+that is about 1300 against a current peak of 157, so `kMaxNodes` would need
+raising or the heading step coarsening.
+
+**C. Inflate per travel direction.** Sweep the hull over the set of directions
+the robot may translate in for a segment. Closest to the physical reality, but
+the result is not a single convex polygon, so it needs per-direction checks or a
+conservative convex hull of the union. More machinery than B for a similar
+outcome.
+
+**D. Model the real hull per load state.** Whatever the algorithm, it is only as
+good as the shape it is given. Nothing else gets more accurate until this
+exists.
+
+**Rejected: a linear heading profile along the path.** Assigning theta from
+`start.a` to `goal.a` by arc length, then re-validating, looks cheap and is
+tempting. It does not work well here: it places mid-rotation wherever the path
+happens to be halfway, it cannot correct *where* the robot turns (only report
+that the result failed), and it assumes the shape is a known function of a
+single angle, which points 1 and 3 above contradict.
+
+Recommended order if this becomes a priority: **D** first (the hull is the input
+to everything), then **B**. A is sound but costs too much reach to use as the
+main planner -- see above.
+
 ## Code layout
 
 | File | Contents |

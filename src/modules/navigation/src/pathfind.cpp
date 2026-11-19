@@ -85,7 +85,9 @@ bool addObstacle(position_t center, double length, double width, double angleDeg
     }
     ObstacleInput& slot = planner.input.obstacles[planner.input.obstacle_count++];
     slot.kind = ObstacleKind::Poly;
-    slot.poly = Polygon::rectangle(center.x, center.y, length, width, angleDeg);
+    // Polygon::rectangle takes the x extent first, and `length` is the long
+    // axis, so the block lies across y at 0 deg.
+    slot.poly = Polygon::rectangle(center.x, center.y, width, length, angleDeg);
     return true;
 }
 
@@ -196,18 +198,23 @@ void pathfindSetup(const TableState& tableState) {
 
     resetInput();
 
-    // Stones are 320 x 110. The quarry heading is the stone's real rotation, so
-    // pass it straight through: hard-coding 0 or 90 put every stone a quarter
-    // turn off from where it actually sits.
+    // Stones are 110 across and 320 long, and their stored heading is the real
+    // rotation, so it is passed straight through. Guessing the orientation from
+    // the angle put every stone a quarter turn off from where it actually sits.
     for (const auto& quarry : tableState.quarry) {
         if (quarry.nb <= 0) continue;
-        addObstacle(quarry.pos, 320.0, 110.0, quarry.pos.a);
+<<<<<<< HEAD
+        addObstacle(quarry.pos, BLOCK_LENGTH, BLOCK_WIDTH, quarry.pos.a);
+=======
+        // A stone lies across y at 0 deg: 110 wide, 320 long.
+        addObstacle(quarry.pos, BLOCK_WIDTH, BLOCK_LENGTH, quarry.pos.a);
+>>>>>>> 14d20f6 (fixup! Lie blocks across y at 0 deg)
     }
 
     // Wall areas lie along their facing direction.
     for (const auto& zone : tableState.wallZone) {
         if (zone.nb <= 0) continue;
-        addObstacle(zone.pos, 320.0, 110.0, zone.pos.a);
+        addObstacle(zone.pos, BLOCK_LENGTH, BLOCK_WIDTH, zone.pos.a);
     }
 
     addCornerZones();
