@@ -429,40 +429,47 @@ double randomRange(double lo, double hi) {
     return lo + (hi - lo) * (rand() / double(RAND_MAX));
 }
 
+// Stones stay in the central band: near the side walls or the corner
+// protection zones they seal the only corridor. Stones and the opponent are
+// allowed to overlap.
+constexpr int kStoneCount = 4;
+
 void randomizeTableAndPlan() {
-    position_t start = {0.0, 1300.0, 0.0};
-    position_t goal = {0.0, -1300.0, 0.0};
+    // The triangular robot reaches 231 mm from its reference point, so the
+    // usable area is a bit smaller than the raw table. y = 1300 would sit
+    // inside the inflated top wall and no path would ever be found.
+    position_t start = {0.0, 1200.0, 0.0};
+    position_t goal = {0.0, -1200.0, 0.0};
 
     pathfindClear();
-    for (int i = 0; i < 5; i++) {
+    for (int placed = 0; placed < kStoneCount; placed++) {
         position_t stone;
         stone.a = randomRange(0.0, 180.0);
-        // Keep the middle corridor free so a path usually exists. A 320 mm
-        // stone may be rotated, so its half-extent along x reaches 160 mm.
-        do {
-            stone.x = randomRange(-700.0, 700.0);
-        } while (std::fabs(stone.x) < 280.0);
-        stone.y = randomRange(-1000.0, 1000.0);
+        stone.x = randomRange(-260.0, 260.0);
+        stone.y = randomRange(-820.0, 820.0);
         pathfindAddObstacle(stone, 320.0, 110.0, stone.a);
     }
 
-    // The opponent is a circle, fed through the table state so the display and
-    // the planner see the same position.
+    // The opponent is a 400 mm octagon, fed through the table state so the
+    // display and the planner see the same position. It may sit on a stone.
     position_t opponent;
-    opponent.x = randomRange(-800.0, 800.0);
-    opponent.y = randomRange(-1000.0, 1000.0);
+    opponent.x = randomRange(-600.0, 600.0);
+    opponent.y = randomRange(-900.0, 900.0);
     opponent.a = 0.0;
     tableStatus.pos_opponent = opponent;
     pathfindUpdateOpponent(&lidar, tableStatus);
 
-    // The robot and its target move and turn too, so the path changes each time.
-    // The hull is convex and the planner is holonomic, so the random heading is
-    // only visual: it shows that the robot keeps its orientation while it
-    // strafes along the path.
-    start.x = randomRange(-500.0, 500.0);
-    start.a = randomRange(-180.0, 180.0);
-    goal.x = randomRange(-500.0, 500.0);
-    goal.a = randomRange(-180.0, 180.0);
+    // The robot turns too, and the planner inflates the hull at the heading it
+    // is given, so a new random heading produces a genuinely different path
+    // (and a visibly different inflation). The goal shares the heading: one
+    // plan is made for one heading, and the real robot replans as it rotates.
+    // The x range stays clear of the corner protection zones (|x| >= 450 at
+    // the table ends).
+    const double heading = randomRange(-180.0, 180.0);
+    start.x = randomRange(-380.0, 380.0);
+    start.a = heading;
+    goal.x = randomRange(-380.0, 380.0);
+    goal.a = heading;
     robot.drive.setCoordinates(start);
     robot.drive.target = goal;
 

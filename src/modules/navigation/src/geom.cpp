@@ -245,8 +245,19 @@ double circle_polygon_gap(Vec center, double radius, const Polygon& poly) {
     return closest - radius;
 }
 
+double robot_rotation_radius(const Polygon& robot) {
+    double best = 0.0;
+    for (int i = 0; i < robot.n; ++i) {
+        best = std::max(best, robot.pts[i].norm());
+    }
+    return best;
+}
+
 Polygon config_obstacle(const Polygon& obstacle, const Polygon& robot) {
     // C_obs = obstacle (+) (-robot): hull of all pairwise vertex sums.
+    //
+    // The robot is taken at its current heading, so the inflation follows the
+    // real silhouette and the planner can use gaps a circle could not.
     std::array<Vec, kMaxPolyVerts * kMaxPolyVerts> buf{};
     int count = 0;
     for (int i = 0; i < obstacle.n; ++i) {
@@ -335,6 +346,26 @@ Polygon grow_polygon(const Polygon& poly, double margin) {
             const double ang = ang_a + d * (double(j) / steps);
             out.pts[out.n++] = b + Vec{std::cos(ang), std::sin(ang)} * r;
         }
+    }
+    out.finalize();
+    return out;
+}
+
+Polygon rotate_polygon(const Polygon& poly, double deg) {
+    Polygon out;
+    for (int i = 0; i < poly.n; ++i) {
+        out.pts[out.n++] = rotate(poly.pts[i], deg);
+    }
+    out.finalize();
+    return out;
+}
+
+Polygon inflate_polygon(const Polygon& poly, double margin) {
+    Polygon out;
+    for (int i = 0; i < poly.n; ++i) {
+        const Vec v = poly.pts[i];
+        const double len = v.norm();
+        out.pts[out.n++] = len < kEps ? v : v + v * (margin / len);
     }
     out.finalize();
     return out;
