@@ -138,8 +138,10 @@
             ctx.lineWidth = 4;
             ctx.strokeStyle = 'white';
             const hull = data["pathfinding"] ? data["pathfinding"]["robot"] : null;
+            // The planner inflates the hull at the goal heading, not the live
+            // one, so outline it there: the robot rotates towards it as it drives.
             drawHeadingMargin(ctx, data["pos"]["y"], data["pos"]["x"],
-                              data["pos"]["a"], hull);
+                              data["target_pos"]["a"], hull);
             drawRobot(ctx, data["pos"]["y"],
                             data["pos"]["x"],
                             data["pos"]["a"],
@@ -204,7 +206,7 @@
             ctx.stroke();
         }
 
-        // The planner rotates the hull to the live heading and adds a small
+        // The planner rotates the hull to the goal heading and adds a small
         // clearance. Outline it around the robot so the drawn body matches what
         // was actually planned.
         function drawHeadingMargin(ctx, x, y, angleDeg, hull) {

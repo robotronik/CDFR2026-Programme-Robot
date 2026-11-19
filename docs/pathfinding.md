@@ -17,18 +17,26 @@ never used for the robot.
    does not depend on the direction of travel.
 
    It *does* depend on the robot's heading, and that is deliberate. The hull is
-   rotated to the live heading before every plan, so `C_obs` follows the real
-   asymmetric silhouette instead of a circle around it. The planner is replanned
-   continuously while driving, so each path is exact for the heading it was
-   made at.
+   rotated to the heading the robot is steering towards (`goal.a`) before every
+   plan, so `C_obs` follows the real asymmetric silhouette instead of a circle
+   around it.
+
+   Planning with `goal.a` rather than the live heading matters. The drive
+   controller turns towards `goal.a` while it follows the path, so planning from
+   the live heading made the path a function of the very angle the controller
+   was changing: a few degrees of rotation moved the inflation, the path jumped
+   to the other side of an obstacle, and the robot oscillated left and right.
+   `goal.a` is fixed for the whole move and is what the controller converges
+   on, so the planner and the controller agree.
 
    That is the whole reason for using a polygon: an asymmetric robot can take a
    gap only its nose fits through. On a corridor test the triangle passes a
-   360 mm slot nose-first but needs 420 mm sideways.
+   360 mm slot when the goal heading points it nose-first, but needs 420 mm when
+   the goal heading is sideways.
 
    The hull is grown by a small **5 mm clearance**, purely so the controller has
    room to correct against a hairline contact. It is *not* a heading margin:
-   since the path is replanned at the live heading, there is no drift to absorb.
+   the heading is fixed for the whole move, so there is no drift to absorb.
    The clearance is applied by pushing each hull vertex out along its own
    direction, which keeps the triangle sharp and at 3 vertices. Do not swap it
    for `grow_polygon`: that arc-samples every corner, turning the hull into ~33
