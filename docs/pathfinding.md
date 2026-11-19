@@ -147,10 +147,16 @@ main planner -- see above.
 The API is small:
 
 ```cpp
-pathfindSetup(tableStatus);                         // start-up, and when stones move
+pathfindSetup(tableStatus);                         // start-up: remembers the table
 pathfindUpdateOpponent(&lidar, tableStatus);        // every loop, cheap
 int n = pathfind(start, goal, path, length_mm);     // 0 means no path
 ```
+
+`pathfind()` rebuilds the stones and wall areas from the table on **every call**,
+so nothing has to notice when a quarry is emptied or a stone is dropped: picking
+a stone up simply stops it being an obstacle on the next plan. Building the
+obstacle set is a few small polygon constructions and measures far below the
+cost of the A* that follows, so there is no reason to cache it.
 
 `pathfind()` returns 0 when the goal cannot be reached; callers already treat a
 non-positive length as a failure.

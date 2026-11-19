@@ -53,10 +53,12 @@ Polygon buildRobotPolygon() {
     return Polygon::from_points(hull, 3);
 }
 
-// Kept between calls so a new target does not rebuild the static obstacles.
 struct PlannerState {
         PlanInput input;
         PlanOutput last;
+        // Table the obstacles are rebuilt from on every plan. Null until
+        // pathfindSetup() has been called.
+        const TableState* table = nullptr;
         // Index of the opponent in `input.obstacles`, or -1. Stored explicitly
         // instead of assuming it is the last slot: obstacles can be added
         // before or after the opponent, and writing to the wrong slot silently
@@ -65,6 +67,9 @@ struct PlannerState {
 };
 
 PlannerState planner;
+
+// Rebuilds the static obstacles from planner.table, carrying the opponent over.
+void rebuildObstacles();
 
 void resetInput() {
     planner.input = PlanInput{};
@@ -109,12 +114,17 @@ void addOpponent(Vec center) {
     ObstacleInput& slot = planner.input.obstacles[planner.input.obstacle_count];
     slot.kind = ObstacleKind::Poly;
     slot.poly = buildOpponentPolygon(center);
+    // rebuildObstacles() carries the opponent over by reading this back, so it
+    // has to be set for the polygon opponent too, not just circles.
+    slot.center = center;
     planner.opponentIndex = planner.input.obstacle_count++;
 }
 
 void moveOpponent(Vec center) {
     if (planner.opponentIndex < 0) return;
-    planner.input.obstacles[planner.opponentIndex].poly = buildOpponentPolygon(center);
+    ObstacleInput& slot = planner.input.obstacles[planner.opponentIndex];
+    slot.poly = buildOpponentPolygon(center);
+    slot.center = center;
 }
 
 json polygonToJson(const Polygon& poly) {
@@ -137,10 +147,60 @@ void removeOpponent() {
     planner.opponentIndex = -1;
 }
 
+// Four protected rectangles, one per table corner. Each is CORNER_SIZE_X wide
+// (along x) and CORNER_SIZE_Y deep (along y), flush with the corner.
+void addCornerZones() {
+    const double halfX = planner.input.table_half_x;
+    const double halfY = planner.input.table_half_y;
+    const struct { double x, y; } corners[4] = {
+        {-1.0, -1.0}, {-1.0, 1.0}, {1.0, -1.0}, {1.0, 1.0}};
+    for (const auto& c : corners) {
+        position_t zone;
+        zone.x = c.x * (halfX - CORNER_SIZE_X / 2.0);
+        zone.y = c.y * (halfY - CORNER_SIZE_Y / 2.0);
+        zone.a = 0.0;
+        addObstacle(zone, CORNER_SIZE_X, CORNER_SIZE_Y, 0.0);
+    }
+}
+
+void rebuildObstacles() {
+    if (planner.table == nullptr) return;
+    const TableState& tableState = *planner.table;
+    const bool hadOpponent = planner.opponentIndex >= 0;
+    Vec opponent{0.0, 0.0};
+    if (hadOpponent) opponent = planner.input.obstacles[planner.opponentIndex].center;
+
+    resetInput();
+
+    // Stones are 110 across and 320 long, and their stored heading is the real
+    // rotation, so it is passed straight through. Guessing the orientation from
+    // the angle put every stone a quarter turn off from where it actually sits.
+    for (const auto& quarry : tableState.quarry) {
+        if (quarry.nb <= 0) continue;
+        addObstacle(quarry.pos, BLOCK_LENGTH, BLOCK_WIDTH, quarry.pos.a);
+    }
+
+    // Wall areas lie along their facing direction.
+    for (const auto& zone : tableState.wallZone) {
+        if (zone.nb <= 0) continue;
+        addObstacle(zone.pos, BLOCK_LENGTH, BLOCK_WIDTH, zone.pos.a);
+    }
+
+    addCornerZones();
+
+    if (hadOpponent) addOpponent(opponent);
+}
+
 } // namespace
 
 int pathfind(position_t start, position_t goal, position_t path[], double& path_length_mm) {
     path_length_mm = 1e6;
+
+    // Rebuild the obstacles from the table on every plan. Stones are picked up
+    // and dropped, so a cached set goes stale the moment a quarry's count
+    // changes; rebuilding is a handful of small polygon constructions and costs
+    // far less than the A* that follows.
+    rebuildObstacles();
 
     planner.input.start = Vec{start.x, start.y};
     planner.input.goal = Vec{goal.x, goal.y};
@@ -175,51 +235,10 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     return planner.last.point_count;
 }
 
-// Four protected rectangles, one per table corner. Each is CORNER_SIZE_X wide
-// (along x) and CORNER_SIZE_Y deep (along y), flush with the corner.
-void addCornerZones() {
-    const double halfX = planner.input.table_half_x;
-    const double halfY = planner.input.table_half_y;
-    const struct { double x, y; } corners[4] = {
-        {-1.0, -1.0}, {-1.0, 1.0}, {1.0, -1.0}, {1.0, 1.0}};
-    for (const auto& c : corners) {
-        position_t zone;
-        zone.x = c.x * (halfX - CORNER_SIZE_X / 2.0);
-        zone.y = c.y * (halfY - CORNER_SIZE_Y / 2.0);
-        zone.a = 0.0;
-        addObstacle(zone, CORNER_SIZE_X, CORNER_SIZE_Y, 0.0);
-    }
-}
-
 void pathfindSetup(const TableState& tableState) {
-    const bool hadOpponent = planner.opponentIndex >= 0;
-    Vec opponent{0.0, 0.0};
-    if (hadOpponent) opponent = planner.input.obstacles[planner.opponentIndex].center;
-
-    resetInput();
-
-    // Stones are 110 across and 320 long, and their stored heading is the real
-    // rotation, so it is passed straight through. Guessing the orientation from
-    // the angle put every stone a quarter turn off from where it actually sits.
-    for (const auto& quarry : tableState.quarry) {
-        if (quarry.nb <= 0) continue;
-<<<<<<< HEAD
-        addObstacle(quarry.pos, BLOCK_LENGTH, BLOCK_WIDTH, quarry.pos.a);
-=======
-        // A stone lies across y at 0 deg: 110 wide, 320 long.
-        addObstacle(quarry.pos, BLOCK_WIDTH, BLOCK_LENGTH, quarry.pos.a);
->>>>>>> 14d20f6 (fixup! Lie blocks across y at 0 deg)
-    }
-
-    // Wall areas lie along their facing direction.
-    for (const auto& zone : tableState.wallZone) {
-        if (zone.nb <= 0) continue;
-        addObstacle(zone.pos, BLOCK_LENGTH, BLOCK_WIDTH, zone.pos.a);
-    }
-
-    addCornerZones();
-
-    if (hadOpponent) addOpponent(opponent);
+    // Remember the table so pathfind() can rebuild from it every call.
+    planner.table = &tableState;
+    rebuildObstacles();
 }
 
 void pathfindUpdateOpponent(Lidar* lidar, const TableState& tableState) {

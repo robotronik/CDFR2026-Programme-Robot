@@ -22,13 +22,13 @@ constexpr int PATHFIND_MAX_POINTS = 256;
 /// @return number of points written, or 0 when no path exists
 int pathfind(position_t start, position_t goal, position_t path[], double& path_length_mm);
 
-/// Rebuilds the static obstacle set (stones and wall areas) from the table.
-/// Call at start-up and whenever the map changes; the opponent is refreshed
-/// separately by pathfindUpdateOpponent().
+/// Remembers the table the obstacles are read from. Call once at start-up.
+/// pathfind() rebuilds the stones and wall areas from it on every call, so a
+/// picked-up stone stops blocking the path without any extra bookkeeping.
 void pathfindSetup(const TableState& tableState);
 
-/// Replaces the moving opponent with the closest lidar cluster. Cheap enough to
-/// run every control loop, unlike a full setup.
+/// Updates the observed opponent position. Call whenever the lidar produces a
+/// new estimate; the tracked position survives the per-call rebuild.
 void pathfindUpdateOpponent(Lidar* lidar, const TableState& tableState);
 
 /// Clears every obstacle, so the next setup starts from an empty table.
