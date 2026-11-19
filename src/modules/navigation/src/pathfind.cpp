@@ -31,10 +31,10 @@ constexpr double BLOCK_WIDTH = 110.0;
 constexpr double CORNER_SIZE_X = 300.0;
 constexpr double CORNER_SIZE_Y = 200.0;
 
-// Clearance added to the exact hull. The path is replanned continuously at the
-// live heading, so this does not absorb heading drift: it only keeps the path
-// off a hairline contact so the controller has room to correct. Kept small,
-// because the sharp corners of the real polygon are what allow tight gaps.
+// Clearance added to the exact hull. It only keeps the path off a hairline
+// contact so the controller has room to correct, nothing more: the heading is
+// fixed for a move, so there is no drift to absorb. Kept small, because the
+// sharp corners of the real polygon are what allow tight gaps.
 constexpr double ROBOT_CLEARANCE = 5.0;
 
 // The robot hull in its own frame: an equilateral triangle with 400 mm sides,
@@ -110,7 +110,10 @@ Polygon buildOpponentPolygon(Vec center) {
 }
 
 void addOpponent(Vec center) {
-    if (state.input.obstacle_count >= planner::kMaxShapes) return;
+    if (state.input.obstacle_count >= planner::kMaxShapes - 1) {
+        LOG_WARNING("Pathfinding: no room for the opponent");
+        return;
+    }
     ObstacleInput& slot = state.input.obstacles[state.input.obstacle_count];
     slot.kind = ObstacleKind::Poly;
     slot.poly = buildOpponentPolygon(center);
@@ -260,18 +263,6 @@ void pathfindUpdateOpponent(Lidar* lidar, const TableState& tableState) {
     } else {
         addOpponent(center);
     }
-}
-
-void pathfindClear() {
-    resetInput();
-    // The corner protection zones belong to the table, not to the match, so
-    // they are part of "an empty table".
-    addCornerZones();
-    state.last = PlanOutput{};
-}
-
-void pathfindAddObstacle(position_t center, double length, double width, double angleDeg) {
-    addObstacle(center, length, width, angleDeg);
 }
 
 void pathfindToJson(json& out) {
