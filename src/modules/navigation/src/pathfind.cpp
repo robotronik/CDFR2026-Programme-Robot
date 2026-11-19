@@ -143,10 +143,14 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     planner.input.start = Vec{start.x, start.y};
     planner.input.goal = Vec{goal.x, goal.y};
 
-    // Inflation follows the heading the robot will drive with, so the exact
-    // asymmetric silhouette is used instead of a circle around it. This is what
-    // lets the robot take gaps only its nose fits through.
-    planner.input.robot = cdfr::rotate_polygon(buildRobotPolygon(), start.a);
+    // Plan for the heading the robot is steering towards, not the one it
+    // happens to have right now. The drive controller turns towards goal.a
+    // while it follows the path, so planning from the live heading made the
+    // path a function of that same angle: a few degrees of rotation moved the
+    // inflation, the path jumped to the other side of an obstacle, and the
+    // robot oscillated left and right. Planning with the goal heading is the
+    // one the controller is converging on, so the two no longer fight.
+    planner.input.robot = cdfr::rotate_polygon(buildRobotPolygon(), goal.a);
     // inflate_polygon, not grow_polygon: the arc-sampled offset would turn the
     // 3-vertex hull into ~33 vertices and triple the planner's edge tests, and
     // rounding the corners is the opposite of what an asymmetric polygon is for.
