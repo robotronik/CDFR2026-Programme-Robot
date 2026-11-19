@@ -14,7 +14,7 @@
 
 #include "navigation/geom.hpp"
 
-namespace cdfr {
+namespace nav {
 
 enum class ObstacleKind : uint8_t { Poly,
                                     Circle };
@@ -60,4 +60,4 @@ PlanOutput plan_path(const PlanInput& input);
 // Returns the number of shapes written to `out`.
 int build_config_shapes(const PlanInput& input, std::array<Polygon, kMaxShapes>& out);
 
-} // namespace cdfr
+} // namespace nav

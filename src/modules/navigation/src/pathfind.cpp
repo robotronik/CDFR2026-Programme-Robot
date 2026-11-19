@@ -9,12 +9,12 @@
 
 namespace {
 
-using cdfr::ObstacleInput;
-using cdfr::ObstacleKind;
-using cdfr::PlanInput;
-using cdfr::PlanOutput;
-using cdfr::Polygon;
-using cdfr::Vec;
+using nav::ObstacleInput;
+using nav::ObstacleKind;
+using nav::PlanInput;
+using nav::PlanOutput;
+using nav::Polygon;
+using nav::Vec;
 
 // The opponent is approximated by an octagon inside a 400 x 400 mm footprint:
 // rounder than a square, cheaper than a circle, and the planner handles the
@@ -84,7 +84,7 @@ void resetInput() {
 }
 
 bool addObstacle(position_t center, double length, double width, double angleDeg) {
-    if (planner.input.obstacle_count >= cdfr::kMaxShapes - 1) {
+    if (planner.input.obstacle_count >= nav::kMaxShapes - 1) {
         LOG_WARNING("Pathfinding: too many obstacles");
         return false;
     }
@@ -110,7 +110,7 @@ Polygon buildOpponentPolygon(Vec center) {
 }
 
 void addOpponent(Vec center) {
-    if (planner.input.obstacle_count >= cdfr::kMaxShapes) return;
+    if (planner.input.obstacle_count >= nav::kMaxShapes) return;
     ObstacleInput& slot = planner.input.obstacles[planner.input.obstacle_count];
     slot.kind = ObstacleKind::Poly;
     slot.poly = buildOpponentPolygon(center);
@@ -212,13 +212,13 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     // inflation, the path jumped to the other side of an obstacle, and the
     // robot oscillated left and right. Planning with the goal heading is the
     // one the controller is converging on, so the two no longer fight.
-    planner.input.robot = cdfr::rotate_polygon(buildRobotPolygon(), goal.a);
+    planner.input.robot = nav::rotate_polygon(buildRobotPolygon(), goal.a);
     // inflate_polygon, not grow_polygon: the arc-sampled offset would turn the
     // 3-vertex hull into ~33 vertices and triple the planner's edge tests, and
     // rounding the corners is the opposite of what an asymmetric polygon is for.
-    planner.input.robot = cdfr::inflate_polygon(planner.input.robot, ROBOT_CLEARANCE);
+    planner.input.robot = nav::inflate_polygon(planner.input.robot, ROBOT_CLEARANCE);
 
-    planner.last = cdfr::plan_path(planner.input);
+    planner.last = nav::plan_path(planner.input);
     if (!planner.last.found || planner.last.point_count <= 0) {
         LOG_WARNING("Pathfinding: no path to the target");
         return 0;
@@ -300,8 +300,8 @@ void pathfindToJson(json& out) {
     // shape per obstacle in order. The border is flagged so the frontend can
     // draw it as a thin edge instead of filling the whole table, and the
     // opponent's shape is flagged so it can be tinted.
-    std::array<Polygon, cdfr::kMaxShapes> shapes{};
-    const int shapeCount = cdfr::build_config_shapes(planner.input, shapes);
+    std::array<Polygon, nav::kMaxShapes> shapes{};
+    const int shapeCount = nav::build_config_shapes(planner.input, shapes);
     const int borderCount = planner.input.use_border ? 4 : 0;
     json inflated = json::array();
     for (int i = 0; i < shapeCount; i++) {
