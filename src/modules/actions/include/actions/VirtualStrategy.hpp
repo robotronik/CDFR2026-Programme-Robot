@@ -36,6 +36,7 @@ public:
     virtual VirtualAction* bestAction() = 0;
 
     virtual position_t StratStartingPos() = 0;
+    virtual position_t StratFinishingPos() = 0;
 
     void stop(){ status = false; }
     void resume(){ status = true; }
