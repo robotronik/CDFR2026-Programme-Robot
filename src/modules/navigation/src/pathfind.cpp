@@ -83,16 +83,17 @@ void resetInput() {
     state.input.margin = 0.0;
 }
 
-bool addObstacle(position_t center, double length, double width, double angleDeg) {
+// Places a rectangle of `x_extent` by `y_extent` (before rotation) at `center`.
+// Both are full side lengths, so the caller never has to reason about which one
+// the polygon builder takes first.
+bool addObstacle(position_t center, double x_extent, double y_extent, double angleDeg) {
     if (state.input.obstacle_count >= planner::kMaxShapes - 1) {
         LOG_WARNING("Pathfinding: too many obstacles");
         return false;
     }
     ObstacleInput& slot = state.input.obstacles[state.input.obstacle_count++];
     slot.kind = ObstacleKind::Poly;
-    // Polygon::rectangle takes the x extent first, and `length` is the long
-    // axis, so the block lies across y at 0 deg.
-    slot.poly = Polygon::rectangle(center.x, center.y, width, length, angleDeg);
+    slot.poly = Polygon::rectangle(center.x, center.y, x_extent, y_extent, angleDeg);
     return true;
 }
 
@@ -180,13 +181,14 @@ void rebuildObstacles() {
     // the angle put every stone a quarter turn off from where it actually sits.
     for (const auto& quarry : tableState.quarry) {
         if (quarry.nb <= 0) continue;
-        addObstacle(quarry.pos, BLOCK_LENGTH, BLOCK_WIDTH, quarry.pos.a);
+        // A stone lies across y at 0 deg: 110 wide, 320 long.
+        addObstacle(quarry.pos, BLOCK_WIDTH, BLOCK_LENGTH, quarry.pos.a);
     }
 
     // Wall areas lie along their facing direction.
     for (const auto& zone : tableState.wallZone) {
         if (zone.nb <= 0) continue;
-        addObstacle(zone.pos, BLOCK_LENGTH, BLOCK_WIDTH, zone.pos.a);
+        addObstacle(zone.pos, BLOCK_WIDTH, BLOCK_LENGTH, zone.pos.a);
     }
 
     addCornerZones();
