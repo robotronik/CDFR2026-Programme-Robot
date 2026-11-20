@@ -219,7 +219,7 @@ int AStar::findPath(position_t start, position_t goal, std::span<position_t> pat
                 if (nodes[next].closed || weight < 0) continue;
                 if (dr && dc && (cost(row + dr, col) < 0 || cost(row, col + dc) < 0)) continue;
                 const double stepCost = current == first ? lineCost(start, cellPosition(next, goal.a))
-                                                        : SCALE * (dr && dc ? std::sqrt(2.0) : 1) * (cost(row, col) + weight) / 2.0;
+                                                         : SCALE * (dr && dc ? std::sqrt(2.0) : 1) * (cost(row, col) + weight) / 2.0;
                 const double nextG = nodes[current].g + stepCost;
                 if (nextG >= nodes[next].g) continue;
                 nodes[next].g = nextG;
