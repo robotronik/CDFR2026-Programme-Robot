@@ -8,6 +8,5 @@ RobotControl::RobotControl(Arduino* arduino)
       wall3(wall3Tab, position_t{0, 0, 0}, &actuators),
       wall4(wall4Tab, position_t{0, 0, 0}, &actuators),
       gate1(0, 0, gate1Tab, position_t{0, 0, 0}, &actuators),
-      gate2(0, 0, gate2Tab, position_t{0, 0, 0}, &actuators)
-{
+      gate2(0, 0, gate2Tab, position_t{0, 0, 0}, &actuators) {
 }

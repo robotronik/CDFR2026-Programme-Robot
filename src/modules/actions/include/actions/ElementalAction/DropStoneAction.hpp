@@ -19,17 +19,16 @@ class DropStoneAction : public VirtualAction {
         ReturnFSM run() override;
         bool stop() override;
         void reset() override;
-        bool available(float &reward) override;
+        bool available(float& reward) override;
         bool fullBlock() override;
         bool mouvementBlock() override;
-        
 
     protected:
         /*
             Error management and sucess management not used but still could bin in the future
             bool errorManagement();
         */
-        
+
     private:
         TableState* tableState;
         RobotControl* robot;
@@ -50,6 +49,4 @@ class DropStoneAction : public VirtualAction {
         DropStoneState state = DropStoneState::Moving;
         unsigned long releaseStartTime = 0;
         static constexpr unsigned long RELEASE_WAIT_MS = 200;
-
-
 };

@@ -9,16 +9,14 @@ using json = nlohmann::json;
 
 class RobotControl;
 
-class TableState
-{
+class TableState {
     public:
-
         explicit TableState(RobotControl* robot);
         ~TableState();
 
         void reset();
         int getScore();
-        
+
         /* common data */
         position_t pos_opponent;
         unsigned long startTime;
@@ -27,7 +25,7 @@ class TableState
 
         /* Cam calibration related*/
         int calibrationAge; // Age of calibration by Camera if exist
-        void resetCalibrationAge(){ calibrationAge = 0;}
+        void resetCalibrationAge() { calibrationAge = 0; }
 
         bool mastStatus = false; // True while the mast is reachable and publishing
         void updateMapStatus(const MatTableData& data); // update of tableState relative to data recived by mast

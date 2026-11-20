@@ -4,7 +4,7 @@
 #include "defs/tableState.hpp"
 #include "math.h" // round()
 
-position_t convert_from_astar(position_int_t k){
+position_t convert_from_astar(position_int_t k) {
     position_t p;
     p.x = k.x * SCALE - 1000.0;
     p.y = k.y * SCALE - 1500.0;
@@ -14,8 +14,7 @@ position_t convert_from_astar(position_int_t k){
 position_int_t astar_path[MAX_PATH_LEN];
 position_int_t smooth_path_arr[MAX_PATH_LEN];
 
-void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int RayonRobot, bool traversable = true, bool square = true)
-{
+void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int RayonRobot, bool traversable = true, bool square = true) {
     position_int_t c = convert_to_astar(position_t{cx, cy, 0.0});
     int w = (w_mm + SCALE - 1) / SCALE;
     int h = (h_mm + SCALE - 1) / SCALE;
@@ -23,13 +22,13 @@ void place_obstacle_with_margin(double cx, double cy, int w_mm, int h_mm, int Ra
     return astar_place_obstacle_with_margin(c, w, h, margin, traversable, square);
 }
 
-int pathfind(position_t start, position_t goal, position_t path[], double& path_length_mm){
+int pathfind(position_t start, position_t goal, position_t path[], double& path_length_mm) {
     //LOG_INFO("Original start : ", start.x, " / ", start.y, " goal : ", goal.x, " / ", goal.y);
     path_length_mm = 1e6; // In case of early exit
     position_int_t k_start = convert_to_astar(start);
     position_int_t k_goal = convert_to_astar(goal);
 
-    if (get_cost(k_goal) > MARGIN_COST){
+    if (get_cost(k_goal) > MARGIN_COST) {
         LOG_WARNING("Goal unreachable because of goal cost");
         return 0;
     }
@@ -48,7 +47,7 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     path_length_mm = astar_path_length(smooth_path_arr, smooth_len) * SCALE;
 
     // Convert path to position_t coordinates
-    for(int i = 0; i < smooth_len; i++){
+    for (int i = 0; i < smooth_len; i++) {
         path[i] = convert_from_astar(smooth_path_arr[i]);
         path[i].a = goal.a;
     }
@@ -58,7 +57,7 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     return smooth_len;
 }
 
-double pathfind_length_mm(position_t start, position_t goal){
+double pathfind_length_mm(position_t start, position_t goal) {
     position_int_t k_start = convert_to_astar(start);
     position_int_t k_goal = convert_to_astar(goal);
     int len = astar_pathfind(k_start, k_goal, astar_path);
@@ -69,7 +68,7 @@ double pathfind_length_mm(position_t start, position_t goal){
 
     int smooth_len = smooth_path(astar_path, len, smooth_path_arr);
     // Compute path length
-    return(astar_path_length(smooth_path_arr, smooth_len) * SCALE);
+    return (astar_path_length(smooth_path_arr, smooth_len) * SCALE);
 }
 
 void pathfind_setup(const TableState& tableState) {
@@ -94,23 +93,23 @@ void pathfind_setup(const TableState& tableState) {
     pathfind_place_border();
 }
 
-void pathfind_place_border(){
-    int RayonRobot=200; // TODO Make dynamic
+void pathfind_place_border() {
+    int RayonRobot = 200; // TODO Make dynamic
 
-    // ===== TABLE BORDER ===== 
-    place_obstacle_with_margin(    0,-1500,   50, 2000, RayonRobot, false);
-    place_obstacle_with_margin(    0, 1500,   50, 2000, RayonRobot, false);
-    place_obstacle_with_margin(-1000,    0, 3000,   50, RayonRobot, false);
-    place_obstacle_with_margin( 1000,    0, 3000,   50, RayonRobot, false);
+    // ===== TABLE BORDER =====
+    place_obstacle_with_margin(0, -1500, 50, 2000, RayonRobot, false);
+    place_obstacle_with_margin(0, 1500, 50, 2000, RayonRobot, false);
+    place_obstacle_with_margin(-1000, 0, 3000, 50, RayonRobot, false);
+    place_obstacle_with_margin(1000, 0, 3000, 50, RayonRobot, false);
 }
 
-void pathfind_fill_lidar(Lidar* lidar, const TableState& tableState){
+void pathfind_fill_lidar(Lidar* lidar, const TableState& tableState) {
     pathfind_setup(tableState);
 
     /* Place opponent on the map */
-    for (int i = 0; i < lidar->count; i++){
+    for (int i = 0; i < lidar->count; i++) {
         if (!lidar->data[i].onTable) continue;
-        place_obstacle_with_margin(lidar->data[i].x,lidar->data[i].y, 400, 400, 230, false, false);
+        place_obstacle_with_margin(lidar->data[i].x, lidar->data[i].y, 400, 400, 230, false, false);
     }
     pathfind_place_border();
 }

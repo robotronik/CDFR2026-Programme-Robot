@@ -1,9 +1,39 @@
-# Matches the existing code. Run on the files you touch: clang-format -i <file>
+# Matches the existing code (see docs/style.md). Run on the files you touch:
+# clang-format -i <file>
+#
+# Options are pinned to what the repository already does. Legacy code that
+# disagrees (e.g. missing spaces after `if`) is left alone: docs/style.md says
+# not to rewrite old code just for style.
 BasedOnStyle: LLVM
 IndentWidth: 4
 ColumnLimit: 0
+# `public:`/`private:`/`protected:` indented one level inside the class, as in
+# the actions/, defs/ and navigation/ headers.
 IndentAccessModifiers: true
 PointerAlignment: Left
 AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: WithoutElse
 SortIncludes: Never
+# `if (cond)`, `f(arg)`.
+SpaceBeforeParens: ControlStatements
+# `{0, 0, 0}`, `position_t{x, y, a}`: no padding inside braces.
+Cpp11BracedListStyle: true
+# `f() {` on the same line, `} else {` on the same line.
+BreakBeforeBraces: Custom
+BraceWrapping:
+    AfterFunction: false
+    AfterControlStatement: Never
+    AfterClass: false
+    AfterStruct: false
+    AfterEnum: false
+    BeforeElse: false
+    SplitEmptyFunction: false
+    SplitEmptyRecord: true
+    SplitEmptyNamespace: true
+# Comments are written by hand: leave their content and spacing alone.
+SpacesBeforeTrailingComments: 1
+ReflowComments: false
+# Do not align anything: the code keeps one space before a trailing comment.
+AlignTrailingComments: false
+AlignConsecutiveMacros: false
+AlignArrayOfStructures: None

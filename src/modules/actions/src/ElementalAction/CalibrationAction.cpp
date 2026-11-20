@@ -6,7 +6,7 @@
 #include "defs/constante.h"
 #include "vision/Cam.hpp" // for OFFSET_CAM_A
 
-CalibrationAction::CalibrationAction(RobotControl* robot, TableState* tableState){
+CalibrationAction::CalibrationAction(RobotControl* robot, TableState* tableState) {
     nom = "Calibration";
     duree = 1000;
     calibrationState = StateCalibration::CalcCalculation;
@@ -14,80 +14,77 @@ CalibrationAction::CalibrationAction(RobotControl* robot, TableState* tableState
     this->tableState = tableState;
 }
 
-bool CalibrationAction::stop(){
+bool CalibrationAction::stop() {
     return true;
 }
 
-void CalibrationAction::reset(){
+void CalibrationAction::reset() {
     calibrationState = StateCalibration::CalcCalculation;
 }
 
-ReturnFSM CalibrationAction::run(){
-    switch (calibrationState){
-        case StateCalibration::CalcCalculation:
-            calibrationTarget_ = calculateClosestArucoPosition(robot->drive.getPosition());
-            calibrationState = StateCalibration::CalibrationNav;
-            break;
-        case StateCalibration::CalibrationNav:
-        {
-            // Look towards the closest aruco marker to recalibrate the position
-            nav_ret = navigation.goTo(calibrationTarget_, true);
-            if (nav_ret == NavReturn::Done){
-                LOG_EXTENDED_DEBUG("FSM_CALIBRATION_NAV: Nav done");
-                if (tableState->calibrationAge){
-                    // Si calibrationAge != 0 la calibration a échoué
-                    errorManagement(NavReturn::Done);
-                    return ReturnFSM::Error;
-                }
-                return ReturnFSM::Done;
-            }
-            else if (nav_ret == NavReturn::Error){
-                errorManagement(NavReturn::Error);
+ReturnFSM CalibrationAction::run() {
+    switch (calibrationState) {
+    case StateCalibration::CalcCalculation:
+        calibrationTarget_ = calculateClosestArucoPosition(robot->drive.getPosition());
+        calibrationState = StateCalibration::CalibrationNav;
+        break;
+    case StateCalibration::CalibrationNav: {
+        // Look towards the closest aruco marker to recalibrate the position
+        nav_ret = navigation.goTo(calibrationTarget_, true);
+        if (nav_ret == NavReturn::Done) {
+            LOG_EXTENDED_DEBUG("FSM_CALIBRATION_NAV: Nav done");
+            if (tableState->calibrationAge) {
+                // Si calibrationAge != 0 la calibration a échoué
+                errorManagement(NavReturn::Done);
                 return ReturnFSM::Error;
             }
-            break;
+            return ReturnFSM::Done;
+        } else if (nav_ret == NavReturn::Error) {
+            errorManagement(NavReturn::Error);
+            return ReturnFSM::Error;
         }
+        break;
+    }
     }
     return ReturnFSM::Working;
 }
 
-bool CalibrationAction::errorManagement(NavReturn error_code){
+bool CalibrationAction::errorManagement(NavReturn error_code) {
     tableState->calibrationAge -= 1;
-    if (error_code == NavReturn::Done){
+    if (error_code == NavReturn::Done) {
         LOG_WARNING("ACTION_CALIBRATION: Failed nav to calibration action");
-    }else if (error_code == NavReturn::Error)
-    {
+    } else if (error_code == NavReturn::Error) {
         LOG_WARNING("ACTION_CALIBRATION: Failed calibration action on aruco scan");
     }
     return true;
 }
 
-bool CalibrationAction::successManagement(){
+bool CalibrationAction::successManagement() {
     LOG_GREEN_INFO("ACTION_CALIBRATION: calibration on aruco tag sucess");
     return true;
 }
 
-bool CalibrationAction::available(float &reward){
+bool CalibrationAction::available(float& reward) {
     reward = duree;
     return true;
 }
 
-bool CalibrationAction::fullBlock(){
+bool CalibrationAction::fullBlock() {
     return true;
 }
 
-bool CalibrationAction::mouvementBlock(){
+bool CalibrationAction::mouvementBlock() {
     return true;
 }
 
 // Return the closest position to look at an aruco marker
-position_t CalibrationAction::calculateClosestArucoPosition(position_t currentPos){
+position_t CalibrationAction::calculateClosestArucoPosition(position_t currentPos) {
     position_t outPos = currentPos;
     position_t closestPos = ARUCO_POSITIONS_TABLE[0];
     double minDistance = position_distance(currentPos, ARUCO_POSITIONS_TABLE[0]);
-    for (int i = 1; i < 4; i++){
+    for (int i = 1; i < 4; i++) {
         double d = position_distance(currentPos, ARUCO_POSITIONS_TABLE[i]);
-        if (d < minDistance){
+        if (d < minDistance) {
             minDistance = d;
             closestPos = ARUCO_POSITIONS_TABLE[i];
         }
@@ -96,15 +93,15 @@ position_t CalibrationAction::calculateClosestArucoPosition(position_t currentPo
     const double target_distance_min = 350.0; // mm
     const double target_distance_max = 550.0; // mm
 
-    if (minDistance < target_distance_min || minDistance > target_distance_max){
+    if (minDistance < target_distance_min || minDistance > target_distance_max) {
         LOG_WARNING("Not in valid range, moving to preset position");
         // Calculate the closest valid position using predetermined pos
         outPos = ARUCO_CALIB_POSITIONS[0];
         double minTargetDistance = 1e6;
-        for (int i = 0; i < ARUCO_CALIB_POSITIONS_COUNT; i++){
+        for (int i = 0; i < ARUCO_CALIB_POSITIONS_COUNT; i++) {
             // Blue side
             double d = position_distance(currentPos, ARUCO_CALIB_POSITIONS[i]);
-            if (d < minTargetDistance){
+            if (d < minTargetDistance) {
                 minTargetDistance = d;
                 outPos = ARUCO_CALIB_POSITIONS[i];
             }
@@ -112,13 +109,12 @@ position_t CalibrationAction::calculateClosestArucoPosition(position_t currentPo
             position_t mirroredPos = ARUCO_CALIB_POSITIONS[i];
             mirroredPos.y = -mirroredPos.y;
             d = position_distance(currentPos, mirroredPos);
-            if (d < minTargetDistance){
+            if (d < minTargetDistance) {
                 minTargetDistance = d;
                 outPos = mirroredPos;
             }
         }
-    }
-    else {
+    } else {
         LOG_DEBUG("Good distance → no movement");
     }
     outPos.a = RAD_TO_DEG * position_angle(outPos, closestPos) + OFFSET_CAM_A;

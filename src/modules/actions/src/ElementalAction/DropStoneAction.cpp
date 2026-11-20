@@ -3,48 +3,45 @@
 #include "utils/utils.h"
 #include <cmath>
 
-
 //#include "utils/logger.hpp"
 
 DropStoneAction::DropStoneAction(TableState* tableState, RobotControl* robot)
-    : tableState(tableState), robot(robot) 
-{
+    : tableState(tableState), robot(robot) {
     this->nom = "DropStone";
     reset();
 }
 
 ReturnFSM DropStoneAction::run() {
     switch (state) {
-        case DropStoneState::Moving:
-            {
-            NavReturn nav_result = navigation.goTo(target, true);
-            if(nav_result == NavReturn::Done) {
-                stop();
-                if (!robot->actuators.setElectroState(true, PUMP_2_NUM)) return ReturnFSM::Error;
-                if (!selected_face->wDrop()) return ReturnFSM::Error;
-                releaseStartTime = _millis();
-                state = DropStoneState::Releasing;
-            }else if (nav_result == NavReturn::Error) {
-                LOG_ERROR("Drop Error");
-                reset();
-                return ReturnFSM::Error;
-            }
-            break;
-            }
-        case DropStoneState::Releasing:
-            // Wait for the release to complete
-            if (_millis() - releaseStartTime >= RELEASE_WAIT_MS) {
-                if (!robot->actuators.setElectroState(false, PUMP_2_NUM)) break;
-                successManagement();
-                LOG_GREEN_INFO("Drop Success");
-                return ReturnFSM::Done;
-            }
-            break;
+    case DropStoneState::Moving: {
+        NavReturn nav_result = navigation.goTo(target, true);
+        if (nav_result == NavReturn::Done) {
+            stop();
+            if (!robot->actuators.setElectroState(true, PUMP_2_NUM)) return ReturnFSM::Error;
+            if (!selected_face->wDrop()) return ReturnFSM::Error;
+            releaseStartTime = _millis();
+            state = DropStoneState::Releasing;
+        } else if (nav_result == NavReturn::Error) {
+            LOG_ERROR("Drop Error");
+            reset();
+            return ReturnFSM::Error;
+        }
+        break;
+    }
+    case DropStoneState::Releasing:
+        // Wait for the release to complete
+        if (_millis() - releaseStartTime >= RELEASE_WAIT_MS) {
+            if (!robot->actuators.setElectroState(false, PUMP_2_NUM)) break;
+            successManagement();
+            LOG_GREEN_INFO("Drop Success");
+            return ReturnFSM::Done;
+        }
+        break;
     }
     return ReturnFSM::Working;
 }
 
-bool DropStoneAction::successManagement(){
+bool DropStoneAction::successManagement() {
     selected_face->stones = 0;
     selected_zone->nb = 3;
     return true;
@@ -61,18 +58,18 @@ void DropStoneAction::reset() {
     releaseStartTime = 0;
     target = {0, 0, 0};
     best_path_length = INFINITY;
-    selected_face = &robot->wall1;// TODO implement a way to chose face
+    selected_face = &robot->wall1; // TODO implement a way to chose face
     selected_zone = nullptr;
 }
 
-bool DropStoneAction::available(float &reward) {
+bool DropStoneAction::available(float& reward) {
     reset();
-    if(selected_face->stones == 0) return false;
+    if (selected_face->stones == 0) return false;
     if (getBestConstructionZone()) {
         toBestConstructionPosition();
-        reward = (float)static_cast<int>(ConstructionType::Wall)/best_path_length;
+        reward = (float)static_cast<int>(ConstructionType::Wall) / best_path_length;
         return true;
-    }else{
+    } else {
         reward = 0.0f;
         return false;
     }
@@ -88,17 +85,17 @@ bool DropStoneAction::mouvementBlock() {
     return true;
 }
 
-bool DropStoneAction::getBestConstructionZone(){
+bool DropStoneAction::getBestConstructionZone() {
     // TODO check if the robot carries stones to drop
     if (!tableState->remainEmptyWall()) return false;
-    if(!tableState->needWall()) return false;
+    if (!tableState->needWall()) return false;
     position_t robot_pos = robot->drive.getPosition();
     selected_zone = nullptr;
 
     best_path_length = INFINITY;
     position_t path[1024];
     const int side = tableState->colorTeam == ColorTeam::Blue ? 1 : -1;
-    for(int i = 0; i < WALL_ZONE_COUNT; i++) {
+    for (int i = 0; i < WALL_ZONE_COUNT; i++) {
         wallZone_t* zone = &tableState->wallZone[i];
         if (zone->nb != 0 || zone->colorTeam != tableState->colorTeam) continue;
 
@@ -111,13 +108,13 @@ bool DropStoneAction::getBestConstructionZone(){
             best_path_length = zone_path_length;
         }
     }
-    if(selected_zone != nullptr){
+    if (selected_zone != nullptr) {
         target = selected_zone->pos;
     }
     return selected_zone != nullptr;
 }
 
-bool DropStoneAction::toBestConstructionPosition(){
+bool DropStoneAction::toBestConstructionPosition() {
     // TODO change for proper offset depending on actuator
     // TODO 2 placement in area should be more dependent on strategy and not fix
     target.a = target.a - selected_face->getOffset().a;

@@ -22,13 +22,14 @@ class GoToPositionAction : public VirtualAction {
         ReturnFSM run() override;
         bool stop() override;
         void reset() override;
-        bool available(float &reward) override;
+        bool available(float& reward) override;
         bool fullBlock() override;
         bool mouvementBlock() override;
 
     protected:
         bool errorManagement();
         bool successManagement();
+
     private:
         // Désigne, parmi les éléments de jeu mémorisés dans tableState, le plus
         // proche de `from`. Renseigne `target` et renvoie false si aucun

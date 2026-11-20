@@ -6,16 +6,14 @@
 #include "navigation/pathfind.h"
 
 GoToPositionAction::GoToPositionAction(const std::string& name, position_t target, RobotControl* robot)
-    : target(target), robot(robot), moving(false)
-{
+    : target(target), robot(robot), moving(false) {
     nom = name;
     value = 100;
     duree = 20; // durée estimée, à ajuster
 }
 
 GoToPositionAction::GoToPositionAction(const std::string& name, TableState* tableState, RobotControl* robot)
-    : target({0, 0, 0}), robot(robot), tableState(tableState), needsTarget(true), moving(false)
-{
+    : target({0, 0, 0}), robot(robot), tableState(tableState), needsTarget(true), moving(false) {
     nom = name;
     value = 100;
     duree = 20; // durée estimée, à ajuster
@@ -44,7 +42,7 @@ bool GoToPositionAction::getClosestElement(const position_t& from, position_t& t
     return true;
 }
 
-bool GoToPositionAction::resolveTarget(){
+bool GoToPositionAction::resolveTarget() {
     if (!needsTarget) {
         return true; // cible fixe, ou déjà résolue pour cette exécution
     }
@@ -55,8 +53,8 @@ bool GoToPositionAction::resolveTarget(){
     return true;
 }
 
-ReturnFSM GoToPositionAction::run(){
-    if (!resolveTarget()){
+ReturnFSM GoToPositionAction::run() {
+    if (!resolveTarget()) {
         LOG_WARNING("GoToPositionAction: aucun élément de jeu connu pour ", nom.c_str());
         return ReturnFSM::Error;
     }
@@ -64,51 +62,51 @@ ReturnFSM GoToPositionAction::run(){
     NavReturn res = navigation.goTo(target, true);
 
     switch (res) {
-        case NavReturn::Paused:
-            LOG_DEBUG("GoToPositionAction: nav is paused");
-            moving = false;
-            break;
-        case NavReturn::Error:
-            errorManagement();
-            return ReturnFSM::Error;
-        case NavReturn::Done:
-            successManagement();
-            return ReturnFSM::Done;
-        case NavReturn::InProcess:
-            moving = true;
-            break;
+    case NavReturn::Paused:
+        LOG_DEBUG("GoToPositionAction: nav is paused");
+        moving = false;
+        break;
+    case NavReturn::Error:
+        errorManagement();
+        return ReturnFSM::Error;
+    case NavReturn::Done:
+        successManagement();
+        return ReturnFSM::Done;
+    case NavReturn::InProcess:
+        moving = true;
+        break;
     }
     return ReturnFSM::Working;
 }
 
-bool GoToPositionAction::errorManagement(){
+bool GoToPositionAction::errorManagement() {
     LOG_ERROR("GoToPositionAction: erreur de navigation vers ", nom.c_str());
     reset();
     return true;
 }
 
-bool GoToPositionAction::successManagement(){
+bool GoToPositionAction::successManagement() {
     LOG_GREEN_INFO("GoToPositionAction: arrivé à ", nom.c_str());
     moving = false;
     done = true;
     return true;
 }
 
-bool GoToPositionAction::stop(){
-    if(moving){
+bool GoToPositionAction::stop() {
+    if (moving) {
         robot->drive.stopMotion();
         moving = false;
     }
     return true;
 }
 
-void GoToPositionAction::reset(){
+void GoToPositionAction::reset() {
     stop();
-    done = false;                  // l'action redevient candidate
+    done = false; // l'action redevient candidate
     needsTarget = (tableState != nullptr); // re-cible l'élément le plus proche
 }
 
-bool GoToPositionAction::available(float &reward){
+bool GoToPositionAction::available(float& reward) {
     // Déplacement déjà terminé (succès ou échec) : plus candidate tant
     // qu'elle n'a pas été réarmée par reset().
     if (done) return false;
@@ -116,17 +114,17 @@ bool GoToPositionAction::available(float &reward){
     if (!resolveTarget()) return false;
     double path_length_mm;
     position_t path[1024]; // Assuming a maximum path length
-    if(!pathfind(robot->drive.getPosition(), target, path, path_length_mm)){
+    if (!pathfind(robot->drive.getPosition(), target, path, path_length_mm)) {
         return false;
     }
-    reward = value/path_length_mm;
+    reward = value / path_length_mm;
     return true;
 }
 
-bool GoToPositionAction::fullBlock(){
+bool GoToPositionAction::fullBlock() {
     return false;
 }
 
-bool GoToPositionAction::mouvementBlock(){
+bool GoToPositionAction::mouvementBlock() {
     return moving;
 }

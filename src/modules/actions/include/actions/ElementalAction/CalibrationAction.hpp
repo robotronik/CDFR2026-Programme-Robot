@@ -19,7 +19,7 @@ class CalibrationAction : public VirtualAction {
         ReturnFSM run() override;
         bool stop() override;
         void reset() override;
-        bool available(float &reward) override;
+        bool available(float& reward) override;
         bool fullBlock() override;
         bool mouvementBlock() override;
 
@@ -28,8 +28,7 @@ class CalibrationAction : public VirtualAction {
         bool successManagement();
 
     private:
-        enum class StateCalibration
-        {
+        enum class StateCalibration {
             CalcCalculation,
             CalibrationNav,
         };

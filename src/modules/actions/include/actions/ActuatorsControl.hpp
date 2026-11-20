@@ -20,18 +20,19 @@ class ActuatorsControl {
         DriveControl* drive;
 };
 
-class Wall{
+class Wall {
     public:
         Wall(int idx[3], position_t offset, ActuatorsControl* actuator)
-        : actuator(actuator), offset(offset){ // Modifier la synthaxe
-            pumpIdx[0] = idx[0]; 
+            : actuator(actuator), offset(offset) { // Modifier la synthaxe
+            pumpIdx[0] = idx[0];
             pumpIdx[1] = idx[1];
             pumpIdx[2] = idx[2];
         };
-        int stones=0; // number of stones on the face
+        int stones = 0; // number of stones on the face
         bool wDrop();
         bool wTake();
         position_t getOffset() const { return offset; }
+
     protected:
         int pumpIdx[3]; // index of the pump for the face
         ActuatorsControl* actuator;
@@ -39,24 +40,25 @@ class Wall{
 };
 
 class Tower : public Wall {
-    public: 
-        Tower(int idxS, int idx[3], position_t offset, ActuatorsControl* actuator) 
+    public:
+        Tower(int idxS, int idx[3], position_t offset, ActuatorsControl* actuator)
             : Wall(idx, offset, actuator) {
             servo = idxS;
         };
         bool tDrop(int idx);
-        bool rotate(bool dir); 
+        bool rotate(bool dir);
+
     protected:
         int servo;
-        
 };
 
 class Gate : public Tower {
     private:
         int servoD;
+
     public:
-        Gate(int idxSD, int idxS, int idx[3], position_t offset, ActuatorsControl* actuator) 
-            : Tower (idxS, idx, offset, actuator) {
+        Gate(int idxSD, int idxS, int idx[3], position_t offset, ActuatorsControl* actuator)
+            : Tower(idxS, idx, offset, actuator) {
             servoD = idxSD;
         };
         bool gDrop();

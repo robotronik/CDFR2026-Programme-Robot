@@ -22,14 +22,14 @@
     mesure qu'elles deviennent la plus prioritaire.
 */
 
-ExempleStrat::ExempleStrat(TableState* ts, RobotControl* rc){
+ExempleStrat::ExempleStrat(TableState* ts, RobotControl* rc) {
     nom = "ExempleStrat";
     tableStatus = ts;
     robot = rc;
     reset();
 }
 
-position_t ExempleStrat::StratStartingPos(){
+position_t ExempleStrat::StratStartingPos() {
     // Returns the starting position of the robot
     position_t pos = START_POSITION;
 
@@ -39,17 +39,17 @@ position_t ExempleStrat::StratStartingPos(){
     return pos;
 }
 
-position_t ExempleStrat::StratFinishingPos(){
+position_t ExempleStrat::StratFinishingPos() {
     // Returns the finishing position of the robot
     position_t pos = FINAL_POSITION;
 
     if (tableStatus->colorTeam == ColorTeam::Yellow)
         position_robot_flip(pos);
-        
+
     return pos;
 }
 
-void ExempleStrat::reset(){
+void ExempleStrat::reset() {
     possible_actions.clear();
     running_actions.clear();
     buildPossibleActions();
@@ -68,12 +68,12 @@ void ExempleStrat::reset(){
     est disponible (cf. calcul du score plus bas).
 
 */
-void ExempleStrat::buildPossibleActions(){
+void ExempleStrat::buildPossibleActions() {
 
-    auto addAction = [this](float weight, std::unique_ptr<VirtualAction> action){
+    auto addAction = [this](float weight, std::unique_ptr<VirtualAction> action) {
         std::string key = action->getNom();
         auto result = possible_actions.emplace(key, std::make_pair(weight, std::move(action)));
-        if (!result.second){
+        if (!result.second) {
             // emplace() ne remplace pas si la clé existe déjà : deux
             // actions avec le même nom écraseraient silencieusement l'une
             // l'autre sinon.
@@ -91,16 +91,16 @@ void ExempleStrat::buildPossibleActions(){
     addAction(1.0f, std::make_unique<TakeStone>(tableStatus, robot));
 }
 
-VirtualAction* ExempleStrat::tempAction(){
+VirtualAction* ExempleStrat::tempAction() {
     return waitAction.get();
 }
 
-VirtualAction* ExempleStrat::bestAction(){
-    if (!status){
+VirtualAction* ExempleStrat::bestAction() {
+    if (!status) {
         return nullptr;
     }
 
-    if (possible_actions.empty()){
+    if (possible_actions.empty()) {
         LOG_WARNING("ExempleStrat: plus d'action disponible dans le pool");
         return nullptr;
     }
@@ -108,21 +108,21 @@ VirtualAction* ExempleStrat::bestAction(){
     std::string bestKey;
     float bestScore = -1.0f;
 
-    for (const auto& [key, weightedAction] : possible_actions){
+    for (const auto& [key, weightedAction] : possible_actions) {
         float reward;
         bool available = weightedAction.second->available(reward);
-        if (!available){
-            //LOG_WARNING("ExempleStrat: sélection de l'action ", key.c_str(), " impossible");    
+        if (!available) {
+            //LOG_WARNING("ExempleStrat: sélection de l'action ", key.c_str(), " impossible");
             continue; // action non disponible
         }
         float score = weightedAction.first * reward;
-        if (score > bestScore){
+        if (score > bestScore) {
             bestScore = score;
             bestKey = key;
         }
     }
 
-    if (bestKey.empty()){
+    if (bestKey.empty()) {
         return nullptr;
     }
 
