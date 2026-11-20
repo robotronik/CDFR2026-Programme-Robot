@@ -34,6 +34,7 @@ BraceWrapping:
 SpacesBeforeTrailingComments: 1
 ReflowComments: false
 # Do not align anything: the code keeps one space before a trailing comment.
-AlignTrailingComments: false
+AlignTrailingComments:
+    Kind: Leave
 AlignConsecutiveMacros: false
 AlignArrayOfStructures: None
