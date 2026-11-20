@@ -47,8 +47,12 @@ void NavHomeAction::reset(){
 bool NavHomeAction::available(float &reward){
     // Retour déjà effectué : plus candidate tant qu'elle n'a pas été réarmée.
     if (done) return false;
+    if (_millis() - tableState->startTime < 90000) return false;
     double path_length_mm;
     position_t path[1024];
+    LOG_INFO("position du robot x=%lf, y=%lf, a=%lf, position homePos x=%lf y=%lf a=%lf",
+         robot->drive.getPosition().x, robot->drive.getPosition().y, robot->drive.getPosition().a, 
+         homePos.x, homePos.y, homePos.a);
     if(!pathfind(robot->drive.getPosition(), homePos, path, path_length_mm)){
         return false;
     }
