@@ -256,8 +256,8 @@ PlanOutput plan_path(const PlanInput& input) {
                 // one that can be driven.
                 if (!escaped) continue;
                 const bool off_table = input.use_border &&
-                    (std::fabs(out.x) > input.table_half_x ||
-                     std::fabs(out.y) > input.table_half_y);
+                                       (std::fabs(out.x) > input.table_half_x ||
+                                        std::fabs(out.y) > input.table_half_y);
                 if (off_table) continue;
                 if (d < best_d) {
                     best_d = d;
