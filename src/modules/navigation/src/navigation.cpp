@@ -95,14 +95,14 @@ void Navigation::pathJson(json& j){
 }
 
 void Navigation::opponentDetection(){
-    bool isCloseToEnnemy = false;
+    bool isCloseToOpponent = false;
     // Check if the opponent is in the way
-    isCloseToEnnemy = opponent_is_close(tableStatus->pos_opponent, robot->drive.position, 800); // If opponent is closer than 800mm, we consider it close and activate slow mode
+    isCloseToOpponent = opponent_is_close(tableStatus->pos_opponent, robot->drive.position, 800); // If opponent is closer than 800mm, we consider it close and activate slow mode
 
-    if (isCloseToEnnemy && !forced_slow_mode){
+    if (isCloseToOpponent && !forced_slow_mode){
         LOG_WARNING("Opponent is close to us, activating slow mode");
         forced_slow_mode = true;
-    }else if (!isCloseToEnnemy && forced_slow_mode){
+    }else if (!isCloseToOpponent && forced_slow_mode){
         LOG_WARNING("Opponent is no longer close to us, deactivating slow mode");
         forced_slow_mode = false;
     }
