@@ -83,7 +83,7 @@ void ExempleStrat::buildPossibleActions(){
 
     //addAction(0.0f, std::make_unique<WaitAction>(400));
     //addAction(1.0f, std::make_unique<CalibrationAction>(robot, tableStatus));
-    addAction(0.1f, std::make_unique<NavHomeAction>(tableStatus, robot, StratFinishingPos()));
+    addAction(0.5f, std::make_unique<NavHomeAction>(tableStatus, robot, StratFinishingPos()));
     // Cible dynamique : l'élément de jeu le plus proche connu de tableStatus,
     // fixé au démarrage de l'action (cf. GoToPositionAction::getClosestElement()).
     //addAction(0.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, robot));
@@ -112,7 +112,7 @@ VirtualAction* ExempleStrat::bestAction(){
         float reward;
         bool available = weightedAction.second->available(reward);
         if (!available){
-            LOG_WARNING("ExempleStrat: sélection de l'action ", key.c_str(), " impossible");    
+            //LOG_WARNING("ExempleStrat: sélection de l'action ", key.c_str(), " impossible");    
             continue; // action non disponible
         }
         float score = weightedAction.first * reward;
