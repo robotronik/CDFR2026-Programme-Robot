@@ -24,7 +24,7 @@ class GoToPositionAction : public VirtualAction {
         void reset() override;
         bool available(float& reward) override;
         bool fullBlock() override;
-        bool mouvementBlock() override;
+        bool movementBlock() override;
 
     protected:
         bool errorManagement();

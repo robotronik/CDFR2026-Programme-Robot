@@ -65,6 +65,6 @@ bool NavHomeAction::fullBlock() {
     return true;
 }
 
-bool NavHomeAction::mouvementBlock() {
+bool NavHomeAction::movementBlock() {
     return true;
 }

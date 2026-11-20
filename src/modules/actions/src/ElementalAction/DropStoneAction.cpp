@@ -80,7 +80,7 @@ bool DropStoneAction::fullBlock() {
     return true;
 }
 
-bool DropStoneAction::mouvementBlock() {
+bool DropStoneAction::movementBlock() {
     // Implementation for checking if the stone drop action is a movement block
     return true;
 }

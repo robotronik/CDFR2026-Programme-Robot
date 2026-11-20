@@ -57,20 +57,6 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     return smooth_len;
 }
 
-double pathfind_length_mm(position_t start, position_t goal) {
-    position_int_t k_start = convert_to_astar(start);
-    position_int_t k_goal = convert_to_astar(goal);
-    int len = astar_pathfind(k_start, k_goal, astar_path);
-    if (len <= 0) {
-        LOG_WARNING("Unreachable");
-        return 1e6; //Big
-    }
-
-    int smooth_len = smooth_path(astar_path, len, smooth_path_arr);
-    // Compute path length
-    return (astar_path_length(smooth_path_arr, smooth_len) * SCALE);
-}
-
 void pathfind_setup(const TableState& tableState) {
     astar_initialize_costmap();
     // Stones : 110 mm sur X et 320 mm sur Y, inverses pour les stones du milieu.

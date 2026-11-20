@@ -125,6 +125,6 @@ bool GoToPositionAction::fullBlock() {
     return false;
 }
 
-bool GoToPositionAction::mouvementBlock() {
+bool GoToPositionAction::movementBlock() {
     return moving;
 }

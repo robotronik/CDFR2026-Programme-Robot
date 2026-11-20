@@ -73,7 +73,7 @@ bool CalibrationAction::fullBlock() {
     return true;
 }
 
-bool CalibrationAction::mouvementBlock() {
+bool CalibrationAction::movementBlock() {
     return true;
 }
 

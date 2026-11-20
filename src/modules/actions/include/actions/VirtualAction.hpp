@@ -39,7 +39,7 @@ public:
     /*Return true if the action blocks the execution of all other actions, false otherwise*/
     virtual bool fullBlock() = 0;
     /*Return true if the action blocks the execution of movement actions, false otherwise*/
-    virtual bool mouvementBlock() = 0;
+    virtual bool movementBlock() = 0;
 
 
     const std::string& getNom() const {

@@ -65,7 +65,7 @@ float TakeStone::getBestQuarry(const position_t& from) {
     return -1;
 }
 
-//TODO ajouter offset de 5.5cm du bloc fait
+// TODO add the 5.5 cm offset of the stone
 
 position_t TakeStone::RobotTakeOffset(const position_t stone, const position_t& from) const {
     const int offsetStone = -150; //offset a regler
@@ -113,7 +113,7 @@ int TakeStone::BestPositionToTake(const position_t& stone, position_t targets[2]
 }
 
 float TakeStone::BestTake(const position_t& from) {
-    return getBestQuarry(from); //TODO ajouter le vole des bloques ou la recuperation des bloques hors carriere
+    return getBestQuarry(from); // TODO also handle stealing stones, or picking stones up from outside a quarry
 }
 
 ReturnFSM TakeStone::run() {
@@ -213,6 +213,6 @@ bool TakeStone::fullBlock() {
     return false;
 }
 
-bool TakeStone::mouvementBlock() {
+bool TakeStone::movementBlock() {
     return true; //the action always blocks the movement of the opponent
 }

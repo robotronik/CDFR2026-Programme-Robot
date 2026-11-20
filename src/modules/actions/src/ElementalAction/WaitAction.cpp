@@ -46,6 +46,6 @@ bool WaitAction::fullBlock(){
     return false;
 }
 
-bool WaitAction::mouvementBlock(){
+bool WaitAction::movementBlock(){
     return false;
 }
