@@ -7,13 +7,12 @@
 #include <vector>
 
 #include <opencv2/core.hpp>
+#include <opencv2/objdetect/aruco_detector.hpp>
 #include <opencv2/videoio.hpp>
 
 #ifdef CAMERA_USE_LIBCAMERA
 #  include "vision/LibcameraCamera.hpp"
 #endif
-
-#include <opencv2/objdetect/aruco_detector.hpp>
 
 namespace vision {
 

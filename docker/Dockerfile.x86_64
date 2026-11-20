@@ -4,7 +4,9 @@
 # OpenCV: install only the runtime libraries of the modules the code uses, then
 # unpack just the headers and .so links from their -dev packages. libopencv-dev
 # pulls every module (VTK, Qt, ...), and even the module -dev packages pull
-# highgui, Qt5, mesa and the FFmpeg -dev packages (~130 MB).
+# highgui, Qt5, mesa and the FFmpeg -dev packages (~130 MB). flann is listed even
+# though nothing links it, because features2d.hpp includes flann/miniflann.hpp
+# and only the flann -dev package ships those headers.
 
 FROM debian:trixie-slim
 
@@ -39,7 +41,8 @@ RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
         libopencv-features2d-dev \
         libopencv-flann-dev \
         libopencv-objdetect-dev \
-    && for d in libopencv-*-dev_*_amd64.deb; do dpkg-deb --fsys-tarfile "$d" | tar -x -C / --wildcards './usr/include/*' './usr/lib/*/*.so'; done
+    && for d in libopencv-*-dev_*_amd64.deb; do dpkg-deb --fsys-tarfile "$d" | tar -x -C / --wildcards './usr/include/*' './usr/lib/*/*.so'; done \
+    && test -L /usr/lib/*/libopencv_core.so
 
 # External robot repositories: drive/protocol headers used at compile time.
 # Baked into the image so the build is self-contained.

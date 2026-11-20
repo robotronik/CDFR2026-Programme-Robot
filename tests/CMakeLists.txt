@@ -19,6 +19,6 @@ foreach(group log lidar mat aruco features)
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     )
 endforeach()
-# TODO: these fail on main already, so a failure counts as a pass (still run and logged).
-# Once one is fixed it "fails" in CI: fix it, then remove it from this line.
+# TODO: lidar fails on main already, so a failure counts as a pass (still run and logged).
+# Once it is fixed it "fails" in CI: fix it, then remove the WILL_FAIL property below.
 set_tests_properties(lidar PROPERTIES WILL_FAIL TRUE)
