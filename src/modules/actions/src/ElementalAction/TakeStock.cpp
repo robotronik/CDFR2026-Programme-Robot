@@ -26,6 +26,7 @@ float TakeStock::getBestQuarry(const position_t& from) {
     int bestApproach = 0;
     int bestRocks = -1;
     double minDistance = INFINITY;
+    double minCost = INFINITY;
 
     position_t path[1024]; // Assuming a maximum path length
     for (int i = 0; i < QUARRY_ZONE_COUNT; i++) {
@@ -43,8 +44,8 @@ float TakeStock::getBestQuarry(const position_t& from) {
             }
             position_t stock = candidate->pos;
             if (j == 1) stock.a -= 180;
-            const position_t approach[] = {targets[j], RobotPosSuctionCupOffset(RobotTakeOffset(stock, from))};
-            if (distance < minDistance && candidate->nb >= bestRocks) {
+            if (distance < minCost && candidate->nb >= bestRocks) {
+                minCost = distance;
                 minDistance = distance;
                 best = candidate;
                 bestTarget = targets[j];
