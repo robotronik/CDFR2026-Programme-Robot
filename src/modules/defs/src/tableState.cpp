@@ -19,7 +19,7 @@ void TableState::reset(){
     /* reset of specific The legend of Camelot */
     elements.clear();
     initQuarry();
-    initDropZone();
+    initConstructionZones();
 }
 
 // Function to check if a point (px, py) lies inside the rectangle
@@ -29,7 +29,7 @@ bool TableState::m_isPointInsideRectangle(float px, float py, float cx, float cy
     return (px >= left && px <= right && py >= bottom && py <= top);
 }
 
-bool TableState::isRobotInArrivalZone(position_t position){
+bool TableState::isRobotInArrivalArea(position_t position){
     // Returns true if the robot is in the arrival zone
     int robotSmallRadius = 100;
     int w = 450;
@@ -43,12 +43,12 @@ int TableState::getScore()
 {
     int totalScore = 0;
     // TODO, should be "completely inside" and not just "in"
-    if (isRobotInArrivalZone((position_t)robot->drive.getPosition()))
+    if (isRobotInArrivalArea((position_t)robot->drive.getPosition()))
         totalScore += 5;
     return totalScore;
 }
 
-void TableState::initDropZone(){
+void TableState::initConstructionZones(){
     for(int i = 0; i < WALL_ZONE_COUNT; i++) {
         wallZone[i].pos = WALL_POSITION[i];
         wallZone[i].nb = 0;
@@ -65,7 +65,7 @@ void TableState::initDropZone(){
     }
 }
 
-bool TableState::remainEmptyDrop(){
+bool TableState::remainEmptyConstructionZone(){
     return remainEmptyWall() || remainEmptyTower();
 }
 
@@ -107,9 +107,9 @@ int TableState::needWall(){
     return count;
 }
 
-bool TableState::needDoor(){
+bool TableState::needGate(){
     for(wallZone_t wall : wallZone) {
-        if (wall.bestConstruction == ConstructionType::Door) {
+        if (wall.bestConstruction == ConstructionType::Gate) {
             return false;
         }
     }

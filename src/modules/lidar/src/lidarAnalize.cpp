@@ -140,7 +140,7 @@ int find_blobs(lidarAnalize_t* data, int count, lidar_blob_detection* blobs, int
     return blob_idx;
 }
 
-// Dans le pire des cas, on a 0.3% des points qui sont l'ennemi
+// Dans le pire des cas, on a 0.3% des points qui sont l'opposant
 bool position_opponentV2(lidarAnalize_t* data, int count, position_t robot_pos, position_t& opponent_pos){
     lidar_blob_detection blobs[BLOBS_COUNT]; // Array to hold detected blobs
     int min_points = 3 ; //3 points to be an opponent

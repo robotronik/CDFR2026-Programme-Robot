@@ -9,20 +9,20 @@ class RobotControl;
 
 
 
-class TakeStock : public VirtualAction {
+class TakeStone : public VirtualAction {
     private:
         TableState* tableState;
         RobotControl* robot;
 
-        enum class TakeStockState
+        enum class TakeStoneState
         {
             MOVE1,
             MOVE2,
         };
         
         const position_t OFFSET_TARGET = {250, 250, 0};
-        int value = 23; // TODO change to be max value of points adv can make with 3 rocks
-        TakeStockState state;
+        int value = 23; // TODO change to be max value of points the opponent can make with 3 stones
+        TakeStoneState state;
         unsigned long approachStartTime = 0;
 
         quarry_t* quarry;
@@ -33,13 +33,13 @@ class TakeStock : public VirtualAction {
         
         float BestTake(const position_t& from);
         float getBestQuarry(const position_t& from);
-        position_t RobotPosSuctionCupOffset(const position_t& stock) const;
-        int BestPositionToTake(const position_t& stock, position_t targets[2]) const;//offset pour avoir la bonne face sur le block
-        position_t RobotTakeOffset(position_t stock, const position_t& from) const;//offset centre/face block
+        position_t RobotPosSuctionCupOffset(const position_t& stone) const;
+        int BestPositionToTake(const position_t& stone, position_t targets[2]) const;//offset pour avoir la bonne face sur la pierre
+        position_t RobotTakeOffset(position_t stone, const position_t& from) const;//offset centre/face pierre
         bool resolveTarget();
     public:
-        TakeStock(TableState* tableState, RobotControl* robot);
-        ~TakeStock() override = default;
+        TakeStone(TableState* tableState, RobotControl* robot);
+        ~TakeStone() override = default;
 
 
         ReturnFSM run() override;

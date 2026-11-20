@@ -28,7 +28,7 @@ class Wall{
             pumpIdx[1] = idx[1];
             pumpIdx[2] = idx[2];
         };
-        int rocks=0; // number of rocks on the face
+        int stones=0; // number of stones on the face
         bool wDrop();
         bool wTake();
         position_t getOffset() const { return offset; }
@@ -51,14 +51,14 @@ class Tower : public Wall {
         
 };
 
-class Door : public Tower {
+class Gate : public Tower {
     private:
         int servoD;
     public:
-        Door(int idxSD, int idxS, int idx[3], position_t offset, ActuatorsControl* actuator) 
+        Gate(int idxSD, int idxS, int idx[3], position_t offset, ActuatorsControl* actuator) 
             : Tower (idxS, idx, offset, actuator) {
             servoD = idxSD;
         };
-        bool dDrop();
+        bool gDrop();
         bool flip();
 };

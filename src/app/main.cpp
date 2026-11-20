@@ -420,7 +420,7 @@ void tests()
 // ------------------------------------------------------
 
 // TODO implement this function
-/* Detect from position of adversary the action of the adversary */
+/* Detect from position of the opponent the action of the opponent */
 void opponentInAction(position_t /*position*/){
 }
 

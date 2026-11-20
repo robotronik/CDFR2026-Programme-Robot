@@ -45,14 +45,14 @@ enum class ConstructionType
     Unconstructed=0,
     Wall=8,
     Tower=6,
-    Door=20,
+    Gate=20,
 };
 
 typedef struct
 {
-    int idx; //index of dropZone
-    position_t pos; // position of dropZone
-    int nb; // nb of rocks in dropZone
+    int idx; //index of wallZone
+    position_t pos; // position of wallZone
+    int nb; // nb of stones in wallZone
     ConstructionType bestConstruction; //Best construction in zone
     ColorTeam colorTeam; // Color of the team that owns the zone
 
@@ -60,9 +60,9 @@ typedef struct
 
 typedef struct
 {
-    int idx; //index of dropZone
-    position_t pos; // position of dropZone
-    int nb; // nb of rocks in dropZone
+    int idx; //index of towerZone
+    position_t pos; // position of towerZone
+    int nb; // nb of stones in towerZone
     ConstructionType bestConstruction; //Best construction in zone
     ColorTeam colorTeam; // Color of the team that owns the zone
 
@@ -72,7 +72,7 @@ typedef struct
 {
     int idx; //index of quarry
     position_t pos; // position of quarry
-    int nb; // nb of rocks in quarry
+    int nb; // nb of stones in quarry
     float trustFactor;
 
 } quarry_t;

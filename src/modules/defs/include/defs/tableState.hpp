@@ -33,7 +33,8 @@ class TableState
         void updateMapStatus(const MatTableData& data); // update of tableState relative to data recived by mast
 
         bool m_isPointInsideRectangle(float px, float py, float cx, float cy, float w, float h);
-        bool isRobotInArrivalZone(position_t position);
+        // Arrival area (throne room): where the main robot must finish the match.
+        bool isRobotInArrivalArea(position_t position);
 
         /* data the Legend of Camelot */
         // Objets de jeu vus par le mat, mémorisés par updateMapStatus().
@@ -49,15 +50,15 @@ class TableState
 
         bool remainEmptyWall();
         bool remainEmptyTower();
-        bool remainEmptyDrop();
+        bool remainEmptyConstructionZone();
         int needTower();
         int needWall();
-        bool needDoor();
+        bool needGate();
 
     private:
         RobotControl* robot;
         void initQuarry();
-        void initDropZone();
+        void initConstructionZones();
 };
 
 // Serialize tableState

@@ -68,7 +68,7 @@ const int ARUCO_CALIB_POSITIONS_COUNT = sizeof(ARUCO_CALIB_POSITIONS) / sizeof(p
 
 /******* CONSTANTS FOR THE LEGEND OF CAMELOT *******/
 
-// Blue start position
+// Blue throne room (starting and arrival area)
 const position_t START_POSITION = { .x = 0, .y = 1250, .a = -90 };
 const position_t FINAL_POSITION = { .x = 0, .y = 1250, .a = -90 };
 

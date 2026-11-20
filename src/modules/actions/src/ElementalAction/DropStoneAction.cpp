@@ -1,4 +1,4 @@
-#include "actions/ElementalAction/DropAction.hpp"
+#include "actions/ElementalAction/DropStoneAction.hpp"
 #include "utils/logger.hpp"
 #include "utils/utils.h"
 #include <cmath>
@@ -6,16 +6,16 @@
 
 //#include "utils/logger.hpp"
 
-DropAction::DropAction(TableState* tableState, RobotControl* robot)
+DropStoneAction::DropStoneAction(TableState* tableState, RobotControl* robot)
     : tableState(tableState), robot(robot) 
 {
-    this->nom = "DropAction";
+    this->nom = "DropStone";
     reset();
 }
 
-ReturnFSM DropAction::run() {
+ReturnFSM DropStoneAction::run() {
     switch (state) {
-        case DropState::Moving:
+        case DropStoneState::Moving:
             {
             NavReturn nav_result = navigation.goTo(target, true);
             if(nav_result == NavReturn::Done) {
@@ -23,7 +23,7 @@ ReturnFSM DropAction::run() {
                 if (!robot->actuators.setElectroState(true, PUMP_2_NUM)) return ReturnFSM::Error;
                 if (!selected_face->wDrop()) return ReturnFSM::Error;
                 releaseStartTime = _millis();
-                state = DropState::Releasing;
+                state = DropStoneState::Releasing;
             }else if (nav_result == NavReturn::Error) {
                 LOG_ERROR("Drop Error");
                 reset();
@@ -31,7 +31,7 @@ ReturnFSM DropAction::run() {
             }
             break;
             }
-        case DropState::Releasing:
+        case DropStoneState::Releasing:
             // Wait for the release to complete
             if (_millis() - releaseStartTime >= RELEASE_WAIT_MS) {
                 if (!robot->actuators.setElectroState(false, PUMP_2_NUM)) break;
@@ -44,32 +44,32 @@ ReturnFSM DropAction::run() {
     return ReturnFSM::Working;
 }
 
-bool DropAction::successManagement(){
-    selected_face->rocks = 0;
-    selected_drop->nb = 3;
+bool DropStoneAction::successManagement(){
+    selected_face->stones = 0;
+    selected_zone->nb = 3;
     return true;
 }
 
-bool DropAction::stop() {
+bool DropStoneAction::stop() {
     robot->drive.stopMotion();
     return true;
 }
 
-void DropAction::reset() {
+void DropStoneAction::reset() {
     stop();
-    state = DropState::Moving;
+    state = DropStoneState::Moving;
     releaseStartTime = 0;
     target = {0, 0, 0};
     best_path_length = INFINITY;
     selected_face = &robot->wall1;// TODO implement a way to chose face
-    selected_drop = nullptr;
+    selected_zone = nullptr;
 }
 
-bool DropAction::available(float &reward) {
+bool DropStoneAction::available(float &reward) {
     reset();
-    if(selected_face->rocks == 0) return false;
-    if (getBestDropZone()) {
-        toBestDropPosition();
+    if(selected_face->stones == 0) return false;
+    if (getBestConstructionZone()) {
+        toBestConstructionPosition();
         reward = (float)static_cast<int>(ConstructionType::Wall)/best_path_length;
         return true;
     }else{
@@ -78,22 +78,22 @@ bool DropAction::available(float &reward) {
     }
 }
 
-bool DropAction::fullBlock() {
-    // Implementation for checking if the drop action is a full block
+bool DropStoneAction::fullBlock() {
+    // Implementation for checking if the stone drop action is a full block
     return true;
 }
 
-bool DropAction::mouvementBlock() {
-    // Implementation for checking if the drop action is a movement block
+bool DropStoneAction::mouvementBlock() {
+    // Implementation for checking if the stone drop action is a movement block
     return true;
 }
 
-bool DropAction::getBestDropZone(){
-    // TODO check if has block to drop
+bool DropStoneAction::getBestConstructionZone(){
+    // TODO check if the robot carries stones to drop
     if (!tableState->remainEmptyWall()) return false;
     if(!tableState->needWall()) return false;
     position_t robot_pos = robot->drive.getPosition();
-    selected_drop = nullptr;
+    selected_zone = nullptr;
 
     best_path_length = INFINITY;
     position_t path[1024];
@@ -105,19 +105,19 @@ bool DropAction::getBestDropZone(){
         double zone_path_length;
         if (!pathfind(robot_pos, zone->pos, path, zone_path_length)) continue;
 
-        if (selected_drop == nullptr || side * zone->pos.y > side * selected_drop->pos.y ||
-            (zone->pos.y == selected_drop->pos.y && zone_path_length < best_path_length)) {
-            selected_drop = zone;
+        if (selected_zone == nullptr || side * zone->pos.y > side * selected_zone->pos.y ||
+            (zone->pos.y == selected_zone->pos.y && zone_path_length < best_path_length)) {
+            selected_zone = zone;
             best_path_length = zone_path_length;
         }
     }
-    if(selected_drop != nullptr){
-        target = selected_drop->pos;
+    if(selected_zone != nullptr){
+        target = selected_zone->pos;
     }
-    return selected_drop != nullptr;
+    return selected_zone != nullptr;
 }
 
-bool DropAction::toBestDropPosition(){
+bool DropStoneAction::toBestConstructionPosition(){
     // TODO change for proper offset depending on actuator
     // TODO 2 placement in area should be more dependent on strategy and not fix
     target.a = target.a - selected_face->getOffset().a;

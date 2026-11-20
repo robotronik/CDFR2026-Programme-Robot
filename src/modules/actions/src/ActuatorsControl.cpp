@@ -113,7 +113,7 @@ void ActuatorsControl::disableActuators(){
 
 bool Wall::wDrop(){
     //actuator->setElectroState(true, idx) TODO add electro use
-    rocks = 0;
+    stones = 0;
     return actuator->setPumpState(false, pumpIdx[0]);
 }
 
@@ -132,7 +132,7 @@ bool Tower::rotate(bool dir){
         return actuator->moveServoAndWait(servo, 0, 50); // TODO :Modifier position et speed
 }
 
-bool Door::dDrop(){ //Version très expérimentale
+bool Gate::gDrop(){ //Version très expérimentale
     tDrop(0); 
     tDrop(1); 
     rotate(false);

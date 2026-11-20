@@ -41,7 +41,7 @@ bool WaitAction::available(float &reward){
     return true;
 }
 
-/*Wait is not a full block we could imagine positionning to block/anticipate adversary action*/
+/*Wait is not a full block we could imagine positionning to block/anticipate opponent action*/
 bool WaitAction::fullBlock(){
     return false;
 }

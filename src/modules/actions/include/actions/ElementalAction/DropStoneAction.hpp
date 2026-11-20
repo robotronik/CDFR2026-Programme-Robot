@@ -8,14 +8,13 @@
 #include "actions/RobotControl.hpp"
 
 /*
-    Action d'attente simple : temporise pendant WAIT_DURATION_MS
-    puis rend la main (ReturnFSM::Done) pour permettre au FSM
-    de recalculer la meilleure action à effectuer.
+    Action de pose : pose les pierres portees dans une zone de construction
+    libre (wall area) de l'equipe, puis rend la main.
 */
-class DropAction : public VirtualAction {
+class DropStoneAction : public VirtualAction {
     public:
-        DropAction(TableState* tableState, RobotControl* robot);
-        ~DropAction() override = default;
+        DropStoneAction(TableState* tableState, RobotControl* robot);
+        ~DropStoneAction() override = default;
 
         ReturnFSM run() override;
         bool stop() override;
@@ -35,20 +34,20 @@ class DropAction : public VirtualAction {
         TableState* tableState;
         RobotControl* robot;
 
-        bool getBestDropZone();
-        bool toBestDropPosition();
+        bool getBestConstructionZone();
+        bool toBestConstructionPosition();
         bool successManagement();
 
-        enum class DropState {
+        enum class DropStoneState {
             Moving,
             Releasing,
         };
 
         Wall* selected_face;
-        wallZone_t* selected_drop;
+        wallZone_t* selected_zone;
         position_t target;
         double best_path_length;
-        DropState state = DropState::Moving;
+        DropStoneState state = DropStoneState::Moving;
         unsigned long releaseStartTime = 0;
         static constexpr unsigned long RELEASE_WAIT_MS = 200;
 

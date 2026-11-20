@@ -74,13 +74,13 @@ double pathfind_length_mm(position_t start, position_t goal){
 
 void pathfind_setup(const TableState& tableState) {
     astar_initialize_costmap();
-    // Stocks : 110 mm sur X et 320 mm sur Y, inverses pour les stocks du milieu.
-    for (const auto& stock : tableState.quarry) {
-        if (stock.nb <= 0) continue;
-        const bool horizontal = stock.pos.a == 270;
+    // Stones : 110 mm sur X et 320 mm sur Y, inverses pour les stones du milieu.
+    for (const auto& stone : tableState.quarry) {
+        if (stone.nb <= 0) continue;
+        const bool horizontal = stone.pos.a == 270;
         const int sizeX = horizontal ? 320 : 110;
         const int sizeY = horizontal ? 110 : 320;
-        place_obstacle_with_margin(stock.pos.x, stock.pos.y, sizeY, sizeX, ROBOT_WIDTH / 2, false);
+        place_obstacle_with_margin(stone.pos.x, stone.pos.y, sizeY, sizeX, ROBOT_WIDTH / 2, false);
     }
     // Le helper ne tourne pas les rectangles : les depots diagonaux sont encadres par un carre.
     for (const auto& zone : tableState.wallZone) {
@@ -107,7 +107,7 @@ void pathfind_place_border(){
 void pathfind_fill_lidar(Lidar* lidar, const TableState& tableState){
     pathfind_setup(tableState);
 
-    /* Place adversary on the map */
+    /* Place opponent on the map */
     for (int i = 0; i < lidar->count; i++){
         if (!lidar->data[i].onTable) continue;
         place_obstacle_with_margin(lidar->data[i].x,lidar->data[i].y, 400, 400, 230, false, false);
