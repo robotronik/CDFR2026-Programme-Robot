@@ -649,6 +649,10 @@ void RestAPI::start(){
             manual_currentFunc = [this]{ return robot->wall1.wTake(); };
         else if(req_value == "PumpOff")
             manual_currentFunc = [this]{ return robot->wall1.wDrop(); };
+        else if(req_value == "ElectroOn")
+            manual_currentFunc = [this]{ return robot->wall1.wEnableElectro(); };
+        else if(req_value == "ElectroOff")
+            manual_currentFunc = [this]{ return robot->wall1.wDisableElectro(); };
         else if (req_value != "Test")
             return jsonError(400, "Invalid action requested");
 

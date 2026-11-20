@@ -122,6 +122,15 @@ bool Wall::wTake() {
     return actuator->setPumpState(true, pumpIdx[0]);
 }
 
+// The stone drop electrovalve shares PUMP_2_NUM with the actuator it drives.
+bool Wall::wEnableElectro() {
+    return actuator->setElectroState(true, PUMP_2_NUM);
+}
+
+bool Wall::wDisableElectro() {
+    return actuator->setElectroState(false, PUMP_2_NUM);
+}
+
 bool Tower::tDrop(int idx) {
     return actuator->setPumpState(false, pumpIdx[idx]);
 }

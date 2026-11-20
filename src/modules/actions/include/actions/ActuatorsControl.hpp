@@ -31,6 +31,8 @@ class Wall {
         int stones = 0; // number of stones on the face
         bool wDrop();
         bool wTake();
+        bool wEnableElectro();
+        bool wDisableElectro();
         position_t getOffset() const { return offset; }
 
     protected:
