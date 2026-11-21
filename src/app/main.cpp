@@ -8,6 +8,7 @@
 #include <unistd.h>  // for usleep
 
 #include "utils/logger.hpp"
+#include "utils/debugSound.hpp"
 
 //lidar related
 #include "lidar/Lidar.hpp"
@@ -236,6 +237,7 @@ int main()
         {
             if (initState){
                 LOG_GREEN_INFO("FIN");
+                debugSound::play("end.wav");
                 arduino.RGB_Solid(0, 255, 0);
                 manual_clearFunc();
                 drive.disable();
@@ -320,6 +322,7 @@ int StartSequence()
     drive.reset();
 
     LOG_GREEN_INFO("Init sequence done");
+    debugSound::play("start.wav");
     return 0;
 }
 
@@ -381,6 +384,8 @@ void EndSequence()
     api.stop();
     api_server_thread.join();
 
+    debugSound::play("shutdown.wav");
+    sleep(1); // Let the sound start: the process is about to exit.
     LOG_GREEN_INFO("Stopped");
 }
 

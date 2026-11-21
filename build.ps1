@@ -133,10 +133,19 @@ function Deploy {
 function Run-Program([string[]]$ProgramArgs) {
     Build-Arch 'x86_64'
     $port = if ($env:CDFR_RUN_PORT) { $env:CDFR_RUN_PORT } else { '8080' }
+    # Already root in the image; sudo would drop PULSE_SERVER.
     $containerArgs = @('./programCDFR') + $ProgramArgs
+    $dockerArgs = @('-p', "${port}:80", '--cap-add=SYS_NICE')
+    # Debug sounds (AUDIO.md): Docker Desktop's path to the WSLg audio socket.
+    if ($env:OS -eq 'Windows_NT') {
+        $dockerArgs += @(
+            '-v', '/run/desktop/mnt/host/wslg:/mnt/wslg:ro',
+            '-e', 'PULSE_SERVER=unix:/mnt/wslg/PulseServer'
+        )
+    }
     Write-Log "Running programCDFR from build/x86_64 (host port $port -> container 80)"
     Invoke-Container -Image $ImageX86 `
-        -DockerArgs @('-p', "${port}:80", '--cap-add=SYS_NICE') `
+        -DockerArgs $dockerArgs `
         -WorkDir "${ContainerWork}/build/x86_64" `
         -CommandArgs $containerArgs
 }

@@ -18,6 +18,13 @@ DOCKER_RUN_EXTRA=(--network host)
 DOCKER_RUN_USER="$(id -u):$(id -g)"
 DOCKER_RUN_WORKDIR="$REPO_ROOT"
 
+# Debug sounds (AUDIO.md): the host's PulseAudio/PipeWire socket, if any.
+AUDIO_RUN_ARGS=()
+PULSE_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/pulse"
+if [ -S "$PULSE_DIR/native" ]; then
+    AUDIO_RUN_ARGS=(-e PULSE_SERVER=unix:/pulse/native -v "$PULSE_DIR":/pulse:ro)
+fi
+
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 
 # Images are labelled with their Dockerfile's hash, so editing a Dockerfile
@@ -123,7 +130,7 @@ case "${1:-build}" in
         # Files the run writes (log/) are then root-owned on the host.
         # Publish the port instead of --network host, which rootless Docker and
         # Docker Desktop don't expose to the host; 8080 because rootless can't bind 80.
-        DOCKER_RUN_EXTRA=(--cap-add=SYS_NICE -p "${CDFR_RUN_PORT:-8080}:80")
+        DOCKER_RUN_EXTRA=(--cap-add=SYS_NICE -p "${CDFR_RUN_PORT:-8080}:80" "${AUDIO_RUN_ARGS[@]}")
         DOCKER_RUN_USER=""
         DOCKER_RUN_WORKDIR="$REPO_ROOT/build/x86_64"
         docker_run "$IMAGE_X86" ./programCDFR "$@"
@@ -135,6 +142,7 @@ case "${1:-build}" in
         docker_run "$IMAGE_ARM" cmake --build --preset arm64 --target deploy
         ;;
     shell)
+        DOCKER_RUN_EXTRA+=("${AUDIO_RUN_ARGS[@]}")
         case "${2:-x86_64}" in
             x86_64) ensure_image "$IMAGE_X86" docker/Dockerfile.x86_64; docker_run "$IMAGE_X86" bash ;;
             arm64)  ensure_image "$IMAGE_ARM" docker/Dockerfile.arm64; docker_run "$IMAGE_ARM" bash ;;

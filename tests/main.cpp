@@ -9,10 +9,11 @@ bool test_camera_robot_conversion();
 bool test_game_element_cube_center();
 bool test_features_localizer();
 bool test_mat_parse();
+bool testDebugSound();
 
 int main(int argc, char** argv) {
     if (argc != 2) {
-        LOG_ERROR("Usage: ", argv[0], " <log|lidar|mat|aruco|features>");
+        LOG_ERROR("Usage: ", argv[0], " <log|sound|lidar|mat|aruco|features>");
         return 1;
     }
 
@@ -20,6 +21,8 @@ int main(int argc, char** argv) {
     bool ok = true;
     if (group == "log") {
         ok = testLogger();
+    } else if (group == "sound") {
+        ok = testDebugSound();
     } else if (group == "lidar") {
         ok = test_lidar_opponent();
     } else if (group == "mat") {
@@ -31,7 +34,7 @@ int main(int argc, char** argv) {
     } else if (group == "features") {
         ok &= test_features_localizer();
     } else {
-        LOG_ERROR("Unknown test '", group, "'. Expected log, lidar, mat, aruco or features.");
+        LOG_ERROR("Unknown test '", group, "'. Expected log, sound, lidar, mat, aruco or features.");
         return 1;
     }
 
