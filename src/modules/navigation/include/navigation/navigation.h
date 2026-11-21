@@ -5,7 +5,7 @@
 #include <utils/json.hpp>
 using json = nlohmann::json;
 
-class RobotControl;
+class DriveControl;
 class TableState;
 class Cam;
 
@@ -19,7 +19,7 @@ enum class NavReturn {
 
 class Navigation {
     public:
-        Navigation(RobotControl* robot, TableState* tableStatus, Cam* cam);
+        Navigation(DriveControl* drive, TableState* tableStatus, Cam* cam);
         ~Navigation() = default;
 
         // Go to a position, returns the navigation state
@@ -29,6 +29,8 @@ class Navigation {
         // Serialize the current navigation path
         void pathJson(json& j);
         void updatePathfinder();
+        // Radius the planner inflates obstacles by. Callers pass the robot's
+        // full extent (chassis plus any carried stones) when the load changes.
         bool setRobotRadius(double radius);
         AStar& getPathfinder() { return planner; }
 
@@ -36,7 +38,7 @@ class Navigation {
         NavReturn driveStep();
         void opponentDetection();
 
-        RobotControl* robot;
+        DriveControl* drive;
         TableState* tableStatus;
         Cam* cam;
 
@@ -52,6 +54,7 @@ class Navigation {
 
         bool driving = true;
         AStar planner;
+        // Full radius used for planning; refreshed by setRobotRadius().
         double chassisRadius = ROBOT_WIDTH / 2.0;
 };
 

@@ -1,8 +1,8 @@
 #include "navigation/navigation.h"
-#include "actions/RobotControl.hpp"
 #include "utils/logger.hpp"
 #include "lidar/lidarAnalize.h"
 #include "navigation/pathfind.h"
+#include "navigation/driveControl.h"
 #include "defs/tableState.hpp"
 #include "vision/Cam.hpp"
 #include <cmath>
@@ -19,7 +19,7 @@ bool Navigation::setRobotRadius(double radius) {
 }
 
 void Navigation::updatePathfinder() {
-    planner.setRobotRadius(robot->navigationRadius(chassisRadius));
+    planner.setRobotRadius(chassisRadius);
     updateGameObstacles(planner, *tableStatus);
 }
 
@@ -36,7 +36,7 @@ NavReturn Navigation::driveStep() {
         currentPathLength = 1;
         currentPath[0] = current_pos_target;
     }
-    bool done = robot->drive.drive(currentPath, currentPathLength, current_slow_mode, current_complete_stop);
+    bool done = drive->drive(currentPath, currentPathLength, current_slow_mode, current_complete_stop);
     if (done) return NavReturn::Done;
     opponentDetection(); // Check if its safe
     return NavReturn::InProcess;
@@ -67,7 +67,7 @@ NavReturn Navigation::go() {
         if (cam->getLocalisation(camera_pos)) {
             // Convert to the robot's frame and apply the new position
             const position_t robot_pos = cameraToRobot(camera_pos);
-            robot->drive.setCoordinates(robot_pos);
+            drive->setCoordinates(robot_pos);
             tableStatus->resetCalibrationAge();
             LOG_GREEN_INFO("Camera calibration during move successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
         } else {
@@ -107,7 +107,7 @@ void Navigation::pathJson(json& j) {
 void Navigation::opponentDetection() {
     bool isCloseToOpponent = false;
     // Check if the opponent is in the way
-    isCloseToOpponent = opponent_is_close(tableStatus->pos_opponent, robot->drive.position, 800); // If opponent is closer than 800mm, we consider it close and activate slow mode
+    isCloseToOpponent = opponent_is_close(tableStatus->pos_opponent, drive->position, 800); // If opponent is closer than 800mm, we consider it close and activate slow mode
 
     if (isCloseToOpponent && !forced_slow_mode) {
         LOG_WARNING("Opponent is close to us, activating slow mode");
