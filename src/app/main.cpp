@@ -66,7 +66,7 @@ Cam cam1(-1, "", "");
 #endif
 
 // Navigation
-Navigation navigation(&robot, &tableStatus, &cam1);
+Navigation navigation(&robot.drive, &tableStatus, &cam1);
 
 MainState currentState;
 MainState nextState;

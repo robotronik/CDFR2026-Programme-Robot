@@ -4,18 +4,17 @@
 #include "navigation/pathfind.h"
 #include "navigation/driveControl.h"
 #include "defs/tableState.hpp"
-#include "actions/RobotControl.hpp"
 #include "vision/Cam.hpp"
 
-Navigation::Navigation(RobotControl* robot, TableState* tableStatus, Cam* cam)
-    : robot(robot), tableStatus(tableStatus), cam(cam){
+Navigation::Navigation(DriveControl* drive, TableState* tableStatus, Cam* cam)
+    : drive(drive), tableStatus(tableStatus), cam(cam){
 }
 
 NavReturn Navigation::driveStep(){
     // Calculate the path
     if (current_use_astar){
         double len;
-        currentPathLength = pathfind(robot->drive.position, current_pos_target, currentPath, len);
+        currentPathLength = pathfind(drive->position, current_pos_target, currentPath, len);
         if (currentPathLength <= 0){
             LOG_ERROR("No path found");
             return NavReturn::Error;
@@ -25,7 +24,7 @@ NavReturn Navigation::driveStep(){
         currentPathLength = 1;
         currentPath[0] = current_pos_target;
     }
-    bool done = robot->drive.drive(currentPath, currentPathLength, current_slow_mode, current_complete_stop);
+    bool done = drive->drive(currentPath, currentPathLength, current_slow_mode, current_complete_stop);
     if (done) return NavReturn::Done;
     opponentDetection(); // Check if its safe
     return NavReturn::InProcess;
@@ -41,7 +40,7 @@ NavReturn Navigation::go(){
             LOG_EXTENDED_DEBUG("Navigation drive completed");
             if (current_complete_stop){ // If came to a complete stop, calibrate using camera, else nav is done
                 driving = false;
-                //robot->drive.setBrakeState(true);
+                //drive->setBrakeState(true);
             }
             else {
                 return NavReturn::Done;
@@ -57,7 +56,7 @@ NavReturn Navigation::go(){
         if (cam->getLocalisation(camera_pos)){
             // Convert to the robot's frame and apply the new position
             const position_t robot_pos = cameraToRobot(camera_pos);
-            robot->drive.setCoordinates(robot_pos);
+            drive->setCoordinates(robot_pos);
             tableStatus->resetCalibrationAge();
             LOG_GREEN_INFO("Camera calibration during move successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
         } else {
@@ -88,7 +87,7 @@ NavReturn Navigation::goTo(position_t pos, bool useAStar, bool slow_mode, bool c
 
 void Navigation::pathJson(json& j){
     j = json::array();
-    j.push_back({{"x", robot->drive.position.x}, {"y", robot->drive.position.y}});
+    j.push_back({{"x", drive->position.x}, {"y", drive->position.y}});
     for (int i = 0; i < currentPathLength; i++){
         j.push_back({{"x", currentPath[i].x}, {"y", currentPath[i].y}});
     }
@@ -97,7 +96,7 @@ void Navigation::pathJson(json& j){
 void Navigation::opponentDetection(){
     bool isCloseToOpponent = false;
     // Check if the opponent is in the way
-    isCloseToOpponent = opponent_is_close(tableStatus->pos_opponent, robot->drive.position, 800); // If opponent is closer than 800mm, we consider it close and activate slow mode
+    isCloseToOpponent = opponent_is_close(tableStatus->pos_opponent, drive->position, 800); // If opponent is closer than 800mm, we consider it close and activate slow mode
 
     if (isCloseToOpponent && !forced_slow_mode){
         LOG_WARNING("Opponent is close to us, activating slow mode");

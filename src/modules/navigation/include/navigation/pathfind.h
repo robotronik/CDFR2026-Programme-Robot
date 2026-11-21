@@ -1,3 +1,5 @@
+#pragma once
+
 #include "drive_interface.h"
 #include "lidar/Lidar.hpp"
 

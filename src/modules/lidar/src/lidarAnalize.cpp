@@ -40,7 +40,7 @@ double average_angles(double angles[], int count) {
     return avg_angle;
 }
 
-double distance_2_pts(double d1,double deg1, double d2, double deg2){
+static double distance_2_pts(double d1, double deg1, double d2, double deg2){
     double alpha;
     double d3;
     alpha = fabs((deg1-deg2)*M_PI/180);
