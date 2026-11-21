@@ -40,6 +40,13 @@ never used for the robot.
    lead somewhere drivable: the corner zones are flush with the table, so their
    nearest edge points off the field and is skipped.
 
+   Only the **start** is escaped. The goal is never moved: relocating it let the
+   search "succeed" at a nearby point, so the robot stopped short while the move
+   still reported `Done`. A goal inside a `C_obs` cannot be reached (every
+   segment ending there enters it), so the plan fails and `pathfind()` returns 0
+   and logs why. A goal merely touching an obstacle is reported as blocked too,
+   rather than approximated by stopping nearby.
+
    The hull is grown by a small **5 mm clearance**, purely so the controller has
    room to correct against a hairline contact. It is *not* a heading margin:
    the heading is fixed for the whole move, so there is no drift to absorb.

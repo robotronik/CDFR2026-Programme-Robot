@@ -228,7 +228,13 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
     state.last = planner::plan_path(state.input);
 
     if (!state.last.found || state.last.point_count <= 0) {
-        LOG_WARNING("Pathfinding: no path to the target");
+        // A goal inside an obstacle can never be reached: say why, since the
+        // caller must not treat this as "arrived".
+        if (state.last.goal_blocked) {
+            LOG_ERROR("Pathfinding: target is inside an obstacle, not moving");
+        } else {
+            LOG_WARNING("Pathfinding: no path to the target");
+        }
         return 0;
     }
     if (state.last.point_count > PATHFIND_MAX_POINTS) {

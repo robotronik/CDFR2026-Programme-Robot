@@ -1,14 +1,16 @@
 // Convex geometry for the grid-free pathfinder (C++ port).
 //
 // Everything is millimetres in the table frame: x in [-1000, 1000],
-// y in [-1500, 1500]. No allocation happens in the hot paths: polygons are
-// fixed-capacity, and the collision tests are plain arithmetic.
+// y in [-1500, 1500]. Polygons themselves are fixed-capacity, and the collision
+// tests are plain arithmetic. The only allocation is the scratch vector a hull
+// build uses, sized to its actual input so it never reserves a worst case.
 #pragma once
 
 #include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <vector>
 
 namespace planner {
 

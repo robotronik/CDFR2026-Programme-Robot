@@ -8,6 +8,7 @@ bool test_aruco_localizer();
 bool test_camera_robot_conversion();
 bool test_game_element_cube_center();
 bool test_features_localizer();
+bool test_pathfind();
 bool test_mat_parse();
 bool testDebugSound();
 
@@ -33,8 +34,10 @@ int main(int argc, char** argv) {
         ok &= test_game_element_cube_center();
     } else if (group == "features") {
         ok &= test_features_localizer();
+    } else if (group == "pathfind") {
+        ok = test_pathfind();
     } else {
-        LOG_ERROR("Unknown test '", group, "'. Expected log, sound, lidar, mat, aruco or features.");
+        LOG_ERROR("Unknown test '", group, "'. Expected log, sound, lidar, mat, aruco, features or pathfind.");
         return 1;
     }
 

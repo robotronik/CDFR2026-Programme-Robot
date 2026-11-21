@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <queue>
+#include <vector>
 
 namespace planner {
 namespace {
@@ -268,8 +270,15 @@ PlanOutput plan_path(const PlanInput& input) {
         return best;
     };
 
+    // Only the start is escaped. The goal is the caller's real target: moving it
+    // would let the search "succeed" somewhere else and the drive controller
+    // would then stop short while the move still reports Done. A goal inside a
+    // configuration obstacle is genuinely unreachable (every segment ending
+    // there enters it), so the search below just finds no path, which callers
+    // already treat as a failure.
     const Vec start = escape_if_blocked(input.start);
-    const Vec goal = escape_if_blocked(input.goal);
+    const Vec goal = input.goal;
+    result.goal_blocked = distance_to_set(goal, shapes, shape_count) <= 1e-6;
 
     NodeBuffer candidates;
     candidates.add(start);
@@ -305,38 +314,22 @@ PlanOutput plan_path(const PlanInput& input) {
     const int gi = index_of(goal);
     if (si < 0 || gi < 0) return result;
 
-    // Simple binary heap over (f, node).
+    // Min-heap over (f, node). One push per successful relaxation: a fixed-size
+    // array here would write past its end once that count exceeds it, so the
+    // heap owns its storage and grows as needed.
     struct HeapItem {
             double f;
             int node;
     };
-    std::array<HeapItem, kMaxNodes * 4> heap{};
-    int heap_size = 0;
-    auto heap_push = [&](double f, int node) {
-        int i = heap_size++;
-        heap[i] = {f, node};
-        while (i > 0) {
-            const int p = (i - 1) / 2;
-            if (heap[p].f <= heap[i].f) break;
-            std::swap(heap[p], heap[i]);
-            i = p;
-        }
+    struct HeapCompare {
+            bool operator()(const HeapItem& a, const HeapItem& b) const {
+                // Ties on f go to the lower node index, the same order the
+                // previous fixed heap produced.
+                return a.f != b.f ? a.f > b.f : a.node > b.node;
+            }
     };
-    auto heap_pop = [&]() {
-        HeapItem top = heap[0];
-        heap[0] = heap[--heap_size];
-        int i = 0;
-        while (true) {
-            const int l = 2 * i + 1, r = 2 * i + 2;
-            int m = i;
-            if (l < heap_size && heap[l].f < heap[m].f) m = l;
-            if (r < heap_size && heap[r].f < heap[m].f) m = r;
-            if (m == i) break;
-            std::swap(heap[m], heap[i]);
-            i = m;
-        }
-        return top;
-    };
+    std::priority_queue<HeapItem, std::vector<HeapItem>, HeapCompare> heap;
+    auto heap_push = [&](double f, int node) { heap.push({f, node}); };
 
     // Pair-tested bitmap: n <= kMaxNodes, so a flat bitset is fine.
     static thread_local std::array<uint64_t, (kMaxNodes * kMaxNodes + 63) / 64> tested_bits{};
@@ -366,8 +359,9 @@ PlanOutput plan_path(const PlanInput& input) {
     double best_complete = kInf;
     g[si] = 0.0;
     heap_push(dist(nodes.pts[si], nodes.pts[gi]), si);
-    while (heap_size > 0) {
-        const HeapItem top = heap_pop();
+    while (!heap.empty()) {
+        const HeapItem top = heap.top();
+        heap.pop();
         const int u = top.node;
         if (closed[u]) continue;
         closed[u] = 1;
@@ -406,6 +400,14 @@ PlanOutput plan_path(const PlanInput& input) {
 
     NodeBuffer simplified;
     simplify(raw, shapes, shape_count, simplified);
+
+    // The path must end on the requested goal; stopping short would report Done
+    // at the wrong place. The search reaches the goal as a node and simplify()
+    // always keeps the last point, so this holds by construction -- keep the
+    // check so a future change cannot silently reintroduce the drift.
+    if (simplified.n == 0 || dist(simplified.pts[simplified.n - 1], goal) > 1e-6) {
+        if (simplified.n < kMaxPathPoints) simplified.add(goal);
+    }
 
     result.found = true;
     result.length = 0.0;

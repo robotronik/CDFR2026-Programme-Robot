@@ -1,6 +1,7 @@
 #include "navigation/geom.hpp"
 
 #include <algorithm>
+#include <vector>
 
 namespace planner {
 namespace {
@@ -14,38 +15,43 @@ double wrap_angle(double d) {
     return d - M_PI;
 }
 
-// Convex hull of up to kMaxPolyVerts points (Andrew monotone chain), CCW.
-Polygon hull_of(std::array<Vec, kMaxPolyVerts * kMaxPolyVerts>& buf, int count) {
-    std::sort(buf.begin(), buf.begin() + count,
+// Convex hull of `count` points (Andrew monotone chain), CCW.
+//
+// `buf` holds the input and is only read: the chain needs it twice (lower pass
+// ascending, upper pass descending), and the lower chain must not overwrite the
+// entries the upper pass still has to see.
+Polygon hull_of(const std::vector<Vec>& buf, int count) {
+    std::vector<Vec> sorted(buf.begin(), buf.begin() + count);
+    std::sort(sorted.begin(), sorted.end(),
               [](const Vec& a, const Vec& b) {
                   return a.x != b.x ? a.x < b.x : a.y < b.y;
               });
     // Drop duplicates.
     int m = 0;
     for (int i = 0; i < count; ++i) {
-        if (m > 0 && dist(buf[i], buf[m - 1]) < 1e-9) continue;
-        buf[m++] = buf[i];
+        if (m > 0 && dist(sorted[i], sorted[m - 1]) < 1e-9) continue;
+        sorted[m++] = sorted[i];
     }
     if (m <= 2) {
         Polygon p;
         for (int i = 0; i < m; ++i)
-            p.pts[p.n++] = buf[i];
+            p.pts[p.n++] = sorted[i];
         p.finalize();
         return p;
     }
 
     auto cross = [](Vec o, Vec a, Vec b) { return (a - o).cross(b - o); };
-    std::array<Vec, kMaxPolyVerts * kMaxPolyVerts> lower{}, upper{};
+    std::array<Vec, kMaxPolyVerts> lower{}, upper{};
     int ln = 0, un = 0;
     for (int i = 0; i < m; ++i) {
-        while (ln >= 2 && cross(lower[ln - 2], lower[ln - 1], buf[i]) <= 0)
+        while (ln >= 2 && cross(lower[ln - 2], lower[ln - 1], sorted[i]) <= 0)
             --ln;
-        lower[ln++] = buf[i];
+        lower[ln++] = sorted[i];
     }
     for (int i = m - 1; i >= 0; --i) {
-        while (un >= 2 && cross(upper[un - 2], upper[un - 1], buf[i]) <= 0)
+        while (un >= 2 && cross(upper[un - 2], upper[un - 1], sorted[i]) <= 0)
             --un;
-        upper[un++] = buf[i];
+        upper[un++] = sorted[i];
     }
 
     Polygon p;
@@ -104,9 +110,8 @@ void Polygon::finalize() {
 }
 
 Polygon Polygon::from_points(const Vec* v, int count) {
-    std::array<Vec, kMaxPolyVerts * kMaxPolyVerts> buf{};
-    for (int i = 0; i < count && i < int(buf.size()); ++i)
-        buf[i] = v[i];
+    if (v == nullptr || count <= 0) return Polygon{};
+    std::vector<Vec> buf(v, v + count);
     return hull_of(buf, count);
 }
 
@@ -250,11 +255,12 @@ Polygon config_obstacle(const Polygon& obstacle, const Polygon& robot) {
     //
     // The robot is taken at its current heading, so the inflation follows the
     // real silhouette and the planner can use gaps a circle could not.
-    std::array<Vec, kMaxPolyVerts * kMaxPolyVerts> buf{};
-    int count = 0;
+    const int count = obstacle.n * robot.n;
+    std::vector<Vec> buf(count);
+    int k = 0;
     for (int i = 0; i < obstacle.n; ++i) {
         for (int j = 0; j < robot.n; ++j) {
-            buf[count++] = obstacle.pts[i] - robot.pts[j];
+            buf[k++] = obstacle.pts[i] - robot.pts[j];
         }
     }
     return hull_of(buf, count);
@@ -282,7 +288,12 @@ Polygon config_circle(Vec center, double radius, const Polygon& robot) {
     // Python's Polygon keeps the reflected order (already CCW); finalize()
     // must not have flipped it, otherwise the corner arcs sweep the wrong way.
 
-    std::array<Vec, kMaxPolyVerts * kMaxPolyVerts> buf{};
+    // Two points per edge, plus the arc samples strictly inside the sweep of
+    // each corner. A wrapped angle is < pi, so an arc emits at most
+    // `floor(pi / step)` extra samples.
+    const int perEdge = 2 + int(M_PI / step);
+    const int capacity = 2 * neg.n * perEdge;
+    std::vector<Vec> buf(capacity);
     int count = 0;
     for (int i = 0; i < neg.n; ++i) {
         const Vec a = neg.pts[i];
@@ -301,11 +312,8 @@ Polygon config_circle(Vec center, double radius, const Polygon& robot) {
             buf[count++] = center + b + Vec{std::cos(ang), std::sin(ang)} * (radius * scale);
         }
     }
-    Polygon p;
-    for (int i = 0; i < count && p.n < kMaxPolyVerts; ++i)
-        p.pts[p.n++] = buf[i];
-    p.finalize();
-    return p;
+    // count never exceeds `capacity` by construction, so no truncation here.
+    return Polygon::from_points(buf.data(), count);
 }
 
 Polygon grow_polygon(const Polygon& poly, double margin) {
