@@ -50,19 +50,12 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
     }
     is_slow_mode = slow_mode;
 
-    // Calculate the target point along the path
-    double looking_distance = 180.0; // Radius (mm)
-    
-    position_t pos_target;
-    double total_distance = position_distance(position, pos[0]);
+    // Look ahead to avoid braking at every short path segment.
     int i = 0;
-    while (total_distance < looking_distance && i < n - 1) {
-        // Calculate the distance to the next position
-        total_distance += position_distance(pos[i], pos[i + 1]);
-        i++;
-    }
-    // Use the position at the looking distance
-    pos_target = pos[i];
+    double distance = position_distance(position, pos[0]);
+    for (; i < n - 1 && distance < 180.0; ++i)
+        distance += position_distance(pos[i], pos[i + 1]);
+    position_t pos_target = pos[i];
 
     // Calculate position_speed with acceleration, top speed, and deceleration
     // Angular motion
@@ -72,9 +65,8 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
     double current_angular_velocity = fabs(velocity.a); // deg/s
     double angle_speed;
     
-    double error_heading = pos[n-1].a - position.a;
-    while (error_heading > 180.0) error_heading -= 360.0;
-    while (error_heading < -180.0) error_heading += 360.0;
+    const double final_error_heading = normalize_angle(pos[n-1].a - position.a);
+    const double error_heading = normalize_angle(pos_target.a - position.a);
     
     angle_speed = MIN(current_angular_velocity + angle_acceleration, angle_top_speed);
 
@@ -99,7 +91,7 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
     const double kP_lin = 4.0;   // Gain for linear speed (mm/s per mm error) (Defined in drive)
     vec.x *= position_speed / kP_lin;
     vec.y *= position_speed / kP_lin;
-    if (distance_to_target > position_length(vec) && distance_to_target > 30.0) {
+    if (position_distance(position, pos_target) > position_length(vec) && distance_to_target > 30.0) {
         pos_target.x = position.x + vec.x;
         pos_target.y = position.y + vec.y;
     }
@@ -107,10 +99,10 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
     bool is_done_pos, is_done_ang;
     if (complete_stop){
         is_done_pos = distance_to_target < 5.0 && fabs(velocity.x) < 35.0 && fabs(velocity.y) < 35.0;
-        is_done_ang = fabs(error_heading) < 1.0 && fabs(velocity.a) < 4.0;
+        is_done_ang = fabs(final_error_heading) < 1.0 && fabs(velocity.a) < 4.0;
     }else{
         is_done_pos = distance_to_target < 20.0 && fabs(velocity.x) < 200.0 && fabs(velocity.y) < 200.0;
-        is_done_ang = fabs(error_heading) < 2.0 && fabs(velocity.a) < 40.0;
+        is_done_ang = fabs(final_error_heading) < 2.0 && fabs(velocity.a) < 40.0;
     }
         
     //LOG_DEBUG("Pos err: ", distance_to_target, "mm, Vel x: ", velocity.x, "mm/s, Vel y: ", velocity.y, "mm/s, Ang err: ", error_heading, "deg, Ang vel: ", fabs(velocity.a), "deg/s");
