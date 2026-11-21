@@ -16,22 +16,6 @@
                 .then(data => console.log(data))
                 .catch(error => console.error('Error:', error));
         }
-
-        // Function to handle dropdown change and send request
-        function sendDropdownRequest() {
-            const selectedValue = parseInt(document.getElementById("stateDropdown").value);
-            const postData = { state: selectedValue };
-            fetch('/post_status', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(postData),
-            })
-                .then(response => response.json())
-                .then(data => console.log(data))
-                .catch(error => console.error('Error:', error));
-        }
     </script>
 </head>
 <body>

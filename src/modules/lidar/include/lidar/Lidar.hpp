@@ -6,7 +6,8 @@
 #include "defs/constante.h"
 #include "i2c/Arduino.hpp"
 
-#define _countof(_Array) (int)(sizeof(_Array) / sizeof(_Array[0]))
+#define SIZEDATALIDAR 15000
+
 
 using namespace sl;
 
@@ -16,7 +17,7 @@ public:
     ~Lidar();
 
     lidarAnalize_t data[SIZEDATALIDAR];
-    int count;
+    int count = 0;
 
     bool setup(const char* serialPort, int baudrate);
 

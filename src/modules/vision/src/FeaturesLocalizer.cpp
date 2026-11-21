@@ -533,9 +533,11 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
 
     position = poseFromTransform(transform, warper_.cameraPatchPx(),
                                  map_origin_px_, map_mm_per_px_);
+    /*
     LOG_INFO("fix (", position.x, ", ", position.y,
              ") mm, heading ", position.heading, " deg, ", query.size(),
              " matches, ", cv::countNonZero(inlierMask), " inliers");
+    */
     return true;
 }
 

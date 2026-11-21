@@ -1,4 +1,5 @@
 #include "lidar/Lidar.hpp"
+#include <iterator> // std::size
 #include <vector>
 
 static bool checkSLAMTECLIDARHealth(ILidarDriver * drv);
@@ -129,7 +130,7 @@ bool Lidar::getData(){
     if (!isSpinning) startSpin();
 
     sl_lidar_response_measurement_node_hq_t nodes[8192];
-    size_t   r_count = _countof(nodes);
+    size_t   r_count = std::size(nodes);
     sl_result op_result;
 
     op_result = drv->grabScanDataHq(nodes, r_count, 0);

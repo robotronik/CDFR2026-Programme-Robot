@@ -9,13 +9,13 @@ WaitAction::WaitAction(unsigned long tps){
     startTime = 0;
 }
 
-ReturnFSM_t WaitAction::run(){
+ReturnFSM WaitAction::run(){
     if (startTime == 0) startTime = _millis();
     if (_millis() - startTime > WAIT_DURATION_MS){
         startTime = 0;
-        return FSM_RETURN_DONE;
+        return ReturnFSM::Done;
     }
-    return FSM_RETURN_WORKING;
+    return ReturnFSM::Working;
 }
 
 bool WaitAction::successManagement(){
@@ -41,11 +41,11 @@ bool WaitAction::available(float &reward){
     return true;
 }
 
-/*Wait is not a full block we could imagine positionning to block/anticipate adversary action*/
+/*Wait is not a full block we could imagine positionning to block/anticipate opponent action*/
 bool WaitAction::fullBlock(){
     return false;
 }
 
-bool WaitAction::mouvementBlock(){
+bool WaitAction::movementBlock(){
     return false;
 }

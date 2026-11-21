@@ -1,20 +1,27 @@
 #include "actions/calibration.h"
+#include "actions/RobotControl.hpp"
 #include "navigation/navigation.h"
+#include "vision/Cam.hpp"
 #include "utils/logger.hpp"
 #include <numeric>
 #include <vector>
 
-bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t startPos) {
+bool calibrate_otos(TableState* tableStatus, RobotControl* robot, Cam* cam, position_t startPos, bool skip_calibration) {
     // Function called continuously from the main loop to calibrate the otosensors
     // Returns true when calibration is done
-    static int step = 1; // We skip angle calib
+
+    static int step = 0; // Entry step: it picks where this run starts, so skip_calibration is always honoured
     static bool state = false; // Used to alternate between two positions
 
     // Aruco tags are at pos (+/-400, +/-900)
-    nav_return_t ret;
+    NavReturn ret;
 
     switch (step){
     case 0:{
+        // Pick the entry point of this calibration run (1: full, 4: straight home)
+        step = skip_calibration ? 4 : 1;
+    } break;
+    case 1:{
         // Angle compensation test
         // New Scalar = Current Scalar * (Actual Angle / Reported Angle)
         static bool has_prev_measure = false;
@@ -29,20 +36,29 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
             pos1.a += 70.0;
         else
             pos1.a -= 70.0;
-        if (tableStatus->colorTeam == YELLOW)
+        if (tableStatus->colorTeam == ColorTeam::Yellow)
             position_robot_flip(pos1);
 
+        // Raw OTOS pose, captured before goTo() applies the camera fix at the end of the move
+        const position_t otos_pos = robot->drive.position;
         ret = navigation.goTo(pos1, false, false, true);
 
-        if (ret == NAV_DONE){
+        if (ret == NavReturn::Done){
+            position_t camera_pos;
+            if (!cam->getLocalisation(camera_pos)){
+                LOG_WARNING("OTOS angle calibration skipped: no camera localisation");
+                return false;
+            }
+            const position_t cam_pos = cameraToRobot(camera_pos);
+
             if (!has_prev_measure){
-                prev_pos = navigation.prev_final_pos_cam;
-                prev_pos_otos = navigation.prev_final_pos_otos;
+                prev_pos = cam_pos;
+                prev_pos_otos = otos_pos;
                 has_prev_measure = true;
                 LOG_GREEN_INFO("OTOS angle calibration: first pose recorded");
             } else {
-                const double da_cam = normalize_angle(navigation.prev_final_pos_cam.a - prev_pos.a);
-                const double da_otos = normalize_angle(navigation.prev_final_pos_otos.a - prev_pos_otos.a);
+                const double da_cam = normalize_angle(cam_pos.a - prev_pos.a);
+                const double da_otos = normalize_angle(otos_pos.a - prev_pos_otos.a);
 
                 if (fabs(da_otos) > 1e-3){
                     const double scalar_angle = da_cam / da_otos;
@@ -62,8 +78,8 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
                     LOG_WARNING("OTOS angle calibration skipped: reported angle too small");
                 }
 
-                prev_pos = navigation.prev_final_pos_cam;
-                prev_pos_otos = navigation.prev_final_pos_otos;
+                prev_pos = cam_pos;
+                prev_pos_otos = otos_pos;
             }
 
             state = !state;
@@ -85,10 +101,10 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
                 }
 
                 if (within_variance){
-                    float current_scalar = drive->getAngularScalar();
+                    float current_scalar = robot->drive.getAngularScalar();
                     float new_scalar = current_scalar * mean;
-                    drive->setAngularScalar(new_scalar);
-                    step = 1;
+                    robot->drive.setAngularScalar(new_scalar);
+                    step = 2;
                     scalar_angle_samples.clear();
                     skip_first_scalar = true;
                     LOG_GREEN_INFO("OTOS calibration done with mean = ", new_scalar);
@@ -96,35 +112,45 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
             }
         }
     } break;
-    case 1:{
+    case 2:{
         // Position compensation test, also compensate for otos angle
         // New Scalar = Current Scalar * (Actual Distance / Reported Distance)
         constexpr int kCalibrationRuns = 2;
         static bool has_prev_measure = false;
         static bool skip_first_scalar = true;
-        static position_t prev_nav_prev_final_pos_cam = {0.0, 0.0, 0.0};
-        static position_t prev_nav_prev_final_pos_otos = {0.0, 0.0, 0.0};
+        static position_t prev_cam_pos = {0.0, 0.0, 0.0};
+        static position_t prev_otos_pos = {0.0, 0.0, 0.0};
         static std::vector<double> scalar_dist_samples;
         static int calibration_runs = 0;
 
         position_t pos1 = {0.0f, 1250.0f, -90.0f};
         pos1.x += state ? 400.0 : -400.0;
 
-        if (tableStatus->colorTeam == YELLOW)
+        if (tableStatus->colorTeam == ColorTeam::Yellow)
             position_robot_flip(pos1);
+
+        // Raw OTOS pose, captured before goTo() applies the camera fix at the end of the move
+        const position_t otos_pos = robot->drive.position;
         ret = navigation.goTo(pos1, false, false, true);
 
-        if (ret == NAV_DONE){
+        if (ret == NavReturn::Done){
+            position_t camera_pos;
+            if (!cam->getLocalisation(camera_pos)){
+                LOG_WARNING("OTOS scalar calibration skipped: no camera localisation");
+                return false;
+            }
+            const position_t cam_pos = cameraToRobot(camera_pos);
+
             if (!has_prev_measure){
-                prev_nav_prev_final_pos_cam = navigation.prev_final_pos_cam;
-                prev_nav_prev_final_pos_otos = navigation.prev_final_pos_otos;
+                prev_cam_pos = cam_pos;
+                prev_otos_pos = otos_pos;
                 has_prev_measure = true;
                 LOG_GREEN_INFO("OTOS scalar calibration: first pose recorded");
             } else {
-                const double d_cam_x = navigation.prev_final_pos_cam.x - prev_nav_prev_final_pos_cam.x;
-                const double d_cam_y = navigation.prev_final_pos_cam.y - prev_nav_prev_final_pos_cam.y;
-                const double d_otos_x = navigation.prev_final_pos_otos.x - prev_nav_prev_final_pos_otos.x;
-                const double d_otos_y = navigation.prev_final_pos_otos.y - prev_nav_prev_final_pos_otos.y;
+                const double d_cam_x = cam_pos.x - prev_cam_pos.x;
+                const double d_cam_y = cam_pos.y - prev_cam_pos.y;
+                const double d_otos_x = otos_pos.x - prev_otos_pos.x;
+                const double d_otos_y = otos_pos.y - prev_otos_pos.y;
 
                 const double dist_cam = sqrt(d_cam_x * d_cam_x + d_cam_y * d_cam_y);
                 const double dist_otos = sqrt(d_otos_x * d_otos_x + d_otos_y * d_otos_y);
@@ -147,8 +173,8 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
                     LOG_WARNING("OTOS scalar calibration skipped: reported displacement too small");
                 }
 
-                prev_nav_prev_final_pos_cam = navigation.prev_final_pos_cam;
-                prev_nav_prev_final_pos_otos = navigation.prev_final_pos_otos;
+                prev_cam_pos = cam_pos;
+                prev_otos_pos = otos_pos;
             }
 
             state = !state;
@@ -170,9 +196,9 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
                 }
 
                 if (within_variance){
-                    float current_scalar = drive->getLinearScalar();
+                    float current_scalar = robot->drive.getLinearScalar();
                     float new_scalar = current_scalar * mean;
-                    drive->setLinearScalar(new_scalar); // TODO Bugfix needed, this causes the OTOS to crash
+                    robot->drive.setLinearScalar(new_scalar); // TODO Bugfix needed, this causes the OTOS to crash
                     LOG_GREEN_INFO("OTOS calibration done with mean = ", new_scalar);
                     scalar_dist_samples.clear();
                     skip_first_scalar = true;
@@ -185,25 +211,25 @@ bool calibrate_otos(TableState* tableStatus, DriveControl* drive, position_t sta
             }
         }
     } break;
-    case 2:{
+    case 3:{
         // Calibrate using a code close to init pos
-        position_t pos = {-400, 1250, -90.0};
-        if (tableStatus->colorTeam == YELLOW)
+        position_t pos = {0, 1250, -45.0};
+        if (tableStatus->colorTeam == ColorTeam::Yellow)
             position_robot_flip(pos);
             
         ret = navigation.goTo(pos, false, true, true);
-        if (ret == NAV_DONE){
+        if (ret == NavReturn::Done){
             step++;
-            LOG_GREEN_INFO("OTOS calibration done, moving to step 3");
+            LOG_GREEN_INFO("OTOS calibration done, moving to home position");
         }
     }break;
-    case 3:{
+    case 4:{
         // goto home
         position_t pos = startPos;
         ret = navigation.goTo(pos, false, true, true);
-        if (ret == NAV_DONE){
+        if (ret == NavReturn::Done){
             LOG_GREEN_INFO("OTOS calibration done, returned to home position");
-            step = 0; // Reset for next time            
+            step = 0; // Reset for next time: the entry step re-applies skip_calibration
             return true;
         }
     }break;

@@ -1,6 +1,5 @@
 #pragma once
 #include "drive_interface.h"
-#define SIZEDATALIDAR 15000
 
 #define LOOP_TIME_MS 20
 
@@ -9,8 +8,6 @@
 
 // Position used before the opponent has been located (off the table).
 const position_t OPPONENT_POS_UNKNOWN = { .x = 3000, .y = 0, .a = 0 };
-
-#define DISTANCESTOP   500
 
 #define RAD_TO_DEG 57.29577951
 #define DEG_TO_RAD 0.01745329252
@@ -39,19 +36,16 @@ const position_t OPPONENT_POS_UNKNOWN = { .x = 3000, .y = 0, .a = 0 };
 #define SENSOR_NUM_3         3
 #define LS_TOP_NUM           4
 #define LS_BOTTOM_NUM        5
-#define SENSOR_NUM_6         6
-#define SENSOR_NUM_7         7
-#define SENSOR_NUM_8         8
+// Define the nums of the arduino for the PUMPS
+#define PUMP_3_NUM           6
+#define PUMP_2_NUM           7
+#define PUMP_1_NUM           8
 
 
-#define MAX_WIDTH_TABLE 1000
-#define MAX_LENGTH_TABLE 1500
-
-#define CALIBRATION_DEPLETION_TIME 2 // Max time between to calibration
-#define D_THRESHOLD_LATERAL 500
-
-#define AS_THRESHOLD 200
-#define ADVERSARY_THRESH 300
+#define TABLE_X_MAX 1000
+#define TABLE_Y_MAX 1500
+#define TABLE_X_MIN -1000
+#define TABLE_Y_MIN -1500
 
 const position_t ARUCO_POSITIONS_TABLE[] = {
     position_t{.x = -400, .y = -900, .a = 0},
@@ -71,31 +65,50 @@ const position_t ARUCO_CALIB_POSITIONS[] = {
     
 const int ARUCO_CALIB_POSITIONS_COUNT = sizeof(ARUCO_CALIB_POSITIONS) / sizeof(position_t);
 
-/******* CONSTANT FOR THE LEGEND OF CAMELOT *******/
 
+/******* CONSTANTS FOR THE LEGEND OF CAMELOT *******/
+
+// Blue throne room (starting and arrival area)
 const position_t START_POSITION = { .x = 0, .y = 1250, .a = -90 };
+const position_t FINAL_POSITION = { .x = 0, .y = 1250, .a = -90 };
 
+// La face de depot pointe vers l'exterieur pour garder le robot cote centre du chateau.
 const position_t WALL_POSITION[] = {
-    position_t{ .x = 1250, .y = -600, .a = 0 },
-    position_t{ .x = 825, .y = -425, .a = 315 },
-    position_t{ .x = 650, .y = 0, .a = 270},
-    position_t{ .x = 825, .y = 425, .a = 225 },
-    position_t{ .x = 1250, .y = 600, .a = 180}};
+    position_t{ .x = -600, .y =  1250, .a = 180 }, // 0
+    position_t{ .x = -429, .y =   821, .a =-135 }, // 1
+    position_t{ .x =    0, .y =   650, .a = -90 }, // 2
+    position_t{ .x =  429, .y =   821, .a = -45 }, // 3
+    position_t{ .x =  600, .y =  1250, .a =   0 }, // 4
+    position_t{ .x = -600, .y = -1250, .a = 180 }, // 5
+    position_t{ .x = -429, .y =  -821, .a = 135 }, // 6
+    position_t{ .x =    0, .y =  -650, .a =  90 }, // 7
+    position_t{ .x =  429, .y =  -821, .a =  45 }, // 8
+    position_t{ .x =  600, .y = -1250, .a =   0 }  // 9
+};
+const int WALL_ZONE_COUNT = sizeof(WALL_POSITION) / sizeof(position_t);
 
 const position_t TOWER_POSITION[] = {
-    position_t{ .x = 650, .y = -250, .a = 0},
-    position_t{ .x = 650, .y = 250, .a = 0},
-    position_t{ .x = 1000, .y = 600, .a = 0},
-    position_t{ .x = 1000, .y = -600, .a = 0}};
+    position_t{ .x = -600, .y =  1000, .a = 0 }, // 0
+    position_t{ .x = -250, .y =   650, .a = 0 }, // 1
+    position_t{ .x =  250, .y =   650, .a = 0 }, // 2
+    position_t{ .x =  600, .y =  1000, .a = 0 }, // 3
+    position_t{ .x = -600, .y = -1000, .a = 0 }, // 4
+    position_t{ .x = -250, .y =  -650, .a = 0 }, // 5
+    position_t{ .x =  250, .y =  -650, .a = 0 }, // 6
+    position_t{ .x =  600, .y = -1000, .a = 0 }  // 7
+};
+const int TOWER_ZONE_COUNT = sizeof(TOWER_POSITION) / sizeof(position_t);
 
 const position_t QUARRY_POSITION[] = {
-    position_t{ .x = 800, .y = -950, .a = 0},
-    position_t{ .x = 250, .y = -950, .a = 0},
-    position_t{ .x  = -250, .y = -950, .a = 0},
-    position_t{ .x = 800, .y = -950, .a = 0},
-    position_t{ .x = 0, .y = -500, .a  = 270},
-    position_t{ .x = 800, .y = 950, .a = 180},
-    position_t{ .x = 250, .y = 950, .a = 180},
-    position_t{ .x = -250, .y = 950, .a = 180},
-    position_t{ .x = -800, .y = 950, .a = 180},
-    position_t{ .x = 0, .y = 500, .a = 270}};
+    position_t{ .x = -950, .y =  750, .a =   180}, // 0
+    position_t{ .x = -950, .y =  250, .a =   180}, // 1
+    position_t{ .x = -950, .y = -250, .a =   180}, // 2
+    position_t{ .x = -950, .y = -750, .a =   180}, // 3
+    position_t{ .x = -500, .y =    0, .a = 270}, // 4
+    position_t{ .x =  950, .y =  750, .a =   0}, // 5
+    position_t{ .x =  950, .y =  250, .a =   0}, // 6
+    position_t{ .x =  950, .y = -250, .a =   0}, // 7
+    position_t{ .x =  950, .y = -750, .a =   0}, // 8
+    position_t{ .x =  500, .y =    0, .a = 270}  // 9
+};
+const int QUARRY_ZONE_COUNT = sizeof(QUARRY_POSITION) / sizeof(position_t);

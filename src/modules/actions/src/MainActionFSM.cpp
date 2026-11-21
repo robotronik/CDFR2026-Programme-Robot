@@ -4,14 +4,14 @@
 #include "actions/VirtualStrategy.hpp"
 #include "utils/logger.hpp"
 
-ActionFSM::ActionFSM(DriveControl* drive, TableState* tableState)
-    : driveControl(drive), tableState(tableState)
+ActionFSM::ActionFSM(RobotControl* robot, TableState* tableState)
+    : robotControl(robot), tableState(tableState)
 {
     Reset();
 }
 
-ActionFSM::ActionFSM(VirtualStrategy* strategy, DriveControl* drive, TableState* tableState)
-    : driveControl(drive), tableState(tableState), currentStrategy(strategy)
+ActionFSM::ActionFSM(VirtualStrategy* strategy, RobotControl* robot, TableState* tableState)
+    : robotControl(robot), tableState(tableState), currentStrategy(strategy)
 {
     Reset();
 }
@@ -62,16 +62,16 @@ bool ActionFSM::RunFSM(){
         return false;
     }
 
-    ReturnFSM_t ret = currentAction->run();
+    ReturnFSM ret = currentAction->run();
 
-    if (ret == FSM_RETURN_DONE){
+    if (ret == ReturnFSM::Done){
         // Action menée à son terme : on enregistre le temps qu'elle a
         // réellement pris.
-        durationDB.record(currentAction->getNom(), _millis() - actionStartTime);
+        //durationDB.record(currentAction->getNom(), _millis() - actionStartTime);
         currentAction = SetBestAction();
         actionStartTime = _millis();
     }
-    else if (ret == FSM_RETURN_ERROR){
+    else if (ret == ReturnFSM::Error){
         currentAction = SetBestAction();
         actionStartTime = _millis();
     }
@@ -85,7 +85,7 @@ bool ActionFSM::RunFSM(){
 */
 VirtualAction* ActionFSM::SetBestAction(){
     //ENDLESSMODE
-    if (endlessMod){
+    if (isEndlessMode){
         if (_millis() > tableState->startTime + 50000) tableState->startTime = _millis();
     }
 

@@ -4,7 +4,7 @@
 
 #include "navigation/driveControl.h"
 #include "defs/tableState.hpp"
-
+#include "actions/RobotControl.hpp"
 /*
     ExempleStrat
     ------------
@@ -20,7 +20,7 @@
 */
 class ExempleStrat : public VirtualStrategy {
 public:
-    ExempleStrat(DriveControl* dc, TableState* ts);
+    ExempleStrat(TableState* ts, RobotControl* rc);
     ~ExempleStrat() override = default;
 
     /*
@@ -52,6 +52,7 @@ public:
 
     // Function to handle the strategy
     position_t StratStartingPos() override;
+    position_t StratFinishingPos() override;
 
 private:
     // (Re)construit le pool possible_actions pour la stratégie courante
@@ -60,6 +61,6 @@ private:
     // hors du pool (cf. reset()) et n'en sort jamais, le FSM n'en obtient
     // qu'un pointeur via tempAction().
     std::unique_ptr<VirtualAction> waitAction;
-    DriveControl* drive;
     TableState* tableStatus;
+    RobotControl* robot;
 };

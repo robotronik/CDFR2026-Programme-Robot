@@ -1,44 +1,44 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
 #include "defs/tableState.hpp"
-#include "navigation/driveControl.h"
-#include "navigation/navigation.h" //For nav_return_t & position_t
+#include "navigation/navigation.h" //For NavReturn & position_t
+
+class RobotControl;
 
 /*
     Action de calibration : force la calibration en se tournant vers
     un tag aruco (ou en s'en éloignant si trop proche/trop loin).
     Si la navigation échoue la calibration est considérée échouée
-    (FSM_RETURN_ERROR) et sera retentée une action plus tard.
+    (ReturnFSM::Error) et sera retentée une action plus tard.
 */
 class CalibrationAction : public VirtualAction {
     public:
-        CalibrationAction(DriveControl* drive, TableState* tableState);
+        CalibrationAction(RobotControl* robot, TableState* tableState);
         ~CalibrationAction() override = default;
 
-        ReturnFSM_t run() override;
+        ReturnFSM run() override;
         bool stop() override;
         void reset() override;
-        bool available(float &reward) override;
+        bool available(float& reward) override;
         bool fullBlock() override;
-        bool mouvementBlock() override;
+        bool movementBlock() override;
 
     protected:
-        bool errorManagement(nav_return_t error_code);
+        bool errorManagement(NavReturn error_code);
         bool successManagement();
 
     private:
-        typedef enum
-        {
-            FSM_CALCULATION,
-            FSM_CALIBRATION_NAV,
-        } StateCalibration_t;
+        enum class StateCalibration {
+            CalcCalculation,
+            CalibrationNav,
+        };
 
-        DriveControl* drive;
+        RobotControl* robot;
         TableState* tableState;
 
-        StateCalibration_t calibrationState;
+        StateCalibration calibrationState;
         position_t calibrationTarget_;
-        nav_return_t nav_ret;
+        NavReturn nav_ret;
 
         // renvoie la position la plus proche
         // à adopter pour regarder un marqueur aruco et se recalibrer.
