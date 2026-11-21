@@ -1,13 +1,4 @@
-// Grid-free path planning for a holonomic convex robot.
-//
-// Pipeline, all exact in continuous space:
-//   1. C_obs = obstacle (+) (-robot)      (convex, heading-free)
-//   2. optional outward offset by margin
-//   3. routing nodes on the union boundary of the C_obs
-//   4. lazy visibility graph + A*
-//
-// Fixed-capacity buffers only: the planner performs no heap allocation, which
-// keeps it predictable on an embedded target.
+// Grid-free path planning for a holonomic convex robot, exact in continuous space.
 #pragma once
 
 #include <array>
@@ -21,7 +12,7 @@ enum class ObstacleKind : uint8_t { Poly,
 
 struct ObstacleInput {
         ObstacleKind kind = ObstacleKind::Poly;
-        // Poly: `poly` is used. Circle: `center` and `radius` are used.
+        // Poly uses `poly`; Circle uses `center` and `radius`.
         Polygon poly{};
         Vec center{};
         double radius = 0.0;
@@ -35,9 +26,7 @@ struct PlanInput {
         std::array<ObstacleInput, kMaxShapes> obstacles{};
         double margin = 0.0;
 
-        // Table half-extents. The reference point is kept inside the rectangle
-        // eroded by the robot's reach, so paths never leave the table. Set
-        // `use_border = false` to plan on an unbounded plane.
+        // Set use_border = false to plan on an unbounded plane.
         bool use_border = true;
         double table_half_x = 1000.0;
         double table_half_y = 1500.0;
@@ -48,19 +37,14 @@ struct PlanOutput {
         int point_count = 0;
         std::array<Vec, kMaxPathPoints> points{};
         double length = kInf;
-        // Set when `goal` lies inside a configuration obstacle: no path can
-        // reach it, so the move must fail rather than stop somewhere nearby.
+        // The goal lies inside a configuration obstacle, so it cannot be reached.
         bool goal_blocked = false;
-        int nodes = 0;
-        int edge_tests = 0;
-        int expanded = 0;
 };
 
-// Plans a path. Returns false when the goal is unreachable.
+// Plans a path, or found = false when the goal is unreachable.
 PlanOutput plan_path(const PlanInput& input);
 
-// Builds the configuration obstacles for a scene (exposed for tests/tools).
-// Returns the number of shapes written to `out`.
+// Configuration obstacles for a scene. Returns the number written to `out`.
 int build_config_shapes(const PlanInput& input, std::array<Polygon, kMaxShapes>& out);
 
 } // namespace planner

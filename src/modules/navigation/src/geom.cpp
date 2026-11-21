@@ -15,11 +15,8 @@ double wrap_angle(double d) {
     return d - M_PI;
 }
 
-// Convex hull of `count` points (Andrew monotone chain), CCW.
-//
-// `buf` holds the input and is only read: the chain needs it twice (lower pass
-// ascending, upper pass descending), and the lower chain must not overwrite the
-// entries the upper pass still has to see.
+// Convex hull of `count` points (Andrew monotone chain), CCW. Both passes read
+// `sorted`, so neither can overwrite what the other still needs.
 Polygon hull_of(const std::vector<Vec>& buf, int count) {
     std::vector<Vec> sorted(buf.begin(), buf.begin() + count);
     std::sort(sorted.begin(), sorted.end(),
@@ -148,9 +145,7 @@ bool segment_enters_polygon(Vec a, Vec b, const Polygon& poly) {
         return false;
     }
 
-    // Separating plane: if both endpoints are strictly outside one face there
-    // is no crossing. This is the hot loop of the whole planner, so it reads
-    // the interleaved plane array directly.
+    // Hot loop: reads the interleaved plane array directly.
     const double* pd = poly.plane_data.data();
     for (int i = 0, lim = poly.n * 3; i < lim; i += 3) {
         const double nx = pd[i], ny = pd[i + 1], m = pd[i + 2];
@@ -161,7 +156,6 @@ bool segment_enters_polygon(Vec a, Vec b, const Polygon& poly) {
 
     if (point_in_polygon(a, poly, -1e-9) || point_in_polygon(b, poly, -1e-9)) return true;
 
-    // Clip the segment against every half-plane.
     const Vec d = b - a;
     double t0 = 0.0, t1 = 1.0;
     for (int i = 0; i < poly.n; ++i) {
@@ -170,7 +164,7 @@ bool segment_enters_polygon(Vec a, Vec b, const Polygon& poly) {
         const double off = poly.planes[i] - a.dot(nrm);
         if (std::abs(denom) < 1e-12) {
             if (off < -1e-9) return false;
-            if (std::abs(off) <= 1e-9) return false; // sliding on this face
+            if (std::abs(off) <= 1e-9) return false;
             continue;
         }
         const double t = off / denom;
@@ -223,8 +217,7 @@ double sat_gap(const Polygon& p, const Polygon& q) {
     }
     if (!separated) return best_overlap == kInf ? 0.0 : -best_overlap;
 
-    // Separated: SAT only gives a lower bound (closest points can be
-    // vertex-to-vertex), so compute the true distance.
+    // SAT only lower-bounds separated shapes; refine to the true distance.
     double best = kInf;
     for (int i = 0; i < p.n; ++i) {
         for (int j = 0; j < q.n; ++j) {
@@ -233,21 +226,6 @@ double sat_gap(const Polygon& p, const Polygon& q) {
         }
     }
     return best;
-}
-
-double circle_polygon_gap(Vec center, double radius, const Polygon& poly) {
-    if (point_in_polygon(center, poly)) {
-        double closest = kInf;
-        for (int i = 0; i < poly.n; ++i) {
-            closest = std::min(closest, point_segment_distance(center, poly.pts[i], poly.pts[(i + 1) % poly.n]));
-        }
-        return -(radius + closest);
-    }
-    double closest = kInf;
-    for (int i = 0; i < poly.n; ++i) {
-        closest = std::min(closest, point_segment_distance(center, poly.pts[i], poly.pts[(i + 1) % poly.n]));
-    }
-    return closest - radius;
 }
 
 Polygon config_obstacle(const Polygon& obstacle, const Polygon& robot) {
@@ -274,23 +252,16 @@ Polygon config_circle(Vec center, double radius, const Polygon& robot) {
     const double step = M_PI / (2 * kArcSegments);
     const double scale = 1.0 / std::cos(step);
 
-    // Reflecting the robot flips its normals, so build (-robot) explicitly:
-    // its outward normals point the other way and the corner arcs must follow
-    // them, otherwise the sampled offset bulges inwards.
-    // Mirror Python: reflect the vertices in place (which reverses the
-    // winding) and let finalize() re-orient CCW and recompute the normals.
+    // Build (-robot) explicitly: its normals point the other way, and the
+    // corner arcs must follow them or the offset bulges inwards.
     Polygon neg;
     for (int i = 0; i < robot.n; ++i) {
         neg.pts[neg.n++] = Vec{robot.pts[i].x == 0.0 ? 0.0 : -robot.pts[i].x,
                                robot.pts[i].y == 0.0 ? 0.0 : -robot.pts[i].y};
     }
     neg.finalize();
-    // Python's Polygon keeps the reflected order (already CCW); finalize()
-    // must not have flipped it, otherwise the corner arcs sweep the wrong way.
 
-    // Two points per edge, plus the arc samples strictly inside the sweep of
-    // each corner. A wrapped angle is < pi, so an arc emits at most
-    // `floor(pi / step)` extra samples.
+    // Two points per edge plus at most floor(pi / step) arc samples.
     const int perEdge = 2 + int(M_PI / step);
     const int capacity = 2 * neg.n * perEdge;
     std::vector<Vec> buf(capacity);
@@ -312,18 +283,12 @@ Polygon config_circle(Vec center, double radius, const Polygon& robot) {
             buf[count++] = center + b + Vec{std::cos(ang), std::sin(ang)} * (radius * scale);
         }
     }
-    // count never exceeds `capacity` by construction, so no truncation here.
     return Polygon::from_points(buf.data(), count);
 }
 
 Polygon grow_polygon(const Polygon& poly, double margin) {
-    // Offset a convex polygon by `margin`: Minkowski sum with a disc, built as
-    // "each edge pushed out, each corner bridged by a short arc".
-    //
-    // This mirrors the verified Python reference one-for-one: a 16-gon disc is
-    // circumscribed by r = margin / cos(pi/16), and every edge emits both of
-    // its endpoints (duplicates are merged later by finalize()). The result is
-    // marginally conservative, which is what a safety margin wants.
+    // Minkowski sum with a 16-gon disc circumscribed at r = margin / cos(pi/16),
+    // so the result never dips below `margin`.
     constexpr int kDiscSides = 16;
     const double step = M_PI / kDiscSides;
     const double r = margin / std::cos(step);
