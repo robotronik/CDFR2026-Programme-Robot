@@ -7,7 +7,7 @@
 
 class RobotControl;
 
-class TakeStone : public VirtualAction {
+class TakeStoneAction : public VirtualAction {
     private:
         TableState* tableState;
         RobotControl* robot;
@@ -34,8 +34,8 @@ class TakeStone : public VirtualAction {
         position_t RobotTakeOffset(position_t stone, const position_t& from) const; //offset centre/face pierre
 
     public:
-        TakeStone(TableState* tableState, RobotControl* robot);
-        ~TakeStone() override = default;
+        TakeStoneAction(TableState* tableState, RobotControl* robot);
+        ~TakeStoneAction() override = default;
 
         ReturnFSM run() override;
         bool stop() override;

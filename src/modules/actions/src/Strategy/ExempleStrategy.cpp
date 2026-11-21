@@ -9,7 +9,7 @@
 #include "actions/ElementalAction/NavHomeAction.hpp"
 #include "actions/ElementalAction/GoToPositionAction.hpp"
 #include "actions/ElementalAction/DropStoneAction.hpp"
-#include "actions/ElementalAction/TakeStone.hpp"
+#include "actions/ElementalAction/TakeStoneAction.hpp"
 
 /*
     ============================================================
@@ -88,7 +88,7 @@ void ExempleStrat::buildPossibleActions() {
     // fixé au démarrage de l'action (cf. GoToPositionAction::findClosestElement()).
     //addAction(0.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, robot));
     addAction(1.0f, std::make_unique<DropStoneAction>(tableStatus, robot));
-    addAction(1.0f, std::make_unique<TakeStone>(tableStatus, robot));
+    addAction(1.0f, std::make_unique<TakeStoneAction>(tableStatus, robot));
 }
 
 VirtualAction* ExempleStrat::tempAction() {
