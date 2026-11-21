@@ -65,7 +65,7 @@ bool test_features_localizer() {
         LOG_ERROR("Features test - missing OV9281 calibration");
         return false;
     }
-    const std::string mapPath = findFeaturePath("table.png");
+    const std::string mapPath = findFeaturePath("FieldBW.png");
     if (mapPath.empty()) {
         LOG_ERROR("Features test - missing field map");
         return false;
