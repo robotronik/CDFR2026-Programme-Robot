@@ -129,26 +129,24 @@
             // Dont draw the grid
             //ctx.drawImage(svgGrid, topLeftX, topLeftY, 3000, 2000);
 
-            if (data["costmap"]) {
-                drawCostmap(data["costmap"]);
+            if (data["pathfinding"]) {
+                drawInflated(data["pathfinding"]);
+                drawPathfinding(data["pathfinding"]);
             }
 
             // Draw robot
             ctx.lineWidth = 4;
             ctx.strokeStyle = 'white';
-            drawRobot(ctx, data["pos"]["y"], 
+            const hull = data["pathfinding"] ? data["pathfinding"]["robot"] : null;
+            drawHeadingMargin(ctx, data["pos"]["y"], data["pos"]["x"],
+                              data["target_pos"]["a"], hull);
+            drawRobot(ctx, data["pos"]["y"],
                             data["pos"]["x"],
-                            data["pos"]["a"]);
+                            data["pos"]["a"],
+                            hull);
 
             //Draws an arrow of the target position
             drawArrow(ctx, data["target_pos"]["y"], data["target_pos"]["x"], data["target_pos"]["a"]);
-
-            // Draw opponent
-            ctx.strokeStyle = 'white';
-            ctx.beginPath();
-            ctx.arc(data["table"]["pos_opponent"]["y"] + centerX, data["table"]["pos_opponent"]["x"] + centerY, 150, 0, Math.PI * 2);
-            ctx.closePath();
-            ctx.stroke();
 
             // Draw yellow beacons
             ctx.fillStyle = 'gold';
@@ -185,36 +183,87 @@
         }
 
         //Screen coords, relative to center
-        function drawRobot(ctx, x, y, angleDeg) {
-            // Convert angle from degrees to radians
+        // Draws the robot hull at (x, y) rotated by angleDeg. The hull comes
+        // from the API (`pathfinding.robot`) so the drawing matches what the
+        // planner actually inflates; the hardcoded shape is only a fallback
+        // for an older backend.
+        function drawRobot(ctx, x, y, angleDeg, hull) {
             const angleRad = angleDeg * Math.PI / 180;
-
-            // Calculate corner points relative to the center of the square
-            const points = [
-                { x: -200, y: -115 },
-                { x: 0, y: 231 },
-                { x: 200, y: -115 },
-                { x: -200, y: -115 },
-                { x: 0, y: -50 },
-                { x: 200, y: -115 }
+            const fallback = [
+                { x: 230.94, y: 0 }, { x: -115.47, y: 200 }, { x: -115.47, y: -200 }
             ];
+            const local = (hull && hull.length >= 3) ? hull : fallback;
 
-            // Rotate points around the center
-            const rotatedPoints = points.map(point => {
-                return {
-                    x: x + centerX + point.x * Math.cos(angleRad) - point.y * Math.sin(angleRad),
-                    y: y + centerY - point.x * Math.sin(angleRad) - point.y * Math.cos(angleRad)
-                };
-            });
-
-            // Set line width
-            // Draw the rotated square
             ctx.beginPath();
-            for (let i = 0; i < rotatedPoints.length; i++) {
-                ctx.lineTo(rotatedPoints[i].x, rotatedPoints[i].y);
-            }
+            local.forEach((point, i) => {
+                const px = x + centerX + point.x * Math.cos(angleRad) - point.y * Math.sin(angleRad);
+                const py = y + centerY - point.x * Math.sin(angleRad) - point.y * Math.cos(angleRad);
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            });
             ctx.closePath();
             ctx.stroke();
+        }
+
+        // The planner rotates the hull to the goal heading and adds a small
+        // clearance. Outline it around the robot so the drawn body matches what
+        // was actually planned.
+        function drawHeadingMargin(ctx, x, y, angleDeg, hull) {
+            const local = (hull && hull.length >= 3) ? hull : null;
+            if (!local) return;
+            const margin = 5; // mm, matches ROBOT_CLEARANCE
+            const a = angleDeg * Math.PI / 180;
+            const cos = Math.cos(a), sin = Math.sin(a);
+
+            ctx.save();
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = 'rgba(120, 220, 255, 0.45)';
+            ctx.beginPath();
+            local.forEach((point, i) => {
+                // Push each hull vertex outwards along its own direction.
+                const len = Math.hypot(point.x, point.y) || 1;
+                const px0 = point.x + (point.x / len) * margin;
+                const py0 = point.y + (point.y / len) * margin;
+                const px = x + centerX + px0 * cos - py0 * sin;
+                const py = y + centerY - px0 * sin - py0 * cos;
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            });
+            ctx.closePath();
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Translucent layer showing the inflated obstacles, i.e. the region the
+        // robot's reference point may not enter. This is C_obs = obstacle (+)
+        // (-robot), so it already accounts for the robot's real shape.
+        function drawInflated(pathfinding) {
+            const shapes = pathfinding["inflated"] || [];
+            ctx.lineWidth = 2;
+
+            shapes.forEach(shape => {
+                const points = shape["corners"] || shape;
+                if (points.length < 3) return;
+
+                ctx.beginPath();
+                points.forEach((p, i) => {
+                    const px = p["y"] + centerX;
+                    const py = p["x"] + centerY;
+                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                });
+                ctx.closePath();
+
+                if (shape["border"]) {
+                    // The table walls cover the whole field, so filling them
+                    // would hide everything. Only their inner edge matters.
+                    ctx.strokeStyle = 'rgba(90, 100, 120, 0.45)';
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = 'rgba(120, 130, 150, 0.28)';
+                    ctx.strokeStyle = 'rgba(90, 100, 120, 0.5)';
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            });
         }
         
         //Screen coords, relative to center
@@ -278,14 +327,38 @@
             canvas.style.height = (window.innerWidth * ratio) + 'px';
         }
 
-        function drawCostmap(costmap) {
-            const scale = 25;
+        // Obstacles and the planned path, in table millimetres.
+        // The canvas uses (0, 0) at its centre with the two axes swapped, and
+        // one millimetre is one pixel, so every point maps as (y, x).
+        function drawPathfinding(pathfinding) {
+            const obstacles = pathfinding["obstacles"] || [];
 
-            costmap.forEach(cell => {
-                const { x, y, cost } = cell;
-                ctx.fillStyle = `rgba(100, 0, 0, ${cost / 300})`;
-                ctx.fillRect(145 + x * scale, 145 + y * scale, scale, scale);
+            // Outline only, so the inflated layer and the path stay readable.
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 6;
+            obstacles.forEach(ob => {
+                ctx.beginPath();
+                ob["corners"].forEach((c, i) => {
+                    const px = c["y"] + centerX;
+                    const py = c["x"] + centerY;
+                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                });
+                ctx.closePath();
+                ctx.stroke();
             });
+
+            // Planned path, drawn on top of the obstacles.
+            const path = pathfinding["path"] || [];
+            if (path.length < 2) return;
+            ctx.strokeStyle = pathfinding["found"] ? 'rgba(30, 100, 255, 0.9)' : 'rgba(150, 150, 150, 0.9)';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            path.forEach((p, i) => {
+                const px = p["y"] + centerX;
+                const py = p["x"] + centerY;
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            });
+            ctx.stroke();
         }
 
         // Call the function to resize initially

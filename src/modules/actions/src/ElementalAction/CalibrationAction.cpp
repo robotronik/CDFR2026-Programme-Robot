@@ -2,7 +2,7 @@
 #include "actions/ElementalAction/CalibrationAction.hpp"
 #include "actions/RobotControl.hpp"
 #include "utils/logger.hpp"
-#include "navigation/pathfind.h"
+#include "navigation/pathfind.hpp"
 #include "defs/constante.h"
 #include "vision/Cam.hpp" // for OFFSET_CAM_A
 

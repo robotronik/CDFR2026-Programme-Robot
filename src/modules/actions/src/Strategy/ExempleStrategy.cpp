@@ -1,7 +1,7 @@
 #include "actions/Strategy/ExempleStrat.hpp"
 #include "actions/VirtualAction.hpp"
 #include "utils/logger.hpp"
-#include "navigation/pathfind.h"
+#include "navigation/pathfind.hpp"
 #include "defs/constante.h"
 
 #include "actions/ElementalAction/WaitAction.hpp"
