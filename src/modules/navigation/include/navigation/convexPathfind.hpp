@@ -48,6 +48,9 @@ struct PlanOutput {
         int point_count = 0;
         std::array<Vec, kMaxPathPoints> points{};
         double length = kInf;
+        // Set when `goal` lies inside a configuration obstacle: no path can
+        // reach it, so the move must fail rather than stop somewhere nearby.
+        bool goal_blocked = false;
         int nodes = 0;
         int edge_tests = 0;
         int expanded = 0;
