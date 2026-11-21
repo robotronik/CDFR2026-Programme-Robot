@@ -8,11 +8,11 @@
 namespace planner {
 namespace {
 
-// Distance between two segments, and a pair of points realising it.
+// Closest distance between two segments; t/u locate it on each segment.
 struct SegPair {
         double d;
-        double t; // parameter along the first segment
-        double u; // parameter along the second segment
+        double t;
+        double u;
 };
 
 SegPair segment_segment(Vec a0, Vec a1, Vec b0, Vec b1) {
@@ -24,7 +24,6 @@ SegPair segment_segment(Vec a0, Vec a1, Vec b0, Vec b1) {
         const double u = (b0 - a0).cross(da) / den;
         if (t >= 0.0 && t <= 1.0 && u >= 0.0 && u <= 1.0) return {0.0, t, u};
     }
-    // Endpoint-to-segment minimum.
     SegPair best{kInf, 0.0, 0.0};
     auto consider = [&](Vec p, Vec s0, Vec s1, bool first) {
         const Vec sd = s1 - s0;
@@ -40,7 +39,6 @@ SegPair segment_segment(Vec a0, Vec a1, Vec b0, Vec b1) {
     return best;
 }
 
-// Cheap exact reject: the segment's AABB must overlap the shape's AABB.
 inline bool aabb_overlap(Vec a, Vec b, const Polygon& poly) {
     return !(std::max(a.x, b.x) < poly.min_corner.x ||
              std::min(a.x, b.x) > poly.max_corner.x ||
@@ -49,8 +47,6 @@ inline bool aabb_overlap(Vec a, Vec b, const Polygon& poly) {
 }
 
 bool segment_blocked(Vec a, Vec b, const std::array<Polygon, kMaxShapes>& shapes, int count) {
-    // AABB test first: a long segment usually only comes near one or two
-    // shapes, so this skips the per-vertex work for the rest.
     for (int i = 0; i < count; ++i) {
         if (!aabb_overlap(a, b, shapes[i])) continue;
         if (segment_enters_polygon(a, b, shapes[i])) return true;
@@ -86,9 +82,8 @@ struct NodeBuffer {
         }
 };
 
-// Union-boundary routing nodes: vertices not swallowed by another shape, plus
-// edge crossings and closest-approach points (which bound narrow passages and
-// otherwise leave a genuine gap looking disconnected).
+// Routing nodes on the union boundary: visible vertices, edge crossings and
+// closest-approach points (the last bound narrow passages).
 void collect_union_nodes(const std::array<Polygon, kMaxShapes>& shapes, int count,
                          NodeBuffer& out) {
     for (int s = 0; s < count; ++s) {
@@ -107,7 +102,6 @@ void collect_union_nodes(const std::array<Polygon, kMaxShapes>& shapes, int coun
             const Polygon& A = shapes[i];
             const Polygon& B = shapes[j];
 
-            // Edge crossings.
             for (int e = 0; e < A.n; ++e) {
                 for (int f = 0; f < B.n; ++f) {
                     const SegPair sp = segment_segment(A.pts[e], A.pts[(e + 1) % A.n],
@@ -122,7 +116,6 @@ void collect_union_nodes(const std::array<Polygon, kMaxShapes>& shapes, int coun
                 }
             }
 
-            // Closest approach, only for genuinely separated shapes.
             if (sat_gap(A, B) <= 1e-6) continue;
             double best_d = kInf;
             Vec best_p{}, best_q{};
@@ -149,7 +142,7 @@ void collect_union_nodes(const std::array<Polygon, kMaxShapes>& shapes, int coun
     }
 }
 
-// Drop waypoints whose removal a straight replacement segment makes safe.
+// Drop waypoints whose removal leaves a clear straight segment.
 void simplify(NodeBuffer& path, const std::array<Polygon, kMaxShapes>& shapes, int count,
               NodeBuffer& out) {
     if (path.n <= 2) {
@@ -172,11 +165,9 @@ void simplify(NodeBuffer& path, const std::array<Polygon, kMaxShapes>& shapes, i
 int build_config_shapes(const PlanInput& input, std::array<Polygon, kMaxShapes>& out) {
     int n = 0;
 
-    // Table border: four thin walls around the field, treated exactly like
-    // any other obstacle (inflated by the robot and by `margin`). This mirrors
-    // the robot firmware's pathfind_place_border().
+    // Border walls are inflated like any other obstacle.
     if (input.use_border) {
-        constexpr double kWall = 50.0; // wall thickness, as on the robot
+        constexpr double kWall = 50.0;
         const double hx = input.table_half_x;
         const double hy = input.table_half_y;
         const Polygon walls[4] = {
@@ -210,19 +201,13 @@ PlanOutput plan_path(const PlanInput& input) {
     std::array<Polygon, kMaxShapes> shapes{};
     const int shape_count = build_config_shapes(input, shapes);
 
-    // If `p` sits inside a configuration obstacle the robot is already
-    // colliding there, and no path can leave it: every segment starting inside
-    // a polygon reads as blocked. Push `p` out to the nearest free point so the
-    // plan starts with the shortest route out of the obstacle.
-    //
-    // Two traps to avoid. The nearest point on the boundary lies *on* the edge,
-    // so segment tests still see it as entering the polygon -- step past it.
-    // And the nearest edge is not always escapable: the corner protection zones
-    // are flush with the table, so their outward normal points off the field.
-    // Try every edge and keep the closest exit that is actually outside all
-    // shapes.
-    constexpr double kEscapeStep = 1.0;  // mm past the boundary
-    constexpr int kEscapeTries = 256;    // clearance steps per candidate
+    // A point inside a configuration obstacle cannot start a path, since every
+    // segment leaving it reads as blocked. Walk it out along the nearest edge
+    // normal that leads somewhere free and drivable; the boundary itself is
+    // still "inside", so the walk steps past it. Corner zones sit flush with
+    // the table, so their outward normal leads off the field: try every edge.
+    constexpr double kEscapeStep = 1.0; // mm
+    constexpr int kEscapeTries = 256;
     auto escape_if_blocked = [&](Vec p) {
         if (distance_to_set(p, shapes, shape_count) > 1e-6) return p;
 
@@ -239,9 +224,6 @@ PlanOutput plan_path(const PlanInput& input) {
                 const double d = dist(p, q);
                 if (d >= best_d) continue;
 
-                // Walk out along this edge's normal until the point is clear of
-                // every shape. Borders and neighbouring zones can sit in the
-                // way, so this may take several steps.
                 const Vec n = shapes[s].normals[i];
                 Vec out = q;
                 bool escaped = false;
@@ -252,10 +234,6 @@ PlanOutput plan_path(const PlanInput& input) {
                         break;
                     }
                 }
-                // Prefer an exit the robot can actually occupy. The corner
-                // zones sit flush with the table, so their nearest edge leads
-                // straight off the field; a slightly longer exit inward is the
-                // one that can be driven.
                 if (!escaped) continue;
                 const bool off_table = input.use_border &&
                                        (std::fabs(out.x) > input.table_half_x ||
@@ -270,12 +248,9 @@ PlanOutput plan_path(const PlanInput& input) {
         return best;
     };
 
-    // Only the start is escaped. The goal is the caller's real target: moving it
-    // would let the search "succeed" somewhere else and the drive controller
-    // would then stop short while the move still reports Done. A goal inside a
-    // configuration obstacle is genuinely unreachable (every segment ending
-    // there enters it), so the search below just finds no path, which callers
-    // already treat as a failure.
+    // Only the start is escaped. Moving the goal would let the search succeed
+    // elsewhere and report Done at the wrong place; a blocked goal is simply
+    // unreachable, which the search below reports as no path.
     const Vec start = escape_if_blocked(input.start);
     const Vec goal = input.goal;
     result.goal_blocked = distance_to_set(goal, shapes, shape_count) <= 1e-6;
@@ -292,10 +267,8 @@ PlanOutput plan_path(const PlanInput& input) {
     nodes.add(start);
     nodes.add(goal);
     const int n = nodes.n;
-    result.nodes = n;
 
-    // Lazy A*: neighbours are generated on demand, and each unordered pair is
-    // tested at most once.
+    // Lazy A*: each unordered pair is tested at most once.
     std::array<double, kMaxNodes> g{};
     std::array<int, kMaxNodes> parent{};
     std::array<uint8_t, kMaxNodes> closed{};
@@ -314,24 +287,20 @@ PlanOutput plan_path(const PlanInput& input) {
     const int gi = index_of(goal);
     if (si < 0 || gi < 0) return result;
 
-    // Min-heap over (f, node). One push per successful relaxation: a fixed-size
-    // array here would write past its end once that count exceeds it, so the
-    // heap owns its storage and grows as needed.
+    // One push per relaxation, so the heap must grow.
     struct HeapItem {
             double f;
             int node;
     };
     struct HeapCompare {
             bool operator()(const HeapItem& a, const HeapItem& b) const {
-                // Ties on f go to the lower node index, the same order the
-                // previous fixed heap produced.
                 return a.f != b.f ? a.f > b.f : a.node > b.node;
             }
     };
     std::priority_queue<HeapItem, std::vector<HeapItem>, HeapCompare> heap;
     auto heap_push = [&](double f, int node) { heap.push({f, node}); };
 
-    // Pair-tested bitmap: n <= kMaxNodes, so a flat bitset is fine.
+    // Pairs already tested; n <= kMaxNodes keeps this small.
     static thread_local std::array<uint64_t, (kMaxNodes * kMaxNodes + 63) / 64> tested_bits{};
     tested_bits.fill(0);
     auto pair_key = [&](int a, int b) -> size_t {
@@ -349,13 +318,11 @@ PlanOutput plan_path(const PlanInput& input) {
     auto visible = [&](int a, int b) {
         if (pair_seen(a, b)) return false;
         pair_mark(a, b);
-        ++result.edge_tests;
         return !segment_blocked(nodes.pts[a], nodes.pts[b], shapes, shape_count);
     };
 
-    // A* over the lazy visibility graph. Each expansion scans the still-open
-    // nodes; every unordered pair is tested at most once (bitmap), and a sound
-    // lower-bound prune skips pairs that cannot beat the incumbent.
+    // Each expansion scans the still-open nodes; the prune skips pairs that
+    // cannot beat the incumbent.
     double best_complete = kInf;
     g[si] = 0.0;
     heap_push(dist(nodes.pts[si], nodes.pts[gi]), si);
@@ -365,7 +332,6 @@ PlanOutput plan_path(const PlanInput& input) {
         const int u = top.node;
         if (closed[u]) continue;
         closed[u] = 1;
-        ++result.expanded;
         if (u == gi) {
             best_complete = g[gi];
             break;
@@ -387,13 +353,11 @@ PlanOutput plan_path(const PlanInput& input) {
         }
     }
 
-    // Unreachable: A* never relaxed the goal, so g[gi] is still infinite.
-    // Without this check the walk below would "succeed" with a single point.
+    // Unreachable: the walk below would otherwise return a single point.
     if (g[gi] == kInf) return result;
 
     NodeBuffer raw;
     for (int c = gi; c != -1; c = parent[c]) {
-        // Build in reverse, then flip.
         if (raw.n < kMaxNodes) raw.pts[raw.n++] = nodes.pts[c];
     }
     std::reverse(raw.pts.begin(), raw.pts.begin() + raw.n);
@@ -401,10 +365,7 @@ PlanOutput plan_path(const PlanInput& input) {
     NodeBuffer simplified;
     simplify(raw, shapes, shape_count, simplified);
 
-    // The path must end on the requested goal; stopping short would report Done
-    // at the wrong place. The search reaches the goal as a node and simplify()
-    // always keeps the last point, so this holds by construction -- keep the
-    // check so a future change cannot silently reintroduce the drift.
+    // The path must end on the requested goal, never short of it.
     if (simplified.n == 0 || dist(simplified.pts[simplified.n - 1], goal) > 1e-6) {
         if (simplified.n < kMaxPathPoints) simplified.add(goal);
     }

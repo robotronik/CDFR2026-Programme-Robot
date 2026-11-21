@@ -16,39 +16,26 @@ using planner::PlanOutput;
 using planner::Polygon;
 using planner::Vec;
 
-// The opponent is approximated by an octagon inside a 400 x 400 mm footprint:
-// rounder than a square, cheaper than a circle, and the planner handles the
-// convex polygon exactly.
 constexpr double OPPONENT_SIZE = 400.0;
 
-// A stone is 110 mm wide and 320 mm long. Its stored heading is the long axis
-// measured from +x, so at 0 deg it extends 320 mm along y.
 constexpr double BLOCK_LENGTH = 320.0;
 constexpr double BLOCK_WIDTH = 110.0;
 
-// Corner protected zones: 300 mm along x and 200 mm along y, at every corner of
-// the table. The robot may never touch them.
 constexpr double CORNER_SIZE_X = 300.0;
 constexpr double CORNER_SIZE_Y = 200.0;
 
-// Clearance added to the exact hull. It only keeps the path off a hairline
-// contact so the controller has room to correct, nothing more: the heading is
-// fixed for a move, so there is no drift to absorb. Kept small, because the
-// sharp corners of the real polygon are what allow tight gaps.
+// Keeps the path off a hairline contact so the controller has room to correct.
 constexpr double ROBOT_CLEARANCE = 5.0;
 
-// The robot hull in its own frame: an equilateral triangle with 400 mm sides,
-// one vertex pointing forward (+x). One convex part is what lets the planner
-// use the exact shape instead of a circle.
+// The robot hull: a 400 mm equilateral triangle, one vertex forward (+x).
 // TODO read the real dimensions from a single source of truth.
 Polygon buildRobotPolygon() {
-    // Circumradius of an equilateral triangle of side s is s / sqrt(3).
     constexpr double kSide = 400.0;
-    constexpr double kR = kSide / 1.7320508075688772;  // s / sqrt(3)
+    constexpr double kR = kSide / 1.7320508075688772; // circumradius, s / sqrt(3)
     const Vec hull[] = {
-        {kR, 0.0},                                         // nose, forward
-        {-kR / 2.0, kSide / 2.0},                          // rear left
-        {-kR / 2.0, -kSide / 2.0},                         // rear right
+        {kR, 0.0},
+        {-kR / 2.0, kSide / 2.0},
+        {-kR / 2.0, -kSide / 2.0},
     };
     return Polygon::from_points(hull, 3);
 }
@@ -56,36 +43,26 @@ Polygon buildRobotPolygon() {
 struct PlannerState {
         PlanInput input;
         PlanOutput last;
-        // Table the obstacles are rebuilt from on every plan. Null until
-        // pathfindSetup() has been called.
         const TableState* table = nullptr;
-        // Index of the opponent in `input.obstacles`, or -1. Stored explicitly
-        // instead of assuming it is the last slot: obstacles can be added
-        // before or after the opponent, and writing to the wrong slot silently
-        // turned a stone into the opponent (or the reverse).
+        // Slot of the opponent in `input.obstacles`, or -1.
         int opponentIndex = -1;
 };
 
 PlannerState state;
 
-// Rebuilds the static obstacles from state.table, carrying the opponent over.
 void rebuildObstacles();
 
 void resetInput() {
     state.input = PlanInput{};
     state.opponentIndex = -1;
     state.input.robot = buildRobotPolygon();
-    // The robot reference point stays inside the table, so paths never leave
-    // the field.
     state.input.use_border = true;
     state.input.table_half_x = 1000.0;
     state.input.table_half_y = 1500.0;
     state.input.margin = 0.0;
 }
 
-// Places a rectangle of `x_extent` by `y_extent` (before rotation) at `center`.
-// Both are full side lengths, so the caller never has to reason about which one
-// the polygon builder takes first.
+// `x_extent` and `y_extent` are full side lengths, before rotation.
 bool addObstacle(position_t center, double x_extent, double y_extent, double angleDeg) {
     if (state.input.obstacle_count >= planner::kMaxShapes - 1) {
         LOG_WARNING("Pathfinding: too many obstacles");
@@ -99,8 +76,7 @@ bool addObstacle(position_t center, double x_extent, double y_extent, double ang
 
 Polygon buildOpponentPolygon(Vec center) {
     constexpr double kHalf = OPPONENT_SIZE / 2.0;
-    // Half-side of the corner cut: kHalf * tan(22.5 deg).
-    constexpr double kCut = kHalf * 0.41421356237309503;
+    constexpr double kCut = kHalf * 0.41421356237309503; // kHalf * tan(22.5 deg)
     const Vec octagon[] = {
         {kHalf, kCut},   {kCut, kHalf},   {-kCut, kHalf},   {-kHalf, kCut},
         {-kHalf, -kCut}, {-kCut, -kHalf}, {kCut, -kHalf},   {kHalf, -kCut},
@@ -118,8 +94,7 @@ void addOpponent(Vec center) {
     ObstacleInput& slot = state.input.obstacles[state.input.obstacle_count];
     slot.kind = ObstacleKind::Poly;
     slot.poly = buildOpponentPolygon(center);
-    // rebuildObstacles() carries the opponent over by reading this back, so it
-    // has to be set for the polygon opponent too, not just circles.
+    // rebuildObstacles() reads this back to carry the opponent over.
     slot.center = center;
     state.opponentIndex = state.input.obstacle_count++;
 }
@@ -139,8 +114,7 @@ json polygonToJson(const Polygon& poly) {
     return points;
 }
 
-// Removes the opponent by moving the last obstacle into its slot: no other
-// entry shifts, and the array stays contiguous.
+// Moves the last obstacle into the opponent's slot to keep the array contiguous.
 void removeOpponent() {
     if (state.opponentIndex < 0) return;
     const int last = state.input.obstacle_count - 1;
@@ -151,8 +125,7 @@ void removeOpponent() {
     state.opponentIndex = -1;
 }
 
-// Four protected rectangles, one per table corner. Each is CORNER_SIZE_X wide
-// (along x) and CORNER_SIZE_Y deep (along y), flush with the corner.
+// One protected rectangle per table corner, flush with it.
 void addCornerZones() {
     const double halfX = state.input.table_half_x;
     const double halfY = state.input.table_half_y;
@@ -176,16 +149,11 @@ void rebuildObstacles() {
 
     resetInput();
 
-    // Stones are 110 across and 320 long, and their stored heading is the real
-    // rotation, so it is passed straight through. Guessing the orientation from
-    // the angle put every stone a quarter turn off from where it actually sits.
     for (const auto& quarry : tableState.quarry) {
         if (quarry.nb <= 0) continue;
-        // A stone lies across y at 0 deg: 110 wide, 320 long.
         addObstacle(quarry.pos, BLOCK_WIDTH, BLOCK_LENGTH, quarry.pos.a);
     }
 
-    // Wall areas lie along their facing direction.
     for (const auto& zone : tableState.wallZone) {
         if (zone.nb <= 0) continue;
         addObstacle(zone.pos, BLOCK_WIDTH, BLOCK_LENGTH, zone.pos.a);
@@ -201,35 +169,23 @@ void rebuildObstacles() {
 int pathfind(position_t start, position_t goal, position_t path[], double& path_length_mm) {
     path_length_mm = 1e6;
 
-    // Rebuild the obstacles from the table on every plan. Stones are picked up
-    // and dropped, so a cached set goes stale the moment a quarry's count
-    // changes; rebuilding is a handful of small polygon constructions and costs
-    // far less than the A* that follows.
+    // Rebuilt every call: stones are picked up and dropped, so a cache goes
+    // stale as soon as a quarry's count changes.
     rebuildObstacles();
 
     state.input.start = Vec{start.x, start.y};
     state.input.goal = Vec{goal.x, goal.y};
 
-    // Plan with the exact hull at the goal heading.
-    //
-    // The drive controller steers towards goal.a, so planning from the live
-    // heading made the path a function of the very angle the controller was
-    // changing: the path jumped sides and the robot oscillated. Planning at
-    // goal.a fixes that, and the exact hull is what lets the robot hug a wall
-    // or reach into a quarry.
-    //
-    // The plan is only valid while the robot stays near goal.a, which it does
-    // because it turns towards that heading as it drives.
+    // Plan at the target heading: the controller turns towards goal.a as it
+    // drives, and planning from the live heading made the path depend on the
+    // very angle being changed, which made the robot oscillate.
     state.input.robot = planner::rotate_polygon(buildRobotPolygon(), goal.a);
     // inflate_polygon, not grow_polygon: the arc-sampled offset would turn the
-    // 3-vertex hull into ~33 vertices and triple the planner's edge tests, and
-    // rounding the corners defeats the polygon.
+    // 3-vertex hull into ~33 vertices.
     state.input.robot = planner::inflate_polygon(state.input.robot, ROBOT_CLEARANCE);
     state.last = planner::plan_path(state.input);
 
     if (!state.last.found || state.last.point_count <= 0) {
-        // A goal inside an obstacle can never be reached: say why, since the
-        // caller must not treat this as "arrived".
         if (state.last.goal_blocked) {
             LOG_ERROR("Pathfinding: target is inside an obstacle, not moving");
         } else {
@@ -250,7 +206,6 @@ int pathfind(position_t start, position_t goal, position_t path[], double& path_
 }
 
 void pathfindSetup(const TableState& tableState) {
-    // Remember the table so pathfind() can rebuild from it every call.
     state.table = &tableState;
     rebuildObstacles();
 }
@@ -258,8 +213,7 @@ void pathfindSetup(const TableState& tableState) {
 void pathfindUpdateOpponent(Lidar* lidar, const TableState& tableState) {
     if (lidar == nullptr) return;
 
-    // The lidar pipeline already tracks the opponent, so reuse it rather than
-    // clustering the raw scan a second time.
+    // The lidar pipeline already tracks the opponent.
     const position_t pos = tableState.pos_opponent;
     const bool known = pos.x < 2000.0; // OPPONENT_POS_UNKNOWN is (3000, 0)
 
@@ -279,8 +233,6 @@ void pathfindUpdateOpponent(Lidar* lidar, const TableState& tableState) {
 void pathfindToJson(json& out) {
     out = json::object();
 
-    // Raw obstacles, as physical objects on the table. `kind` tells the
-    // opponent apart from the stones for any consumer that wants to style them.
     json obstacles = json::array();
     for (int i = 0; i < state.input.obstacle_count; i++) {
         const ObstacleInput& ob = state.input.obstacles[i];
@@ -290,26 +242,15 @@ void pathfindToJson(json& out) {
     }
     out["obstacles"] = obstacles;
 
-    // The robot hull in its own frame, unrotated. The planner inflates a
-    // rotated copy, but the frontend places this one at `pos` and rotates it by
-    // `a` itself, so sending the rotated version would apply the heading twice.
+    // Unrotated: the frontend places it at `pos` and applies the heading itself.
     out["robot"] = polygonToJson(buildRobotPolygon());
 
-    // The inflated obstacles the planner actually avoids: C_obs = O (+) (-robot).
-    // Drawn as a translucent layer to show why a path keeps its distance.
-    //
-    // build_config_shapes() emits the four table-border walls first, then one
-    // shape per obstacle in order. The border is flagged so the frontend can
-    // draw it as a thin edge instead of filling the whole table, and the
-    // opponent's shape is flagged so it can be tinted.
+    // C_obs per obstacle, border walls first, so the frontend can tint them.
     std::array<Polygon, planner::kMaxShapes> shapes{};
     const int shapeCount = planner::build_config_shapes(state.input, shapes);
     const int borderCount = state.input.use_border ? 4 : 0;
     json inflated = json::array();
     for (int i = 0; i < shapeCount; i++) {
-        // Shape order matches the obstacle order after the border block. The
-        // `>= 0` guard matters: for border shapes the index is negative, and
-        // with no opponent (-1) a missing guard flagged a wall as the opponent.
         const int obstacleIndex = i - borderCount;
         const bool isOpponent =
             (state.opponentIndex >= 0 && obstacleIndex == state.opponentIndex);

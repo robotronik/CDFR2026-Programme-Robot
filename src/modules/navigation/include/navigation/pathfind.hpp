@@ -9,30 +9,18 @@ class Lidar;
 /// Upper bound on the points a planned path can contain.
 constexpr int PATHFIND_MAX_POINTS = 256;
 
-/// Plans a collision-free path for the robot's convex hull.
+/// Plans a path around the stones, wall areas and opponent.
 ///
-/// The obstacles are the stones and wall areas held by `tableState`, plus the
-/// opponent detected by the lidar. The configuration-space obstacles are exact
-/// (obstacle (+) (-robot)), so the robot is never approximated by a circle.
-///
-/// @param start         first point of the returned path
-/// @param goal          last point of the returned path
-/// @param path          output buffer of at least PATHFIND_MAX_POINTS entries
+/// @param path           buffer of at least PATHFIND_MAX_POINTS entries
 /// @param path_length_mm polyline length in millimetres
-/// @return number of points written, or 0 when no path exists
+/// @return number of points written, or 0 when the goal is unreachable
 int pathfind(position_t start, position_t goal, position_t path[], double& path_length_mm);
 
-/// Remembers the table the obstacles are read from. Call once at start-up.
-/// pathfind() rebuilds the stones and wall areas from it on every call, so a
-/// picked-up stone stops blocking the path without any extra bookkeeping.
+/// Remembers the table the obstacles are rebuilt from on every pathfind().
 void pathfindSetup(const TableState& tableState);
 
-/// Updates the observed opponent position. Call whenever the lidar produces a
-/// new estimate; the tracked position survives the per-call rebuild.
+/// Updates the opponent position; it survives the per-call rebuild.
 void pathfindUpdateOpponent(Lidar* lidar, const TableState& tableState);
 
-/// Serializes the obstacles and the last planned path for the web display.
-///
-/// The frontend draws `obstacles` (rotated rectangles plus one circle for the
-/// opponent) instead of the old grid costmap.
+/// Obstacles, inflated obstacles and the last path, for the web display.
 void pathfindToJson(json& out);
