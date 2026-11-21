@@ -14,7 +14,7 @@ class ActionFSM{
         void Reset();
         bool RunFSM();
 
-        bool endlessMod = false;
+        bool isEndlessMode = false;
         // Permet de brancher/changer la stratégie utilisée par le FSM.
         // N'importe quelle classe dérivant de VirtualStrategy (ExempleStrat,
         // ou toute autre stratégie de match) peut être utilisée ici.

@@ -30,7 +30,7 @@ class TableState {
         bool mastStatus = false; // True while the mast is reachable and publishing
         void updateMapStatus(const MatTableData& data); // update of tableState relative to data recived by mast
 
-        bool m_isPointInsideRectangle(float px, float py, float cx, float cy, float w, float h);
+        bool isPointInsideRectangle(float px, float py, float cx, float cy, float w, float h);
         // Arrival area (throne room): where the main robot must finish the match.
         bool isRobotInArrivalArea(position_t position);
 
@@ -40,18 +40,18 @@ class TableState {
         // l'élément le plus proche du robot.
         std::vector<MatGameElement> elements;
         quarry_t quarry[10];
-        bool remainQuarry();
-        int isQuarryAvailable(int idx);
+        bool hasAvailableQuarry();
+        bool hasQuarryAvailable(int idx);
 
         wallZone_t wallZone[WALL_ZONE_COUNT];
         towerZone_t towerZone[TOWER_ZONE_COUNT];
 
-        bool remainEmptyWall();
-        bool remainEmptyTower();
-        bool remainEmptyConstructionZone();
-        int needTower();
-        int needWall();
-        bool needGate();
+        bool hasEmptyWall();
+        bool hasEmptyTower();
+        bool hasEmptyConstructionZone();
+        int countMissingTowers();
+        int countMissingWalls();
+        bool isGateNeeded();
 
     private:
         RobotControl* robot;

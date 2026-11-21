@@ -28,7 +28,7 @@ class Wall {
             pumpIdx[1] = idx[1];
             pumpIdx[2] = idx[2];
         };
-        int stones = 0; // number of stones on the face
+        int stoneCount = 0; // number of stones on the face
         bool wDrop();
         bool wTake();
         bool wEnableElectro();

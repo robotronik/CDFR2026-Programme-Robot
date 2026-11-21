@@ -114,7 +114,7 @@ void ActuatorsControl::disableActuators() {
 
 bool Wall::wDrop() {
     //actuator->setElectroState(true, idx) TODO add electro use
-    stones = 0;
+    stoneCount = 0;
     return actuator->setPumpState(false, pumpIdx[0]);
 }
 

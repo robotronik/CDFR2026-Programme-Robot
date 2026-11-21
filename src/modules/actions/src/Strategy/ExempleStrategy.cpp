@@ -58,7 +58,7 @@ void ExempleStrat::reset() {
     // fait passer du pool au membre waitAction, elle reste donc la propriété
     // de la stratégie ; le FSM n'en verra jamais qu'un pointeur.
     waitAction = extractAction("Wait");
-    resume(); // la stratégie démarre active (status = true)
+    resume(); // la stratégie démarre active (isActive = true)
 }
 
 /*
@@ -85,7 +85,7 @@ void ExempleStrat::buildPossibleActions() {
     //addAction(1.0f, std::make_unique<CalibrationAction>(robot, tableStatus));
     addAction(0.5f, std::make_unique<NavHomeAction>(tableStatus, robot, StratFinishingPos()));
     // Cible dynamique : l'élément de jeu le plus proche connu de tableStatus,
-    // fixé au démarrage de l'action (cf. GoToPositionAction::getClosestElement()).
+    // fixé au démarrage de l'action (cf. GoToPositionAction::findClosestElement()).
     //addAction(0.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, robot));
     addAction(1.0f, std::make_unique<DropStoneAction>(tableStatus, robot));
     addAction(1.0f, std::make_unique<TakeStone>(tableStatus, robot));
@@ -96,7 +96,7 @@ VirtualAction* ExempleStrat::tempAction() {
 }
 
 VirtualAction* ExempleStrat::bestAction() {
-    if (!status) {
+    if (!isActive) {
         return nullptr;
     }
 

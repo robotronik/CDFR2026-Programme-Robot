@@ -16,7 +16,7 @@ TakeStone::TakeStone(TableState* tableState, RobotControl* robot)
 }
 
 float TakeStone::getBestQuarry(const position_t& from) {
-    if (!tableState->remainQuarry()) {
+    if (!tableState->hasAvailableQuarry()) {
         return -1;
     }
 
@@ -175,7 +175,7 @@ bool TakeStone::errorManagement() {
 bool TakeStone::successManagement() {
     LOG_GREEN_INFO("TakeStone: arrivé à ", nom.c_str());
     quarry->nb = 0;
-    selected_face->stones = 3;
+    selected_face->stoneCount = 3;
     reset();
     return true;
 }
@@ -192,7 +192,7 @@ void TakeStone::reset() {
 }
 
 bool TakeStone::available(float& reward) {
-    if (selected_face->stones != 0) return false;
+    if (selected_face->stoneCount != 0) return false;
     bool hasDropSpace = false;
     for (const auto& zone : tableState->wallZone) {
         if (zone.colorTeam == tableState->colorTeam && zone.nb == 0) {

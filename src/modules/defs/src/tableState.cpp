@@ -24,7 +24,7 @@ void TableState::reset() {
 }
 
 // Function to check if a point (px, py) lies inside the rectangle
-bool TableState::m_isPointInsideRectangle(float px, float py, float cx, float cy, float w, float h) {
+bool TableState::isPointInsideRectangle(float px, float py, float cx, float cy, float w, float h) {
     float left = cx - w / 2, right = cx + w / 2;
     float bottom = cy - h / 2, top = cy + h / 2;
     return (px >= left && px <= right && py >= bottom && py <= top);
@@ -37,7 +37,7 @@ bool TableState::isRobotInArrivalArea(position_t position) {
     int h = 600;
     int c_x = -550 - w / 2;
     int c_y = colorTeam == ColorTeam::Blue ? (900 + h / 2) : (-900 - h / 2);
-    return m_isPointInsideRectangle(position.x, position.y, c_x, c_y, w + 2 * robotSmallRadius, h + 2 * robotSmallRadius);
+    return isPointInsideRectangle(position.x, position.y, c_x, c_y, w + 2 * robotSmallRadius, h + 2 * robotSmallRadius);
 }
 
 int TableState::getScore() {
@@ -65,11 +65,11 @@ void TableState::initConstructionZones() {
     }
 }
 
-bool TableState::remainEmptyConstructionZone() {
-    return remainEmptyWall() || remainEmptyTower();
+bool TableState::hasEmptyConstructionZone() {
+    return hasEmptyWall() || hasEmptyTower();
 }
 
-bool TableState::remainEmptyTower() {
+bool TableState::hasEmptyTower() {
     for (towerZone_t tower : towerZone) {
         if (tower.nb == 0) {
             return true;
@@ -78,7 +78,7 @@ bool TableState::remainEmptyTower() {
     return false;
 }
 
-bool TableState::remainEmptyWall() {
+bool TableState::hasEmptyWall() {
     for (wallZone_t wall : wallZone) {
         if (wall.nb == 0) {
             return true;
@@ -87,7 +87,7 @@ bool TableState::remainEmptyWall() {
     return false;
 }
 
-int TableState::needTower() {
+int TableState::countMissingTowers() {
     int count = 4;
     for (towerZone_t tower : towerZone) {
         if (tower.bestConstruction == ConstructionType::Tower) {
@@ -97,7 +97,7 @@ int TableState::needTower() {
     return count;
 }
 
-int TableState::needWall() {
+int TableState::countMissingWalls() {
     int count = 5;
     for (wallZone_t wall : wallZone) {
         if (wall.bestConstruction == ConstructionType::Wall) {
@@ -107,7 +107,7 @@ int TableState::needWall() {
     return count;
 }
 
-bool TableState::needGate() {
+bool TableState::isGateNeeded() {
     for (wallZone_t wall : wallZone) {
         if (wall.bestConstruction == ConstructionType::Gate) {
             return false;
@@ -125,13 +125,13 @@ void TableState::initQuarry() {
     }
 }
 
-int TableState::isQuarryAvailable(int idx) {
-    return quarry[idx].nb;
+bool TableState::hasQuarryAvailable(int idx) {
+    return quarry[idx].nb > 0;
 }
 
-bool TableState::remainQuarry() {
-    for (int i = 0; i < 10; i++) {
-        if (isQuarryAvailable(i)) {
+bool TableState::hasAvailableQuarry() {
+    for (int i = 0; i < QUARRY_ZONE_COUNT; i++) {
+        if (hasQuarryAvailable(i)) {
             return true;
         }
     }

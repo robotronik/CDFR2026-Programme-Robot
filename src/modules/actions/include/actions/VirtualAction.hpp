@@ -46,7 +46,7 @@ public:
         return nom;
     }
 
-    float getDuree() const {
+    float getDuration() const {
         return duree;
     }
 };

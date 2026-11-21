@@ -85,7 +85,7 @@ bool ActionFSM::RunFSM(){
 */
 VirtualAction* ActionFSM::SetBestAction(){
     //ENDLESSMODE
-    if (endlessMod){
+    if (isEndlessMode){
         if (_millis() > tableState->startTime + 50000) tableState->startTime = _millis();
     }
 

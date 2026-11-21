@@ -6,20 +6,20 @@
 #include "navigation/pathfind.h"
 
 GoToPositionAction::GoToPositionAction(const std::string& name, position_t target, RobotControl* robot)
-    : target(target), robot(robot), moving(false) {
+    : target(target), robot(robot), isMoving(false) {
     nom = name;
     value = 100;
     duree = 20; // durée estimée, à ajuster
 }
 
 GoToPositionAction::GoToPositionAction(const std::string& name, TableState* tableState, RobotControl* robot)
-    : target({0, 0, 0}), robot(robot), tableState(tableState), needsTarget(true), moving(false) {
+    : target({0, 0, 0}), robot(robot), tableState(tableState), needsTarget(true), isMoving(false) {
     nom = name;
     value = 100;
     duree = 20; // durée estimée, à ajuster
 }
 
-bool GoToPositionAction::getClosestElement(const position_t& from, position_t& target) const {
+bool GoToPositionAction::findClosestElement(const position_t& from, position_t& target) const {
     const std::vector<MatGameElement>& elements = tableState->elements;
     if (elements.empty()) {
         return false;
@@ -42,11 +42,11 @@ bool GoToPositionAction::getClosestElement(const position_t& from, position_t& t
     return true;
 }
 
-bool GoToPositionAction::resolveTarget() {
+bool GoToPositionAction::hasResolvedTarget() {
     if (!needsTarget) {
         return true; // cible fixe, ou déjà résolue pour cette exécution
     }
-    if (!getClosestElement(robot->drive.getPosition(), target)) {
+    if (!findClosestElement(robot->drive.getPosition(), target)) {
         return false; // aucun élément de jeu connu
     }
     needsTarget = false;
@@ -54,7 +54,7 @@ bool GoToPositionAction::resolveTarget() {
 }
 
 ReturnFSM GoToPositionAction::run() {
-    if (!resolveTarget()) {
+    if (!hasResolvedTarget()) {
         LOG_WARNING("GoToPositionAction: aucun élément de jeu connu pour ", nom.c_str());
         return ReturnFSM::Error;
     }
@@ -64,7 +64,7 @@ ReturnFSM GoToPositionAction::run() {
     switch (res) {
     case NavReturn::Paused:
         LOG_DEBUG("GoToPositionAction: nav is paused");
-        moving = false;
+        isMoving = false;
         break;
     case NavReturn::Error:
         errorManagement();
@@ -73,7 +73,7 @@ ReturnFSM GoToPositionAction::run() {
         successManagement();
         return ReturnFSM::Done;
     case NavReturn::InProcess:
-        moving = true;
+        isMoving = true;
         break;
     }
     return ReturnFSM::Working;
@@ -87,15 +87,15 @@ bool GoToPositionAction::errorManagement() {
 
 bool GoToPositionAction::successManagement() {
     LOG_GREEN_INFO("GoToPositionAction: arrivé à ", nom.c_str());
-    moving = false;
+    isMoving = false;
     done = true;
     return true;
 }
 
 bool GoToPositionAction::stop() {
-    if (moving) {
+    if (isMoving) {
         robot->drive.stopMotion();
-        moving = false;
+        isMoving = false;
     }
     return true;
 }
@@ -111,7 +111,7 @@ bool GoToPositionAction::available(float& reward) {
     // qu'elle n'a pas été réarmée par reset().
     if (done) return false;
     // Cible dynamique : sans élément connu, l'action n'est pas jouable.
-    if (!resolveTarget()) return false;
+    if (!hasResolvedTarget()) return false;
     double path_length_mm;
     position_t path[1024]; // Assuming a maximum path length
     if (!pathfind(robot->drive.getPosition(), target, path, path_length_mm)) {
@@ -126,5 +126,5 @@ bool GoToPositionAction::fullBlock() {
 }
 
 bool GoToPositionAction::movementBlock() {
-    return moving;
+    return isMoving;
 }

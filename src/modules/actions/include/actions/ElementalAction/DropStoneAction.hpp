@@ -33,8 +33,8 @@ class DropStoneAction : public VirtualAction {
         TableState* tableState;
         RobotControl* robot;
 
-        bool getBestConstructionZone();
-        bool toBestConstructionPosition();
+        bool findBestConstructionZone();
+        bool moveTargetToConstructionPosition();
         bool successManagement();
 
         enum class DropStoneState {

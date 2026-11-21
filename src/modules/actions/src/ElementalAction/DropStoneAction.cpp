@@ -42,7 +42,7 @@ ReturnFSM DropStoneAction::run() {
 }
 
 bool DropStoneAction::successManagement() {
-    selected_face->stones = 0;
+    selected_face->stoneCount = 0;
     selected_zone->nb = 3;
     return true;
 }
@@ -64,9 +64,9 @@ void DropStoneAction::reset() {
 
 bool DropStoneAction::available(float& reward) {
     reset();
-    if (selected_face->stones == 0) return false;
-    if (getBestConstructionZone()) {
-        toBestConstructionPosition();
+    if (selected_face->stoneCount == 0) return false;
+    if (findBestConstructionZone()) {
+        moveTargetToConstructionPosition();
         reward = (float)static_cast<int>(ConstructionType::Wall) / best_path_length;
         return true;
     } else {
@@ -85,10 +85,10 @@ bool DropStoneAction::movementBlock() {
     return true;
 }
 
-bool DropStoneAction::getBestConstructionZone() {
+bool DropStoneAction::findBestConstructionZone() {
     // TODO check if the robot carries stones to drop
-    if (!tableState->remainEmptyWall()) return false;
-    if (!tableState->needWall()) return false;
+    if (!tableState->hasEmptyWall()) return false;
+    if (!tableState->countMissingWalls()) return false;
     position_t robot_pos = robot->drive.getPosition();
     selected_zone = nullptr;
 
@@ -114,7 +114,7 @@ bool DropStoneAction::getBestConstructionZone() {
     return selected_zone != nullptr;
 }
 
-bool DropStoneAction::toBestConstructionPosition() {
+bool DropStoneAction::moveTargetToConstructionPosition() {
     // TODO change for proper offset depending on actuator
     // TODO 2 placement in area should be more dependent on strategy and not fix
     target.a = target.a - selected_face->getOffset().a;
