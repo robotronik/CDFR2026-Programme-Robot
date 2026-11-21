@@ -1,34 +1,66 @@
 #pragma once
 
 #include "defs/structs.hpp"
+#include "defs/constante.h"
+#include <array>
+#include <cstdint>
+#include <mutex>
+#include <span>
+#include <string>
+#include <vector>
 
-#define SCALE 25
-#define AS_HEIGHT ((2000 / SCALE) + 1)
-#define AS_WIDTH  ((3000 / SCALE) + 1)
+class AStar {
+    public:
+        static const int SCALE = 25;
+        static const int ROWS = 2000 / SCALE + 1;
+        static const int COLS = 3000 / SCALE + 1;
+        static const int CELL_COUNT = ROWS * COLS;
+        enum class Layer { Border,
+                           Game,
+                           Opponent };
 
-#define OBSTACLE_COST 255
-#define MARGIN_COST   200
-#define FREE_SPACE     0
-#define UN_OPTI_SPACE 50
-// Maximum possible path length on the A* grid (conservative bound).
-#define MAX_PATH_LEN (4 * (AS_HEIGHT + AS_WIDTH))
+        struct Obstacle {
+                double x, y;
+                double width = 0, height = 0, angle = 0;
+                double radius = 0; // A positive radius describes a circle instead of a rectangle.
+                bool operator==(const Obstacle&) const = default;
+        };
 
-typedef struct {
-    int x;
-    int y;
-} position_int_t;
+        explicit AStar(double robotRadius = ROBOT_WIDTH / 2.0);
+        bool setRobotRadius(double radius);
+        bool setObstacles(Layer layer, std::vector<Obstacle> obstacles);
+        int findPath(position_t start, position_t goal, std::span<position_t> path, double& length);
+        double pathCost(std::span<const position_t> path) const;
+        json mapJson(const std::string& knownSession = "",
+                     const std::array<uint64_t, 3>& knownVersions = {UINT64_MAX, UINT64_MAX, UINT64_MAX}) const;
+        json costmapJson() const;
 
-inline int to_as_coord(int x){
-    return (x / SCALE) + 1;
-}
+    private:
+        struct Mask {
+                std::array<uint8_t, CELL_COUNT> cells{};
+                std::vector<Obstacle> obstacles;
+                uint64_t version = 0;
+                json encoded;
+        };
+        struct Node {
+                double g;
+                int parent;
+                bool closed;
+        };
 
-position_int_t convert_to_astar(position_t p);
-void astar_initialize_costmap();
-void astar_place_obstacle_with_margin(position_int_t c, int w, int h, int margin, bool traversable = true, bool square = true);
-int astar_pathfind(position_int_t start, position_int_t goal, position_int_t path[]);
-int smooth_path(position_int_t in[], int in_len, position_int_t out[]);
-int coarse_smooth_path(position_int_t in[], int in_len, position_int_t out[]);
-void print_costmap_with_path(position_int_t path[], int len, position_int_t start, position_int_t goal);
-unsigned char get_cost(position_int_t p);
-double astar_path_length(position_int_t path[], int len);
-json astar_get_costmap_json();
+        void rebuildMask(Mask& mask);
+        void encodeMask(Mask& mask);
+        double inflation(const Mask& mask) const;
+        int cost(int row, int col) const;
+        bool pointClear(position_t point) const;
+        double lineCost(position_t from, position_t to) const;
+        static int cellIndex(position_t position);
+        static position_t cellPosition(int index, double angle);
+
+        mutable std::mutex mutex;
+        std::array<Mask, 3> masks;
+        std::array<Node, CELL_COUNT> nodes;
+        std::vector<position_t> waypoints;
+        double robotRadius;
+        std::string session;
+};

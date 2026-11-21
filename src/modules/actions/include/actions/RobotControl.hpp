@@ -14,6 +14,7 @@ class Arduino;
 class RobotControl {
     public:
         explicit RobotControl(Arduino* arduino);
+        double navigationRadius(double chassisRadius) const;
 
         DriveControl drive;
         ActuatorsControl actuators;

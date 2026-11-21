@@ -1,6 +1,7 @@
 #pragma once
 
 #include "defs/structs.hpp"
+#include "navigation/astar.h"
 #include <utils/json.hpp>
 using json = nlohmann::json;
 
@@ -27,6 +28,11 @@ class Navigation {
 
         // Serialize the current navigation path
         void pathJson(json& j);
+        void updatePathfinder();
+        // Radius the planner inflates obstacles by. Callers pass the robot's
+        // full extent (chassis plus any carried stones) when the load changes.
+        bool setRobotRadius(double radius);
+        AStar& getPathfinder() { return planner; }
 
     private:
         NavReturn driveStep();
@@ -47,6 +53,9 @@ class Navigation {
         int currentPathLength = 0;
 
         bool driving = true;
+        AStar planner;
+        // Full radius used for planning; refreshed by setRobotRadius().
+        double chassisRadius = ROBOT_WIDTH / 2.0;
 };
 
 // Global navigation instance, created in main.cpp

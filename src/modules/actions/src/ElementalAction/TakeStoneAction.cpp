@@ -38,13 +38,18 @@ float TakeStoneAction::getBestQuarry(const position_t& from) {
         const int targetCount = BestPositionToTake(candidate->pos, targets);
         for (int j = 0; j < targetCount; j++) {
             double distance;
-            if (!pathfind(from, targets[j], path, distance)) {
+            const int count = pathfind(from, targets[j], path, distance);
+            if (count <= 0) {
                 continue;
             }
             position_t stone = candidate->pos;
             if (j == 1) stone.a -= 180;
-            if (distance < minCost && candidate->nb >= bestStones) {
-                minCost = distance;
+            const position_t approach[] = {targets[j], RobotPosSuctionCupOffset(RobotTakeOffset(stone, from))};
+            // Include the direct pickup approach in the weighted stone comparison.
+            const double cost = navigation.getPathfinder().pathCost(std::span<const position_t>(path, count)) +
+                                navigation.getPathfinder().pathCost(approach);
+            if (cost < minCost && candidate->nb >= bestStones) {
+                minCost = cost;
                 minDistance = distance;
                 best = candidate;
                 bestTarget = targets[j];

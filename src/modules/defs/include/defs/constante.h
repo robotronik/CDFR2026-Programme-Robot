@@ -13,7 +13,13 @@ const position_t OPPONENT_POS_UNKNOWN = { .x = 3000, .y = 0, .a = 0 };
 #define DEG_TO_RAD 0.01745329252
 
 #define ROBOT_WIDTH 400
-#define OPPONENT_ROBOT_RADIUS 250
+#define OPPONENT_ROBOT_RADIUS 200
+const double TABLE_BORDER_MARGIN_REDUCTION_MM = 50;
+const double GAME_ELEMENT_DEPTH_MM = 110;
+const double GAME_ELEMENT_WIDTH_MM = 320;
+const double GAME_ELEMENT_MARGIN_MM = 50;
+const int GAME_ELEMENT_COST = 1000;
+const int OPPONENT_COST = 10000;
 
 // Define the nums of the arduino for the STEPPERS
 #define STEPPER_NUM_1        1
