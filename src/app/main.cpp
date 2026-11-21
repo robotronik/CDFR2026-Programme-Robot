@@ -66,7 +66,7 @@ Cam cam1(-1, "", "");
 #endif
 
 // Navigation
-Navigation navigation(&robot, &tableStatus, &cam1);
+Navigation navigation(&robot.drive, &tableStatus, &cam1);
 
 MainState currentState;
 MainState nextState;
@@ -138,7 +138,9 @@ int main()
                 GetMat();
             }
         }
-        navigation.updatePathfinder();
+        // The planner inflates by the robot's full extent, which grows when it
+        // carries stones, so refresh it before every plan.
+        navigation.setRobotRadius(robot.navigationRadius(ROBOT_WIDTH / 2.0));
 
         // State machine
         switch (currentState)
