@@ -304,29 +304,6 @@ void RestAPI::start(){
         return crow::response(response.dump(4));
     });
 
-    // Define a route for an simple GET request that returns all of the information from the arduino
-    CROW_ROUTE(app, "/get_arduino")
-    ([this](){
-        json response;
-        response["message"] = "Failure to get Arduino data!";
-        json stepper_pos = json::array();
-        for (int i = 1; i <= 4; i++){
-            int32_t val ;
-            if (!arduino->getStepper(val, i)) return crow::response(400, response.dump(4));
-            stepper_pos.push_back({i, val});
-        }
-        json sensor_state = json::array();
-        for (int i = 1; i <= 6; i++){
-            bool val ;
-            if (!arduino->readSensor(i, val)) return crow::response(400, response.dump(4));
-            sensor_state.push_back({i, val});
-        }
-        response["steppers_pos"] = stepper_pos;
-        response["sensors_state"] = sensor_state;
-        response["message"] = "Success to fetch Arduino data";
-        return crow::response(response.dump(4));
-    });
-
     CROW_ROUTE(app, "/get_costmap")
     ([this](){
         json response;
@@ -594,6 +571,10 @@ void RestAPI::start(){
         return jsonMessage("Successful");
     });
 
+    // WARNING: these actuator routes write to the I2C bus directly from a REST
+    // worker thread, concurrently with the main loop. If you're unlucky, two
+    // transfers can interleave and break stuff. The interface is rarely used,
+    // so we accept the risk for now.
     // Define a route for a POST request to rotate a servo to a certain value
     CROW_ROUTE(app, "/set_servo").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         json req_data;
