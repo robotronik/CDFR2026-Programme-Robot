@@ -26,7 +26,7 @@ class RobotControl {
         Gate gate2;
 
     private:
-        int wall1Tab[3] = {PUMP_1_NUM, 0, 0};
+        int wall1Tab[3] = {0, 0, 0};
         int wall2Tab[3] = {0, 0, 0};
         int wall3Tab[3] = {0, 0, 0};
         int wall4Tab[3] = {0, 0, 0};

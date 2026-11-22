@@ -107,12 +107,12 @@
             </div>
             <div class="col">
                 <select id="servo-select" class="form-select" aria-label="Servo Number">
-                    <option value=1>Claws Close (1)</option>
-                    <option value=2>Claws Spin 1 (2)</option>
-                    <option value=3>Claws Spin 2 (3)</option>
-                    <option value=4>Claws Spin 3 (4)</option>
-                    <option value=5>Claws Spin 4 (5)</option>
-                    <option value=6>Servo 6 (6)</option>
+                    <option value=1>Turn Left Tower (1)</option>
+                    <option value=2>Graal Door Lift Left (2)</option>
+                    <option value=3>Turn Right Tower (3)</option>
+                    <option value=4>Graal Door Lift Right (4)</option>
+                    <option value=5>Back Rail (5)</option>
+                    <option value=6>Fire Bullets (6)</option>
                     <option value=7>Servo 7 (7)</option>
                 </select>
             </div>
@@ -122,42 +122,53 @@
         </div>
 
         <div class="label-section">
-            Turn a Stepper to an absolute value
+            Enable or disable a pump
         </div>
         <div class="row mb-3">
             <div class="col">
-                <input id="stepper-value" type="number" class="form-control" placeholder="value">
-            </div>
-            <div class="col">
-                <select id="stepper-select" class="form-select" aria-label="Stepper Number">
-                    <option value=1>Platforms Elevator (1)</option>
-                    <option value=2>Tribunes Elevator (2)</option>
-                    <option value=3>Columns Revolver Low (3)</option>
-                    <option value=4>Columns Revolver High (4)</option>
+                <select id="pump-select" class="form-select" aria-label="Pump">
+                    <option value=1>Pump 1</option>
+                    <option value=2>Pump 2</option>
+                    <option value=3>Pump 3</option>
+                    <option value=4>Pump 4</option>
+                    <option value=5>Pump 5</option>
+                    <option value=6>Pump 6</option>
                 </select>
             </div>
             <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendSetStepper()">Turn Stepper</button>
+                <button type="button" class="btn btn-success w-100" onclick="sendSetPump(true)">Enable</button>
+            </div>
+            <div class="col">
+                <button type="button" class="btn btn-danger w-100" onclick="sendSetPump(false)">Disable</button>
             </div>
         </div>
 
         <div class="label-section">
-            Activate a predefined action sequence
+            Enable or disable an electrovalve
         </div>
         <div class="row mb-3">
             <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('PumpOn')">Pump On</button>
+                <select id="ev-select" class="form-select" aria-label="Electrovalve">
+                    <option value=1>EV 1</option>
+                    <option value=2>EV 2</option>
+                    <option value=3>EV 3</option>
+                    <option value=4>EV 4</option>
+                    <option value=5>EV 5</option>
+                    <option value=6>EV 6</option>
+                    <option value=7>EV 7</option>
+                    <option value=8>EV 8</option>
+                    <option value=9>EV 9</option>
+                    <option value=10>EV 10</option>
+                </select>
             </div>
             <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('PumpOff')">Pump Off</button>
+                <button type="button" class="btn btn-success w-100" onclick="sendSetEV(true)">Enable</button>
             </div>
             <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('ElectroOn')">Electro On</button>
-            </div>
-            <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('ElectroOff')">Electro Off</button>
+                <button type="button" class="btn btn-danger w-100" onclick="sendSetEV(false)">Disable</button>
             </div>
         </div>
+
     </div>
 
     <!-- Error messages will go here (bottom of the page) -->
@@ -415,15 +426,16 @@
             });
         }
 
-        const set_stepper_select = document.getElementById("stepper-select");
-        const set_stepper_value = document.getElementById("stepper-value");
-        function sendSetStepper() {
-            fetch('/set_stepper', {
+        const pump_select = document.getElementById("pump-select");
+        const ev_select = document.getElementById("ev-select");
+
+        function sendSetActuator(route, id, state) {
+            fetch(route, {
                 method: 'POST', // HTTP method
                 headers: {
                     'Content-Type': 'application/json' // Define the content type as JSON
                 },
-                body: JSON.stringify({ value: Number(set_stepper_value.value), id: Number(set_stepper_select.value) })
+                body: JSON.stringify({ state: state, id: id })
             })
             .then(response => {
                 if (!response.ok) {
@@ -442,29 +454,12 @@
             });
         }
 
-        function sendAction(action) {
-            fetch('/test_action', {
-                method: 'POST', // HTTP method
-                headers: {
-                    'Content-Type': 'application/json' // Define the content type as JSON
-                },
-                body: JSON.stringify({ value: action })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    // If the response is not OK, parse the JSON message
-                    return response.json().then(errorData => {
-                    throw new Error(errorData.message || 'Something went wrong!');
-                    });
-                }
-                return response.json(); // Assuming the response will be JSON
-            })
-            .then(data => {
-            })
-            .catch((error) => {
-                console.error('Error:', error); // Handle errors
-                appendAlert(error, 'danger');
-            });
+        function sendSetPump(state) {
+            sendSetActuator('/set_pump', Number(pump_select.value), state);
+        }
+
+        function sendSetEV(state) {
+            sendSetActuator('/set_ev', Number(ev_select.value), state);
         }
 
         // /stop GET method

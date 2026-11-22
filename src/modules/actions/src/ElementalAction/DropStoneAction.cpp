@@ -17,7 +17,6 @@ ReturnFSM DropStoneAction::run() {
         NavReturn nav_result = navigation.goTo(target, true);
         if (nav_result == NavReturn::Done) {
             stop();
-            if (!robot->actuators.setElectroState(true, PUMP_2_NUM)) return ReturnFSM::Error;
             if (!selected_face->wDrop()) return ReturnFSM::Error;
             releaseStartTime = _millis();
             state = DropStoneState::Releasing;
@@ -31,7 +30,6 @@ ReturnFSM DropStoneAction::run() {
     case DropStoneState::Releasing:
         // Wait for the release to complete
         if (_millis() - releaseStartTime >= RELEASE_WAIT_MS) {
-            if (!robot->actuators.setElectroState(false, PUMP_2_NUM)) break;
             successManagement();
             LOG_GREEN_INFO("Drop Success");
             return ReturnFSM::Done;

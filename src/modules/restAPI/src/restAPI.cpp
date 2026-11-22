@@ -615,6 +615,54 @@ void RestAPI::start(){
         return jsonMessage("Successful");
     });
 
+    // Define a route for a POST request to enable/disable a pump
+    CROW_ROUTE(app, "/set_pump").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
+
+        if (*currentState != MainState::Manual)
+            return jsonError(400, "Cannot control a pump when not in MANUAL mode");
+
+        if (!req_data.contains("id") || !req_data.contains("state"))
+            return jsonError(400, "Missing pump id or state");
+
+        int req_id = req_data["id"];
+        bool req_state = req_data["state"];
+
+        if (req_id < 1 || req_id > PUMP_COUNT)
+            return jsonError(400, "Pump id out of range");
+
+        if (!arduino->setPump(req_id, req_state))
+            return jsonError(500, "Failed to set pump");
+
+        return jsonMessage("Successful");
+    });
+
+    // Define a route for a POST request to enable/disable an electrovalve
+    CROW_ROUTE(app, "/set_ev").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
+
+        if (*currentState != MainState::Manual)
+            return jsonError(400, "Cannot control an electrovalve when not in MANUAL mode");
+
+        if (!req_data.contains("id") || !req_data.contains("state"))
+            return jsonError(400, "Missing electrovalve id or state");
+
+        int req_id = req_data["id"];
+        bool req_state = req_data["state"];
+
+        if (req_id < 1 || req_id > EV_COUNT)
+            return jsonError(400, "Electrovalve id out of range");
+
+        if (!arduino->setElectro(req_id, req_state))
+            return jsonError(500, "Failed to set electrovalve");
+
+        return jsonMessage("Successful");
+    });
+
     // Define a route for a POST request to rotate a stepper to a certain value
     CROW_ROUTE(app, "/set_stepper").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         json req_data;
@@ -645,15 +693,7 @@ void RestAPI::start(){
 
         std::string req_value = req_data["value"];
 
-        if(req_value == "PumpOn")
-            manual_currentFunc = [this]{ return robot->wall1.wTake(); };
-        else if(req_value == "PumpOff")
-            manual_currentFunc = [this]{ return robot->wall1.wDrop(); };
-        else if(req_value == "ElectroOn")
-            manual_currentFunc = [this]{ return robot->wall1.wEnableElectro(); };
-        else if(req_value == "ElectroOff")
-            manual_currentFunc = [this]{ return robot->wall1.wDisableElectro(); };
-        else if (req_value != "Test")
+        if (req_value != "Test")
             return jsonError(400, "Invalid action requested");
 
         return jsonMessage("Successful");
