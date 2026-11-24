@@ -172,6 +172,18 @@ int main()
                 tableStatus.calibrationAge = -1; // Force a fresh camera localisation
             }
 
+            if (manual_ctrl){
+                // Debug escape hatch: allow driving without ever seeing an aruco tag.
+                if (tableStatus.calibrationAge == -1 && tableStatus.colorTeam != ColorTeam::None){
+                    const position_t home = action.getStrategy()->StratStartingPos();
+                    robot.drive.setCoordinates(home);
+                    navigation.goTo(home);
+                    LOG_INFO("Manual mode before calibration: assuming home position");
+                }
+                nextState = MainState::Manual;
+                break;
+            }
+
             if (tableStatus.calibrationAge == -1){
                 // Get a camera fix; the OTOS calibration compares its moves against it.
                 // Navigation only tries once per call and reports Done either way, so keep

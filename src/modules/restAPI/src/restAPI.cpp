@@ -495,8 +495,8 @@ void RestAPI::start(){
             return jsonError(400, "Invalid JSON");
 
         bool req_value = req_data["value"];
-        if (req_value && *currentState != MainState::WaitStart)
-            return jsonError(400, "Cannot enter manual mode when not in WAITSTART");
+        if (req_value && *currentState != MainState::WaitStart && *currentState != MainState::Calibration)
+            return jsonError(400, "Cannot enter manual mode when not in WAITSTART or CALIBRATION");
         if (!req_value && *currentState != MainState::Manual)
             return jsonError(400, "Cannot exit manual mode when not in MANUAL");
 
