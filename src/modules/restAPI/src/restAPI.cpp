@@ -653,6 +653,12 @@ void RestAPI::start(){
             manual_currentFunc = [this]{ return robot->wall1.wEnableElectro(); };
         else if(req_value == "ElectroOff")
             manual_currentFunc = [this]{ return robot->wall1.wDisableElectro(); };
+        else if(req_value == "TowerInitial") manual_currentFunc = [this]{ return robot->gate1.rotate(0); };
+        else if(req_value == "TowerPosition") manual_currentFunc = [this]{ return robot->gate1.rotate(1); };
+        else if(req_value == "TowerGate") manual_currentFunc = [this]{ return robot->gate1.rotate(2); };
+        else if(req_value == "BlockInitial") manual_currentFunc = [this]{ return robot->gate1.gBlockFlip(0); };
+        else if(req_value == "BlockGate") manual_currentFunc = [this]{ return robot->gate1.gBlockFlip(1); };
+        else if(req_value == "BlockGraal") manual_currentFunc = [this]{ return robot->gate1.gBlockFlip(2); };
         else if (req_value != "Test")
             return jsonError(400, "Invalid action requested");
 
