@@ -58,12 +58,14 @@ class Tower : public Wall {
 class Gate : public Tower {
     private:
         int servoD;
+        int dropStep = 0;
+        position_t retreatTarget;
 
     public:
         Gate(int idxSD, int idxS, int idx[3], position_t offset, ActuatorsControl* actuator)
             : Tower(idxS, idx, offset, actuator) {
             servoD = idxSD;
         };
-        bool gDrop();
+        bool gDrop(DriveControl* drive);
         bool gBlockFlip(int position);
 };

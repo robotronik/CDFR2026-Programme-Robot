@@ -2,7 +2,9 @@
 #include "actions/ActuatorsControl.hpp"
 #include "i2c/Arduino.hpp"
 #include "navigation/driveControl.h"
+#include "navigation/navigation.h"
 #include "utils/logger.hpp"
+#include <cmath>
 
 ActuatorsControl::ActuatorsControl(Arduino* arduino, DriveControl* drive)
     : arduino(arduino), drive(drive) {
@@ -173,10 +175,45 @@ bool Gate::gBlockFlip(int position) {
     return actuator->moveServoAndWait(servoD, ANGLES[position], 360);
 }
 
-bool Gate::gDrop() { //Version très expérimentale
-    tDrop(0);
-    tDrop(1);
-    rotate(false);
-    tDrop(2);
+bool Gate::gDrop(DriveControl* drive) {
+    switch (dropStep) {
+    case 0:
+        if (!rotate(1)) return false;
+        break;
+
+    case 1:
+        if (!tDrop(0) || !tDrop(1)) return false;
+        retreatTarget = drive->position;
+        retreatTarget.x -= 150 * std::cos(retreatTarget.a * DEG_TO_RAD);
+        retreatTarget.y -= 150 * std::sin(retreatTarget.a * DEG_TO_RAD);
+        break;
+
+    case 2:
+        if (navigation.goTo(retreatTarget, false, true) != NavReturn::Done) return false;
+        break;
+
+    case 3:
+        if (!rotate(2)) return false;
+        break;
+
+    case 4:
+        if (!gBlockFlip(1)) return false;
+        break;
+    
+    case 5:
+        if (navigation.goTo(retreatTarget, false, true) != NavReturn::Done) return false;
+        break;
+
+    case 6:
+        if (!tDrop(2)) return false;
+        break;
+
+    case 7:
+        if (!rotate(0)) return false;
+        break;
+    }
+
+    if (++dropStep < 7) return false;
+    dropStep = 0;
     return true;
 }
