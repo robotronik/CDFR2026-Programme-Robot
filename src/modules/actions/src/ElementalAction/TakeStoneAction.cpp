@@ -168,6 +168,7 @@ bool TakeStoneAction::stop() {
 
 bool TakeStoneAction::errorManagement() {
     LOG_ERROR("TakeStone: erreur de navigation vers ", nom.c_str());
+    stop();
     reset();
     return true;
 }
@@ -181,7 +182,6 @@ bool TakeStoneAction::successManagement() {
 }
 
 void TakeStoneAction::reset() {
-    stop();
     selected_face = &robot->wall1;
     value = 23; // TODO change to be max value of points the opponent can make with 3 stones
     state = TakeStoneState::MOVE1;

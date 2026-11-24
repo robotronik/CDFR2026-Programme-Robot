@@ -44,6 +44,7 @@ ReturnFSM DropStoneAction::run() {
 bool DropStoneAction::successManagement() {
     selected_face->stoneCount = 0;
     selected_zone->nb = 3;
+    reset();
     return true;
 }
 
@@ -53,7 +54,6 @@ bool DropStoneAction::stop() {
 }
 
 void DropStoneAction::reset() {
-    stop();
     state = DropStoneState::Moving;
     releaseStartTime = 0;
     target = {0, 0, 0};
@@ -63,7 +63,6 @@ void DropStoneAction::reset() {
 }
 
 bool DropStoneAction::available(float& reward) {
-    reset();
     if (selected_face->stoneCount == 0) return false;
     if (findBestConstructionZone()) {
         moveTargetToConstructionPosition();
