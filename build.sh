@@ -4,51 +4,43 @@
 # per-architecture images, so no compiler is needed on the host. The workspace is
 # mounted at its own path, so build/x86_64 and build/arm64 appear on the host.
 #
-# Runs on Linux, macOS (whose /bin/bash is 3.2) and Windows through WSL/Git Bash.
-# bash 3.2 rejects "${arr[@]}" on an empty array under `set -u`, so every array
-# is expanded as "${arr[@]+"${arr[@]}"}".
+# Runs on Linux, macOS and Windows through WSL/Git Bash. No `set -u`: macOS's
+# /bin/bash 3.2 treats an empty "${arr[@]}" as an unbound variable.
 
-set -euo pipefail
+set -eo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_ROOT"
 
-HOST_OS="$(uname -s)"
-HOST_ARCH="$(uname -m)"
-
 IMAGE_X86="cdfr-builder-x86_64"
 IMAGE_ARM="cdfr-builder-arm64"
 
-# Both presets compile natively (no -m64/-march flags) and the arm64 image
-# cross-compiles from amd64, so the images must be Linux amd64 whatever the host.
-# On an arm64 host (Apple Silicon) Docker would produce arm64 images instead, so
-# pin the platform there and let Docker Desktop emulate it (Rosetta).
-PLATFORM_X86="" PLATFORM_ARM=""
-if [ "$HOST_ARCH" != x86_64 ] && [ "$HOST_ARCH" != amd64 ]; then
-    PLATFORM_X86="linux/amd64" PLATFORM_ARM="linux/amd64"
-fi
+# Both images are amd64-only (the arm64 one cross-compiles), so an arm64 host
+# (Apple Silicon) must emulate them instead of building arm64 images.
+export DOCKER_DEFAULT_PLATFORM=linux/amd64
 
 # Extra `docker run` flags, user and workdir applied to the next docker_run call;
 # callers override these before invoking it (see the run command).
 DOCKER_RUN_EXTRA=(--network host)
 DOCKER_RUN_USER="$(id -u):$(id -g)"
 DOCKER_RUN_WORKDIR="$REPO_ROOT"
-if [ "$HOST_OS" = Darwin ]; then
-    # Docker Desktop has no host networking (the default bridge already reaches
-    # the network), maps bind-mount ownership to the macOS user whatever the
-    # container uid, and the host uid (501) has no passwd entry and an
-    # unwritable $HOME in the image, so keep the images' default user.
+# ssh agent and ~/.ssh for deploy; root's ssh reads /root/.ssh whatever $HOME.
+SSH_RUN_ARGS=()
+SSH_DIR_TARGET=/home/ubuntu/.ssh
+if [ -S "$SSH_AUTH_SOCK" ]; then
+    SSH_RUN_ARGS=(-v "$SSH_AUTH_SOCK:/ssh-agent" -e SSH_AUTH_SOCK=/ssh-agent)
+fi
+if [ "$(uname -s)" = Darwin ]; then
+    # Docker Desktop: no host networking by default, bind mounts already map to
+    # the macOS user, and uid 501 has no home in the image, so run as root. The
+    # launchd agent socket is unreachable from its VM; it proxies its own.
     DOCKER_RUN_EXTRA=()
     DOCKER_RUN_USER=""
+    SSH_DIR_TARGET=/root/.ssh
+    SSH_RUN_ARGS=(-v /run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock
+                  -e SSH_AUTH_SOCK=/run/host-services/ssh-auth.sock)
 fi
-
-# image_platform <image> -> --platform value, empty when the native one is right.
-image_platform() {
-    case "$1" in
-        "$IMAGE_X86") printf '%s' "$PLATFORM_X86" ;;
-        "$IMAGE_ARM") printf '%s' "$PLATFORM_ARM" ;;
-    esac
-}
+[ -d "$HOME/.ssh" ] && SSH_RUN_ARGS+=(-v "$HOME/.ssh:$SSH_DIR_TARGET:ro")
 
 # Debug sounds (AUDIO.md): the host's PulseAudio/PipeWire socket, if any.
 AUDIO_RUN_ARGS=()
@@ -62,7 +54,7 @@ log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 # Images are labelled with their Dockerfile's hash, so editing a Dockerfile
 # rebuilds its image on the next run.
 build_image() {
-    local image="$1" dockerfile="$2" cache_args=() platform=() p
+    local image="$1" dockerfile="$2" cache_args=()
     log "Building image $image"
     # Optional layer cache in a registry (GHCR in CI): reuse the inline cache of
     # the last pushed $image:cache and tag the new build as the next one.
@@ -71,11 +63,9 @@ build_image() {
         docker pull "$cache" || true # none on the first run
         cache_args=(--cache-from "$cache" --cache-to type=inline -t "$cache")
     fi
-    p="$(image_platform "$image")"
-    [ -n "$p" ] && platform=(--platform "$p")
     # The Dockerfiles use ADD <git url>, which only BuildKit supports.
     DOCKER_BUILDKIT=1 docker build -t "$image" --label "cdfr_dockerfile=$(git hash-object "$dockerfile")" \
-        -f "$dockerfile" "${platform[@]+"${platform[@]}"}" "${cache_args[@]+"${cache_args[@]}"}" .
+        -f "$dockerfile" "${cache_args[@]}" .
 }
 
 ensure_image() {
@@ -87,28 +77,20 @@ ensure_image() {
 # docker_run <image> <command...>
 docker_run() {
     local image="$1"; shift
-    local tty=() ssh=() user=() platform=() p
+    local tty=() user=()
     [ -t 0 ] && tty+=(-it)
     # An empty DOCKER_RUN_USER keeps the image's default user (root), which is
-    # required to actually exercise added capabilities (see run) and is what
-    # Docker Desktop expects on macOS.
+    # required to actually exercise added capabilities (see run).
     if [ -n "$DOCKER_RUN_USER" ]; then
         user=(--user "$DOCKER_RUN_USER")
     fi
-    if [ -n "${SSH_AUTH_SOCK:-}" ] && [ -S "${SSH_AUTH_SOCK}" ]; then
-        ssh+=(-v "${SSH_AUTH_SOCK}:/ssh-agent" -e SSH_AUTH_SOCK=/ssh-agent)
-    fi
-    [ -d "$HOME/.ssh" ] && ssh+=(-v "$HOME/.ssh:/home/ubuntu/.ssh:ro")
-    p="$(image_platform "$image")"
-    [ -n "$p" ] && platform=(--platform "$p")
     # label=disable: on SELinux hosts the bind mounts are otherwise denied
     # ("Permission denied", which cmake reports as a missing CMakePresets.json).
     # No-op on hosts without SELinux.
-    docker run --rm "${tty[@]+"${tty[@]}"}" "${ssh[@]+"${ssh[@]}"}" \
-        "${platform[@]+"${platform[@]}"}" \
-        "${DOCKER_RUN_EXTRA[@]+"${DOCKER_RUN_EXTRA[@]}"}" \
+    docker run --rm "${tty[@]}" "${SSH_RUN_ARGS[@]}" \
+        "${DOCKER_RUN_EXTRA[@]}" \
         --security-opt label=disable \
-        "${user[@]+"${user[@]}"}" \
+        "${user[@]}" \
         -v "$REPO_ROOT:$REPO_ROOT" \
         -w "$DOCKER_RUN_WORKDIR" \
         "$image" "$@"

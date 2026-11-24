@@ -43,25 +43,16 @@ as `build.sh`. Differences:
 
 ## macOS
 
-`build.sh` runs unchanged on macOS with Docker Desktop; it does not need a
-Homebrew bash (the macOS `/bin/bash` 3.2 is supported).
+`build.sh` runs unchanged with Docker Desktop and the stock `/bin/bash` 3.2.
 
-- **Apple Silicon:** the `x86_64` preset compiles natively and the arm64 image
-  cross-compiles from amd64, so both images are pinned to `linux/amd64`.
-  Enable *Settings → General → Use Rosetta for x86_64/amd64 emulation*: builds
-  and tests then run emulated and produce the same binaries as Linux and CI.
-- Keep the clone under a path Docker Desktop shares (`/Users`, `/Volumes`,
-  `/private`, `/tmp` by default) and on the local APFS disk, not a network
-  share: bind-mounted builds are slow there.
-- Builds use the images' default user: Docker Desktop already maps bind-mount
-  ownership to the macOS user whatever the container uid. The default
-  `--network host` is dropped, since Docker Desktop does not provide host
-  networking unless enabled; the default bridge is enough for the builds.
-- `deploy` mounts `~/.ssh` read-only and forwards `SSH_AUTH_SOCK`, so a
-  passphrase-protected key works once it is loaded:
-  `ssh-add --apple-use-keychain ~/.ssh/id_ed25519`.
-- `clean` deletes the `log/` files written by `run` without the container
-  fallback, because files created in a bind mount are owned by the macOS user.
+- **Apple Silicon:** both images are amd64-only (the arm64 one cross-compiles),
+  so `build.sh` pins them to `linux/amd64`. Enable *Settings → General → Use
+  Rosetta for x86_64/amd64 emulation* to make the emulation fast.
+- Keep the clone on the local disk under a shared path (`/Users` is shared by default).
+- Containers run as root: Docker Desktop maps bind-mount ownership to the macOS
+  user anyway. `deploy` mounts `~/.ssh` at `/root/.ssh` and uses Docker
+  Desktop's ssh-agent proxy, so a key loaded with
+  `ssh-add --apple-use-keychain ~/.ssh/id_ed25519` works.
 
 ## Dev container
 
