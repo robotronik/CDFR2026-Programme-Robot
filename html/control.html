@@ -144,31 +144,44 @@
         <div class="label-section">
             Activate a predefined action sequence
         </div>
-        <div class="row mb-3">
-            <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('PumpOn')">Pump On</button>
+        <div class="row g-3 mb-3">
+            <div class="col-12 col-lg-6">
+                <div class="form-label">Pump</div>
+                <div class="btn-group w-100" role="group" aria-label="Pump">
+                    <button type="button" class="btn btn-outline-success" onclick="sendSwitchAction(this, 'PumpOn')">On</button>
+                    <button type="button" class="btn btn-outline-success" onclick="sendSwitchAction(this, 'PumpOff')">Off</button>
+                </div>
             </div>
-            <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('PumpOff')">Pump Off</button>
+            <div class="col-12 col-lg-6">
+                <div class="form-label">Electro</div>
+                <div class="btn-group w-100" role="group" aria-label="Electro">
+                    <button type="button" class="btn btn-outline-success" onclick="sendSwitchAction(this, 'ElectroOn')">On</button>
+                    <button type="button" class="btn btn-outline-success" onclick="sendSwitchAction(this, 'ElectroOff')">Off</button>
+                </div>
             </div>
-            <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('ElectroOn')">Electro On</button>
+            <div class="col-12 col-lg-6">
+                <div class="form-label">Tower</div>
+                <div class="btn-group w-100" role="group" aria-label="Tower">
+                    <button type="button" class="btn btn-outline-success" onclick="sendSwitchAction(this, 'TowerInitial')">Initial</button>
+                    <button type="button" class="btn btn-outline-success" onclick="sendSwitchAction(this, 'TowerPosition')">Position</button>
+                    <button type="button" class="btn btn-outline-success" onclick="sendSwitchAction(this, 'TowerGate')">Gate</button>
+                </div>
             </div>
-            <div class="col">
-                <button type="button" class="btn btn-success w-100" onclick="sendAction('ElectroOff')">Electro Off</button>
+            <div class="col-12 col-lg-6">
+                <div class="form-label">Block</div>
+                <div class="btn-group w-100" role="group" aria-label="Block">
+                    <button type="button" class="btn btn-outline-success" onclick="sendSwitchAction(this, 'BlockInitial')">Initial</button>
+                    <button type="button" class="btn btn-outline-success" onclick="sendSwitchAction(this, 'BlockGate')">Gate</button>
+                    <button type="button" class="btn btn-outline-success" onclick="sendSwitchAction(this, 'BlockGraal')">Graal</button>
+                </div>
             </div>
-            <div class="col"><button type="button" class="btn btn-success w-100" onclick="sendAction('TowerInitial')">Tower 0 - Initial</button></div>
-            <div class="col"><button type="button" class="btn btn-success w-100" onclick="sendAction('TowerPosition')">Tower 1 - Tower</button></div>
-            <div class="col"><button type="button" class="btn btn-success w-100" onclick="sendAction('TowerGate')">Tower 2 - Gate</button></div>
-        </div>
-        <div class="row mb-3">
-            <div class="col"><button type="button" class="btn btn-success w-100" onclick="sendAction('BlockInitial')">Block 0 - Initial</button></div>
-            <div class="col"><button type="button" class="btn btn-success w-100" onclick="sendAction('BlockGate')">Block 1 - Gate</button></div>
-            <div class="col"><button type="button" class="btn btn-success w-100" onclick="sendAction('BlockGraal')">Block 2 - Graal</button></div>
-        </div>
-        <div class="row mb-3">
-            <div class="col"><button type="button" class="btn btn-success w-100" onclick="sendAction('DeployBackGripper')">Deploy Back Gripper</button></div>
-            <div class="col"><button type="button" class="btn btn-success w-100" onclick="sendAction('RetractBackGripper')">Retract Back Gripper</button></div>
+            <div class="col-12 col-lg-6">
+                <div class="form-label">Back Gripper</div>
+                <div class="btn-group w-100" role="group" aria-label="Back Gripper">
+                    <button type="button" class="btn btn-outline-success" onclick="sendSwitchAction(this, 'DeployBackGripper')">Deploy</button>
+                    <button type="button" class="btn btn-outline-success" onclick="sendSwitchAction(this, 'RetractBackGripper')">Retract</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -454,8 +467,23 @@
             });
         }
 
+        // Sends the action and keeps the clicked position highlighted only if it succeeded
+        async function sendSwitchAction(button, action) {
+            const group = button.closest('.btn-group');
+            const buttons = group.querySelectorAll('button');
+            buttons.forEach(b => b.disabled = true);
+
+            const success = await sendAction(action);
+
+            buttons.forEach(b => b.disabled = false);
+            if (success) {
+                buttons.forEach(b => b.classList.remove('active'));
+                button.classList.add('active');
+            }
+        }
+
         function sendAction(action) {
-            fetch('/test_action', {
+            return fetch('/test_action', {
                 method: 'POST', // HTTP method
                 headers: {
                     'Content-Type': 'application/json' // Define the content type as JSON
@@ -472,10 +500,12 @@
                 return response.json(); // Assuming the response will be JSON
             })
             .then(data => {
+                return true;
             })
             .catch((error) => {
                 console.error('Error:', error); // Handle errors
                 appendAlert(error, 'danger');
+                return false;
             });
         }
 
