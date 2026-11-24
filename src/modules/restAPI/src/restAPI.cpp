@@ -659,6 +659,8 @@ void RestAPI::start(){
         else if(req_value == "BlockInitial") manual_currentFunc = [this]{ return robot->gate1.gBlockFlip(0); };
         else if(req_value == "BlockGate") manual_currentFunc = [this]{ return robot->gate1.gBlockFlip(1); };
         else if(req_value == "BlockGraal") manual_currentFunc = [this]{ return robot->gate1.gBlockFlip(2); };
+        else if(req_value == "DeployBackGripper") manual_currentFunc = [this]{ return robot->wall1.DeployBackGripper(true); };
+        else if(req_value == "RetractBackGripper") manual_currentFunc = [this]{ return robot->wall1.DeployBackGripper(false); };
         else if (req_value != "Test")
             return jsonError(400, "Invalid action requested");
 

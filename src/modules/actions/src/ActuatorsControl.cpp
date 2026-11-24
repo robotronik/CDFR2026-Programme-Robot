@@ -131,6 +131,9 @@ bool Wall::wDisableElectro() {
     return actuator->setElectroState(false, PUMP_2_NUM);
 }
 
+bool Wall::DeployBackGripper(bool state) {
+    return actuator->moveServoAndWait(SERVO_CLAW_CLOSE_1, state ? 0 : 120, 360);
+}
 // ------------------------------------------------------
 //                   Towers CONTROL
 // ------------------------------------------------------
