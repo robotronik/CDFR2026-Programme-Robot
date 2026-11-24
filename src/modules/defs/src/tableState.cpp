@@ -71,7 +71,7 @@ bool TableState::hasEmptyConstructionZone() {
 
 bool TableState::hasEmptyTower() {
     for (towerZone_t tower : towerZone) {
-        if (tower.nb == 0) {
+        if (tower.nb == 0 && tower.colorTeam == colorTeam) {
             return true;
         }
     }
@@ -80,7 +80,7 @@ bool TableState::hasEmptyTower() {
 
 bool TableState::hasEmptyWall() {
     for (wallZone_t wall : wallZone) {
-        if (wall.nb == 0) {
+        if (wall.nb == 0 && wall.colorTeam == colorTeam) {
             return true;
         }
     }
@@ -90,7 +90,7 @@ bool TableState::hasEmptyWall() {
 int TableState::countMissingTowers() {
     int count = 4;
     for (towerZone_t tower : towerZone) {
-        if (tower.bestConstruction == ConstructionType::Tower) {
+        if (tower.bestConstruction == ConstructionType::Tower && tower.colorTeam == colorTeam) {
             count--;
         }
     }
@@ -100,7 +100,7 @@ int TableState::countMissingTowers() {
 int TableState::countMissingWalls() {
     int count = 5;
     for (wallZone_t wall : wallZone) {
-        if (wall.bestConstruction == ConstructionType::Wall) {
+        if (wall.bestConstruction == ConstructionType::Wall && wall.colorTeam == colorTeam) {
             count--;
         }
     }
@@ -109,7 +109,7 @@ int TableState::countMissingWalls() {
 
 bool TableState::isGateNeeded() {
     for (wallZone_t wall : wallZone) {
-        if (wall.bestConstruction == ConstructionType::Gate) {
+        if (wall.bestConstruction == ConstructionType::Gate && wall.colorTeam == colorTeam) {
             return false;
         }
     }
