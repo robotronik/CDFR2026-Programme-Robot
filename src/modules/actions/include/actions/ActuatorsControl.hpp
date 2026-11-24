@@ -33,6 +33,7 @@ class Wall {
         bool wTake();
         bool wEnableElectro();
         bool wDisableElectro();
+        bool DeployBackGripper(bool state);
         position_t getOffset() const { return offset; }
 
     protected:
