@@ -1,7 +1,9 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
-#include "navigation/driveControl.h"
 #include "defs/tableState.hpp"
+
+class RobotControl;
+
 /*
     Action de retour sur la zone de départ.
     N'est run que si plus rien n'est possible sur la table
@@ -9,24 +11,26 @@
 */
 class NavHomeAction : public VirtualAction {
     public:
-        NavHomeAction(TableState* tableState, DriveControl* drive);
+        NavHomeAction(TableState* tableState, RobotControl* robot, position_t homePos);
         ~NavHomeAction() override = default;
 
-        ReturnFSM_t run() override;
+        ReturnFSM run() override;
         bool stop() override;
         void reset() override;
-        bool available(float &reward) override;
+        bool available(float& reward) override;
         bool fullBlock() override;
-        bool mouvementBlock() override;
+        bool movementBlock() override;
+
     protected:
         bool errorManagement();
         bool successManagement();
+
     private:
-        position_t homePos;
         TableState* tableState;
-        DriveControl* drive;
+        RobotControl* robot;
         // valeur de l'action en point
         int value = 10;
+        position_t homePos;
         // Passe à true quand le retour est terminé : l'action n'est alors
         // plus candidate (available() renvoie -1) jusqu'à reset().
         bool done = false;

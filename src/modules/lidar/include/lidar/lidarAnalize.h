@@ -8,7 +8,3 @@ void convertAngularToAxial(lidarAnalize_t* data, int count, position_t position,
 bool position_opponentV2(lidarAnalize_t* data, int count, position_t robot_pos, position_t &opponent_pos);
 bool opponent_collide_lidar(lidarAnalize_t* data, int count, int width, int depth, int margin, double angle);
 bool opponent_is_close(position_t opponent_pos, position_t robot_pos, int distance_threshold);
-double distance_2_pts(double d1,double deg1, double d2, double deg2);
-
-int delta_angle(int angle1, int angle2);
-double delta_angle_double(double angle1, double angle2);

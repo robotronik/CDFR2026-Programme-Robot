@@ -3,24 +3,26 @@
 #include <string>
 #include <vector>
 
+#include "actions/RobotControl.hpp"
 #include "defs/mainState.hpp"
 #include "defs/structs.hpp"
 
-class DriveControl;
 class TableState;
 class Arduino;
 class Lidar;
 class Cam;
 class Navigation;
 class VirtualStrategy;
+class SensorControl;
 
 class RestAPI {
     public:
-        RestAPI(main_State_t* currentState,
-                main_State_t* nextState,
-                DriveControl* drive,
+        RestAPI(MainState* currentState,
+                MainState* nextState,
+                RobotControl* robot,
                 TableState* tableStatus,
                 Arduino* arduino,
+                SensorControl* sensor,
                 Lidar* lidar,
                 Cam* cam,
                 Navigation* navigation,
@@ -31,22 +33,23 @@ class RestAPI {
         void stop();
 
         // Requests received through the REST API, applied by the main loop
-        bool consumeColorRequest(colorTeam_t& color);
+        bool consumeColorRequest(ColorTeam& color);
         bool consumeStrategyRequest(std::string& strategy);
 
     private:
-        main_State_t* currentState;
-        main_State_t* nextState;
-        DriveControl* drive;
+        MainState* currentState;
+        MainState* nextState;
+        RobotControl* robot;
         TableState* tableStatus;
         Arduino* arduino;
+        SensorControl* sensor;
         Lidar* lidar;
         Cam* cam;
         Navigation* navigation;
         std::vector<VirtualStrategy*>* strategies;
 
         bool hasColorRequest = false;
-        colorTeam_t requestedColor = NONE;
+        ColorTeam requestedColor = ColorTeam::None;
         bool hasStrategyRequest = false;
         std::string requestedStrategy;
 };

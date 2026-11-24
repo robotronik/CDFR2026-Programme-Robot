@@ -1,13 +1,15 @@
 #include "actions/Strategy/ExempleStrat.hpp"
 #include "actions/VirtualAction.hpp"
-#include "navigation/driveControl.h"
 #include "utils/logger.hpp"
 #include "navigation/pathfind.h"
 #include "defs/constante.h"
+
 #include "actions/ElementalAction/WaitAction.hpp"
 //#include "actions/ElementalAction/CalibrationAction.hpp"
 #include "actions/ElementalAction/NavHomeAction.hpp"
 #include "actions/ElementalAction/GoToPositionAction.hpp"
+#include "actions/ElementalAction/DropStoneAction.hpp"
+#include "actions/ElementalAction/TakeStoneAction.hpp"
 
 /*
     ============================================================
@@ -20,23 +22,34 @@
     mesure qu'elles deviennent la plus prioritaire.
 */
 
-ExempleStrat::ExempleStrat(DriveControl* dc, TableState* ts){
+ExempleStrat::ExempleStrat(TableState* ts, RobotControl* rc) {
     nom = "ExempleStrat";
-    drive = dc;
     tableStatus = ts;
+    robot = rc;
     reset();
 }
 
-position_t ExempleStrat::StratStartingPos(){
+position_t ExempleStrat::StratStartingPos() {
     // Returns the starting position of the robot
     position_t pos = START_POSITION;
 
-    if (tableStatus->colorTeam == YELLOW)
+    if (tableStatus->colorTeam == ColorTeam::Yellow)
         position_robot_flip(pos);
+
     return pos;
 }
 
-void ExempleStrat::reset(){
+position_t ExempleStrat::StratFinishingPos() {
+    // Returns the finishing position of the robot
+    position_t pos = FINAL_POSITION;
+
+    if (tableStatus->colorTeam == ColorTeam::Yellow)
+        position_robot_flip(pos);
+
+    return pos;
+}
+
+void ExempleStrat::reset() {
     possible_actions.clear();
     running_actions.clear();
     buildPossibleActions();
@@ -45,7 +58,7 @@ void ExempleStrat::reset(){
     // fait passer du pool au membre waitAction, elle reste donc la propriété
     // de la stratégie ; le FSM n'en verra jamais qu'un pointeur.
     waitAction = extractAction("Wait");
-    resume(); // la stratégie démarre active (status = true)
+    resume(); // la stratégie démarre active (isActive = true)
 }
 
 /*
@@ -55,12 +68,12 @@ void ExempleStrat::reset(){
     est disponible (cf. calcul du score plus bas).
 
 */
-void ExempleStrat::buildPossibleActions(){
+void ExempleStrat::buildPossibleActions() {
 
-    auto addAction = [this](float weight, std::unique_ptr<VirtualAction> action){
+    auto addAction = [this](float weight, std::unique_ptr<VirtualAction> action) {
         std::string key = action->getNom();
         auto result = possible_actions.emplace(key, std::make_pair(weight, std::move(action)));
-        if (!result.second){
+        if (!result.second) {
             // emplace() ne remplace pas si la clé existe déjà : deux
             // actions avec le même nom écraseraient silencieusement l'une
             // l'autre sinon.
@@ -68,24 +81,26 @@ void ExempleStrat::buildPossibleActions(){
         }
     };
 
-    addAction(1.0f, std::make_unique<WaitAction>(400));
-    //addAction(1.0f, std::make_unique<CalibrationAction>(drive, tableStatus));
-    addAction(1.0f, std::make_unique<NavHomeAction>(tableStatus, drive));
+    //addAction(0.0f, std::make_unique<WaitAction>(400));
+    //addAction(1.0f, std::make_unique<CalibrationAction>(robot, tableStatus));
+    addAction(0.5f, std::make_unique<NavHomeAction>(tableStatus, robot, StratFinishingPos()));
     // Cible dynamique : l'élément de jeu le plus proche connu de tableStatus,
-    // fixé au démarrage de l'action (cf. GoToPositionAction::getClosestElement()).
-    addAction(1.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, drive));
+    // fixé au démarrage de l'action (cf. GoToPositionAction::findClosestElement()).
+    //addAction(0.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, robot));
+    addAction(1.0f, std::make_unique<DropStoneAction>(tableStatus, robot));
+    addAction(1.0f, std::make_unique<TakeStoneAction>(tableStatus, robot));
 }
 
-VirtualAction* ExempleStrat::tempAction(){
+VirtualAction* ExempleStrat::tempAction() {
     return waitAction.get();
 }
 
-VirtualAction* ExempleStrat::bestAction(){
-    if (!status){
+VirtualAction* ExempleStrat::bestAction() {
+    if (!isActive) {
         return nullptr;
     }
 
-    if (possible_actions.empty()){
+    if (possible_actions.empty()) {
         LOG_WARNING("ExempleStrat: plus d'action disponible dans le pool");
         return nullptr;
     }
@@ -93,19 +108,21 @@ VirtualAction* ExempleStrat::bestAction(){
     std::string bestKey;
     float bestScore = -1.0f;
 
-    for (const auto& [key, weightedAction] : possible_actions){
+    for (const auto& [key, weightedAction] : possible_actions) {
         float reward;
         bool available = weightedAction.second->available(reward);
-        if (!available) continue; // action non disponible
-
+        if (!available) {
+            //LOG_WARNING("ExempleStrat: sélection de l'action ", key.c_str(), " impossible");
+            continue; // action non disponible
+        }
         float score = weightedAction.first * reward;
-        if (score > bestScore){
+        if (score > bestScore) {
             bestScore = score;
             bestKey = key;
         }
     }
 
-    if (bestKey.empty()){
+    if (bestKey.empty()) {
         return nullptr;
     }
 

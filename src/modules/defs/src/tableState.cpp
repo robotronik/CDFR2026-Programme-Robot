@@ -1,60 +1,153 @@
 #include "defs/tableState.hpp"
+#include "defs/constante.h"
+#include "actions/RobotControl.hpp"
 
-TableState::TableState(DriveControl* drive){
-    this->drive = drive;
-    pos_opponent.x = 3000; pos_opponent.y = 0; //si on detect pas l'adversaire, on se mettrait en slow mode proche de 0,0
-    colorTeam = NONE;
+TableState::TableState(RobotControl* robot) {
+    this->robot = robot;
+    pos_opponent.x = 3000;
+    pos_opponent.y = 0; //si on detect pas l'adversaire, on se mettrait en slow mode proche de 0,0
+    colorTeam = ColorTeam::None;
     strategy = "";
     startTime = 0;
     calibrationAge = 0;
     reset();
 }
 
-TableState::~TableState(){}
+TableState::~TableState() {}
 
-void TableState::reset(){
+void TableState::reset() {
     resetCalibrationAge();
     /* reset of specific The legend of Camelot */
     elements.clear();
+    initQuarry();
+    initConstructionZones();
 }
 
 // Function to check if a point (px, py) lies inside the rectangle
-bool TableState::m_isPointInsideRectangle(float px, float py, float cx, float cy, float w, float h) {
+bool TableState::isPointInsideRectangle(float px, float py, float cx, float cy, float w, float h) {
     float left = cx - w / 2, right = cx + w / 2;
     float bottom = cy - h / 2, top = cy + h / 2;
     return (px >= left && px <= right && py >= bottom && py <= top);
 }
 
-bool TableState::isRobotInArrivalZone(position_t position){
+bool TableState::isRobotInArrivalArea(position_t position) {
     // Returns true if the robot is in the arrival zone
     int robotSmallRadius = 100;
     int w = 450;
     int h = 600;
-    int c_x = -550 - w/2;
-    int c_y = colorTeam == BLUE ? (900 + h/2) : (-900 - h/2);
-    return m_isPointInsideRectangle(position.x, position.y, c_x, c_y, w + 2*robotSmallRadius, h + 2*robotSmallRadius);
+    int c_x = -550 - w / 2;
+    int c_y = colorTeam == ColorTeam::Blue ? (900 + h / 2) : (-900 - h / 2);
+    return isPointInsideRectangle(position.x, position.y, c_x, c_y, w + 2 * robotSmallRadius, h + 2 * robotSmallRadius);
 }
 
-int TableState::getScore()
-{
+int TableState::getScore() {
     int totalScore = 0;
     // TODO, should be "completely inside" and not just "in"
-    if (isRobotInArrivalZone((position_t)drive->getPosition()))
+    if (isRobotInArrivalArea((position_t)robot->drive.getPosition()))
         totalScore += 5;
     return totalScore;
 }
 
+void TableState::initConstructionZones() {
+    for (int i = 0; i < WALL_ZONE_COUNT; i++) {
+        wallZone[i].pos = WALL_POSITION[i];
+        wallZone[i].nb = 0;
+        wallZone[i].bestConstruction = ConstructionType::Unconstructed;
+        wallZone[i].idx = i;
+        wallZone[i].colorTeam = i < WALL_ZONE_COUNT / 2 ? ColorTeam::Blue : ColorTeam::Yellow;
+    }
+    for (int i = 0; i < TOWER_ZONE_COUNT; i++) {
+        towerZone[i].pos = TOWER_POSITION[i];
+        towerZone[i].nb = 0;
+        towerZone[i].bestConstruction = ConstructionType::Unconstructed;
+        towerZone[i].idx = i;
+        towerZone[i].colorTeam = i < TOWER_ZONE_COUNT / 2 ? ColorTeam::Blue : ColorTeam::Yellow;
+    }
+}
+
+bool TableState::hasEmptyConstructionZone() {
+    return hasEmptyWall() || hasEmptyTower();
+}
+
+bool TableState::hasEmptyTower() {
+    for (towerZone_t tower : towerZone) {
+        if (tower.nb == 0 && tower.colorTeam == colorTeam) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TableState::hasEmptyWall() {
+    for (wallZone_t wall : wallZone) {
+        if (wall.nb == 0 && wall.colorTeam == colorTeam) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int TableState::countMissingTowers() {
+    int count = 4;
+    for (towerZone_t tower : towerZone) {
+        if (tower.bestConstruction == ConstructionType::Tower && tower.colorTeam == colorTeam) {
+            count--;
+        }
+    }
+    return count;
+}
+
+int TableState::countMissingWalls() {
+    int count = 5;
+    for (wallZone_t wall : wallZone) {
+        if (wall.bestConstruction == ConstructionType::Wall && wall.colorTeam == colorTeam) {
+            count--;
+        }
+    }
+    return count;
+}
+
+bool TableState::isGateNeeded() {
+    for (wallZone_t wall : wallZone) {
+        if (wall.bestConstruction == ConstructionType::Gate && wall.colorTeam == colorTeam) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void TableState::initQuarry() {
+    for (int i = 0; i < QUARRY_ZONE_COUNT; i++) {
+        quarry[i].pos = QUARRY_POSITION[i];
+        quarry[i].nb = 3;
+        quarry[i].idx = i;
+        quarry[i].trustFactor = 1.0f;
+    }
+}
+
+bool TableState::hasQuarryAvailable(int idx) {
+    return quarry[idx].nb > 0;
+}
+
+bool TableState::hasAvailableQuarry() {
+    for (int i = 0; i < QUARRY_ZONE_COUNT; i++) {
+        if (hasQuarryAvailable(i)) {
+            return true;
+        }
+    }
+    return false;
+}
 // Serialize tableState
 void to_json(json& j, const TableState& ts) {
     j = json{
         {"pos_opponent", ts.pos_opponent},
         {"startTime", ts.startTime},
-        {"colorTeam", ts.colorTeam},
-        {"strategy", ts.strategy}
-    };
+        {"colorTeam", static_cast<int>(ts.colorTeam)},
+        {"strategy", ts.strategy},
+        {"mastStatus", ts.mastStatus}};
 }
 
-void TableState::updateMapStatus(const MatTableData& data){
+void TableState::updateMapStatus(const MatTableData& data) {
     elements = data.elements;
 
     if (!data.opponentVisible) {

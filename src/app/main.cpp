@@ -7,14 +7,15 @@
 #include <vector>
 #include <unistd.h>  // for usleep
 
+#include "actions/RobotControl.hpp"
 #include "utils/logger.hpp"
 #include "utils/debugSound.hpp"
 
-//lidar related
+// Lidar
 #include "lidar/Lidar.hpp"
 #include "lidar/lidarAnalize.h"
 
-//navigation related
+// Navigation
 #include "navigation/navigation.h"
 #include "navigation/pathfind.h"
 #include "actions/calibration.h"
@@ -25,14 +26,13 @@
 #include "vision/Cam.hpp"
 #include "mat/mat.hpp"
 
-//brain include
+// Actions
 #include "actions/MainActionFSM.hpp"
 #include "actions/Strategy/ExempleStrat.hpp"
 
-//Arduino
+// Arduino
 #include "i2c/Arduino.hpp"
 #include "actions/SensorControl.hpp"
-#include "actions/ActuatorsControl.hpp"
 
 #ifndef __CROSS_COMPILE_ARM__
     // Desktop Build
@@ -42,42 +42,40 @@
 #endif
 
 // Hardware init
-DriveControl drive;
 Arduino arduino;
-Lidar lidar= Lidar(&arduino);
+Lidar lidar = Lidar(&arduino);
 
 // control of hardware
 SensorControl sensor(&arduino);
-ActuatorsControl actuators(&arduino, &drive);
-
+RobotControl robot(&arduino);
 // status of table
-TableState tableStatus(&drive);
+TableState tableStatus(&robot);
 
 // Brain Init
-VirtualStrategy* currentStrategy = new ExempleStrat(&drive, &tableStatus);
+VirtualStrategy* currentStrategy = new ExempleStrat(&tableStatus, &robot);
 
 // Strategies selectable through the REST API
 std::vector<VirtualStrategy*> strategies = { currentStrategy };
 
-ActionFSM action(currentStrategy, &drive, &tableStatus);
+ActionFSM action(currentStrategy, &robot, &tableStatus);
 
 #ifndef EMULATE_CAM
-Cam cam1 = Cam(0, "data/OV9281_1280_800.yaml", "data/table.png");
+Cam cam1 = Cam(0, "data/OV9281_1280_800.yaml", "data/FieldBW.png");
 #else
 Cam cam1(-1, "", "");
 #endif
 
 // Navigation
-Navigation navigation(&drive, &tableStatus, &cam1);
+Navigation navigation(&robot.drive, &tableStatus, &cam1);
 
-main_State_t currentState;
-main_State_t nextState;
+MainState currentState;
+MainState nextState;
 bool initState;
 
 std::thread api_server_thread;
 
 // REST API
-RestAPI api(&currentState, &nextState, &drive, &tableStatus, &arduino, &lidar, &cam1, &navigation, &strategies);
+RestAPI api(&currentState, &nextState, &robot, &tableStatus, &arduino, &sensor, &lidar, &cam1, &navigation, &strategies);
 
 // Prototypes
 int StartSequence();
@@ -94,6 +92,27 @@ void ctrlc(int)
     exit_requested = true;
 }
 
+// Bring the robot up for a match: actuators enabled and homed, lidar spinning, camera running.
+// Idempotent; Init and Fin tear the hardware down and clear the flag.
+// TODO: move this into class Robot (hardware bring-up does not belong in the app state machine).
+static bool hw_ready = false;
+static void startMatchHardware()
+{
+    if (hw_ready)
+        return;
+    robot.actuators.enableActuators();
+    // The wheels start at the strategy's starting position: set both the
+    // robot's odometry position and its target there, and initialise the
+    // navigation target so the first move starts from the right pose.
+    const position_t startPos = action.getStrategy()->StratStartingPos();
+    robot.drive.setCoordinates(startPos);
+    navigation.goTo(startPos);
+    robot.actuators.homeActuators();
+    lidar.startSpin();
+    cam1.start();
+    hw_ready = true;
+}
+
 int main()
 {
     LOG_DEBUG("LOG ID : ", log_main_get_id());
@@ -106,12 +125,12 @@ int main()
 
         // Get Sensor Data
         {
-            drive.update();
+            robot.drive.update();
             // The odometry prior helps the feature localiser; the marker
             // localiser ignores it.
-            cam1.setPrior(drive.position);
+            cam1.setPrior(robot.drive.position);
 
-            if (currentState != INIT && currentState != FIN)
+            if (currentState != MainState::Init && currentState != MainState::Fin)
             {
 #ifndef DISABLE_LIDAR
                 GetLidar();
@@ -124,74 +143,82 @@ int main()
         switch (currentState)
         {
         //****************************************************************
-        case INIT:
+        case MainState::Init:
         {
             if (initState)
             {
                 LOG_GREEN_INFO("INIT");
-                actuators.disableActuators();
+                robot.actuators.disableActuators();
+                hw_ready = false;
                 tableStatus.reset();
                 arduino.RGB_Rainbow();
             }
 
             update_team_strat();
 
-            if (sensor.readButtonSensor() && !sensor.readLatchSensor() && tableStatus.colorTeam != NONE && currentStrategy != nullptr)
-                nextState = WAITSTART;
+            if (sensor.readButtonSensor() && !sensor.readLatchSensor() && tableStatus.colorTeam != ColorTeam::None && currentStrategy != nullptr)
+                nextState = MainState::Calibration;
             break;
         }
         //****************************************************************
-        case WAITSTART:
+        case MainState::Calibration:
         {
-            if (initState){
-                LOG_GREEN_INFO("WAITSTART");
-                actuators.enableActuators();
-                actuators.homeActuators();
-                lidar.startSpin();
-                cam1.start();
+            static bool has_calib = false;
 
-                if (tableStatus.colorTeam == NONE)
-                    arduino.RGB_Blinking(255, 0, 0); // Red Blinking
-                tableStatus.calibrationAge = -1;
+            if (initState){
+                LOG_GREEN_INFO("CALIBRATION");
+                startMatchHardware();
+                tableStatus.pos_opponent = OPPONENT_POS_UNKNOWN;
+                tableStatus.calibrationAge = -1; // Force a fresh camera localisation
+            }
+
+            if (manual_ctrl){
+                // Debug escape hatch: allow driving without ever seeing an aruco tag.
+                if (tableStatus.calibrationAge == -1 && tableStatus.colorTeam != ColorTeam::None){
+                    const position_t home = action.getStrategy()->StratStartingPos();
+                    robot.drive.setCoordinates(home);
+                    navigation.goTo(home);
+                    LOG_INFO("Manual mode before calibration: assuming home position");
+                }
+                nextState = MainState::Manual;
+                break;
             }
 
             if (tableStatus.calibrationAge == -1){
+                // Get a camera fix; the OTOS calibration compares its moves against it.
+                // Navigation only tries once per call and reports Done either way, so keep
+                // asking until the fix lands (which resets the calibration age).
                 navigation.go();
-            } else{
-                //nextState = CALIBRATION;
-            }
-
-            if (sensor.readLatchSensor() && tableStatus.colorTeam != NONE)
-                nextState = RUN;
-            if (manual_ctrl)
-                nextState = MANUAL;
-            break;
-        }
-        //****************************************************************
-        case CALIBRATION:
-        {
-            if (initState){
-                LOG_GREEN_INFO("CALIBRATION");
-            }
-            tableStatus.pos_opponent = OPPONENT_POS_UNKNOWN;
-
-            tableStatus.startTime = _millis();
-            static bool has_calib = false;
-            if (!has_calib){
-                if (calibrate_otos(&tableStatus, &drive, action.getStrategy()->StratStartingPos())){
+            } else if (!has_calib){
+                // Move to the calibration poses, then back to the strategy starting position
+                if (calibrate_otos(&tableStatus, &robot, &cam1, action.getStrategy()->StratStartingPos())){
                     LOG_GREEN_INFO("Calibration successful");
                     has_calib = true;
                 }
+            } else {
+                nextState = MainState::WaitStart;
             }
-
-            if (sensor.readLatchSensor() && tableStatus.colorTeam != NONE)
-                nextState = RUN;
-            if (manual_ctrl)
-                nextState = MANUAL;
             break;
         }
         //****************************************************************
-        case RUN:
+        case MainState::WaitStart:
+        {
+            if (initState){
+                LOG_GREEN_INFO("WAITSTART");
+                // Already up when coming from Calibration, but a WaitStart forced through
+                // the REST API skips calibration, so make sure the hardware is ready.
+                startMatchHardware();
+            }
+
+            // Calibrated and at the starting position: wait for the latch to start the match
+            if (sensor.readLatchSensor())
+                nextState = MainState::Run;
+            if (manual_ctrl)
+                nextState = MainState::Manual;
+            break;
+        }
+        //****************************************************************
+        case MainState::Run:
         {
             if (initState){
                 LOG_GREEN_INFO("RUN");
@@ -203,11 +230,11 @@ int main()
             bool finished = action.RunFSM();
 
             if (_millis() > tableStatus.startTime + MATCH_DURATION_MS || finished || sensor.readButtonSensor())
-                nextState = FIN;
+                nextState = MainState::Fin;
             break;
         }
         //****************************************************************
-        case TEST:
+        case MainState::Test:
         {
             if (initState){
                 LOG_GREEN_INFO("TEST");
@@ -217,7 +244,7 @@ int main()
             break;
         }
         //****************************************************************
-        case MANUAL:
+        case MainState::Manual:
         {
             if (initState){
                 LOG_GREEN_INFO("MANUAL");
@@ -233,29 +260,27 @@ int main()
             break;
         }
         //****************************************************************
-        case FIN:
+        case MainState::Fin:
         {
             if (initState){
                 LOG_GREEN_INFO("FIN");
                 debugSound::play("end.wav");
                 arduino.RGB_Solid(0, 255, 0);
                 manual_clearFunc();
-                drive.disable();
-                actuators.disableActuators();
+                robot.drive.disable();
+                robot.actuators.disableActuators();
                 lidar.stopSpin();
+                cam1.stop();
+                hw_ready = false;
             }
 
+            // Wait for the operator to release the latch, then quit
             if (!sensor.readLatchSensor()){
-                actuators.enableActuators();
                 exit_requested = true;
             }
             break;
         }
-        //****************************************************************
-        default:
-            nextState = INIT;
-            break;
-        }
+        } // switch (currentState)
 
         initState = false;
         if (currentState != nextState)
@@ -307,19 +332,19 @@ int StartSequence()
 
 #ifdef TEST_API_ONLY
     LOG_GREEN_INFO("Running in API test mode only");
-    currentState = TEST;
-    nextState = TEST;
+    currentState = MainState::Test;
+    nextState = MainState::Test;
 #else
-    currentState = INIT;
-    nextState = INIT;
+    currentState = MainState::Init;
+    nextState = MainState::Init;
 #endif // TEST_API_ONLY
 
     initState = true;
     manual_init();
 
-    pathfind_setup();
+    pathfind_setup(tableStatus);
 
-    drive.reset();
+    robot.drive.reset();
 
     LOG_GREEN_INFO("Init sequence done");
     debugSound::play("start.wav");
@@ -329,15 +354,17 @@ int StartSequence()
 void GetLidar()
 {
     static position_t pos_opponent = OPPONENT_POS_UNKNOWN;
-    double IsDataValid = (fabs(drive.velocity.a) <= 45.0) || (position_distance(drive.position, pos_opponent) < 1000);
+    double IsDataValid = (fabs(robot.drive.velocity.a) <= 45.0) || (position_distance(robot.drive.position, pos_opponent) < 1000);
 
     if (lidar.getData()){
-        convertAngularToAxial(lidar.data, lidar.count, drive.position, 150);
-        pathfind_fill_lidar(&lidar);
+        convertAngularToAxial(lidar.data, lidar.count, robot.drive.position, 150);
+            pathfind_fill_lidar(&lidar, tableStatus);
         // Only update opponent position if the robot is not moving too fast to avoid noise
-        if (IsDataValid && position_opponentV2(lidar.data, lidar.count, drive.position, pos_opponent) &&
-                (currentState == RUN || currentState == MANUAL) &&
-                (_millis() - tableStatus.startTime > 1000)){ // Only update opponent position after 1 second from the start to avoid false readings at the beginning
+        if (IsDataValid && position_opponentV2(lidar.data, lidar.count, robot.drive.position, pos_opponent) &&
+                (currentState == MainState::Run || currentState == MainState::Manual) &&
+                // No match clock yet (startTime == 0): nothing to wait for. Otherwise ignore
+                // the first second of the match to avoid false readings at the beginning.
+                (tableStatus.startTime == 0 || _millis() - tableStatus.startTime > 1000)){
             tableStatus.pos_opponent.x = pos_opponent.x;
             tableStatus.pos_opponent.y = pos_opponent.y;
             opponentInAction(pos_opponent);
@@ -352,8 +379,10 @@ void GetMat()
     // dernière donnée, sans bloquer la boucle. Il loggue lui-même la connexion
     // et sa perte, rien à faire ici si la donnée est absente.
     MatTableData matData;
-    if (getMapStatus(matData))
+    const bool mastReachable = getMapStatus(matData);
+    if (mastReachable)
         tableStatus.updateMapStatus(matData);
+    tableStatus.mastStatus = mastReachable;
 }
 
 void EndSequence()
@@ -368,16 +397,16 @@ void EndSequence()
     cam1.stop();
 
 #ifndef EMULATE_I2C
-    drive.disable();
+    robot.drive.disable();
 
     arduino.RGB_Solid(0, 0, 0); // OFF
 
     for(int i = 0; i < 60; i++){
-        if (actuators.homeActuators())
+        if (robot.actuators.homeActuators())
             break;
         delay(100);
     };
-    actuators.disableActuators();
+    robot.actuators.disableActuators();
 #endif // EMULATE_I2C
 
     // Stop the API server
@@ -402,40 +431,25 @@ void tests()
 //                        OTHER
 // ------------------------------------------------------
 
-bool returnToHome(){
-
-    static position_t homePos;
-    nav_return_t res = navigation.goTo(homePos, true);
-    if (res == NAV_ERROR){
-        LOG_ERROR("RETURN_TO_HOME: Navigation error");
-        homePos.y += (tableStatus.colorTeam == BLUE) ? 50 : -50; // recule un peu et retente
-    }
-    if (res == NAV_DONE){
-        LOG_GREEN_INFO("RETURN_TO_HOME: Done");
-        return true;
-    }
-    return false;
-}
-
 // TODO implement this function
-/* Detect from position of adversary the action of the adversary */
+/* Detect from position of the opponent the action of the opponent */
 void opponentInAction(position_t /*position*/){
 }
 
-void switchTeamSide(colorTeam_t color){ // TODO move to tableState
-    if (color == NONE) return;
-    if (currentState == RUN) return;
+void switchTeamSide(ColorTeam color){ // TODO move to tableState
+    if (color == ColorTeam::None) return;
+    if (currentState == MainState::Run) return;
     if (color != tableStatus.colorTeam){
         LOG_INFO("Color switch detected");
         tableStatus.colorTeam = color;
 
         switch (color)
         {
-        case BLUE:
+        case ColorTeam::Blue:
             LOG_INFO("Switching to BLUE");
             arduino.RGB_Blinking(0, 0, 255);
             break;
-        case YELLOW:
+        case ColorTeam::Yellow:
             LOG_INFO("Switching to YELLOW");
             arduino.RGB_Blinking(255, 56, 0);
             break;
@@ -446,13 +460,11 @@ void switchTeamSide(colorTeam_t color){ // TODO move to tableState
         position_t pos = action.getStrategy()->StratStartingPos();
         LOG_INFO("Stratégie '", action.getStrategy()->getNom(),
                  "', départ : x=", pos.x, " y=", pos.y, " a=", pos.a);
-        drive.setCoordinates(pos);
-        navigation.goTo(pos, true, true); // Go to starting pos with A* and slow mode to avoid collisions during the switch
     }
 }
 
 void switchStrategy(std::string strategy){ // TODO move to tableState
-    if (currentState == RUN) return;
+    if (currentState == MainState::Run) return;
 
     if (strategy != action.getStrategy()->getNom()){
         VirtualStrategy* selectedStrategy = nullptr;
@@ -464,8 +476,6 @@ void switchStrategy(std::string strategy){ // TODO move to tableState
         LOG_INFO("Strategy switch detected");
         tableStatus.strategy = strategy;
         action.setStrategy(selectedStrategy);
-        position_t pos = action.getStrategy()->StratStartingPos();
-        drive.setCoordinates(pos);
     }
     else {
         LOG_INFO("Stratégie '", strategy, "' déjà active");
@@ -473,7 +483,7 @@ void switchStrategy(std::string strategy){ // TODO move to tableState
 }
 
 void update_team_strat(){
-    colorTeam_t requestedColor;
+    ColorTeam requestedColor;
     if (api.consumeColorRequest(requestedColor))
         switchTeamSide(requestedColor);
 

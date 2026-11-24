@@ -1,19 +1,20 @@
 #pragma once
 #include "actions/VirtualAction.hpp"
 #include "actions/VirtualStrategy.hpp"
-#include "db/ActionDurationDB.hpp"
+//#include "db/ActionDurationDB.hpp"
 #include "defs/tableState.hpp"
-#include "navigation/driveControl.h"
+
+class RobotControl;
 
 class ActionFSM{
     public:
-        ActionFSM(DriveControl* drive, TableState* tableState);
-        explicit ActionFSM(VirtualStrategy* strategy, DriveControl* drive, TableState* tableState);
+        ActionFSM(RobotControl* robot, TableState* tableState);
+        explicit ActionFSM(VirtualStrategy* strategy, RobotControl* robot, TableState* tableState);
         ~ActionFSM();
         void Reset();
         bool RunFSM();
 
-        bool endlessMod = false;
+        bool isEndlessMode = false;
         // Permet de brancher/changer la stratégie utilisée par le FSM.
         // N'importe quelle classe dérivant de VirtualStrategy (ExempleStrat,
         // ou toute autre stratégie de match) peut être utilisée ici.
@@ -21,7 +22,7 @@ class ActionFSM{
         VirtualStrategy* getStrategy(){ return currentStrategy; }
 
     private:
-        DriveControl* driveControl = nullptr;
+        RobotControl* robotControl = nullptr;
         TableState* tableState = nullptr;
         /***** FUNCTIONS  *******/
         // Détermine et renvoie l'action la plus prioritaire à exécuter
@@ -39,9 +40,9 @@ class ActionFSM{
         VirtualAction* currentAction = nullptr;
 
         /************  BASE DES DURÉES D'ACTION ************/
-        // Enregistre, pour chaque action menée à son terme (FSM_RETURN_DONE),
+        // Enregistre, pour chaque action menée à son terme (ReturnFSM::Done),
         // le temps qu'elle a réellement mis à s'exécuter.
-        ActionDurationDB durationDB{ACTION_DB_PATH};
+        //ActionDurationDB durationDB{ACTION_DB_PATH};
         // Instant (_millis()) du début de l'exécution de currentAction.
         unsigned long actionStartTime = 0;
 };

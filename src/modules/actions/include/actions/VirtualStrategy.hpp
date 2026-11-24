@@ -10,7 +10,7 @@
 class VirtualStrategy {
 protected:
     std::string nom;
-    bool status = false;
+    bool isActive = false;
 
     // Clé = nom de l'action (VirtualAction::getNom()), pour pouvoir
     // retrouver/retirer une action du pool directement par son nom,
@@ -36,9 +36,10 @@ public:
     virtual VirtualAction* bestAction() = 0;
 
     virtual position_t StratStartingPos() = 0;
+    virtual position_t StratFinishingPos() = 0;
 
-    void stop(){ status = false; }
-    void resume(){ status = true; }
+    void stop(){ isActive = false; }
+    void resume(){ isActive = true; }
 
     /* Action de temporisation à exécuter quand la stratégie n'a plus rien à
        proposer. L'action reste la propriété de la stratégie : le FSM n'en
@@ -56,7 +57,7 @@ public:
 
     /* Retire du pool et renvoie (transfert de propriété) l'action
        nommée `name`, ou nullptr si absente. Utile pour re-proposer
-       une action précise après un FSM_RETURN_DONE par exemple. */
+       une action précise après un ReturnFSM::Done par exemple. */
     std::unique_ptr<VirtualAction> extractAction(const std::string& name) {
         auto it = possible_actions.find(name);
         if (it == possible_actions.end()) return nullptr;

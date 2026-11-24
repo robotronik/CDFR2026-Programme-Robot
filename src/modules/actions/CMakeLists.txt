@@ -6,8 +6,11 @@ target_sources(actions
         src/ElementalAction/GoToPositionAction.cpp
         src/ElementalAction/NavHomeAction.cpp
         src/ElementalAction/WaitAction.cpp
+        src/ElementalAction/DropStoneAction.cpp
+        src/ElementalAction/TakeStoneAction.cpp
         src/Strategy/ExempleStrategy.cpp
         src/ActuatorsControl.cpp
+        src/RobotControl.cpp
         src/MainActionFSM.cpp
         src/SensorControl.cpp
         src/calibration.cpp

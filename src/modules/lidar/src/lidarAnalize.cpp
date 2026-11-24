@@ -40,7 +40,7 @@ double average_angles(double angles[], int count) {
     return avg_angle;
 }
 
-double distance_2_pts(double d1,double deg1, double d2, double deg2){
+static double distance_2_pts(double d1, double deg1, double d2, double deg2){
     double alpha;
     double d3;
     alpha = fabs((deg1-deg2)*M_PI/180);
@@ -140,7 +140,7 @@ int find_blobs(lidarAnalize_t* data, int count, lidar_blob_detection* blobs, int
     return blob_idx;
 }
 
-// Dans le pire des cas, on a 0.3% des points qui sont l'ennemi
+// Dans le pire des cas, on a 0.3% des points qui sont l'opposant
 bool position_opponentV2(lidarAnalize_t* data, int count, position_t robot_pos, position_t& opponent_pos){
     lidar_blob_detection blobs[BLOBS_COUNT]; // Array to hold detected blobs
     int min_points = 3 ; //3 points to be an opponent

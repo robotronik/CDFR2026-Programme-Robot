@@ -11,6 +11,12 @@
 #include "vision/Angles.hpp"
 #include "vision/ArucoLocalizer.hpp"
 
+// The AKAZE feature localiser is disabled: the camera localises on the ArUco
+// markers only. Comment out to run both localisers again.
+#ifndef DISABLE_FEATURE_LOCALISATION
+#define DISABLE_FEATURE_LOCALISATION
+#endif
+
 namespace {
 
 constexpr int kCameraWidth = 1280;
@@ -106,12 +112,16 @@ Cam::Cam(int camNumber, const char* calibrationFilePath, const char* mapFilePath
     detector_.setMarkerSize(kGameElementId, GAME_ELEMENT_TAG_MM);
     vision::ArucoLocalizer::registerLandmarkTags(detector_);
 
+#ifndef DISABLE_FEATURE_LOCALISATION
     if (!featuresLocalizer_.loadCalibration(calibrationFilePath)) {
         LOG_ERROR("Cam ", id_, " failed to load the feature localiser calibration");
     }
     if (!featuresLocalizer_.loadMap(mapFilePath)) {
         LOG_ERROR("Cam ", id_, " failed to load the feature map from ", mapFilePath);
     }
+#else
+    (void)mapFilePath; // Only the feature localiser uses the field map.
+#endif
 }
 
 Cam::~Cam() {
@@ -168,6 +178,12 @@ void Cam::workerLoop() {
 
         const std::vector<vision::DetectionResult> detections = detector_.detect(frame);
 
+        vision::CameraPosition arucoPosition;
+        const bool hasAruco = vision::ArucoLocalizer::locate(detections, arucoPosition);
+        vision::CameraPosition position = arucoPosition;
+        bool localised = hasAruco;
+
+#ifndef DISABLE_FEATURE_LOCALISATION
         // Snapshot the prior so setPrior() from another thread cannot race the
         // feature localiser.
         position_t priorRobot;
@@ -178,9 +194,6 @@ void Cam::workerLoop() {
             hasPrior = hasPrior_;
         }
 
-        vision::CameraPosition arucoPosition;
-        const bool hasAruco = vision::ArucoLocalizer::locate(detections, arucoPosition);
-
         if (hasPrior) {
             const position_t cameraPrior = robotToCamera(priorRobot);
             featuresLocalizer_.setPrior({cameraPrior.x, cameraPrior.y, CAMERA_HEIGHT_MM,
@@ -190,8 +203,11 @@ void Cam::workerLoop() {
         const bool hasFeature = featuresLocalizer_.locate(frame, featurePosition, hasPrior);
 
         // Prefer the feature result, else the markers.
-        const bool localised = hasFeature || hasAruco;
-        const vision::CameraPosition& position = hasFeature ? featurePosition : arucoPosition;
+        localised = hasFeature || hasAruco;
+        if (hasFeature) {
+            position = featurePosition;
+        }
+#endif
 
         std::lock_guard<std::mutex> lock(mutex_);
         detections_ = detections;
