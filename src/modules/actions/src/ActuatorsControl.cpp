@@ -109,7 +109,7 @@ void ActuatorsControl::disableActuators() {
 }
 
 // ------------------------------------------------------
-//                   FACE PALM CONTROL
+//                   Walls CONTROL
 // ------------------------------------------------------
 
 bool Wall::wDrop() {
@@ -131,15 +131,43 @@ bool Wall::wDisableElectro() {
     return actuator->setElectroState(false, PUMP_2_NUM);
 }
 
+// ------------------------------------------------------
+//                   Towers CONTROL
+// ------------------------------------------------------
+
 bool Tower::tDrop(int idx) {
     return actuator->setPumpState(false, pumpIdx[idx]);
 }
 
-bool Tower::rotate(bool dir) {
-    if (dir)
-        return actuator->moveServoAndWait(servo, 180, 50); // TODO :Modifier position et speed
-    else
-        return actuator->moveServoAndWait(servo, 0, 50); // TODO :Modifier position et speed
+// ActuatorsControl.cpp
+bool Tower::rotate(int position) {
+    constexpr int ANGLES[3] = {180, // Position 0 : Initial position
+                            90,  // Position 1 : Tower Position
+                            0};  // Position 2 : Gate Position
+
+    if (position < 0 || position > 2) {
+        LOG_ERROR("Invalid tower position: ", position);
+        return false;
+    }
+
+    return actuator->moveServoAndWait(servo, ANGLES[position], 50);
+}
+
+// ------------------------------------------------------
+//                   Gate CONTROL
+// ------------------------------------------------------
+
+bool Gate::gBlockFlip(int position) {
+    constexpr int ANGLES[3] = {175, // Position 0 : Initial position
+                            90,  // Position 1 : Gate Position
+                            40};  // Position 2 : Grall Position
+
+    if (position < 0 || position > 2) {
+        LOG_ERROR("Invalid gate block flip position: ", position);
+        return false;
+    }
+
+    return actuator->moveServoAndWait(servoD, ANGLES[position], 360);
 }
 
 bool Gate::gDrop() { //Version très expérimentale

@@ -48,7 +48,7 @@ class Tower : public Wall {
             servo = idxS;
         };
         bool tDrop(int idx);
-        bool rotate(bool dir);
+        bool rotate(int position);
 
     protected:
         int servo;
@@ -64,5 +64,5 @@ class Gate : public Tower {
             servoD = idxSD;
         };
         bool gDrop();
-        bool flip();
+        bool gBlockFlip(int position);
 };
