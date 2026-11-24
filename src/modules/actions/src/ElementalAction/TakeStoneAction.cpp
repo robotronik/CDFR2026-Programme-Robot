@@ -193,14 +193,8 @@ void TakeStoneAction::reset() {
 
 bool TakeStoneAction::available(float& reward) {
     if (selected_face->stoneCount != 0) return false;
-    bool hasDropSpace = false;
-    for (const auto& zone : tableState->wallZone) {
-        if (zone.colorTeam == tableState->colorTeam && zone.nb == 0) {
-            hasDropSpace = true;
-            break;
-        }
-    }
-    if (!hasDropSpace) return false;
+    if (!tableState->hasAvailableQuarry()) return false;
+    if (tableState->countMissingTowers() && tableState->countMissingWalls() == 0) return false; //TODO take towers into account
     float dist = BestTake(robot->drive.getPosition());
     if (dist != -1) {
         reward = value / dist;
