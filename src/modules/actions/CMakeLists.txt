@@ -3,7 +3,6 @@ add_library(actions OBJECT)
 target_sources(actions
     PRIVATE
         src/ElementalAction/CalibrationAction.cpp
-        src/ElementalAction/GoToPositionAction.cpp
         src/ElementalAction/NavHomeAction.cpp
         src/ElementalAction/WaitAction.cpp
         src/ElementalAction/DropStoneAction.cpp
