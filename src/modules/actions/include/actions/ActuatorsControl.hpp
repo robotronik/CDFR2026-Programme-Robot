@@ -1,5 +1,6 @@
 #pragma once
 #include "drive_interface.h"
+#include <cstddef>
 
 class Arduino;
 class DriveControl;
@@ -22,49 +23,55 @@ class ActuatorsControl {
 
 class Wall {
     public:
-        Wall(int idx[3], position_t offset, ActuatorsControl* actuator)
-            : actuator(actuator), offset(offset) { // Modifier la synthaxe
-            pumpIdx[0] = idx[0];
-            pumpIdx[1] = idx[1];
-            pumpIdx[2] = idx[2];
+        typedef struct{
+            unsigned short int pumpIdx;
+            unsigned short int electroIdx[3];
+            unsigned short int servoIdx[3]; 
+        } actuatorsIdx_t;
+
+        Wall(actuatorsIdx_t idx, position_t offset, ActuatorsControl* actuator)
+            : idx(idx), actuator(actuator), offset(offset) { // Modifier la synthaxe
         };
-        int stoneCount = 0; // number of stones on the face
+        bool stone[3] = {false, false, false}; // number of stones on the face
+        void setStone(int index, bool value){ stone[index] = value; };
+        void voidStone(){ for (int i = 0; i < 3; i++) stone[i] = false; };
+        void fullStone(){ for (int i = 0; i < 3; i++) stone[i] = true; };
+        bool hasStone(){ for (int i = 0; i < 3; i++) if (stone[i]) return true; return false; };
+
         bool wDrop();
         bool wTake();
         bool wEnableElectro();
         bool wDisableElectro();
         bool DeployBackGripper(bool state);
         position_t getOffset() const { return offset; }
+        bool home();
 
     protected:
-        int pumpIdx[3]; // index of the pump for the face
+        actuatorsIdx_t idx; // struct containing all the pins for servo pum electro
         ActuatorsControl* actuator;
         position_t offset;
 };
 
 class Tower : public Wall {
     public:
-        Tower(int idxS, int idx[3], position_t offset, ActuatorsControl* actuator)
+        Tower(actuatorsIdx_t idx, position_t offset, ActuatorsControl* actuator)
             : Wall(idx, offset, actuator) {
-            servo = idxS;
         };
         bool tDrop(int idx);
         bool rotate(int position);
 
     protected:
-        int servo;
+        //nothing to store for now
 };
 
 class Gate : public Tower {
     private:
-        int servoD;
         int dropStep = 0;
         position_t retreatTarget;
 
     public:
-        Gate(int idxSD, int idxS, int idx[3], position_t offset, ActuatorsControl* actuator)
-            : Tower(idxS, idx, offset, actuator) {
-            servoD = idxSD;
+        Gate(actuatorsIdx_t idx, position_t offset, ActuatorsControl* actuator)
+            : Tower(idx, offset, actuator) {
         };
         bool gDrop(DriveControl* drive);
         bool gBlockFlip(int position);

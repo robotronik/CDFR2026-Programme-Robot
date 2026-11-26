@@ -32,7 +32,7 @@ class TakeStoneAction : public VirtualAction {
         position_t RobotPosSuctionCupOffset(const position_t& stone) const;
         int BestPositionToTake(const position_t& stone, position_t targets[2]) const; //offset pour avoir la bonne face sur la pierre
         position_t RobotTakeOffset(position_t stone, const position_t& from) const; //offset centre/face pierre
-
+        Wall* getBestPossibleFace();
     public:
         TakeStoneAction(TableState* tableState, RobotControl* robot);
         ~TakeStoneAction() override = default;

@@ -3,10 +3,26 @@
 RobotControl::RobotControl(Arduino* arduino)
     : drive(),
       actuators(arduino, &drive),
-      wall1(wall1Tab, position_t{-70, 120, 120}, &actuators),
-      wall2(wall2Tab, position_t{0, 0, 0}, &actuators),
-      wall3(wall3Tab, position_t{0, 0, 0}, &actuators),
-      wall4(wall4Tab, position_t{0, 0, 0}, &actuators),
-      gate1(3, 2, gate1Tab, position_t{0, 0, 0}, &actuators),
-      gate2(5, 4, gate2Tab, position_t{0, 0, 0}, &actuators) {
+      wall1(idxWall1, position_t{-70, 120, 120}, &actuators),
+      wall2(idxWall2, position_t{0, 0, 0}, &actuators),
+      wall3(idxWall3, position_t{0, 0, 0}, &actuators),
+      wall4(idxWall4, position_t{0, 0, 0}, &actuators),
+      gate1(idxGate1, position_t{0, 0, 0}, &actuators),
+      gate2(idxGate2, position_t{0, 0, 0}, &actuators) {
+
+    wallTable[0] = &wall1;
+    wallTable[1] = &wall2;
+    wallTable[2] = &wall3;
+    wallTable[3] = &wall4;
+    wallTable[4] = &gate1;
+    wallTable[5] = &gate2;
+
+}
+
+void RobotControl::homeActuators()
+{
+  actuators.homeActuators();
+  for(Wall* wall : wallTable) {
+    wall->home();
+  }
 }

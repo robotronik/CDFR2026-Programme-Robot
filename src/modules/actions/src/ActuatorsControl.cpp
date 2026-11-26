@@ -89,7 +89,7 @@ bool ActuatorsControl::moveColumnsElevator(int level) {
 
 // Returns true if actuators are home
 bool ActuatorsControl::homeActuators() {
-    return true; // TODO
+    return true; // add specific home if needed proper home is done in the different faces
 }
 
 void ActuatorsControl::enableActuators() {
@@ -114,37 +114,44 @@ void ActuatorsControl::disableActuators() {
 //                   Walls CONTROL
 // ------------------------------------------------------
 
+bool Wall::home(){
+    return false;
+}
+
 bool Wall::wDrop() {
-    //actuator->setElectroState(true, idx) TODO add electro use
-    stoneCount = 0;
-    return actuator->setPumpState(false, pumpIdx[0]);
+    if (!wEnableElectro()
+        || !actuator->setPumpState(false, idx.pumpIdx)) return false;
+    voidStone();
+    return true;
 }
 
 bool Wall::wTake() {
-    return actuator->setPumpState(true, pumpIdx[0]);
+    return wDisableElectro()
+        && actuator->setPumpState(true, idx.pumpIdx);
 }
 
-// The stone drop electrovalve shares PUMP_2_NUM with the actuator it drives.
 bool Wall::wEnableElectro() {
-    return actuator->setElectroState(true, PUMP_2_NUM);
+    return actuator->setElectroState(true, idx.electroIdx[0]);
 }
 
 bool Wall::wDisableElectro() {
-    return actuator->setElectroState(false, PUMP_2_NUM);
+    return actuator->setElectroState(false, idx.electroIdx[0]);
 }
 
 bool Wall::DeployBackGripper(bool state) {
-    return actuator->moveServoAndWait(SERVO_CLAW_CLOSE_1, state ? 0 : 120, 360);
+    return actuator->moveServoAndWait(idx.servoIdx[0], state ? 0 : 120, 360);
 }
 // ------------------------------------------------------
 //                   Towers CONTROL
 // ------------------------------------------------------
 
-bool Tower::tDrop(int idx) {
-    return actuator->setPumpState(false, pumpIdx[idx]);
+bool Tower::tDrop(int index) {
+    actuator->setElectroState(true, idx.electroIdx[index]);
+    setStone(index, false);
+    if(!hasStone()) actuator->setPumpState(false, idx.pumpIdx);
+    return true;
 }
 
-// ActuatorsControl.cpp
 bool Tower::rotate(int position) {
     constexpr int ANGLES[3] = {180, // Position 0 : Initial position
                             90,  // Position 1 : Tower Position
@@ -155,7 +162,7 @@ bool Tower::rotate(int position) {
         return false;
     }
 
-    return actuator->moveServoAndWait(servo, ANGLES[position], 50);
+    return actuator->moveServoAndWait(idx.servoIdx[0], ANGLES[position], 50);
 }
 
 // ------------------------------------------------------
@@ -172,7 +179,7 @@ bool Gate::gBlockFlip(int position) {
         return false;
     }
 
-    return actuator->moveServoAndWait(servoD, ANGLES[position], 360);
+    return actuator->moveServoAndWait(idx.servoIdx[1], ANGLES[position], 360);
 }
 
 bool Gate::gDrop(DriveControl* drive) {

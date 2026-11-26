@@ -17,8 +17,7 @@ ReturnFSM DropStoneAction::run() {
         NavReturn nav_result = navigation.goTo(target, true);
         if (nav_result == NavReturn::Done) {
             stop();
-            if (!robot->actuators.setElectroState(true, PUMP_2_NUM)) return ReturnFSM::Error;
-            if (!selected_face->wDrop()) return ReturnFSM::Error;
+            if (!selected_face->wDrop()) return ReturnFSM::Error; // In practice can't fail
             releaseStartTime = _millis();
             state = DropStoneState::Releasing;
         } else if (nav_result == NavReturn::Error) {
@@ -31,7 +30,9 @@ ReturnFSM DropStoneAction::run() {
     case DropStoneState::Releasing:
         // Wait for the release to complete
         if (_millis() - releaseStartTime >= RELEASE_WAIT_MS) {
-            if (!robot->actuators.setElectroState(false, PUMP_2_NUM)) break;
+            // we close the air circuit
+            // In practice can't fail
+            if (!selected_face->wDisableElectro()) return ReturnFSM::Error;
             successManagement();
             LOG_GREEN_INFO("Drop Success");
             return ReturnFSM::Done;
@@ -42,7 +43,6 @@ ReturnFSM DropStoneAction::run() {
 }
 
 bool DropStoneAction::successManagement() {
-    selected_face->stoneCount = 0;
     selected_zone->nb = 3;
     reset();
     return true;
@@ -63,7 +63,7 @@ void DropStoneAction::reset() {
 }
 
 bool DropStoneAction::available(float& reward) {
-    if (selected_face->stoneCount == 0) return false;
+    if (!selected_face->hasStone()) return false;
     if (findBestConstructionZone()) {
         moveTargetToConstructionPosition();
         reward = (float)static_cast<int>(ConstructionType::Wall) / best_path_length;

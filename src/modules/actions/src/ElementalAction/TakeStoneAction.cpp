@@ -91,6 +91,11 @@ position_t TakeStoneAction::RobotPosSuctionCupOffset(const position_t& stone) co
     return face;
 }
 
+Wall* TakeStoneAction::getBestPossibleFace() {
+    
+    return nullptr;
+}
+
 int TakeStoneAction::BestPositionToTake(const position_t& stone, position_t targets[2]) const {
     const position_t face = RobotPosSuctionCupOffset(stone);
 
@@ -176,7 +181,7 @@ bool TakeStoneAction::errorManagement() {
 bool TakeStoneAction::successManagement() {
     LOG_GREEN_INFO("TakeStone: arrivé à ", nom.c_str());
     quarry->nb = 0;
-    selected_face->stoneCount = 3;
+    selected_face->fullStone();
     reset();
     return true;
 }
@@ -192,7 +197,7 @@ void TakeStoneAction::reset() {
 }
 
 bool TakeStoneAction::available(float& reward) {
-    if (selected_face->stoneCount != 0) return false;
+    if (selected_face->hasStone()) return false;
     if (!tableState->hasAvailableQuarry()) return false;
     if (tableState->countMissingTowers() && tableState->countMissingWalls() == 0) return false; //TODO take towers into account
     float dist = BestTake(robot->drive.getPosition());
