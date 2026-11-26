@@ -123,11 +123,19 @@ bool DriveControl::drive(position_t pos[], int n, bool slow_mode, bool complete_
 }
 
 void DriveControl::update() {
+#ifndef __CROSS_COMPILE_ARM__
+    // Desktop build: there is no drive controller, and the emulated I2C bus
+    // returns zeros for every read. Refreshing here would wipe the position and
+    // target set by the caller (test mode sets them to random poses), so keep
+    // whatever is currently held.
+    return;
+#else
     // Get motion and target
     packed_motion_t mot = drive_interface::get_motion();
     position = convertPackedToPosition(mot.pos);
     velocity = convertPackedToPosition(mot.vel);
     target = convertPackedToPosition(drive_interface::get_target());
+#endif
 }
 
 void DriveControl::setCoordinates(position_t pos) {

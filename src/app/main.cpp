@@ -17,7 +17,7 @@
 
 // Navigation
 #include "navigation/navigation.h"
-#include "navigation/pathfind.h"
+#include "navigation/pathfind.hpp"
 #include "actions/calibration.h"
 
 #include "utils/utils.h"
@@ -342,7 +342,7 @@ int StartSequence()
     initState = true;
     manual_init();
 
-    pathfind_setup(tableStatus);
+    pathfindSetup(tableStatus);
 
     robot.drive.reset();
 
@@ -358,7 +358,7 @@ void GetLidar()
 
     if (lidar.getData()){
         convertAngularToAxial(lidar.data, lidar.count, robot.drive.position, 150);
-            pathfind_fill_lidar(&lidar, tableStatus);
+            pathfindUpdateOpponent(&lidar, tableStatus);
         // Only update opponent position if the robot is not moving too fast to avoid noise
         if (IsDataValid && position_opponentV2(lidar.data, lidar.count, robot.drive.position, pos_opponent) &&
                 (currentState == MainState::Run || currentState == MainState::Manual) &&
@@ -419,12 +419,84 @@ void EndSequence()
 }
 
 
+namespace {
+
+// Local preview: the table is re-randomized every 500 ms so the web display
+// shows a freshly planned path each time.
+unsigned long lastRandomizeMs = 0;
+
+double randomRange(double lo, double hi) {
+    return lo + (hi - lo) * (rand() / double(RAND_MAX));
+}
+
+// Stones stay in the central band: near the side walls or the corner
+// protection zones they seal the only corridor. Stones and the opponent are
+// allowed to overlap.
+constexpr int kStoneCount = 4;
+
+void randomizeTableAndPlan() {
+    // The triangular robot reaches 231 mm from its reference point, so the
+    // usable area is a bit smaller than the raw table. y = 1300 would sit
+    // inside the inflated top wall and no path would ever be found.
+    position_t start = {0.0, 1200.0, 0.0};
+    position_t goal = {0.0, -1200.0, 0.0};
+
+    // Stones live in the table state, not in the planner: pathfind() rebuilds
+    // its obstacles from the table on every call, so anything added straight to
+    // the planner would be discarded before planning.
+    for (auto& q : tableStatus.quarry) q.nb = 0;
+    for (auto& w : tableStatus.wallZone) w.nb = 0;
+    int placed = 0;
+    for (auto& q : tableStatus.quarry) {
+        if (placed >= kStoneCount) break;
+        q.pos.a = randomRange(0.0, 180.0);
+        q.pos.x = randomRange(-260.0, 260.0);
+        q.pos.y = randomRange(-820.0, 820.0);
+        q.nb = 1;
+        placed++;
+    }
+
+    // The opponent is a 400 mm octagon, fed through the table state so the
+    // display and the planner see the same position. It may sit on a stone.
+    position_t opponent;
+    opponent.x = randomRange(-600.0, 600.0);
+    opponent.y = randomRange(-900.0, 900.0);
+    opponent.a = 0.0;
+    tableStatus.pos_opponent = opponent;
+    pathfindUpdateOpponent(&lidar, tableStatus);
+
+    // Start and goal headings are independent so both inflation modes get
+    // exercised: a small error keeps the exact hull, a large one makes the
+    // planner assume the robot spins and fall back to its swept disc.
+    // The x range stays clear of the corner protection zones (|x| >= 450 at
+    // the table ends).
+    start.x = randomRange(-380.0, 380.0);
+    start.a = randomRange(-180.0, 180.0);
+    goal.x = randomRange(-380.0, 380.0);
+    goal.a = randomRange(-180.0, 180.0);
+    robot.drive.setCoordinates(start);
+    robot.drive.target = goal;
+
+    position_t path[PATHFIND_MAX_POINTS];
+    double length = 0.0;
+    if (pathfind(start, goal, path, length) > 0) {
+        LOG_INFO("Test: path with ", int(length), " mm");
+    } else {
+        LOG_WARNING("Test: no path for this random table");
+    }
+}
+
+}  // namespace
+
 void tests()
 {
     /*
         * Call test functions here.
         * They will be executed in loop until the program is stopped.
     */
+    if (_millis() - lastRandomizeMs < 500) return;
+    lastRandomizeMs = _millis();
+    randomizeTableAndPlan();
 }
 
 // ------------------------------------------------------

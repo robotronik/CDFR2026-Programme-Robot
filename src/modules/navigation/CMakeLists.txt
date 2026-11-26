@@ -2,7 +2,8 @@ add_library(navigation OBJECT)
 
 target_sources(navigation
     PRIVATE
-        src/astar.cpp
+        src/geom.cpp
+        src/convexPathfind.cpp
         src/driveControl.cpp
         src/navigation.cpp
         src/pathfind.cpp
