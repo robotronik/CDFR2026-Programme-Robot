@@ -304,29 +304,6 @@ void RestAPI::start(){
         return crow::response(response.dump(4));
     });
 
-    // Define a route for an simple GET request that returns all of the information from the arduino
-    CROW_ROUTE(app, "/get_arduino")
-    ([this](){
-        json response;
-        response["message"] = "Failure to get Arduino data!";
-        json stepper_pos = json::array();
-        for (int i = 1; i <= 4; i++){
-            int32_t val ;
-            if (!arduino->getStepper(val, i)) return crow::response(400, response.dump(4));
-            stepper_pos.push_back({i, val});
-        }
-        json sensor_state = json::array();
-        for (int i = 1; i <= 6; i++){
-            bool val ;
-            if (!arduino->readSensor(i, val)) return crow::response(400, response.dump(4));
-            sensor_state.push_back({i, val});
-        }
-        response["steppers_pos"] = stepper_pos;
-        response["sensors_state"] = sensor_state;
-        response["message"] = "Success to fetch Arduino data";
-        return crow::response(response.dump(4));
-    });
-
     CROW_ROUTE(app, "/get_costmap")
     ([this](){
         json response;
@@ -594,6 +571,10 @@ void RestAPI::start(){
         return jsonMessage("Successful");
     });
 
+    // WARNING: these actuator routes write to the I2C bus directly from a REST
+    // worker thread, concurrently with the main loop. If you're unlucky, two
+    // transfers can interleave and break stuff. The interface is rarely used,
+    // so we accept the risk for now.
     // Define a route for a POST request to rotate a servo to a certain value
     CROW_ROUTE(app, "/set_servo").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         json req_data;
@@ -611,6 +592,54 @@ void RestAPI::start(){
             arduino->moveServoSpeed(req_id, req_value, req_speed);
         else
             arduino->moveServo(req_id, req_value);
+
+        return jsonMessage("Successful");
+    });
+
+    // Define a route for a POST request to enable/disable a pump
+    CROW_ROUTE(app, "/set_pump").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
+
+        if (*currentState != MainState::Manual)
+            return jsonError(400, "Cannot control a pump when not in MANUAL mode");
+
+        if (!req_data.contains("id") || !req_data.contains("state"))
+            return jsonError(400, "Missing pump id or state");
+
+        int req_id = req_data["id"];
+        bool req_state = req_data["state"];
+
+        if (req_id < 1 || req_id > PUMP_COUNT)
+            return jsonError(400, "Pump id out of range");
+
+        if (!arduino->setPump(req_id, req_state))
+            return jsonError(500, "Failed to set pump");
+
+        return jsonMessage("Successful");
+    });
+
+    // Define a route for a POST request to enable/disable an electrovalve
+    CROW_ROUTE(app, "/set_ev").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
+        json req_data;
+        if (!parseBody(req, req_data))
+            return jsonError(400, "Invalid JSON");
+
+        if (*currentState != MainState::Manual)
+            return jsonError(400, "Cannot control an electrovalve when not in MANUAL mode");
+
+        if (!req_data.contains("id") || !req_data.contains("state"))
+            return jsonError(400, "Missing electrovalve id or state");
+
+        int req_id = req_data["id"];
+        bool req_state = req_data["state"];
+
+        if (req_id < 1 || req_id > EV_COUNT)
+            return jsonError(400, "Electrovalve id out of range");
+
+        if (!arduino->setElectro(req_id, req_state))
+            return jsonError(500, "Failed to set electrovalve");
 
         return jsonMessage("Successful");
     });
@@ -645,15 +674,7 @@ void RestAPI::start(){
 
         std::string req_value = req_data["value"];
 
-        if(req_value == "PumpOn")
-            manual_currentFunc = [this]{ return robot->wall1.wTake(); };
-        else if(req_value == "PumpOff")
-            manual_currentFunc = [this]{ return robot->wall1.wDrop(); };
-        else if(req_value == "ElectroOn")
-            manual_currentFunc = [this]{ return robot->wall1.wEnableElectro(); };
-        else if(req_value == "ElectroOff")
-            manual_currentFunc = [this]{ return robot->wall1.wDisableElectro(); };
-        else if (req_value != "Test")
+        if (req_value != "Test")
             return jsonError(400, "Invalid action requested");
 
         return jsonMessage("Successful");

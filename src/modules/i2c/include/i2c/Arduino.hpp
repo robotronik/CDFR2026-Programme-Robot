@@ -15,8 +15,11 @@ public:
     void moveServoSpeed(int ServoID, int position, int speed);
     bool getServo(int ServoID, int& position);
     bool readSensor(int SensorID, bool& value);
-    bool writeSensor(int SensorID, bool state);
+    bool setPump(int PumpID, bool state);
+    bool setElectro(int ElectroID, bool state);
 
+    // Steppers and the DC motor are not present on the 2027 Arduino board;
+    // these methods are kept for API compatibility.
     void moveStepper(int32_t absPosition, int StepperID);
     void setStepperSpeed(int StepperID, int speed);
     void setStepper(int32_t absPosition, int StepperID);

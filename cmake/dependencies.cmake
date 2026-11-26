@@ -41,5 +41,5 @@ set(CDFR_EXTERNAL_DIR "/opt/cdfr" CACHE PATH "Location of the external CDFR robo
 add_library(external_robot_interfaces INTERFACE)
 target_include_directories(external_robot_interfaces INTERFACE
     ${CDFR_EXTERNAL_DIR}/CDFR2026-Program-DriveControl/include/interface
-    ${CDFR_EXTERNAL_DIR}/cdfr2024-programme-Actionneur/include/common
+    ${CDFR_EXTERNAL_DIR}/CDFR2027-Programme-Arduino/include/common
 )

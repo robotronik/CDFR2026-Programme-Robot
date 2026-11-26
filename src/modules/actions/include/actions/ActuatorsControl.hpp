@@ -10,7 +10,6 @@ class ActuatorsControl {
         bool setPumpState(bool state, int pumpIdx);
         bool setElectroState(bool state, int electroIdx);
         bool moveServoAndWait(int servo, int target, int speed);
-        bool moveColumnsElevator(int level);
         bool homeActuators();
         void enableActuators();
         void disableActuators();
@@ -31,8 +30,6 @@ class Wall {
         int stoneCount = 0; // number of stones on the face
         bool wDrop();
         bool wTake();
-        bool wEnableElectro();
-        bool wDisableElectro();
         position_t getOffset() const { return offset; }
 
     protected:

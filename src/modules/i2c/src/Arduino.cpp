@@ -101,19 +101,31 @@ bool Arduino::readSensor(int SensorID, bool& value){
     return true;
 }
 
-bool Arduino::writeSensor(int SensorID, bool state){
+bool Arduino::setPump(int PumpID, bool state){
     if (i2cFile == -1) return true; // Emulation
 
     uint8_t message[2];
     uint8_t *ptr = message;
 
-    WriteUInt8(&ptr, SensorID);
+    WriteUInt8(&ptr, PumpID);
     WriteUInt8(&ptr, state);
 
-    I2cSendData(i2cFile, CMD_WRITE_PIN, message, 2);
-    return true;
+    return I2cSendData(i2cFile, CMD_SET_PUMP, message, 2) == 0;
 }
 
+bool Arduino::setElectro(int ElectroID, bool state){
+    if (i2cFile == -1) return true; // Emulation
+
+    uint8_t message[2];
+    uint8_t *ptr = message;
+
+    WriteUInt8(&ptr, ElectroID);
+    WriteUInt8(&ptr, state);
+
+    return I2cSendData(i2cFile, CMD_SET_EV, message, 2) == 0;
+}
+
+// Not present on the 2027 Arduino board.
 void Arduino::enableStepper(int StepperID) {
     LOG_DEBUG("Enable Stepper #", StepperID);
     I2cSendData(i2cFile, CMD_ENABLE_STEPPER, (uint8_t*)&StepperID, 1);

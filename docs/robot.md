@@ -2,19 +2,17 @@
 
 ## Actuators
 
-In the code, these elements are referred to as *banner*, *stocks*, *columns*, *platforms*, and *tribunes*. Defined in `constante.h`:
+All actuators are driven by the 2027 Arduino board: servos through the PCA9685
+PWM outputs, pumps and electrovalves as fully on/off outputs.
 
-- **Stepper 1**: Platforms elevator
-- **Stepper 2**: Multi-level elevator
-- **Stepper 3**: Lower revolver
-- **Servo 1**: Tribunes pusher
-- **Servo 2**: Left platforms lifter
-- **Servo 3**: Right platforms lifter
-- **Servo 4**: Clamps
-- **Servo 5**: String Claws
-- **Servo 6**: Banner Front
-- **Servo 7**: Banner Back
-- **DC Motor 1**: Tribunes elevator
+- **Servo 1**: Turn Left Tower
+- **Servo 2**: Graal Door Lift Left
+- **Servo 3**: Turn Right Tower
+- **Servo 4**: Graal Door Lift Right
+- **Servo 5**: Back Rail
+- **Servo 6**: Fire Bullets
+- **Pump 1–6**: Not decided yet
+- **EV 1–10**: Not decided yet
 
 ## LED signals
 
