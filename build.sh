@@ -3,8 +3,11 @@
 # Docker-only build wrapper: every compilation happens inside the
 # per-architecture images, so no compiler is needed on the host. The workspace is
 # mounted at its own path, so build/x86_64 and build/arm64 appear on the host.
+#
+# Runs on Linux, macOS and Windows through WSL/Git Bash. No `set -u`: macOS's
+# /bin/bash 3.2 treats an empty "${arr[@]}" as an unbound variable.
 
-set -euo pipefail
+set -eo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_ROOT"
@@ -12,11 +15,32 @@ cd "$REPO_ROOT"
 IMAGE_X86="cdfr-builder-x86_64"
 IMAGE_ARM="cdfr-builder-arm64"
 
+# Both images are amd64-only (the arm64 one cross-compiles), so an arm64 host
+# (Apple Silicon) must emulate them instead of building arm64 images.
+export DOCKER_DEFAULT_PLATFORM=linux/amd64
+
 # Extra `docker run` flags, user and workdir applied to the next docker_run call;
 # callers override these before invoking it (see the run command).
 DOCKER_RUN_EXTRA=(--network host)
 DOCKER_RUN_USER="$(id -u):$(id -g)"
 DOCKER_RUN_WORKDIR="$REPO_ROOT"
+# ssh agent and ~/.ssh for deploy; root's ssh reads /root/.ssh whatever $HOME.
+SSH_RUN_ARGS=()
+SSH_DIR_TARGET=/home/ubuntu/.ssh
+if [ -S "$SSH_AUTH_SOCK" ]; then
+    SSH_RUN_ARGS=(-v "$SSH_AUTH_SOCK:/ssh-agent" -e SSH_AUTH_SOCK=/ssh-agent)
+fi
+if [ "$(uname -s)" = Darwin ]; then
+    # Docker Desktop: no host networking by default, bind mounts already map to
+    # the macOS user, and uid 501 has no home in the image, so run as root. The
+    # launchd agent socket is unreachable from its VM; it proxies its own.
+    DOCKER_RUN_EXTRA=()
+    DOCKER_RUN_USER=""
+    SSH_DIR_TARGET=/root/.ssh
+    SSH_RUN_ARGS=(-v /run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock
+                  -e SSH_AUTH_SOCK=/run/host-services/ssh-auth.sock)
+fi
+[ -d "$HOME/.ssh" ] && SSH_RUN_ARGS+=(-v "$HOME/.ssh:$SSH_DIR_TARGET:ro")
 
 # Debug sounds (AUDIO.md): the host's PulseAudio/PipeWire socket, if any.
 AUDIO_RUN_ARGS=()
@@ -53,21 +77,17 @@ ensure_image() {
 # docker_run <image> <command...>
 docker_run() {
     local image="$1"; shift
-    local tty=() ssh=() user=()
+    local tty=() user=()
     [ -t 0 ] && tty+=(-it)
     # An empty DOCKER_RUN_USER keeps the image's default user (root), which is
     # required to actually exercise added capabilities (see run).
     if [ -n "$DOCKER_RUN_USER" ]; then
         user=(--user "$DOCKER_RUN_USER")
     fi
-    if [ -n "${SSH_AUTH_SOCK:-}" ] && [ -S "${SSH_AUTH_SOCK}" ]; then
-        ssh+=(-v "${SSH_AUTH_SOCK}:/ssh-agent" -e SSH_AUTH_SOCK=/ssh-agent)
-    fi
-    [ -d "$HOME/.ssh" ] && ssh+=(-v "$HOME/.ssh:/home/ubuntu/.ssh:ro")
     # label=disable: on SELinux hosts the bind mounts are otherwise denied
     # ("Permission denied", which cmake reports as a missing CMakePresets.json).
     # No-op on hosts without SELinux.
-    docker run --rm "${tty[@]}" "${ssh[@]}" \
+    docker run --rm "${tty[@]}" "${SSH_RUN_ARGS[@]}" \
         "${DOCKER_RUN_EXTRA[@]}" \
         --security-opt label=disable \
         "${user[@]}" \

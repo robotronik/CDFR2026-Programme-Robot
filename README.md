@@ -51,6 +51,9 @@ use another port).
 **Windows:** use `build.bat` with the same commands (except `clangd`), with
 Docker Desktop running. See [docs/build.md](docs/build.md#windows).
 
+**macOS:** `./build.sh` works as-is with Docker Desktop (Rosetta emulation on
+Apple Silicon). See [docs/build.md](docs/build.md#macos).
+
 ## 🧠 Editor (clangd)
 
 Install the [clangd extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd);

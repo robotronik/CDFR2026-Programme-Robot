@@ -41,6 +41,19 @@ as `build.sh`. Differences:
 - `compile_commands.json` is not exported, because its symlink cannot be written
   reliably on a Windows bind mount. For clangd, use the dev container.
 
+## macOS
+
+`build.sh` runs unchanged with Docker Desktop and the stock `/bin/bash` 3.2.
+
+- **Apple Silicon:** both images are amd64-only (the arm64 one cross-compiles),
+  so `build.sh` pins them to `linux/amd64`. Enable *Settings → General → Use
+  Rosetta for x86_64/amd64 emulation* to make the emulation fast.
+- Keep the clone on the local disk under a shared path (`/Users` is shared by default).
+- Containers run as root: Docker Desktop maps bind-mount ownership to the macOS
+  user anyway. `deploy` mounts `~/.ssh` at `/root/.ssh` and uses Docker
+  Desktop's ssh-agent proxy, so a key loaded with
+  `ssh-add --apple-use-keychain ~/.ssh/id_ed25519` works.
+
 ## Dev container
 
 VS Code / CLion can open the project in the x86_64 image through
