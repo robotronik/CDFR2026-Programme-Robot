@@ -115,7 +115,10 @@ void ActuatorsControl::disableActuators() {
 // ------------------------------------------------------
 
 bool Wall::home(){
-    return false;
+    wDisableElectro();
+    actuator->setPumpState(false, idx.pumpIdx);
+    actuator->moveServoAndWait(idx.servoIdx[0], 120, 360);
+    return true;
 }
 
 bool Wall::wDrop() {
@@ -145,6 +148,13 @@ bool Wall::DeployBackGripper(bool state) {
 //                   Towers CONTROL
 // ------------------------------------------------------
 
+bool Tower::home(){
+    wDisableElectro();
+    actuator->setPumpState(false, idx.pumpIdx);
+    actuator->moveServoAndWait(idx.servoIdx[0], 180, 360);
+    return true;
+}
+
 bool Tower::tDrop(int index) {
     actuator->setElectroState(true, idx.electroIdx[index]);
     setStone(index, false);
@@ -169,6 +179,14 @@ bool Tower::rotate(int position) {
 //                   Gate CONTROL
 // ------------------------------------------------------
 
+bool Gate::home(){
+    wDisableElectro();
+    actuator->setPumpState(false, idx.pumpIdx);
+    actuator->moveServoAndWait(idx.servoIdx[0], 180, 360);
+    gBlockFlip(0);
+    return true;
+}
+
 bool Gate::gBlockFlip(int position) {
     constexpr int ANGLES[3] = {175, // Position 0 : Initial position
                             90,  // Position 1 : Gate Position
@@ -182,7 +200,7 @@ bool Gate::gBlockFlip(int position) {
     return actuator->moveServoAndWait(idx.servoIdx[1], ANGLES[position], 360);
 }
 
-bool Gate::gDrop(DriveControl* drive) {
+bool Gate::gDrop() {
     switch (dropStep) {
     case 0:
         if (!rotate(1)) return false;
@@ -190,7 +208,7 @@ bool Gate::gDrop(DriveControl* drive) {
 
     case 1:
         if (!tDrop(0) || !tDrop(1)) return false;
-        retreatTarget = drive->position;
+        retreatTarget = actuator->getDrive()->position;
         retreatTarget.x -= 150 * std::cos(retreatTarget.a * DEG_TO_RAD);
         retreatTarget.y -= 150 * std::sin(retreatTarget.a * DEG_TO_RAD);
         break;

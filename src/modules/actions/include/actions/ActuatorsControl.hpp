@@ -15,7 +15,7 @@ class ActuatorsControl {
         bool homeActuators();
         void enableActuators();
         void disableActuators();
-
+        DriveControl* getDrive(){ return drive; }
     private:
         Arduino* arduino;
         DriveControl* drive;
@@ -59,7 +59,7 @@ class Tower : public Wall {
         };
         bool tDrop(int idx);
         bool rotate(int position);
-
+        bool home();
     protected:
         //nothing to store for now
 };
@@ -73,6 +73,7 @@ class Gate : public Tower {
         Gate(actuatorsIdx_t idx, position_t offset, ActuatorsControl* actuator)
             : Tower(idx, offset, actuator) {
         };
-        bool gDrop(DriveControl* drive);
+        bool home();
+        bool gDrop();
         bool gBlockFlip(int position);
 };
