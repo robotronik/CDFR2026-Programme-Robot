@@ -172,6 +172,9 @@ int main()
                 tableStatus.calibrationAge = -1; // Force a fresh camera localisation
             }
 
+            // if (calibrate_camera(&tableStatus, &robot, &cam1))
+            //     LOG_GREEN_INFO("Camera calibration successful");
+
             if (manual_ctrl){
                 // Debug escape hatch: allow driving without ever seeing an aruco tag.
                 if (tableStatus.calibrationAge == -1 && tableStatus.colorTeam != ColorTeam::None){

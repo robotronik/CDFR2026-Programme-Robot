@@ -62,6 +62,10 @@ public:
     // Latest camera pose on the table (use cameraToRobot() for the robot pose).
     bool getLocalisation(position_t& cameraPose) const;
 
+    // Marker detections of the latest frame, with their pose (rvec/tvec) when
+    // available. A copy, so it is safe to inspect from another thread.
+    std::vector<vision::DetectionResult> getDetections() const;
+
     // JPEG of the latest frame with the detected markers outlined and labelled.
     bool getPreview(std::vector<uchar>& jpeg) const;
 

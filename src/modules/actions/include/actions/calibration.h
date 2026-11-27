@@ -7,5 +7,6 @@ class RobotControl;
 class Cam;
 
 bool calibrate_otos(TableState* tableStatus, RobotControl* robot, Cam* cam, position_t startPos, bool skip_calibration = true);
+bool calibrate_camera(TableState* tableStatus, RobotControl* robot, Cam* cam);
 
 #endif // CALIBRATION_H
