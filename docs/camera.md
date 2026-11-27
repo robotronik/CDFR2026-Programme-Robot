@@ -78,6 +78,16 @@ rotation. Run after moving the camera; update `OFFSET_CAM_*` from the output.
 | `kAkazeThreshold` / `kRatioTest` | 2e-4 / 0.95 |
 | `kRansacMm` / `kMinInliers` / `kMinInlierSpanMm` | 8 / 15 / 300 |
 
-Alternatives: ORB (with comparable map density ~35/44 and ~6× faster
-detection, but it loses the low-light fixes), coarse-detect/fine-describe, and
-ECC direct alignment (slower, did not converge).
+Alternatives tried, each at its best setting (whole-map solves/44; ms is the
+per-frame whole-map cost). None beat AKAZE (42/44 @ 105 ms, ~38 ms windowed):
+
+| detector | solves | ms |
+|---|---|---|
+| BRISK | 40/44 (or 32/44 coarse, 19 ms) | 166 |
+| KAZE | 40/42 windowed | 148 |
+| SIFT | 38/42 windowed | 47 |
+| ORB (density matched) | 37/44 | 220 |
+
+Also rejected: coarse-detect/fine-describe; ECC direct alignment (slower, did
+not converge). Watch out with any `nfeatures`-style cap: it applies to the whole
+map, so an under-set cap benchmarks the cap, not the detector.
