@@ -186,9 +186,9 @@ bool Gate::home(){
 }
 
 bool Gate::gBlockFlip(int position) {
-    constexpr int ANGLES[3] = {175, // Position 0 : Initial position
-                            90,  // Position 1 : Gate Position
-                            40};  // Position 2 : Grall Position
+    constexpr int ANGLES[3] = {90, // Position 0 : Initial position
+                            60,  // Position 1 : Gate Position
+                            20};  // Position 2 : Grall Position
 
     if (position < 0 || position > 2) {
         LOG_ERROR("Invalid gate block flip position: ", position);
