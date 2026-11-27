@@ -44,7 +44,7 @@ class Wall {
         bool wDisableElectro();
         bool DeployBackGripper(bool state);
         position_t getOffset() const { return offset; }
-        bool home();
+        virtual bool home();
 
     protected:
         actuatorsIdx_t idx; // struct containing all the pins for servo pum electro
@@ -59,7 +59,7 @@ class Tower : public Wall {
         };
         bool tDrop(int idx);
         bool rotate(int position);
-        bool home();
+        bool home() override;
     protected:
         //nothing to store for now
 };
@@ -73,7 +73,7 @@ class Gate : public Tower {
         Gate(actuatorsIdx_t idx, position_t offset, ActuatorsControl* actuator)
             : Tower(idx, offset, actuator) {
         };
-        bool home();
+        bool home() override;
         bool gDrop();
         bool gBlockFlip(int position);
 };

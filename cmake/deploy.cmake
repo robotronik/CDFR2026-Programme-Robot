@@ -1,6 +1,6 @@
 # Target device; edit these values directly.
 set(PI_USER "robotronik")
-set(PI_HOST "192.168.8.108")
+set(PI_HOST "192.168.0.103")
 set(PI_DIR  "/home/${PI_USER}/CDFR")
 set(PI_DEST "arm_bin")
 

@@ -107,7 +107,7 @@ static void startMatchHardware()
     const position_t startPos = action.getStrategy()->StratStartingPos();
     robot.drive.setCoordinates(startPos);
     navigation.goTo(startPos);
-    //while(!robot.homeActuators());
+    while(!robot.homeActuators());
     lidar.startSpin();
     cam1.start();
     hw_ready = true;

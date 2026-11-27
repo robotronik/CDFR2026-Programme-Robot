@@ -25,14 +25,16 @@ ActuatorsControl::ActuatorsControl(Arduino* arduino, DriveControl* drive)
 bool ActuatorsControl::moveServoAndWait(int servo, int target, int speed) {
     static int prevServo = -1;
     static int prevTarget = -1;
+    int s = -1;
 
     if (servo != prevServo || target != prevTarget) {
+        if (!arduino->getServo(servo, s)) return false;
+        if(s == target) return true;
         arduino->moveServoSpeed(servo, target, speed);
         prevServo = servo;
         prevTarget = target;
     }
 
-    int s;
     if (!arduino->getServo(servo, s)) return false;
 
     return s == target;
@@ -105,7 +107,7 @@ void ActuatorsControl::disableActuators() {
     for (int i = 0; i < 4; i++) {
         arduino->disableStepper(i);
     }
-    setPumpState(false, 0);
+    setPumpState(false, PUMP_1_NUM);
     arduino->disableServos();
     drive->disable();
 }
