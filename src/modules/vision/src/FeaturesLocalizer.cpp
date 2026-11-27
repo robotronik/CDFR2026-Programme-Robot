@@ -17,10 +17,11 @@ namespace {
 
 // Working grid. The map and the rectified patch are both resampled to this
 // millimetre-per-pixel value, so a match between them is a rigid motion with no
-// scale term. 2.0 mm/px is a fixed performance constraint: it keeps the per-frame
-// AKAZE cost low enough for the Pi. Finer (1-1.5 mm/px) localises more of the
-// harsh, low-contrast captures but costs noticeably more.
-constexpr double kMmPerPx = 2.0;
+// scale term. 1.5 mm/px is the accuracy/speed knee: it localises nearly every
+// capture (including the harshest low-light ones) at roughly twice the AKAZE cost
+// of 2 mm/px. Coarser grids lose those marginal captures; finer ones (1-1.25)
+// cost much more without solving more.
+constexpr double kMmPerPx = 1.5;
 
 // Illumination normalisation applied to the map and every patch before AKAZE.
 // The field markings are low contrast and lie under glare gradients that shift
