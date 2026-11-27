@@ -1,415 +1,352 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Robot</title>
-    
-    <!-- Bootstrap CSS -->
-    <link href="css/bootstrap.min.css" rel="stylesheet">
 
+    <!--
+        On-robot touch screen: Waveshare 8.8" 1920x480 (~218x55 mm active area, ~8.8 px/mm).
+        Everything fits in one viewport (no scroll); sizes use vh so the page
+        still scales when opened from a laptop. No Bootstrap here on purpose:
+        the page stays light for the robot's browser.
+    -->
     <style>
-        .main-container {
-            padding: 20px;
+        :root {
+            --bg: #212529;
+            --fg: #f1f3f5;
+            --muted: #adb5bd;
+            --line: #dee2e6;
+            --blue: #2f6bff;
+            --blue-text: #7aa2ff;
+            --yellow: #ffd000;
+            --red: #dc3545;
+            --gap: 12px;
         }
 
-        .number-display {
-            font-size: 5rem;
-            text-align: center;
-            border: 2px solid white;
-            border-radius: 5px;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
             height: 100%;
+            overflow: hidden;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            /* Touch screen: no text selection, no double-tap zoom, no grey tap flash */
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior: none;
         }
 
-        .colored-btn {
-            font-size: 2rem;
-            font-weight: bold;
-            height: 134px;
+        .screen {
+            height: 100vh;
+            padding: 16px;
+            display: grid;
+            grid-template-rows: 1fr 25vh;   /* 25vh = 120 px on the robot (~14 mm tall STOP) */
+            gap: var(--gap);
         }
 
-        .label-section {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 2rem;
+        .top {
+            display: grid;
+            grid-template-columns: 20vh 1.4fr 1fr 1fr 2fr;
+            gap: var(--gap);
+            min-height: 0;
         }
 
-        .ip-label {
-            margin-top: 8px;
-            text-align: center;
-            font-size: 1.2rem;
-        }
-
-        .home-icon {
-            font-size: 2rem;
-            width: 52px;
-            height: 52px;
-        }
-        .btn-team-blue-sel {
-            background-color: blue;
-            border-color: blue;
-            color: white;
-        }
-        .btn-team-blue-uns {
-            background-color: transparent;
-            border-color: blue;
-            color: blue;
-        }
-        .btn-team-yellow-sel {
-            background-color: gold;
-            border-color: gold;
-            color: white;
-        }
-        .btn-team-yellow-uns {
-            background-color: transparent;
-            border-color: gold;
-            color: gold;
-        }
-
-        /* Disable hover animations, should be reworked but idk how to do css */
-        .btn-team-blue-sel:hover {
-            background-color: blue;
-            border-color: blue;
-            color: white;
-        }
-        .btn-team-blue-uns:hover {
-            background-color: transparent;
-            border-color: blue;
-            color: blue;
-        }
-        .btn-team-yellow-sel:hover {
-            background-color: gold;
-            border-color: gold;
-            color: white;
-        }
-        .btn-team-yellow-uns:hover {
-            background-color: transparent;
-            border-color: gold;
-            color: gold;
-        }
-
-        /* Disable hover styling globally */
-        .btn:hover {
-            background-color: inherit !important;
-            color: inherit !important;
-            text-decoration: none !important;
-            transform: none !important;
-        }  
-
-        .logo {
-            text-align: center;
-        }
-
-        .checklist-btn {
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .control-btns {
-            font-size: 2rem;
-            height: 100%;
-        }
-
-        .btn-container {
+        .stack {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: var(--gap);
+            min-height: 0;
         }
+        .stack > * { flex: 1 1 0; min-height: 0; }
+
+        /* ---- Buttons ---- */
+        .tbtn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid var(--line);
+            border-radius: 10px;
+            background: transparent;
+            color: var(--fg);
+            font: inherit;
+            font-size: 7vh;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            padding: 0 8px;
+            overflow: hidden;
+            transition: transform 60ms, filter 60ms;
+        }
+        /* Press feedback only (no hover: it sticks on touch screens) */
+        .tbtn:active { transform: scale(0.96); filter: brightness(1.35); }
+
+        .nav-btn img { width: 55%; height: 55%; filter: invert(100%); pointer-events: none; }
+
+        #blue-btn   { border-color: var(--blue);   color: var(--blue-text); }
+        #yellow-btn { border-color: var(--yellow); color: var(--yellow); }
+        #blue-btn.selected   { background: var(--blue);   color: #fff; }
+        #yellow-btn.selected { background: var(--yellow); color: #1a1a1a; }
+
+        /* Strategies: 2 columns x 3 rows, Homologation first, then the match strategies */
+        #strat-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: repeat(3, 1fr);
+            gap: var(--gap);
+            min-height: 0;
+        }
+        #strat-container .tbtn { font-size: 5.5vh; min-width: 0; white-space: nowrap; text-overflow: ellipsis; }
+        #strat-container .empty-slot { border: 2px dashed #495057; border-radius: 10px; }
+        #strat-container .tbtn.selected { background: var(--fg); color: #1a1a1a; border-color: var(--fg); }
+
+        #stop-run-btn {
+            border: none;
+            background: var(--red);
+            color: #fff;
+            font-size: 12vh;
+            font-weight: 800;
+            letter-spacing: 0.3em;
+            box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.25);
+        }
+        #stop-run-btn.sent { filter: brightness(1.5); }
+
+        /* ---- Displays ---- */
+        .number-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--line);
+            border-radius: 10px;
+            font-size: 18vh;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            min-height: 0;
+        }
+        .brand img { flex: 1 1 0; min-height: 0; max-width: 100%; object-fit: contain; }
+
+        #status-label {
+            font-size: 5.5vh;
+            font-weight: 600;
+            padding: 0.15em 0.7em;
+            border-radius: 999px;
+            background: #495057;
+            white-space: nowrap;
+        }
+        #status-label[data-state="1"] { background: #0b7285; }   /* Calibration */
+        #status-label[data-state="2"] { background: #e67700; }   /* Waiting for start */
+        #status-label[data-state="3"] { background: #2b8a3e; }   /* Running */
+        #status-label[data-state="4"] { background: #862e2e; }   /* Fin */
+        #status-label[data-state="5"] { background: #5f3dc4; }   /* Manual */
+        #status-label[data-state="6"] { background: #1864ab; }   /* Local test */
+        #status-label[data-state="offline"] { background: var(--red); }
+
+        .info { font-size: 3.6vh; color: var(--muted); white-space: nowrap; }
     </style>
 </head>
-<body>
-    <div class="container main-container" style="max-width: 100%;">        
-        <div class="row mt-4">
-            <div class="col-md-4" style="width: 80px;">
-                <div class="d-flex flex-column align-items-start" style="gap: 10px;">
-                    <a href="/">
-                        <button class="btn btn-outline-light home-icon p-2" style="width: 60px; height: 60px;">
-                            <img src="assets/house.svg" alt="Home" style="width: 100%; height: 100%; filter: invert(100%); vertical-align:top">
-                        </button>
-                    </a>
-                    <button class="btn btn-outline-light home-icon p-2" style="width: 60px; height: 60px;">
-                        <img src="assets/card-checklist.svg" alt="New" style="width: 100%; height: 100%; filter: invert(100%); vertical-align:top">
-                    </button>
-                </div>
-            </div>
-            <div class="col-md-4" style="width: 25%;">
-                <!-- Logo -->
-                <div class="logo">
-                    <img src="assets/logoSimple.png" alt="LOGO" style="max-width: 100%; height: auto;">
-                </div>
-            </div>
-
-            <div class="col-md-4" style="width: 17%;">
-                <!-- Number display -->
-                <div id="time-label" class="number-display">
-                    10.000
-                </div>
-            </div>
-
-            <div class="col-md-4" style="width: 17%;">
-                <!-- Colored buttons, stacked vertically -->
-                <div class="btn-container">
-                    <button id="blue-btn"   class="btn btn-team-blue-uns colored-btn"   onclick="sendColor(1)">BLUE</button>
-                    <button id="yellow-btn" class="btn btn-team-yellow-uns colored-btn" onclick="sendColor(2)">YELLOW</button>
-                </div>
-            </div>
-            
-            <div class="col-md-4" style="width: 17%;">
-                <!-- Strategy buttons, built from the strategies available on the robot -->
-                <div id="strat-container" class="btn-container"></div>
-            </div>
-            
-            <div class="col-md-4" style="width: 17%;">
-                <!-- Number display -->
-                <div id="score-label" class="number-display">
-                    123
-                </div>
-            </div>
-        </div>
-
-        <div class="row mt-4">
-            <div class="col-md-4" style="width: 10%; position: relative;">
-                <div id="run-id" class="label-section text-center" style="position: absolute; bottom: 0; left: 1rem; font-size: 1rem; color: white;">
-                    #42
-                </div>
-            </div>
-            <div class="col-md-4" style="width: 90%;">
-                <!-- Stop Run Button Red -->
-                <button id="stop-run-btn" class="btn btn-danger w-100" onclick="sendStopRun()">
-                    STOP
+<body oncontextmenu="return false">
+    <div class="screen">
+        <div class="top">
+            <div class="stack">
+                <a href="/" class="tbtn nav-btn" aria-label="Home">
+                    <img src="assets/house.svg" alt="">
+                </a>
+                <button class="tbtn nav-btn" aria-label="Checklist">
+                    <img src="assets/card-checklist.svg" alt="">
                 </button>
             </div>
-            <div class="col-md-4" style="width: 90%;">
-                <div id="status-label" class="label-section text-center">
-                    Placeholder for a label here
-                </div>
-                <div id="ip-label" class="ip-label text-center">
-                    IP: --
-                </div>
+
+            <div class="brand">
+                <img src="assets/logoSimple.png" alt="LOGO">
+                <div id="status-label">Connecting…</div>
+                <div class="info"><span id="run-id">#--</span> · <span id="ip-label">IP: --</span></div>
             </div>
+
+            <div id="time-label" class="number-display">--</div>
+
+            <div class="stack">
+                <button id="blue-btn"   class="tbtn" onclick="sendColor(1)">BLUE</button>
+                <button id="yellow-btn" class="tbtn" onclick="sendColor(2)">YELLOW</button>
+            </div>
+
+            <!-- Strategy buttons, built from the strategies available on the robot -->
+            <div id="strat-container"></div>
         </div>
+
+        <!-- Fires on pointerdown (finger touch), not on release -->
+        <button id="stop-run-btn" class="tbtn">STOP</button>
     </div>
 
     <script>
+        const STATES = ["Init", "Calibration", "Waiting for Start", "Running", "Fin", "Manual", "Local Test"];
 
+        const el = {
+            status: document.getElementById("status-label"),
+            time:   document.getElementById("time-label"),
+            runid:  document.getElementById("run-id"),
+            ip:     document.getElementById("ip-label"),
+            blue:   document.getElementById("blue-btn"),
+            yellow: document.getElementById("yellow-btn"),
+            strats: document.getElementById("strat-container"),
+            stop:   document.getElementById("stop-run-btn"),
+        };
+
+        // Only touch the DOM when a value actually changes (polled every 100 ms)
+        function setText(node, text) {
+            text = String(text);
+            if (node.textContent !== text) node.textContent = text;
+        }
+        function setState(state) {
+            if (el.status.dataset.state !== String(state)) el.status.dataset.state = state;
+        }
+
+        function postJSON(url, body) {
+            return fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: body === undefined ? undefined : JSON.stringify(body)
+            }).then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            });
+        }
 
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
-        // Function to start the continuous robot data fetching loop
         async function startContinuousRobotFetch() {
-            while (true) {  // Infinite loop
-                await getRobot();  // Wait for the data to be fetched
+            while (true) {
+                await getRobot();
                 await sleep(100);
             }
         }
 
         async function getRobot() {
             try {
-                let response = await fetch('/get_robot');
-                if (!response.ok) {
-                    throw new Error('Network response was not ok ' + response.statusText);
-                }
-                let data = await response.json();     
-                
-                const scoreLabel = document.getElementById("score-label");
-                const statusLabel = document.getElementById("status-label");
-                const timeLabel = document.getElementById("time-label");
-                const runid = document.getElementById("run-id");
+                const response = await fetch('/get_robot');
+                if (!response.ok) throw new Error('Network response was not ok ' + response.statusText);
+                const data = await response.json();
 
-                runid.innerHTML = "#" + data["runid"];
+                setText(el.runid, "#" + data["runid"]);
 
-                let robotStatus = data["status"];
-                if (robotStatus == 0)
-                    statusLabel.innerHTML = "Robot State : Init";
-                else if (robotStatus == 1)
-                    statusLabel.innerHTML = "Robot State : Calibration";
-                else if (robotStatus == 2)
-                    statusLabel.innerHTML = "Robot State : Waiting for Start";
-                else if (robotStatus == 3)
-                    statusLabel.innerHTML = "Robot State : Running";
-                else if (robotStatus == 4)
-                    statusLabel.innerHTML = "Robot State : Fin";
-                else if (robotStatus == 5)
-                    statusLabel.innerHTML = "Robot State : Manual";
-                else if (robotStatus == 6)
-                    statusLabel.innerHTML = "Robot State : Local Test";
-                else
-                    statusLabel.innerHTML = "Robot State : Undefined";
-                
-                scoreLabel.innerHTML = data["score"];
+                const robotStatus = data["status"];
+                setText(el.status, STATES[robotStatus] || "Undefined");
+                setState(robotStatus);
 
-                let timeInSeconds = (100-(data["time"] / 1000)).toFixed(1);
-                timeLabel.innerHTML = timeInSeconds;
+                setText(el.time, (100 - (data["time"] / 1000)).toFixed(1));
 
                 toggleColor(data["team"]);
                 toggleStrat(data["strategy"]);
             } catch (error) {
+                setText(el.status, "No connection");
+                setState("offline");
                 console.error('Failed to fetch data:', error);
             }
         }
-        // Start the continuous fetching loop
         startContinuousRobotFetch();
 
         async function getIP() {
             try {
-                let response = await fetch('/get_ip');
-                if (!response.ok) {
-                    throw new Error('Network response was not ok ' + response.statusText);
-                }
-                let data = await response.json();
-                const ipLabel = document.getElementById("ip-label");
+                const response = await fetch('/get_ip');
+                if (!response.ok) throw new Error('Network response was not ok ' + response.statusText);
+                const data = await response.json();
                 if (data["ips"] && data["ips"].length > 1) {
-                    ipLabel.innerHTML = "IPs: " + data["ips"].join(", ");
+                    setText(el.ip, "IPs: " + data["ips"].join(", "));
                 } else {
-                    ipLabel.innerHTML = "IP: " + (data["ip"] || "127.0.0.1");
+                    setText(el.ip, "IP: " + (data["ip"] || "127.0.0.1"));
                 }
             } catch (error) {
                 console.error('Failed to fetch IP:', error);
             }
         }
-
-        function startIpFetch(){
-            getIP();
-            setInterval(getIP, 5000);
-        }
-
-        startIpFetch();
-
+        getIP();
+        setInterval(getIP, 5000);
 
         function sendColor(color) {
-            // Send POST request to /set_color with color data
-            fetch('/set_color', {
-                method: 'POST', // HTTP method
-                headers: {
-                    'Content-Type': 'application/json' // Define the content type as JSON
-                },
-                body: JSON.stringify({ color: color }) // Convert the color object to a JSON string
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json(); // Assuming the response will be JSON
-            })
-            .then(data => {
-                toggleColor(color);
-            })
-            .catch((error) => {
-                toggleColor("none");
-                console.error('Error:', error); // Handle errors
-            });
-        }
-        function sendStrat(strat) {
-            // Send POST request to /set_strat with the strategy name
-            fetch('/set_strat', {
-                method: 'POST', // HTTP method
-                headers: {
-                    'Content-Type': 'application/json' // Define the content type as JSON
-                },
-                body: JSON.stringify({ strat: strat }) // Convert the color object to a JSON string
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json(); // Assuming the response will be JSON
-            })
-            .then(data => {
-                toggleStrat(strat);
-            })
-            .catch((error) => {
-                toggleStrat(0);
-                console.error('Error:', error); // Handle errors
-            });
+            postJSON('/set_color', { color: color })
+                .then(() => toggleColor(color))
+                .catch(error => {
+                    toggleColor("none");
+                    console.error('Error:', error);
+                });
         }
 
-        // Build one button per strategy available on the robot (name given by getNom())
+        function sendStrat(strat) {
+            postJSON('/set_strat', { strat: strat })
+                .then(() => toggleStrat(strat))
+                .catch(error => {
+                    toggleStrat(0);
+                    console.error('Error:', error);
+                });
+        }
+
+        // Build one button per strategy available on the robot (name given by getNom()).
+        // 2x3 grid: the homologation strategy goes in the first cell, the match
+        // strategies fill the other 5; unused cells stay as empty placeholders.
+        const STRAT_SLOTS = 6;
         async function buildStrategyButtons() {
             try {
                 const response = await fetch('/get_strategies');
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
+                if (!response.ok) throw new Error('Network response was not ok');
                 const data = await response.json();
-                const container = document.getElementById("strat-container");
-                container.innerHTML = "";
-                data["strategies"].forEach(name => {
+                const isHomol = name => /homolog/i.test(name);
+                const names = data["strategies"].filter(isHomol)
+                    .concat(data["strategies"].filter(name => !isHomol(name)));
+                if (names.length > STRAT_SLOTS)
+                    console.warn("More strategies than slots, hidden:", names.slice(STRAT_SLOTS));
+                el.strats.innerHTML = "";
+                for (let i = 0; i < STRAT_SLOTS; i++) {
+                    const name = names[i];
+                    if (name === undefined) {
+                        const slot = document.createElement("div");
+                        slot.className = "empty-slot";
+                        el.strats.appendChild(slot);
+                        continue;
+                    }
                     const btn = document.createElement("button");
-                    btn.className = "btn btn-outline-light control-btns";
+                    btn.className = "tbtn";
                     btn.dataset.strat = name;
                     btn.textContent = name;
                     btn.addEventListener("click", () => sendStrat(name));
-                    container.appendChild(btn);
-                });
+                    el.strats.appendChild(btn);
+                }
             } catch (error) {
                 console.error('Failed to fetch strategies:', error);
+                setTimeout(buildStrategyButtons, 2000);   // robot API not up yet: retry
             }
         }
-
         buildStrategyButtons();
 
-        // /stop GET method
         function sendStopRun() {
-            fetch('/stop', {
-                method: 'POST', // HTTP method
-                headers: {
-                    'Content-Type': 'application/json' // Define the content type as JSON
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json(); // Assuming the response will be JSON
-            })
-            .then(data => {
-            })
-            .catch((error) => {
-                console.error('Error:', error); // Handle errors
-            });
+            el.stop.classList.add("sent");
+            setTimeout(() => el.stop.classList.remove("sent"), 300);
+            postJSON('/stop').catch(error => console.error('Error:', error));
         }
+        el.stop.addEventListener("pointerdown", sendStopRun);
 
         function toggleColor(color) {
-            const blueBtn = document.getElementById("blue-btn");
-            const yellowBtn = document.getElementById("yellow-btn");
-        
-            if (color == 1) {
-                // Set blue background and reset yellow
-                blueBtn.classList.remove('btn-team-blue-uns');
-                blueBtn.classList.add('btn-team-blue-sel');
-                
-                yellowBtn.classList.remove('btn-team-yellow-sel');
-                yellowBtn.classList.add('btn-team-yellow-uns');
-            } else if (color == 2) {
-                // Set yellow background and reset blue
-                yellowBtn.classList.remove('btn-team-yellow-uns');
-                yellowBtn.classList.add('btn-team-yellow-sel');
-                
-                blueBtn.classList.remove('btn-team-blue-sel');
-                blueBtn.classList.add('btn-team-blue-uns');
-            } else {
-                yellowBtn.classList.remove('btn-team-yellow-sel');
-                yellowBtn.classList.add('btn-team-yellow-uns');
-                
-                blueBtn.classList.remove('btn-team-blue-sel');
-                blueBtn.classList.add('btn-team-blue-uns');
+            el.blue.classList.toggle("selected", color == 1);
+            el.yellow.classList.toggle("selected", color == 2);
+        }
+
+        function toggleStrat(strat) {
+            for (const btn of el.strats.children) {
+                btn.classList.toggle("selected", btn.dataset.strat === strat);
             }
         }
-        function toggleStrat(strat) {
-            document.querySelectorAll("#strat-container .control-btns").forEach(btn => {
-                const selected = btn.dataset.strat === strat;
-                btn.classList.toggle('btn-outline-danger', selected);
-                btn.classList.toggle('btn-outline-light', !selected);
-            });
-        }
-        </script>
-
-    <!-- Bootstrap JS and dependencies -->
-    <script src="js/bootstrap.bundle.min.js"></script>
+    </script>
 </body>
 </html>
