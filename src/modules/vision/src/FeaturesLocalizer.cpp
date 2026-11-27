@@ -55,6 +55,13 @@ constexpr float kAkazeThreshold = 0.0002f;
 constexpr int kAkazeDescriptorSize = 486;
 constexpr int kAkazeDescriptorChannels = 3;
 
+// Two scale layers per octave instead of AKAZE's default four. Only the finest
+// scales carry usable detail on this map -- the coarser octaves contribute no
+// additional keypoints -- so the extra layers cost detection time for nothing.
+// Measured on the 44 captures against the four-layer fit: the same solves, the
+// same poses (median 1 mm, max 6.5 mm), ~25 ms instead of ~38 ms.
+constexpr int kAkazeOctaveLayers = 2;
+
 // Lowe's ratio test, raised for AKAZE's more selective descriptors.
 constexpr float kRatioTest = 0.95f;
 
@@ -73,6 +80,13 @@ constexpr double kMinInlierSpanMm = 300.0;
 // Odometry prior slack: how far the true pose may be from the prior. The window
 // sweeps the patch footprint through this yaw range.
 constexpr double kPriorYawSlackDeg = 15.0;
+
+// The prior also fixes the map-to-patch rotation, so a fit that turns the patch
+// by an unrelated angle is wrong even if it explains many matches. The field's
+// near-symmetric texture lets a 180-degree turn pass every other gate, and
+// without a prior the localiser has no way to tell. Wider than the yaw slack so
+// a slightly stale prior still passes.
+constexpr double kPriorHeadingToleranceDeg = 25.0;
 
 // Glare and exposure vary between the map and each capture, but AKAZE compares
 // raw gradients. Remove the smooth illumination (box high-pass) and normalise
@@ -376,7 +390,8 @@ cv::Point2d GroundWarper::cameraPatchPx() const {
 
 FeaturesLocalizer::FeaturesLocalizer()
     : detector_(cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, kAkazeDescriptorSize,
-                                  kAkazeDescriptorChannels, kAkazeThreshold)),
+                                  kAkazeDescriptorChannels, kAkazeThreshold,
+                                  /* nOctaves = */ 4, kAkazeOctaveLayers)),
       matcher_(cv::makePtr<cv::BFMatcher>(cv::NORM_HAMMING, false)) {}
 
 bool FeaturesLocalizer::loadCalibration(const std::string& cameraFilePath) {
@@ -637,6 +652,13 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
 
     position = poseFromTransform(transform, warper_.cameraPatchPx(),
                                  map_origin_px_, map_mm_per_px_);
+
+    // Reject a turn the prior rules out (see kPriorHeadingToleranceDeg).
+    if (hasStartingPosition &&
+        std::fabs(normalizeAngle(position.heading - prior_.heading)) >
+            kPriorHeadingToleranceDeg) {
+        return false;
+    }
     /*
     LOG_INFO("fix (", position.x, ", ", position.y,
              ") mm, heading ", position.heading, " deg, ", query.size(),

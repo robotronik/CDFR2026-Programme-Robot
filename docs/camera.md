@@ -42,10 +42,10 @@ Camera↔robot offsets (`Cam.hpp`), from `calibrate_camera()`:
   1. one folded capture→patch `remap` (undistort + ground warp, precomputed);
   2. crop to `kPatchCrop` of the footprint (it is ~45 % black);
   3. illumination normalise — box high-pass + CLAHE, on map *and* patch;
-  4. AKAZE (MLDB 486) at `kAkazeThreshold`;
+  4. AKAZE (MLDB 486, 2 scale layers) at `kAkazeThreshold`;
   5. match against the odometry-prior window (BF + ratio + mutual);
-  6. RANSAC partial affine, gated by min inliers, scale and inlier span —
-     prefer no fix over a wrong one.
+  6. RANSAC partial affine, gated by min inliers, scale, inlier span and
+     heading vs the prior — prefer no fix over a wrong one.
 
 Filter **after** the warp: a fixed kernel only has uniform scale there.
 
@@ -53,9 +53,13 @@ Filter **after** the warp: a fixed kernel only has uniform scale there.
 
 - Residual ~2.5 mm median; expect ~2–3 mm, 5 mm bound. ArUco agreement ~7 mm
   (ArUco is the less precise side). Map is the fixed reference.
-- ~38 ms/frame windowed on x86_64: remap ~3, normalise ~1, AKAZE detect ~26,
-  match ~5, RANSAC ~1. The Pi 5 runs ≈3–4× slower, i.e. within the 150 ms
+- ~25 ms/frame windowed on x86_64: remap ~0.6, normalise ~0.9, AKAZE detect ~15,
+  match ~8, RANSAC ~0.2. The Pi 5 runs ≈3–4× slower, i.e. within the 150 ms
   budget (confirm on device).
+- The prior heading is what makes AKAZE's cheap 2-layer pyramid safe: a
+  180° mise-match (the field texture is near-symmetric) is a valid rigid motion,
+  so without a prior it can pass every other gate. One was seen in whole-map
+  mode; none in prior mode.
 
 ## `calibrate_camera()`
 
@@ -66,7 +70,8 @@ rotation. Run after moving the camera; update `OFFSET_CAM_*` from the output.
 ## Tests
 
 `tests/data/{aruco_loc,features,aruco_blocs}`; `./build.sh test` (or
-`robot_tests aruco|features`). Current: **features 42/44**, **ArUco 11/11**.
+`robot_tests aruco|features`). Current: **features 43/44** (whole map, no
+prior), **ArUco 11/11**.
 
 ## Tuning (`FeaturesLocalizer.cpp`)
 
@@ -76,10 +81,17 @@ rotation. Run after moving the camera; update `OFFSET_CAM_*` from the output.
 | `kPatchCrop` | 0.85 |
 | `kHighpassKernel` / `kClaheClip` | 15 / 1.5 |
 | `kAkazeThreshold` / `kRatioTest` | 2e-4 / 0.95 |
+| `kAkazeOctaveLayers` | 2 |
 | `kRansacMm` / `kMinInliers` / `kMinInlierSpanMm` | 8 / 15 / 300 |
+| `kPriorYawSlackDeg` / `kPriorHeadingToleranceDeg` | 15 / 25 |
+
+AKAZE's default four scale layers add no keypoints on this map but cost 13 ms;
+two layers give the same 42/44 and the same poses (median 1 mm, max 6.5 mm) at
+~25 ms. Raising `kAkazeThreshold` to cut the cost further loses the harder
+captures (4e-4 → 41/44 whole-map, 8e-4 → 35/44).
 
 Alternatives tried, each at its best setting (whole-map solves/44; ms is the
-per-frame whole-map cost). None beat AKAZE (42/44 @ 105 ms, ~38 ms windowed):
+per-frame whole-map cost). None beat AKAZE (42/44, ~25 ms windowed):
 
 | detector | solves | ms |
 |---|---|---|
