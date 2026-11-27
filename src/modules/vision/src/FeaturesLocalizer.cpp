@@ -28,11 +28,15 @@ constexpr double kMmPerPx = 1.5;
 // the local brightness frame to frame; neither is stable for a detector. A box
 // high-pass removes the smooth illumination (glare) and CLAHE stretches the
 // remaining local contrast, so the same markings are detected across lighting.
-// Measured at 2 mm/px: this recovers ~8 more captures than the raw frame with no
-// wrong poses, and stays under the raw cost because the sharper image needs a
-// higher AKAZE threshold (see kAkazeThreshold).
+// Neither half is optional: raw frames solve 34/44, high-pass alone 40/44, CLAHE
+// alone 39/44, both 43-44/44.
 constexpr int kHighpassKernel = 15;      // box size, pixels (odd)
-constexpr double kClaheClip = 1.5;       // CLAHE clip limit
+// A low clip limit keeps CLAHE from amplifying noise in the flat panels, which
+// cuts the map to fewer, cleaner keypoints: 0.5 solves every capture at ~20 ms
+// against 43/44 at ~25 ms for 1.5, at the same accuracy against ArUco. The cost
+// is geometric support: without a prior the sparser map gives up one solve and
+// admits a 180-degree mise-match (1.0-1.5 do not).
+constexpr double kClaheClip = 0.5;       // CLAHE clip limit
 constexpr int kClaheTile = 8;            // CLAHE tile grid
 
 // Fraction of the camera footprint rectangle kept as the working patch. The

@@ -59,7 +59,11 @@ std::vector<std::string> featureCaptures() {
 
 // The feature localiser must recover a pose by matching a rectified capture
 // against the field map. The frames carry no ground-truth pose or starting
-// position, so the whole map is searched; passing needs at least one fix.
+// position, so the whole map is searched. Every capture in tests/data/features
+// shows enough field to be fixed, so all of them must be; the two frames in
+// tests/data/features_no_field are bare table with only a sliver of field at the
+// edge, and are kept out of this set rather than demanding a fix the matcher
+// cannot support.
 bool test_features_localizer() {
     const std::string calibrationPath = findCalibrationPath("OV9281_1280_800.yaml");
     if (calibrationPath.empty()) {
@@ -109,8 +113,11 @@ bool test_features_localizer() {
 
     LOG_INFO("Features test - found a position for ", solved, "/", captures.size(),
              " captures");
-    if (solved == 0) {
-        LOG_ERROR("Features test - no capture yielded a position");
+    // Every capture in the dataset shows enough field to be localised: a single
+    // miss is a regression in the pipeline, not an edge case.
+    if (solved != static_cast<int>(captures.size())) {
+        LOG_ERROR("Features test - ", captures.size() - solved,
+                  " capture(s) yielded no position");
         return false;
     }
     return true;
