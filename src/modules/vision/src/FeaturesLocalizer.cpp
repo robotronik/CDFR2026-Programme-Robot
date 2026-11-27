@@ -22,16 +22,26 @@ namespace {
 // harsh, low-contrast captures but costs noticeably more.
 constexpr double kMmPerPx = 2.0;
 
+// Illumination normalisation applied to the map and every patch before AKAZE.
+// The field markings are low contrast and lie under glare gradients that shift
+// the local brightness frame to frame; neither is stable for a detector. A box
+// high-pass removes the smooth illumination (glare) and CLAHE stretches the
+// remaining local contrast, so the same markings are detected across lighting.
+// Measured at 2 mm/px: this recovers ~8 more captures than the raw frame with no
+// wrong poses, and stays under the raw cost because the sharper image needs a
+// higher AKAZE threshold (see kAkazeThreshold).
+constexpr int kHighpassKernel = 15;      // box size, pixels (odd)
+constexpr double kClaheClip = 1.5;       // CLAHE clip limit
+constexpr int kClaheTile = 8;            // CLAHE tile grid
+
 // AKAZE with binary MLDB descriptors. The size is required at its full 486-bit
 // width, not a tuning knob: OpenCV silently returns a 1-byte descriptor
 // otherwise.
 //
-// The detection threshold is the response floor for a keypoint. Lowering it lets
-// AKAZE latch onto fainter structure, which the low-contrast field markings
-// need; below this value the extra keypoints no longer add correct matches, and
-// the remaining failures lack consistent correspondences (mostly off-field
-// views), not keypoints.
-constexpr float kAkazeThreshold = 0.00005f;
+// The detection threshold is the response floor for a keypoint. Illumination
+// normalisation lifts the faint markings well above this floor, so it can be
+// high enough to keep the keypoint count (and thus the matching cost) low.
+constexpr float kAkazeThreshold = 0.0003f;
 constexpr int kAkazeDescriptorSize = 486;
 constexpr int kAkazeDescriptorChannels = 3;
 
@@ -53,6 +63,24 @@ constexpr double kMinInlierSpanMm = 300.0;
 // Odometry prior slack: how far the true pose may be from the prior. The window
 // sweeps the patch footprint through this yaw range.
 constexpr double kPriorYawSlackDeg = 15.0;
+
+// Glare and exposure vary between the map and each capture, but AKAZE compares
+// raw gradients. Remove the smooth illumination (box high-pass) and normalise
+// the local contrast (CLAHE) so the same markings look alike in both.
+cv::Mat normalizeIllumination(const cv::Mat& gray) {
+    cv::Mat background;
+    cv::boxFilter(gray, background, CV_8U, cv::Size(kHighpassKernel, kHighpassKernel));
+    cv::Mat highpass;
+    cv::subtract(gray, background, highpass, cv::noArray(), CV_16S);
+    cv::Mat normalized;
+    highpass.convertTo(normalized, CV_8U, 1.0, 128.0);
+
+    cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(kClaheClip,
+                                               cv::Size(kClaheTile, kClaheTile));
+    cv::Mat out;
+    clahe->apply(normalized, out);
+    return out;
+}
 
 // Bounding box grown point by point; the 1e18 seeds let the first point set both
 // extremes.
@@ -394,8 +422,11 @@ bool FeaturesLocalizer::loadMap(const std::string& mapFilePath) {
     map_mm_per_px_ = FIELD_WIDTH_MM / static_cast<double>(gray.cols);
     map_origin_px_ = cv::Point2d(gray.cols / 2.0 - 0.5, gray.rows / 2.0 - 0.5);
 
+    // Same normalisation the patches get, so the descriptors are comparable.
+    const cv::Mat normalized = normalizeIllumination(gray);
+
     std::vector<cv::KeyPoint> keypoints;
-    detector_->detectAndCompute(gray, cv::noArray(), keypoints, map_descriptors_);
+    detector_->detectAndCompute(normalized, cv::noArray(), keypoints, map_descriptors_);
     map_points_px_.clear();
     map_points_px_.reserve(keypoints.size());
     for (const cv::KeyPoint& kp : keypoints) {
@@ -474,9 +505,13 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
 
     const cv::Mat rectified = warper_.warp(undistorted);
 
+    // Detect on the illumination-normalised patch; cameraViewWindow still uses
+    // the raw patch, whose zero border marks the area outside the camera view.
+    const cv::Mat normalized = normalizeIllumination(rectified);
+
     std::vector<cv::KeyPoint> patchKeypoints;
     cv::Mat patchDescriptors;
-    detector_->detectAndCompute(rectified, cv::noArray(), patchKeypoints,
+    detector_->detectAndCompute(normalized, cv::noArray(), patchKeypoints,
                                 patchDescriptors);
     if (patchKeypoints.empty() || patchDescriptors.empty()) {
         return false;
