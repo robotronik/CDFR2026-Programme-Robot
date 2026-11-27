@@ -60,6 +60,11 @@ private:
     GroundWarper warper_;
     cv::Size warper_size_;
 
+    // Precomputed capture-pixel -> patch-pixel maps (undistortion and ground
+    // warp folded into one remap), built once per frame size.
+    cv::Mat capture_to_patch_x_;
+    cv::Mat capture_to_patch_y_;
+
     double map_mm_per_px_ = 1.0;
     cv::Point2d map_origin_px_;
     cv::Mat map_descriptors_;

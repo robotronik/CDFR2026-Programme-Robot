@@ -35,14 +35,23 @@ constexpr int kHighpassKernel = 15;      // box size, pixels (odd)
 constexpr double kClaheClip = 1.5;       // CLAHE clip limit
 constexpr int kClaheTile = 8;            // CLAHE tile grid
 
+// Fraction of the camera footprint rectangle kept as the working patch. The
+// footprint is a trapezoid, so the full rectangle is mostly black; cropping
+// keeps the usable ground while cutting AKAZE cost (which scales with area).
+// 0.85 costs one fix of 43 and roughly a quarter of the per-frame time; 0.7 is
+// about twice as fast again but drops several of the low-light captures.
+constexpr double kPatchCrop = 0.85;
+
 // AKAZE with binary MLDB descriptors. The size is required at its full 486-bit
 // width, not a tuning knob: OpenCV silently returns a 1-byte descriptor
 // otherwise.
 //
 // The detection threshold is the response floor for a keypoint. Illumination
 // normalisation lifts the faint markings well above this floor, so it can be
-// high enough to keep the keypoint count (and thus the matching cost) low.
-constexpr float kAkazeThreshold = 0.0003f;
+// high enough to keep the keypoint count (and thus the matching cost) low. The
+// folded capture->patch remap resamples once (sharper than undistort + warp), so
+// this is retuned for that image.
+constexpr float kAkazeThreshold = 0.0002f;
 constexpr int kAkazeDescriptorSize = 486;
 constexpr int kAkazeDescriptorChannels = 3;
 
@@ -462,6 +471,19 @@ bool FeaturesLocalizer::buildWarper(const cv::Size& size) {
     x1 += pad;
     y1 += pad;
 
+    // The camera's footprint is a trapezoid, so the rectangle around it is ~45%
+    // black (outside the field of view). Cropping a centred fraction of it keeps
+    // almost all the usable ground while shrinking the patch -- and AKAZE cost
+    // scales with patch area. See kPatchCrop.
+    const double cx = 0.5 * (x0 + x1);
+    const double cy = 0.5 * (y0 + y1);
+    const double halfW = 0.5 * kPatchCrop * (x1 - x0);
+    const double halfH = 0.5 * kPatchCrop * (y1 - y0);
+    x0 = cx - halfW;
+    x1 = cx + halfW;
+    y0 = cy - halfH;
+    y1 = cy + halfH;
+
     const double scale = 1.0 / kMmPerPx;
     warper_.mm_per_px = kMmPerPx;
     warper_.x0 = x0;
@@ -475,6 +497,57 @@ bool FeaturesLocalizer::buildWarper(const cv::Size& size) {
                         0.0, 0.0, 1.0);
     warper_.homography = cv::Mat(S * H).clone();
     warper_size_ = size;
+
+    // Fold undistortion and the ground warp into one capture->patch remap, so a
+    // frame costs a single remap instead of undistort (full frame) plus warp.
+    // For each patch pixel, walk back through the warp to the undistorted image,
+    // then look up where that point came from in the raw capture.
+    cv::Mat undistortX, undistortY;
+    if (dist_coeffs_.empty()) {
+        cv::Mat gridX(size, CV_32F), gridY(size, CV_32F);
+        for (int r = 0; r < size.height; ++r) {
+            for (int c = 0; c < size.width; ++c) {
+                gridX.at<float>(r, c) = static_cast<float>(c);
+                gridY.at<float>(r, c) = static_cast<float>(r);
+            }
+        }
+        undistortX = gridX;
+        undistortY = gridY;
+    } else {
+        cv::initUndistortRectifyMap(camera_matrix_, dist_coeffs_, cv::noArray(),
+                                    camera_matrix_, size, CV_32FC1,
+                                    undistortX, undistortY);
+    }
+
+    cv::Mat homographyInv;
+    cv::invert(warper_.homography, homographyInv);
+    cv::Matx33d patchToUndistorted;
+    for (int r = 0; r < 3; ++r) {
+        for (int c = 0; c < 3; ++c) {
+            patchToUndistorted(r, c) = homographyInv.at<double>(r, c);
+        }
+    }
+    cv::Mat patchGridX(warper_.out_size, CV_32F), patchGridY(warper_.out_size, CV_32F);
+    for (int r = 0; r < warper_.out_size.height; ++r) {
+        for (int c = 0; c < warper_.out_size.width; ++c) {
+            const cv::Vec3d q = patchToUndistorted * cv::Vec3d(c, r, 1.0);
+            patchGridX.at<float>(r, c) = static_cast<float>(q[0] / q[2]);
+            patchGridY.at<float>(r, c) = static_cast<float>(q[1] / q[2]);
+        }
+    }
+    cv::remap(undistortX, capture_to_patch_x_, patchGridX, patchGridY, cv::INTER_LINEAR);
+    cv::remap(undistortY, capture_to_patch_y_, patchGridX, patchGridY, cv::INTER_LINEAR);
+
+    // Where the undistorted coordinate falls outside the undistorted frame there
+    // is no data. Point the map far away so the final remap leaves those pixels
+    // black, instead of sampling the frame's (0,0) corner when the first remap
+    // clamps an out-of-range coordinate to 0.
+    cv::Mat patchValid = (patchGridX >= 0.0f) &
+                         (patchGridX <= static_cast<float>(size.width - 1)) &
+                         (patchGridY >= 0.0f) &
+                         (patchGridY <= static_cast<float>(size.height - 1));
+    capture_to_patch_x_.setTo(-1e6f, ~patchValid);
+    capture_to_patch_y_.setTo(-1e6f, ~patchValid);
 
     LOG_INFO("warp ", warper_.out_size.width, "x",
              warper_.out_size.height, " at ", kMmPerPx, " mm/px");
@@ -495,16 +568,11 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
         return false;
     }
 
-    // Undistort first: the warp is a pinhole homography, so distortion would
-    // stretch the patch off the map's grid.
-    cv::Mat undistorted;
-    if (dist_coeffs_.empty()) {
-        undistorted = frame;
-    } else {
-        cv::undistort(frame, undistorted, camera_matrix_, dist_coeffs_);
-    }
-
-    const cv::Mat rectified = warper_.warp(undistorted);
+    // Undistortion and the ground warp folded into one precomputed remap: the
+    // warp is a pinhole homography, so distortion must be undone on the way.
+    cv::Mat rectified;
+    cv::remap(frame, rectified, capture_to_patch_x_, capture_to_patch_y_,
+              cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0));
 
     // Detect on the illumination-normalised patch; cameraViewWindow still uses
     // the raw patch, whose zero border marks the area outside the camera view.
