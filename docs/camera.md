@@ -4,9 +4,13 @@ Downward camera: mounting, calibration, localisation, tuning.
 
 ## Constraints
 
-- **Accuracy target: 3 mm** — sufficient; do not trade speed for more.
-- **Feature grid: 1.5 mm/px** — the speed/accuracy knee.
-- **Keep it fast** — ~38 ms/frame (windowed) on x86_64.
+- **Latency: under 150 ms per frame on the Raspberry Pi 5.**
+- **Lighting robustness**: must work under glare and in low light.
+- **Accuracy: 3 mm is sufficient** — no need for anything more precise.
+
+The implementation choices are consequences of these, not requirements: the
+1.5 mm/px grid and 0.85 crop are what fit the latency budget at 3 mm, and the
+high-pass + CLAHE normalisation is what delivers lighting robustness.
 
 ## Hardware and files
 
@@ -49,8 +53,9 @@ Filter **after** the warp: a fixed kernel only has uniform scale there.
 
 - Residual ~2.5 mm median; expect ~2–3 mm, 5 mm bound. ArUco agreement ~7 mm
   (ArUco is the less precise side). Map is the fixed reference.
-- ~38 ms/frame windowed: remap ~3, normalise ~1, AKAZE detect ~26, match ~5,
-  RANSAC ~1. Pi 5 ≈ 3–4×.
+- ~38 ms/frame windowed on x86_64: remap ~3, normalise ~1, AKAZE detect ~26,
+  match ~5, RANSAC ~1. The Pi 5 runs ≈3–4× slower, i.e. within the 150 ms
+  budget (confirm on device).
 
 ## `calibrate_camera()`
 
