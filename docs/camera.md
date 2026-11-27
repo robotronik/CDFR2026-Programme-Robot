@@ -16,9 +16,11 @@ high-pass + CLAHE normalisation is what delivers lighting robustness.
 
 - OV9281 mono, 1280×800, driven through **libcamera** on the Pi 5.
 - `data/OV9281_1280_800.yaml` — OpenCV intrinsics.
-- `data/FieldBW.png` (= `tests/data/features/FieldBW.png`) — top-down map,
-  **1.00000 px/mm**, 2000×3000 mm, origin at image centre. True scale matches the
-  printed vinyl (tags land within 0.6 mm), so it is the metric reference.
+- `data/FieldBW.png` — top-down map, **1.00000 px/mm**, 2000×3000 mm, origin at
+  image centre, greyscale. Rendered from the print file (`table.svg`, Inkscape,
+  3000×2000 mm) at 1 px/mm, rotated 90° CCW, desaturated — so it is the printed
+  vinyl, metric by construction: the landmark tags land at exactly
+  (±400, ±900) mm.
 
 ## Mounting
 

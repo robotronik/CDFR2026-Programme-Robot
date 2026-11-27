@@ -30,6 +30,7 @@ std::string findFeaturePath(const std::string& name) {
         "tests/data/features/" + name,
         "../tests/data/features/" + name,
         "data/features/" + name,
+        "data/" + name,
     };
     for (const std::string& path : candidates) {
         if (!cv::imread(path, cv::IMREAD_GRAYSCALE).empty()) {
