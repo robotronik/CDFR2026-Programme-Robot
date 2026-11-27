@@ -364,13 +364,6 @@ bool cameraViewWindow(const cv::Mat& rectified, const GroundWarper& warper,
 
 } // namespace
 
-cv::Mat GroundWarper::warp(const cv::Mat& gray) const {
-    cv::Mat out;
-    cv::warpPerspective(gray, out, homography, out_size, cv::INTER_LINEAR,
-                        cv::BORDER_CONSTANT, cv::Scalar(0));
-    return out;
-}
-
 cv::Point2d GroundWarper::robotMm(const cv::Point2d& px) const {
     const double rawX = px.x * mm_per_px + x0;
     const double rawY = px.y * mm_per_px + y0;

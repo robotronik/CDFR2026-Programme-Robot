@@ -62,4 +62,5 @@ Install the [clangd extension](https://marketplace.visualstudio.com/items?itemNa
 - [Build](docs/build.md) — how the Docker build works, outputs, Windows, dev container
 - [Raspberry Pi](docs/raspberry-pi.md) — setup, deploy, logs, debugging, touchscreen
 - [Robot](docs/robot.md) — actuators, LED signals, debug sounds, match checklist
+- [Camera](docs/camera.md) — mounting, calibration, localisers, accuracy, tuning
 - [Code style](docs/style.md) — how to write code here, clang-format
