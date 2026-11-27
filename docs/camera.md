@@ -78,5 +78,6 @@ rotation. Run after moving the camera; update `OFFSET_CAM_*` from the output.
 | `kAkazeThreshold` / `kRatioTest` | 2e-4 / 0.95 |
 | `kRansacMm` / `kMinInliers` / `kMinInlierSpanMm` | 8 / 15 / 300 |
 
-Rejected: ORB (0–2/44), coarse-detect/fine-describe, ECC direct alignment
-(slower, did not converge).
+Alternatives: ORB (with comparable map density ~35/44 and ~6× faster
+detection, but it loses the low-light fixes), coarse-detect/fine-describe, and
+ECC direct alignment (slower, did not converge).
