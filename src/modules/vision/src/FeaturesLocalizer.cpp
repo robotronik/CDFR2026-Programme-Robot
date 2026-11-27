@@ -17,7 +17,9 @@ namespace {
 
 // Working grid. The map and the rectified patch are both resampled to this
 // millimetre-per-pixel value, so a match between them is a rigid motion with no
-// scale term.
+// scale term. 2.0 mm/px is a fixed performance constraint: it keeps the per-frame
+// AKAZE cost low enough for the Pi. Finer (1-1.5 mm/px) localises more of the
+// harsh, low-contrast captures but costs noticeably more.
 constexpr double kMmPerPx = 2.0;
 
 // AKAZE with binary MLDB descriptors. The size is required at its full 486-bit
@@ -26,21 +28,26 @@ constexpr double kMmPerPx = 2.0;
 //
 // The detection threshold is the response floor for a keypoint. Lowering it lets
 // AKAZE latch onto fainter structure, which the low-contrast field markings
-// need; this is the highest value that still localises every capture in the test
-// set.
-constexpr float kAkazeThreshold = 0.0002f;
+// need; below this value the extra keypoints no longer add correct matches, and
+// the remaining failures lack consistent correspondences (mostly off-field
+// views), not keypoints.
+constexpr float kAkazeThreshold = 0.00005f;
 constexpr int kAkazeDescriptorSize = 486;
 constexpr int kAkazeDescriptorChannels = 3;
 
 // Lowe's ratio test, raised for AKAZE's more selective descriptors.
-constexpr float kRatioTest = 0.9f;
+constexpr float kRatioTest = 0.95f;
 
 // RANSAC fit of the map-to-patch rigid motion.
 constexpr double kRansacMm = 8.0;
 constexpr double kRansacConfidence = 0.999;
 constexpr int kRansacMaxIters = 5000;
 constexpr int kRansacRefineIters = 10;
-constexpr double kMinInliers = 25.0;
+// A fix needs at least this many consistent inliers. Below it a spurious rigid
+// fit (repetitive field texture) is too likely, and a missing fix is preferred
+// over a wrong one. Measured against the ArUco pose on the frames where both
+// localisers succeed, 15 gives no wrong fixes while keeping coverage.
+constexpr double kMinInliers = 15.0;
 constexpr double kMinInlierSpanMm = 300.0;
 
 // Odometry prior slack: how far the true pose may be from the prior. The window
