@@ -31,6 +31,14 @@ constexpr double kMmPerPx = 1.5;
 // Neither half is optional: raw frames solve 34/44, high-pass alone 40/44, CLAHE
 // alone 39/44, both 43-44/44.
 constexpr int kHighpassKernel = 15;      // box size, pixels (odd)
+// How far the high-pass is stretched before the AKAZE threshold sees it. The
+// high-pass is only a few grey levels deep, so the output looks washed out; that
+// is expected and costs nothing, because AKAZE reads gradient structure, not
+// visual contrast. Stretching further is a plain linear gain, identical on the
+// map and on every patch, so it raises signal and noise together: 1.5 buys ~50%
+// more keypoints and ~30% more inliers for ~2 ms, but loses the marginal
+// bare-table capture the coverage assert needs, so 1.0 stays.
+constexpr double kHighpassGain = 1.0;
 // A low clip limit keeps CLAHE from amplifying noise in the flat panels, which
 // cuts the map to fewer, cleaner keypoints: 0.5 solves every capture at ~20 ms
 // against 43/44 at ~25 ms for 1.5, at the same accuracy against ArUco. The cost
@@ -101,7 +109,7 @@ cv::Mat normalizeIllumination(const cv::Mat& gray) {
     cv::Mat highpass;
     cv::subtract(gray, background, highpass, cv::noArray(), CV_16S);
     cv::Mat normalized;
-    highpass.convertTo(normalized, CV_8U, 1.0, 128.0);
+    highpass.convertTo(normalized, CV_8U, kHighpassGain, 128.0);
 
     cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(kClaheClip,
                                                cv::Size(kClaheTile, kClaheTile));
