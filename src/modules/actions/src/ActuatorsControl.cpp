@@ -28,8 +28,6 @@ bool ActuatorsControl::moveServoAndWait(int servo, int target, int speed) {
     int s = -1;
 
     if (servo != prevServo || target != prevTarget) {
-        if (!arduino->getServo(servo, s)) return false;
-        if(s == target) return true;
         arduino->moveServoSpeed(servo, target, speed);
         prevServo = servo;
         prevTarget = target;
