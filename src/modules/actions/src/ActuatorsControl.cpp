@@ -43,7 +43,7 @@ bool ActuatorsControl::moveServoAndWait(int servo, int target, int speed) {
 // ------------------------------------------------------
 
 bool ActuatorsControl::setPumpState(bool state, int pumpIdx) {
-    return arduino->writeSensor(PUMP_1_NUM, state); //TODO : Change to pumpIdx when multiple pumps are used
+    return arduino->writeSensor(pumpIdx, state);
 }
 
 bool ActuatorsControl::setElectroState(bool state, int electroIdx) {
@@ -117,8 +117,7 @@ void ActuatorsControl::disableActuators() {
 bool Wall::home(){
     wDisableElectro();
     actuator->setPumpState(false, idx.pumpIdx);
-    actuator->moveServoAndWait(idx.servoIdx[0], 120, 360);
-    return true;
+    return DeployBackGripper(false);
 }
 
 bool Wall::wDrop() {
@@ -151,8 +150,7 @@ bool Wall::DeployBackGripper(bool state) {
 bool Tower::home(){
     wDisableElectro();
     actuator->setPumpState(false, idx.pumpIdx);
-    actuator->moveServoAndWait(idx.servoIdx[0], 180, 360);
-    return true;
+    return rotate(0);
 }
 
 bool Tower::tDrop(int index) {
@@ -182,9 +180,9 @@ bool Tower::rotate(int position) {
 bool Gate::home(){
     wDisableElectro();
     actuator->setPumpState(false, idx.pumpIdx);
-    actuator->moveServoAndWait(idx.servoIdx[0], 180, 360);
-    gBlockFlip(0);
-    return true;
+    bool a = rotate(0);
+    bool b = gBlockFlip(0);
+    return a && b;
 }
 
 bool Gate::gBlockFlip(int position) {

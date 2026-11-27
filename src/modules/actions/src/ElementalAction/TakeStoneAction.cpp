@@ -187,7 +187,7 @@ bool TakeStoneAction::successManagement() {
 }
 
 void TakeStoneAction::reset() {
-    selected_face = &robot->wall1;
+    selected_face = &robot->gate1;
     value = 23; // TODO change to be max value of points the opponent can make with 3 stones
     state = TakeStoneState::MOVE1;
     approachStartTime = 0;

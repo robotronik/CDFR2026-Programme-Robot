@@ -646,21 +646,21 @@ void RestAPI::start(){
         std::string req_value = req_data["value"];
 
         if(req_value == "PumpOn")
-            manual_currentFunc = [this]{ return robot->wall1.wTake(); };
+            manual_currentFunc = [this]{ return robot->gate1.wTake(); };
         else if(req_value == "PumpOff")
-            manual_currentFunc = [this]{ return robot->wall1.wDrop(); };
+            manual_currentFunc = [this]{ return robot->gate1.wDrop(); };
         else if(req_value == "ElectroOn")
-            manual_currentFunc = [this]{ return robot->wall1.wEnableElectro(); };
+            manual_currentFunc = [this]{ return robot->gate1.wEnableElectro(); };
         else if(req_value == "ElectroOff")
-            manual_currentFunc = [this]{ return robot->wall1.wDisableElectro(); };
+            manual_currentFunc = [this]{ return robot->gate1.wDisableElectro(); };
         else if(req_value == "TowerInitial") manual_currentFunc = [this]{ return robot->gate1.rotate(0); };
         else if(req_value == "TowerPosition") manual_currentFunc = [this]{ return robot->gate1.rotate(1); };
         else if(req_value == "TowerGate") manual_currentFunc = [this]{ return robot->gate1.rotate(2); };
         else if(req_value == "BlockInitial") manual_currentFunc = [this]{ return robot->gate1.gBlockFlip(0); };
         else if(req_value == "BlockGate") manual_currentFunc = [this]{ return robot->gate1.gBlockFlip(1); };
         else if(req_value == "BlockGraal") manual_currentFunc = [this]{ return robot->gate1.gBlockFlip(2); };
-        else if(req_value == "DeployBackGripper") manual_currentFunc = [this]{ return robot->wall1.DeployBackGripper(true); };
-        else if(req_value == "RetractBackGripper") manual_currentFunc = [this]{ return robot->wall1.DeployBackGripper(false); };
+        else if(req_value == "DeployBackGripper") manual_currentFunc = [this]{ return robot->wall2.DeployBackGripper(true); };
+        else if(req_value == "RetractBackGripper") manual_currentFunc = [this]{ return robot->wall2.DeployBackGripper(false); };
         else if (req_value != "Test")
             return jsonError(400, "Invalid action requested");
 

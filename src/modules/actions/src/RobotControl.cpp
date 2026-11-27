@@ -10,19 +10,23 @@ RobotControl::RobotControl(Arduino* arduino)
       gate1(idxGate1, position_t{0, 0, 0}, &actuators),
       gate2(idxGate2, position_t{0, 0, 0}, &actuators) {
 
-    wallTable[0] = &wall1;
-    wallTable[1] = &wall2;
-    wallTable[2] = &wall3;
-    wallTable[3] = &wall4;
-    wallTable[4] = &gate1;
-    wallTable[5] = &gate2;
+    //wallTable[0] = &wall1;
+    wallTable[0] = &wall2;
+    //wallTable[2] = &wall3;
+    //wallTable[3] = &wall4;
+    wallTable[1] = &gate1;
+    //wallTable[5] = &gate2;
 
 }
 
-void RobotControl::homeActuators()
+bool RobotControl::homeActuators()
 {
   actuators.homeActuators();
+  bool allHomed = true;
   for(Wall* wall : wallTable) {
-    wall->home();
+    if(!wall->home()) {
+      allHomed = false;
+    }
   }
+  return allHomed;
 }

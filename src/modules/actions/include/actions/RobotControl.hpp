@@ -14,8 +14,8 @@ class Arduino;
 class RobotControl {
     private:
         Gate::actuatorsIdx_t idxWall1{
-            .pumpIdx = PUMP_1_NUM,
-            .electroIdx = {PUMP_2_NUM, 0, 0},
+            .pumpIdx = 0,
+            .electroIdx = {0, 0, 0},
             .servoIdx = {0, 0, 0}
         };
         Gate::actuatorsIdx_t idxWall2{
@@ -34,8 +34,8 @@ class RobotControl {
             .servoIdx = {0, 0, 0}
         };
         Gate::actuatorsIdx_t idxGate1{
-            .pumpIdx = 0,
-            .electroIdx = {0, 0, 0},
+            .pumpIdx = PUMP_1_NUM,
+            .electroIdx = {PUMP_2_NUM, 0, 0},
             .servoIdx = {2, 3, 0}
         };
         Gate::actuatorsIdx_t idxGate2{
@@ -56,7 +56,7 @@ class RobotControl {
         Gate gate1;
         Gate gate2;
 
-        Wall* wallTable[6];
-        void homeActuators();
+        Wall* wallTable[2];
+        bool homeActuators();
     
 };

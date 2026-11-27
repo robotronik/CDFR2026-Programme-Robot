@@ -58,7 +58,7 @@ void DropStoneAction::reset() {
     releaseStartTime = 0;
     target = {0, 0, 0};
     best_path_length = INFINITY;
-    selected_face = &robot->wall1; // TODO implement a way to chose face
+    selected_face = &robot->gate1; // TODO implement a way to chose face
     selected_zone = nullptr;
 }
 
