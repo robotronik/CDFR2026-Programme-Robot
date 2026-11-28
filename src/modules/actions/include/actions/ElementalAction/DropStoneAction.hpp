@@ -2,7 +2,7 @@
 #include "actions/VirtualAction.hpp"
 #include "defs/structs.hpp"
 #include "drive_interface.h"
-#include "navigation/navigation.h" // pour NavReturn & position_t
+#include "navigation/navigation.h" // for NavReturn & position_t
 #include "defs/tableState.hpp"
 #include "navigation/pathfind.h"
 #include "actions/Robot.hpp"

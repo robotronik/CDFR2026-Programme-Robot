@@ -52,19 +52,18 @@ void ExempleStrat::reset() {
     possible_actions.clear();
     running_actions.clear();
     buildPossibleActions();
-    // L'attente n'est pas une action candidate : on la réserve hors du pool
-    // pour que bestAction() ne puisse pas la consommer. extractAction() la
-    // fait passer du pool au membre waitAction, elle reste donc la propriété
-    // de la stratégie ; le FSM n'en verra jamais qu'un pointeur.
+    // Wait is not a candidate action: keep it out of the pool so bestAction()
+    // cannot consume it. extractAction() moves it from the pool to the
+    // waitAction member, so it stays owned by the strategy; the FSM only ever
+    // sees a pointer to it.
     waitAction = extractAction("Wait");
-    resume(); // la stratégie démarre active (isActive = true)
+    resume(); // the strategy starts active (isActive = true)
 }
 
 /*
-    Construit le pool d'actions possibles de la stratégie, avec leur
-    pondération respective. Plus la pondération est grande, plus
-    l'action a de chances d'être choisie par bestAction() lorsqu'elle
-    est disponible (cf. calcul du score plus bas).
+    Build the strategy's pool of possible actions, with their respective
+    weights. The larger the weight, the more likely the action is to be chosen
+    by bestAction() when it is available (cf. the score computation below).
 
 */
 void ExempleStrat::buildPossibleActions() {
@@ -73,10 +72,10 @@ void ExempleStrat::buildPossibleActions() {
         std::string key = action->getNom();
         auto result = possible_actions.emplace(key, std::make_pair(weight, std::move(action)));
         if (!result.second) {
-            // emplace() ne remplace pas si la clé existe déjà : deux
-            // actions avec le même nom écraseraient silencieusement l'une
-            // l'autre sinon.
-            LOG_WARNING("ExempleStrat: action '", key.c_str(), "' déjà présente dans le pool, ignorée");
+            // emplace() does not replace when the key already exists: two
+            // actions with the same name would otherwise silently overwrite
+            // each other.
+            LOG_WARNING("ExempleStrat: action '", key.c_str(), "' already in the pool, ignored");
         }
     };
 
@@ -97,7 +96,7 @@ VirtualAction* ExempleStrat::bestAction() {
     }
 
     if (possible_actions.empty()) {
-        LOG_WARNING("ExempleStrat: plus d'action disponible dans le pool");
+        LOG_WARNING("ExempleStrat: no more actions available in the pool");
         return nullptr;
     }
 
@@ -108,8 +107,8 @@ VirtualAction* ExempleStrat::bestAction() {
         float reward;
         bool available = weightedAction.second->available(reward);
         if (!available) {
-            //LOG_WARNING("ExempleStrat: sélection de l'action ", key.c_str(), " impossible");
-            continue; // action non disponible
+            //LOG_WARNING("ExempleStrat: cannot select action ", key.c_str());
+            continue; // action not available
         }
         float score = weightedAction.first * reward;
         if (score > bestScore) {
@@ -122,10 +121,9 @@ VirtualAction* ExempleStrat::bestAction() {
         return nullptr;
     }
 
-    LOG_GREEN_INFO("ExempleStrat: sélection de l'action ", bestKey.c_str());
+    LOG_GREEN_INFO("ExempleStrat: selecting action ", bestKey.c_str());
 
-    // L'action n'est pas retirée du pool : la stratégie en garde la
-    // propriété, le FSM n'en reçoit qu'un pointeur et pourra la rejouer
-    // tant qu'elle reste disponible.
+    // The action is not removed from the pool: the strategy keeps ownership,
+    // the FSM only gets a pointer and can replay it while it stays available.
     return findAction(bestKey);
 }

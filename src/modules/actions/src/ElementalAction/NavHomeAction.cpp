@@ -46,7 +46,7 @@ void NavHomeAction::reset() {
 }
 
 bool NavHomeAction::available(float& reward) {
-    // Retour déjà effectué : plus candidate tant qu'elle n'a pas été réarmée.
+    // Return already done: not a candidate until it is re-armed.
     if (done) return false;
     if (_millis() - tableState->startTime < 90000) return false;
     double path_length_mm;

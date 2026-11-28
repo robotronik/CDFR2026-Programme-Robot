@@ -34,7 +34,7 @@ ReturnFSM CalibrationAction::run() {
         if (nav_ret == NavReturn::Done) {
             LOG_EXTENDED_DEBUG("FSM_CALIBRATION_NAV: Nav done");
             if (robot->calibrationAge) {
-                // Si calibrationAge != 0 la calibration a échoué
+                // If calibrationAge != 0 the calibration failed
                 errorManagement(NavReturn::Done);
                 return ReturnFSM::Error;
             }

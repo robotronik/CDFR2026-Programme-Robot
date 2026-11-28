@@ -28,10 +28,10 @@ class NavHomeAction : public VirtualAction {
     private:
         TableState* tableState;
         Robot* robot;
-        // valeur de l'action en point
+        // the action's value in points
         int value = 10;
         position_t homePos;
-        // Passe à true quand le retour est terminé : l'action n'est alors
-        // plus candidate (available() renvoie -1) jusqu'à reset().
+        // Set to true when the return is complete: the action is then no longer
+        // a candidate (available() returns -1) until reset().
         bool done = false;
 };

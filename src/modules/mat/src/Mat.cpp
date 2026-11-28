@@ -28,7 +28,7 @@ const std::string Mat::MAT_OBJECTS_PATH = "/objects";
 
 namespace {
 
-// Délais courts : le thread de fond ne doit pas rester bloqué si le mat est absent.
+// Short timeouts: the background thread must not stay blocked if the mat is absent.
 constexpr int CONNECT_TIMEOUT_US = 50 * 1000;   // 50 ms
 constexpr int READ_TIMEOUT_US = 150 * 1000;     // 150 ms
 
@@ -64,22 +64,22 @@ HttpGet get(httplib::Client& cli, const std::string& path, json& response) {
     return {true, {}};
 }
 
-// État partagé entre le thread de fond et la boucle principale (protégé par g_mutex).
+// Shared state between the background thread and the main loop (guarded by g_mutex).
 std::mutex g_mutex;
-std::condition_variable g_wake;   // réveille le thread de fond au stop()
+std::condition_variable g_wake;   // wakes the background thread on stop()
 std::thread g_thread;
 bool g_runRequested = false;
-MatTableData g_data;              // dernière table reçue
+MatTableData g_data;              // last table received
 bool g_hasData = false;
 std::chrono::steady_clock::time_point g_stamp;
 
-// g_mutex doit être verrouillé.
+// g_mutex must be held.
 bool isFresh() {
     return g_hasData && std::chrono::steady_clock::now() - g_stamp <= STALE_PERIOD;
 }
 
-// Interroge le mat sans fin. Seuls le retour, la perte de la connexion et
-// l'échec du tout premier essai sont loggés (jamais les tentatives suivantes).
+// Polls the mat endlessly. Only the (re)connection, the connection loss and
+// the failure of the very first attempt are logged (never the later retries).
 void workerLoop() {
     httplib::Client cli(MAT_URL);
     configure(cli);
@@ -117,7 +117,7 @@ void workerLoop() {
         g_wake.wait_for(lock, POLL_PERIOD, [] { return !g_runRequested; });
     }
 
-    // Le client HTTP n'appartient qu'à ce thread : /stop est envoyé ici.
+    // The HTTP client belongs to this thread only: /stop is sent here.
     if (connected) {
         json response;
         const HttpGet stop = get(cli, "/stop", response);

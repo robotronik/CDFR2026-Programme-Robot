@@ -36,7 +36,7 @@ void WaitAction::reset(){
 }
 
 bool WaitAction::available(float &reward){
-    // L'attente est toujours disponible, mais son coût est élevé car non rentable
+    // Waiting is always available, but its cost is high since it is not worthwhile
     reward = -duree;
     return true;
 }
