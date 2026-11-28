@@ -82,8 +82,7 @@ int main()
             if (initState)
             {
                 LOG_GREEN_INFO("INIT");
-                robot.actuators.disableActuators();
-                robot.markHardwareStopped();
+                robot.stopMatchHardware();
                 robot.tableState().reset();
                 robot.arduino()->RGB_Rainbow();
             }

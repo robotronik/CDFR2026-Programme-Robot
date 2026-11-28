@@ -17,10 +17,11 @@ class TableState;
 class VirtualStrategy;
 
 /*
-    Single entry point to the robot: owns the hardware (Arduino, lidar, camera,
-    mat, sensors), the chassis (DriveControl) and actuators (ActuatorsControl),
-    and the match-level state (team colour, calibration age, strategy). Modules
-    that need the hardware only receive this instance.
+    Single entry point to the robot. Owns the hardware (Arduino, and the
+    SensorControl bundle: lidar, camera, mat, buttons), the chassis
+    (DriveControl), the actuators (ActuatorsControl) and the match-level state
+    (team colour, calibration age, strategy pool). The TableState is owned by
+    the app and only referenced here.
 */
 class Robot {
     private:
@@ -29,8 +30,9 @@ class Robot {
         std::unique_ptr<Arduino> arduino_;
         SensorControl sensor_;
 
-        // Owned collaborators (constructed by the robot itself).
-        TableState* tableState_ = nullptr; // owned by the app, shared in
+        // The table state is owned by the app and shared in via setTableState().
+        TableState* tableState_ = nullptr;
+        // Navigation is built once the table exists (see setTableState()).
         std::unique_ptr<Navigation> navigation_;
         MainState* currentState_ = nullptr;
         bool hardwareReady_ = false;
@@ -135,8 +137,6 @@ class Robot {
         void startMatchHardware();
         // Stop the match hardware (drive, actuators, lidar, camera).
         void stopMatchHardware();
-        // Clear the "hardware is up" flag (the caller stops the devices).
-        void markHardwareStopped() { hardwareReady_ = false; }
 
         // Team / strategy switching.
         void switchTeamSide(ColorTeam color);

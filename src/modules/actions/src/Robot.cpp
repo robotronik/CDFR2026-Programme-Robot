@@ -4,11 +4,8 @@
 #include "actions/Strategy/ExempleStrat.hpp"
 #include "actions/VirtualStrategy.hpp"
 #include "i2c/Arduino.hpp"
-#include "lidar/Lidar.hpp"
-#include "mat/mat.hpp"
 #include "navigation/navigation.h"
 #include "utils/logger.hpp"
-#include "vision/Cam.hpp"
 #include <cmath>
 
 #include "defs/tableState.hpp"
