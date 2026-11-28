@@ -7,7 +7,6 @@
 #include "actions/ElementalAction/WaitAction.hpp"
 //#include "actions/ElementalAction/CalibrationAction.hpp"
 #include "actions/ElementalAction/NavHomeAction.hpp"
-#include "actions/ElementalAction/GoToPositionAction.hpp"
 #include "actions/ElementalAction/DropStoneAction.hpp"
 #include "actions/ElementalAction/TakeStoneAction.hpp"
 
@@ -84,9 +83,6 @@ void ExempleStrat::buildPossibleActions() {
     //addAction(0.0f, std::make_unique<WaitAction>(400));
     //addAction(1.0f, std::make_unique<CalibrationAction>(robot, tableStatus));
     addAction(0.5f, std::make_unique<NavHomeAction>(tableStatus, robot, StratFinishingPos()));
-    // Cible dynamique : l'élément de jeu le plus proche connu de tableStatus,
-    // fixé au démarrage de l'action (cf. GoToPositionAction::findClosestElement()).
-    //addAction(0.0f, std::make_unique<GoToPositionAction>("MoveAction", tableStatus, robot));
     addAction(1.0f, std::make_unique<DropStoneAction>(tableStatus, robot));
     addAction(1.0f, std::make_unique<TakeStoneAction>(tableStatus, robot));
 }

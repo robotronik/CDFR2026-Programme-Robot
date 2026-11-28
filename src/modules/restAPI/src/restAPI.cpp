@@ -14,11 +14,11 @@
 #include "i2c/Arduino.hpp"
 #include "actions/SensorControl.hpp"
 #include "lidar/Lidar.hpp"
-#include "lidar/lidarAnalize.h" //for static variable
+#include "lidar/lidarAnalize.h" // for static variable
 #include "navigation/navigation.h"
-#include "navigation/astar.h" //for static variable
+#include "navigation/astar.h" // for static variable
 #include "actions/VirtualStrategy.hpp" // for the strategy list
-#include "vision/Cam.hpp" //for vision fuction
+#include "vision/Cam.hpp" // for vision functions
 #include "restAPI/manual_mode.h" // for manual mode functions
 
 #include <crow.h>
@@ -236,7 +236,7 @@ void RestAPI::start(){
         return crow::response(response.dump());
     });
 
-    // Define a route for an simple GET request that returns the lidar data
+    // Define a route for a simple GET request that returns the lidar data
     CROW_ROUTE(app, "/get_lidar")
     ([this](){
         json response;
@@ -251,7 +251,7 @@ void RestAPI::start(){
         return crow::response(response.dump());
     });
 
-    // Define a route for an simple GET request that returns the general data
+    // Define a route for a simple GET request that returns the general data
     CROW_ROUTE(app, "/get_robot")
     ([this](){
         json response;
@@ -304,7 +304,7 @@ void RestAPI::start(){
         return crow::response(response.dump(4));
     });
 
-    // Define a route for an simple GET request that returns all of the information from the arduino
+    // Define a route for a simple GET request that returns all of the information from the arduino
     CROW_ROUTE(app, "/get_arduino")
     ([this](){
         json response;
@@ -632,7 +632,7 @@ void RestAPI::start(){
         return jsonMessage("Successful");
     });
 
-    // Define a route for a PORT request to test action functions
+    // Define a route for a POST request to test action functions
     CROW_ROUTE(app, "/test_action").methods(crow::HTTPMethod::POST)([this](const crow::request& req){
         json req_data;
         if (!parseBody(req, req_data))
@@ -646,13 +646,29 @@ void RestAPI::start(){
         std::string req_value = req_data["value"];
 
         if(req_value == "PumpOn")
-            manual_currentFunc = [this]{ return robot->wall1.wTake(); };
+            manual_currentFunc = [this] { return robot->gate1.grabStone(); };
         else if(req_value == "PumpOff")
-            manual_currentFunc = [this]{ return robot->wall1.wDrop(); };
+            manual_currentFunc = [this] { return robot->gate1.releaseStone(); };
         else if(req_value == "ElectroOn")
-            manual_currentFunc = [this]{ return robot->wall1.wEnableElectro(); };
+            manual_currentFunc = [this] { return robot->gate1.enableElectro(); };
         else if(req_value == "ElectroOff")
-            manual_currentFunc = [this]{ return robot->wall1.wDisableElectro(); };
+            manual_currentFunc = [this] { return robot->gate1.disableElectro(); };
+        else if (req_value == "TowerInitial")
+            manual_currentFunc = [this] { return robot->gate1.rotate(0); };
+        else if (req_value == "TowerPosition")
+            manual_currentFunc = [this] { return robot->gate1.rotate(1); };
+        else if (req_value == "TowerGate")
+            manual_currentFunc = [this] { return robot->gate1.rotate(2); };
+        else if (req_value == "BlockInitial")
+            manual_currentFunc = [this] { return robot->gate1.flipBlock(0); };
+        else if (req_value == "BlockGate")
+            manual_currentFunc = [this] { return robot->gate1.flipBlock(1); };
+        else if (req_value == "BlockGraal")
+            manual_currentFunc = [this] { return robot->gate1.flipBlock(2); };
+        else if (req_value == "DeployBackGripper")
+            manual_currentFunc = [this] { return robot->wall2.deployBackGripper(true); };
+        else if (req_value == "RetractBackGripper")
+            manual_currentFunc = [this] { return robot->wall2.deployBackGripper(false); };
         else if (req_value != "Test")
             return jsonError(400, "Invalid action requested");
 

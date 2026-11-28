@@ -4,8 +4,8 @@
 #include "defs/tableState.hpp"
 #include "actions/RobotControl.hpp"
 #include "drive_interface.h"
-#include "navigation/driveControl.h" // pour position_t
-#include "navigation/navigation.h" // pour nav_return_t & position_t
+#include "navigation/driveControl.h" // for position_t
+#include "navigation/navigation.h" // for nav_return_t & position_t
 #include "navigation/pathfind.h"
 #include "utils/logger.hpp"
 
@@ -35,7 +35,7 @@ float TakeStoneAction::getBestQuarry(const position_t& from) {
         }
 
         position_t targets[2];
-        const int targetCount = BestPositionToTake(candidate->pos, targets);
+        const int targetCount = bestPositionToTake(candidate->pos, targets);
         for (int j = 0; j < targetCount; j++) {
             double distance;
             if (!pathfind(from, targets[j], path, distance)) {
@@ -59,7 +59,7 @@ float TakeStoneAction::getBestQuarry(const position_t& from) {
         target = bestTarget;
         position_t stone = best->pos;
         if (bestApproach == 1) stone.a -= 180;
-        diffpos = RobotPosSuctionCupOffset(RobotTakeOffset(stone, from)); //J'ai le droit
+        diffPos = robotPosSuctionCupOffset(robotTakeOffset(stone, from)); // This is allowed
         return (float)minDistance;
     }
     return -1;
@@ -67,8 +67,8 @@ float TakeStoneAction::getBestQuarry(const position_t& from) {
 
 // TODO add the 5.5 cm offset of the stone
 
-position_t TakeStoneAction::RobotTakeOffset(const position_t stone, const position_t& from) const {
-    const int offsetStone = -150; //offset a regler
+position_t TakeStoneAction::robotTakeOffset(const position_t stone, const position_t& from) const {
+    const int offsetStone = -150; // offset to tune
     position_t stonePos;
     double angle;
     if (stone.y == 0) {
@@ -81,7 +81,7 @@ position_t TakeStoneAction::RobotTakeOffset(const position_t stone, const positi
     stonePos.y = stone.y + offsetStone * sin(angle);
     return stonePos;
 }
-position_t TakeStoneAction::RobotPosSuctionCupOffset(const position_t& stone) const {
+position_t TakeStoneAction::robotPosSuctionCupOffset(const position_t& stone) const {
     const position_t offsetface = selected_face->getOffset();
     position_t face;
     face.a = stone.a - offsetface.a;
@@ -91,8 +91,13 @@ position_t TakeStoneAction::RobotPosSuctionCupOffset(const position_t& stone) co
     return face;
 }
 
-int TakeStoneAction::BestPositionToTake(const position_t& stone, position_t targets[2]) const {
-    const position_t face = RobotPosSuctionCupOffset(stone);
+Wall* TakeStoneAction::getBestPossibleFace() {
+
+    return nullptr;
+}
+
+int TakeStoneAction::bestPositionToTake(const position_t& stone, position_t targets[2]) const {
+    const position_t face = robotPosSuctionCupOffset(stone);
 
     targets[0] = face;
     if (stone.x == 950) {
@@ -106,13 +111,13 @@ int TakeStoneAction::BestPositionToTake(const position_t& stone, position_t targ
         targets[0].y += OFFSET_TARGET.y;
         position_t oppositeStone = stone;
         oppositeStone.a -= 180;
-        targets[1] = RobotPosSuctionCupOffset(oppositeStone);
+        targets[1] = robotPosSuctionCupOffset(oppositeStone);
         targets[1].y -= OFFSET_TARGET.y;
         return 2;
     }
 }
 
-float TakeStoneAction::BestTake(const position_t& from) {
+float TakeStoneAction::bestTake(const position_t& from) {
     return getBestQuarry(from); // TODO also handle stealing stones, or picking stones up from outside a quarry
 }
 
@@ -141,8 +146,8 @@ ReturnFSM TakeStoneAction::run() {
             successManagement();
             return ReturnFSM::Done;
         }
-        selected_face->wTake(); //TODO need to implement face selection
-        NavReturn res2 = navigation.goTo(diffpos, false, true, true); //TODO fast mode
+        selected_face->grabStone(); // TODO: implement face selection
+        NavReturn res2 = navigation.goTo(diffPos, false, true, true); // TODO: fast mode
         switch (res2) {
         case NavReturn::Paused:
             LOG_DEBUG("TakeStone: nav is paused");
@@ -176,26 +181,26 @@ bool TakeStoneAction::errorManagement() {
 bool TakeStoneAction::successManagement() {
     LOG_GREEN_INFO("TakeStone: arrivé à ", nom.c_str());
     quarry->nb = 0;
-    selected_face->stoneCount = 3;
+    selected_face->fillStones();
     reset();
     return true;
 }
 
 void TakeStoneAction::reset() {
-    selected_face = &robot->wall1;
+    selected_face = &robot->gate1;
     value = 23; // TODO change to be max value of points the opponent can make with 3 stones
     state = TakeStoneState::MOVE1;
     approachStartTime = 0;
     quarry = nullptr;
     target = {0, 0, 0};
-    diffpos = {0, 0, 0};
+    diffPos = {0, 0, 0};
 }
 
 bool TakeStoneAction::available(float& reward) {
-    if (selected_face->stoneCount != 0) return false;
+    if (selected_face->hasAnyStone()) return false;
     if (!tableState->hasAvailableQuarry()) return false;
-    if (tableState->countMissingTowers() && tableState->countMissingWalls() == 0) return false; //TODO take towers into account
-    float dist = BestTake(robot->drive.getPosition());
+    if (tableState->countMissingTowers() && tableState->countMissingWalls() == 0) return false; // TODO: take towers into account
+    float dist = bestTake(robot->drive.getPosition());
     if (dist != -1) {
         reward = value / dist;
         return true;
@@ -208,5 +213,5 @@ bool TakeStoneAction::fullBlock() {
 }
 
 bool TakeStoneAction::movementBlock() {
-    return true; //the action always blocks the movement of the opponent
+    return true; // the action always blocks the opponent's move
 }

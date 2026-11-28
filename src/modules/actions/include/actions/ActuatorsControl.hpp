@@ -1,5 +1,6 @@
 #pragma once
 #include "drive_interface.h"
+#include <cstddef>
 
 class Arduino;
 class DriveControl;
@@ -14,6 +15,7 @@ class ActuatorsControl {
         bool homeActuators();
         void enableActuators();
         void disableActuators();
+        DriveControl* getDrive() { return drive; }
 
     private:
         Arduino* arduino;
@@ -22,47 +24,66 @@ class ActuatorsControl {
 
 class Wall {
     public:
-        Wall(int idx[3], position_t offset, ActuatorsControl* actuator)
-            : actuator(actuator), offset(offset) { // Modifier la synthaxe
-            pumpIdx[0] = idx[0];
-            pumpIdx[1] = idx[1];
-            pumpIdx[2] = idx[2];
+        typedef struct {
+                unsigned short int pumpIdx;
+                unsigned short int electroIdx[3];
+                unsigned short int servoIdx[3];
+        } actuatorsIdx_t;
+
+        // TODO: fix the syntax
+        Wall(actuatorsIdx_t idx, position_t offset, ActuatorsControl* actuator)
+            : idx(idx), actuator(actuator), offset(offset) {}
+        bool stones[3] = {false, false, false}; // stones present on the face (true = present)
+        void setStone(int index, bool value) { stones[index] = value; };
+        void clearStones() {
+            for (int i = 0; i < 3; i++)
+                stones[i] = false;
         };
-        int stoneCount = 0; // number of stones on the face
-        bool wDrop();
-        bool wTake();
-        bool wEnableElectro();
-        bool wDisableElectro();
+        void fillStones() {
+            for (int i = 0; i < 3; i++)
+                stones[i] = true;
+        };
+        bool hasAnyStone() {
+            for (int i = 0; i < 3; i++)
+                if (stones[i]) return true;
+            return false;
+        };
+
+        bool releaseStone();
+        bool grabStone();
+        bool enableElectro();
+        bool disableElectro();
+        bool deployBackGripper(bool state);
         position_t getOffset() const { return offset; }
+        virtual bool home();
 
     protected:
-        int pumpIdx[3]; // index of the pump for the face
+        actuatorsIdx_t idx; // pins for the servo, pump and electro of each face
         ActuatorsControl* actuator;
         position_t offset;
 };
 
 class Tower : public Wall {
     public:
-        Tower(int idxS, int idx[3], position_t offset, ActuatorsControl* actuator)
-            : Wall(idx, offset, actuator) {
-            servo = idxS;
-        };
-        bool tDrop(int idx);
-        bool rotate(bool dir);
+        Tower(actuatorsIdx_t idx, position_t offset, ActuatorsControl* actuator)
+            : Wall(idx, offset, actuator) {}
+        bool dropStone(int idx);
+        bool rotate(int position);
+        bool home() override;
 
     protected:
-        int servo;
+        // Nothing to store for now
 };
 
 class Gate : public Tower {
-    private:
-        int servoD;
-
     public:
-        Gate(int idxSD, int idxS, int idx[3], position_t offset, ActuatorsControl* actuator)
-            : Tower(idxS, idx, offset, actuator) {
-            servoD = idxSD;
-        };
-        bool gDrop();
-        bool flip();
+        Gate(actuatorsIdx_t idx, position_t offset, ActuatorsControl* actuator)
+            : Tower(idx, offset, actuator) {}
+        bool home() override;
+        bool runDropSequence();
+        bool flipBlock(int position);
+
+    private:
+        int dropStep = 0;
+        position_t retreatTarget;
 };
