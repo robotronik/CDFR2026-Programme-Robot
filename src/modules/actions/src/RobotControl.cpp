@@ -16,17 +16,15 @@ RobotControl::RobotControl(Arduino* arduino)
     //wallTable[3] = &wall4;
     wallTable[1] = &gate1;
     //wallTable[5] = &gate2;
-
 }
 
-bool RobotControl::homeActuators()
-{
-  actuators.homeActuators();
-  bool allHomed = true;
-  for(Wall* wall : wallTable) {
-    if(!wall->home()) {
-      allHomed = false;
+bool RobotControl::homeActuators() {
+    actuators.homeActuators();
+    bool allHomed = true;
+    for (Wall* wall : wallTable) {
+        if (!wall->home()) {
+            allHomed = false;
+        }
     }
-  }
-  return allHomed;
+    return allHomed;
 }

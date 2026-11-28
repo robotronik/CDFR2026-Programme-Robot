@@ -13,15 +13,14 @@ ActuatorsControl::ActuatorsControl(Arduino* arduino, DriveControl* drive)
 // ------------------------------------------------------
 //                   BASIC FSM CONTROL
 // ------------------------------------------------------
-// TODD USELESS ?
-// TODD USELESS ?
+// TODO: check whether this is useless
 /* Code for basic FSM (elemental actions)*/
 
 // ------------------------------------------------------
 //                   SERVO CONTROL
 // ------------------------------------------------------
 
-// Exemple of servo control
+// Example of servo control
 bool ActuatorsControl::moveServoAndWait(int servo, int target, int speed) {
     static int prevServo = -1;
     static int prevTarget = -1;
@@ -53,7 +52,7 @@ bool ActuatorsControl::setElectroState(bool state, int electroIdx) {
 //                   STEPPER CONTROL
 // ------------------------------------------------------
 
-// Exemple of stepper control
+// Example of stepper control
 // Moves the platforms elevator to a predefined level
 // 0:startpos, 1:lowest, 2:Banner, 3:highest
 bool ActuatorsControl::moveColumnsElevator(int level) {
@@ -114,56 +113,54 @@ void ActuatorsControl::disableActuators() {
 //                   Walls CONTROL
 // ------------------------------------------------------
 
-bool Wall::home(){
-    wDisableElectro();
+bool Wall::home() {
+    disableElectro();
     actuator->setPumpState(false, idx.pumpIdx);
-    return DeployBackGripper(false);
+    return deployBackGripper(false);
 }
 
-bool Wall::wDrop() {
-    if (!wEnableElectro()
-        || !actuator->setPumpState(false, idx.pumpIdx)) return false;
-    voidStone();
+bool Wall::releaseStone() {
+    if (!enableElectro() || !actuator->setPumpState(false, idx.pumpIdx)) return false;
+    clearStones();
     return true;
 }
 
-bool Wall::wTake() {
-    return wDisableElectro()
-        && actuator->setPumpState(true, idx.pumpIdx);
+bool Wall::grabStone() {
+    return disableElectro() && actuator->setPumpState(true, idx.pumpIdx);
 }
 
-bool Wall::wEnableElectro() {
+bool Wall::enableElectro() {
     return actuator->setElectroState(true, idx.electroIdx[0]);
 }
 
-bool Wall::wDisableElectro() {
+bool Wall::disableElectro() {
     return actuator->setElectroState(false, idx.electroIdx[0]);
 }
 
-bool Wall::DeployBackGripper(bool state) {
+bool Wall::deployBackGripper(bool state) {
     return actuator->moveServoAndWait(idx.servoIdx[0], state ? 0 : 120, 360);
 }
 // ------------------------------------------------------
 //                   Towers CONTROL
 // ------------------------------------------------------
 
-bool Tower::home(){
-    wDisableElectro();
+bool Tower::home() {
+    disableElectro();
     actuator->setPumpState(false, idx.pumpIdx);
     return rotate(0);
 }
 
-bool Tower::tDrop(int index) {
+bool Tower::dropStone(int index) {
     actuator->setElectroState(true, idx.electroIdx[index]);
     setStone(index, false);
-    if(!hasStone()) actuator->setPumpState(false, idx.pumpIdx);
+    if (!hasAnyStone()) actuator->setPumpState(false, idx.pumpIdx);
     return true;
 }
 
 bool Tower::rotate(int position) {
     constexpr int ANGLES[3] = {180, // Position 0 : Initial position
-                            90,  // Position 1 : Tower Position
-                            0};  // Position 2 : Gate Position
+                               90,  // Position 1 : Tower Position
+                               0};  // Position 2 : Gate Position
 
     if (position < 0 || position > 2) {
         LOG_ERROR("Invalid tower position: ", position);
@@ -177,18 +174,18 @@ bool Tower::rotate(int position) {
 //                   Gate CONTROL
 // ------------------------------------------------------
 
-bool Gate::home(){
-    wDisableElectro();
+bool Gate::home() {
+    disableElectro();
     actuator->setPumpState(false, idx.pumpIdx);
     bool a = rotate(0);
-    bool b = gBlockFlip(0);
+    bool b = flipBlock(0);
     return a && b;
 }
 
-bool Gate::gBlockFlip(int position) {
+bool Gate::flipBlock(int position) {
     constexpr int ANGLES[3] = {90, // Position 0 : Initial position
-                            60,  // Position 1 : Gate Position
-                            20};  // Position 2 : Grall Position
+                               60,  // Position 1 : Gate Position
+                               20};  // Position 2 : Graal Position
 
     if (position < 0 || position > 2) {
         LOG_ERROR("Invalid gate block flip position: ", position);
@@ -198,14 +195,14 @@ bool Gate::gBlockFlip(int position) {
     return actuator->moveServoAndWait(idx.servoIdx[1], ANGLES[position], 360);
 }
 
-bool Gate::gDrop() {
+bool Gate::runDropSequence() {
     switch (dropStep) {
     case 0:
         if (!rotate(1)) return false;
         break;
 
     case 1:
-        if (!tDrop(0) || !tDrop(1)) return false;
+        if (!dropStone(0) || !dropStone(1)) return false;
         retreatTarget = actuator->getDrive()->position;
         retreatTarget.x -= 150 * std::cos(retreatTarget.a * DEG_TO_RAD);
         retreatTarget.y -= 150 * std::sin(retreatTarget.a * DEG_TO_RAD);
@@ -220,15 +217,15 @@ bool Gate::gDrop() {
         break;
 
     case 4:
-        if (!gBlockFlip(1)) return false;
+        if (!flipBlock(1)) return false;
         break;
-    
+
     case 5:
         if (navigation.goTo(retreatTarget, false, true) != NavReturn::Done) return false;
         break;
 
     case 6:
-        if (!tDrop(2)) return false;
+        if (!dropStone(2)) return false;
         break;
 
     case 7:

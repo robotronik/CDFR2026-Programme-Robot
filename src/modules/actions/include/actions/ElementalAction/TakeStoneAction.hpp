@@ -25,14 +25,15 @@ class TakeStoneAction : public VirtualAction {
         quarry_t* quarry;
         Wall* selected_face;
         position_t target;
-        position_t diffpos;
+        position_t diffPos;
 
-        float BestTake(const position_t& from);
+        float bestTake(const position_t& from);
         float getBestQuarry(const position_t& from);
-        position_t RobotPosSuctionCupOffset(const position_t& stone) const;
-        int BestPositionToTake(const position_t& stone, position_t targets[2]) const; //offset pour avoir la bonne face sur la pierre
-        position_t RobotTakeOffset(position_t stone, const position_t& from) const; //offset centre/face pierre
+        position_t robotPosSuctionCupOffset(const position_t& stone) const;
+        int bestPositionToTake(const position_t& stone, position_t targets[2]) const; // offset to line the correct face up with the stone
+        position_t robotTakeOffset(position_t stone, const position_t& from) const; // offset from the stone centre to its face
         Wall* getBestPossibleFace();
+
     public:
         TakeStoneAction(TableState* tableState, RobotControl* robot);
         ~TakeStoneAction() override = default;

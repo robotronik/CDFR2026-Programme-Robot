@@ -15,7 +15,8 @@ class ActuatorsControl {
         bool homeActuators();
         void enableActuators();
         void disableActuators();
-        DriveControl* getDrive(){ return drive; }
+        DriveControl* getDrive() { return drive; }
+
     private:
         Arduino* arduino;
         DriveControl* drive;
@@ -23,31 +24,41 @@ class ActuatorsControl {
 
 class Wall {
     public:
-        typedef struct{
-            unsigned short int pumpIdx;
-            unsigned short int electroIdx[3];
-            unsigned short int servoIdx[3]; 
+        typedef struct {
+                unsigned short int pumpIdx;
+                unsigned short int electroIdx[3];
+                unsigned short int servoIdx[3];
         } actuatorsIdx_t;
 
+        // TODO: fix the syntax
         Wall(actuatorsIdx_t idx, position_t offset, ActuatorsControl* actuator)
-            : idx(idx), actuator(actuator), offset(offset) { // Modifier la synthaxe
+            : idx(idx), actuator(actuator), offset(offset) {}
+        bool stones[3] = {false, false, false}; // stones present on the face (true = present)
+        void setStone(int index, bool value) { stones[index] = value; };
+        void clearStones() {
+            for (int i = 0; i < 3; i++)
+                stones[i] = false;
         };
-        bool stone[3] = {false, false, false}; // number of stones on the face
-        void setStone(int index, bool value){ stone[index] = value; };
-        void voidStone(){ for (int i = 0; i < 3; i++) stone[i] = false; };
-        void fullStone(){ for (int i = 0; i < 3; i++) stone[i] = true; };
-        bool hasStone(){ for (int i = 0; i < 3; i++) if (stone[i]) return true; return false; };
+        void fillStones() {
+            for (int i = 0; i < 3; i++)
+                stones[i] = true;
+        };
+        bool hasAnyStone() {
+            for (int i = 0; i < 3; i++)
+                if (stones[i]) return true;
+            return false;
+        };
 
-        bool wDrop();
-        bool wTake();
-        bool wEnableElectro();
-        bool wDisableElectro();
-        bool DeployBackGripper(bool state);
+        bool releaseStone();
+        bool grabStone();
+        bool enableElectro();
+        bool disableElectro();
+        bool deployBackGripper(bool state);
         position_t getOffset() const { return offset; }
         virtual bool home();
 
     protected:
-        actuatorsIdx_t idx; // struct containing all the pins for servo pum electro
+        actuatorsIdx_t idx; // pins for the servo, pump and electro of each face
         ActuatorsControl* actuator;
         position_t offset;
 };
@@ -55,25 +66,24 @@ class Wall {
 class Tower : public Wall {
     public:
         Tower(actuatorsIdx_t idx, position_t offset, ActuatorsControl* actuator)
-            : Wall(idx, offset, actuator) {
-        };
-        bool tDrop(int idx);
+            : Wall(idx, offset, actuator) {}
+        bool dropStone(int idx);
         bool rotate(int position);
         bool home() override;
+
     protected:
-        //nothing to store for now
+        // Nothing to store for now
 };
 
 class Gate : public Tower {
+    public:
+        Gate(actuatorsIdx_t idx, position_t offset, ActuatorsControl* actuator)
+            : Tower(idx, offset, actuator) {}
+        bool home() override;
+        bool runDropSequence();
+        bool flipBlock(int position);
+
     private:
         int dropStep = 0;
         position_t retreatTarget;
-
-    public:
-        Gate(actuatorsIdx_t idx, position_t offset, ActuatorsControl* actuator)
-            : Tower(idx, offset, actuator) {
-        };
-        bool home() override;
-        bool gDrop();
-        bool gBlockFlip(int position);
 };
