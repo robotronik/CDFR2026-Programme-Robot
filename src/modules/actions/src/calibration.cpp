@@ -6,7 +6,9 @@
 #include <numeric>
 #include <vector>
 
-bool calibrate_otos(TableState* tableStatus, Robot* robot, Cam* cam, position_t startPos, bool skip_calibration) {
+bool calibrate_otos(Robot* robot, position_t startPos, bool skip_calibration) {
+    TableState* tableStatus = &robot->tableState();
+    Cam* cam = robot->cam();
     // Function called continuously from the main loop to calibrate the otosensors
     // Returns true when calibration is done
 

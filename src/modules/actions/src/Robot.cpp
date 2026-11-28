@@ -54,9 +54,6 @@ Lidar* Robot::lidar() {
 Cam* Robot::cam() {
     return &sensor_.cam();
 }
-Mat* Robot::mat() {
-    return &sensor_.mat();
-}
 
 bool Robot::homeActuators() {
     actuators.homeActuators();

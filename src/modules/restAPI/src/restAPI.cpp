@@ -13,9 +13,8 @@
 #include "defs/tableState.hpp"
 #include "i2c/Arduino.hpp"
 #include "lidar/Lidar.hpp"
-#include "lidar/lidarAnalize.h" // for static variable
 #include "navigation/navigation.h"
-#include "navigation/astar.h" // for static variable
+#include "navigation/astar.h" // for astar_get_costmap_json
 #include "vision/Cam.hpp" // for vision functions
 #include "restAPI/manual_mode.h" // for manual mode functions
 

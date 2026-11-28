@@ -18,7 +18,6 @@ class SensorControl {
         bool readLimitSwitchBottom();
         bool readLimitSwitchTop();
 
-        Arduino* arduino() const { return arduino_; }
         Lidar& lidar() { return lidar_; }
         Cam& cam() { return cam_; }
         Mat& mat() { return mat_; }

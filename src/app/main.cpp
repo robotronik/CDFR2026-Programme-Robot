@@ -29,27 +29,11 @@
     #define EMULATE_I2C
 #endif
 
-// Robot: owns the hardware (Arduino, lidar, camera, mat, sensors) and the
-// chassis/actuator control (see actions/Robot.hpp).
-Robot robot;
-TableState tableStatus(&robot.colorTeam);
-
-// The action FSM runs the selected strategy; it depends on the robot and table.
-// (The robot's table reference + navigation are wired in StartSequence.)
-ActionFSM action(&robot, &tableStatus);
-
-MainState currentState;
-MainState nextState;
-bool initState;
-
-std::thread api_server_thread;
-
-// REST API
-RestAPI api(&currentState, &nextState, &robot);
-
 // Prototypes
-int StartSequence();
-void EndSequence();
+int StartSequence(Robot& robot, TableState& tableStatus, RestAPI& api,
+                  std::thread& api_server_thread, MainState& currentState,
+                  MainState& nextState, bool& initState);
+void EndSequence(Robot& robot, RestAPI& api, std::thread& api_server_thread);
 void tests();
 
 // Signal Management
@@ -63,7 +47,18 @@ void ctrlc(int)
 int main()
 {
     LOG_DEBUG("LOG ID : ", log_main_get_id());
-    if (StartSequence() != 0)
+
+    // Built here (not at static init) so the hardware bring-up order is explicit.
+    Robot robot;
+    TableState tableStatus(&robot.colorTeam);
+    ActionFSM action(&robot, &tableStatus);
+    MainState currentState;
+    MainState nextState;
+    bool initState;
+    std::thread api_server_thread;
+    RestAPI api(&currentState, &nextState, &robot);
+
+    if (StartSequence(robot, tableStatus, api, api_server_thread, currentState, nextState, initState) != 0)
         return -1;
 
     while (!exit_requested)
@@ -124,7 +119,7 @@ int main()
                 robot.navigation().go();
             } else if (!has_calib) {
                 // Move to the calibration poses, then back to the strategy starting position
-                if (calibrate_otos(&robot.tableState(), &robot, robot.cam(), robot.currentStrategy->StratStartingPos())) {
+                if (calibrate_otos(&robot, robot.currentStrategy->StratStartingPos())) {
                     LOG_GREEN_INFO("Calibration successful");
                     has_calib = true;
                 }
@@ -228,12 +223,13 @@ int main()
         }
     }
 
-    EndSequence();
+    EndSequence(robot, api, api_server_thread);
     return 0;
 }
 
-int StartSequence()
-{
+int StartSequence(Robot& robot, TableState& tableStatus, RestAPI& api,
+                  std::thread& api_server_thread, MainState& currentState,
+                  MainState& nextState, bool& initState) {
     signal(SIGTERM, ctrlc);
     signal(SIGINT, ctrlc);
 
@@ -271,8 +267,7 @@ int StartSequence()
     return 0;
 }
 
-void EndSequence()
-{
+void EndSequence(Robot& robot, RestAPI& api, std::thread& api_server_thread) {
     LOG_GREEN_INFO("Stopping");
 
     robot.shutdown();
@@ -285,7 +280,6 @@ void EndSequence()
     sleep(1); // Let the sound start: the process is about to exit.
     LOG_GREEN_INFO("Stopped");
 }
-
 
 void tests()
 {

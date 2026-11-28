@@ -97,7 +97,6 @@ class Robot {
         // Match state (moved out of TableState).
         ColorTeam colorTeam = ColorTeam::None;
         int calibrationAge = 0;
-        void resetCalibrationAge() { calibrationAge = 0; }
 
         // Strategy selection (moved out of the app globals).
         VirtualStrategy* currentStrategy = nullptr;
@@ -123,7 +122,6 @@ class Robot {
         SensorControl* sensor() { return &sensor_; }
         Lidar* lidar();
         Cam* cam();
-        Mat* mat();
 
         // One-time bring-up (RGB, lidar setup, mat client, drive reset).
         // Returns false if a required device (the lidar) cannot be opened.
