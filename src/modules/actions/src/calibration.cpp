@@ -1,12 +1,14 @@
 #include "actions/calibration.h"
-#include "actions/RobotControl.hpp"
+#include "actions/Robot.hpp"
 #include "navigation/navigation.h"
 #include "vision/Cam.hpp"
 #include "utils/logger.hpp"
 #include <numeric>
 #include <vector>
 
-bool calibrate_otos(TableState* tableStatus, RobotControl* robot, Cam* cam, position_t startPos, bool skip_calibration) {
+bool calibrate_otos(Robot* robot, position_t startPos, bool skip_calibration) {
+    TableState* tableStatus = &robot->tableState();
+    Cam* cam = robot->cam();
     // Function called continuously from the main loop to calibrate the otosensors
     // Returns true when calibration is done
 
@@ -36,12 +38,12 @@ bool calibrate_otos(TableState* tableStatus, RobotControl* robot, Cam* cam, posi
             pos1.a += 70.0;
         else
             pos1.a -= 70.0;
-        if (tableStatus->colorTeam == ColorTeam::Yellow)
+        if (robot->colorTeam == ColorTeam::Yellow)
             position_robot_flip(pos1);
 
         // Raw OTOS pose, captured before goTo() applies the camera fix at the end of the move
         const position_t otos_pos = robot->drive.position;
-        ret = navigation.goTo(pos1, false, false, true);
+        ret = robot->navigation().goTo(pos1, false, false, true);
 
         if (ret == NavReturn::Done){
             position_t camera_pos;
@@ -126,12 +128,12 @@ bool calibrate_otos(TableState* tableStatus, RobotControl* robot, Cam* cam, posi
         position_t pos1 = {0.0f, 1250.0f, -90.0f};
         pos1.x += state ? 400.0 : -400.0;
 
-        if (tableStatus->colorTeam == ColorTeam::Yellow)
+        if (robot->colorTeam == ColorTeam::Yellow)
             position_robot_flip(pos1);
 
         // Raw OTOS pose, captured before goTo() applies the camera fix at the end of the move
         const position_t otos_pos = robot->drive.position;
-        ret = navigation.goTo(pos1, false, false, true);
+        ret = robot->navigation().goTo(pos1, false, false, true);
 
         if (ret == NavReturn::Done){
             position_t camera_pos;
@@ -214,10 +216,10 @@ bool calibrate_otos(TableState* tableStatus, RobotControl* robot, Cam* cam, posi
     case 3:{
         // Calibrate using a code close to init pos
         position_t pos = {0, 1250, -45.0};
-        if (tableStatus->colorTeam == ColorTeam::Yellow)
+        if (robot->colorTeam == ColorTeam::Yellow)
             position_robot_flip(pos);
-            
-        ret = navigation.goTo(pos, false, true, true);
+
+        ret = robot->navigation().goTo(pos, false, true, true);
         if (ret == NavReturn::Done){
             step++;
             LOG_GREEN_INFO("OTOS calibration done, moving to home position");
@@ -226,7 +228,7 @@ bool calibrate_otos(TableState* tableStatus, RobotControl* robot, Cam* cam, posi
     case 4:{
         // goto home
         position_t pos = startPos;
-        ret = navigation.goTo(pos, false, true, true);
+        ret = robot->navigation().goTo(pos, false, true, true);
         if (ret == NavReturn::Done){
             LOG_GREEN_INFO("OTOS calibration done, returned to home position");
             step = 0; // Reset for next time: the entry step re-applies skip_calibration

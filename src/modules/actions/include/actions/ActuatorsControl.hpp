@@ -1,9 +1,9 @@
 #pragma once
 #include "drive_interface.h"
-#include <cstddef>
 
 class Arduino;
 class DriveControl;
+class Navigation;
 
 class ActuatorsControl {
     public:
@@ -55,12 +55,14 @@ class Wall {
         bool disableElectro();
         bool deployBackGripper(bool state);
         position_t getOffset() const { return offset; }
+        void setNavigation(Navigation* navigation) { navigation_ = navigation; }
         virtual bool home();
 
     protected:
         actuatorsIdx_t idx; // pins for the servo, pump and electro of each face
         ActuatorsControl* actuator;
         position_t offset;
+        Navigation* navigation_ = nullptr; // for the gate's navigation sequence
 };
 
 class Tower : public Wall {

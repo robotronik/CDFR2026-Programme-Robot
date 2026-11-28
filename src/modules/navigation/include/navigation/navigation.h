@@ -18,7 +18,7 @@ enum class NavReturn {
 
 class Navigation {
     public:
-        Navigation(DriveControl* drive, TableState* tableStatus, Cam* cam);
+        Navigation(DriveControl* drive, TableState* tableStatus, Cam* cam, int* calibrationAge = nullptr);
         ~Navigation() = default;
 
         // Go to a position, returns the navigation state
@@ -35,6 +35,7 @@ class Navigation {
         DriveControl* drive;
         TableState* tableStatus;
         Cam* cam;
+        int* calibrationAge = nullptr; // owned by the Robot; reset on a camera fix
 
         bool forced_slow_mode = false;
 
@@ -48,6 +49,3 @@ class Navigation {
 
         bool driving = true;
 };
-
-// Global navigation instance, created in main.cpp
-extern Navigation navigation;

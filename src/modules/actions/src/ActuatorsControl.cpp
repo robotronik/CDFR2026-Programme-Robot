@@ -209,7 +209,7 @@ bool Gate::runDropSequence() {
         break;
 
     case 2:
-        if (navigation.goTo(retreatTarget, false, true) != NavReturn::Done) return false;
+        if (navigation_->goTo(retreatTarget, false, true) != NavReturn::Done) return false;
         break;
 
     case 3:
@@ -221,7 +221,7 @@ bool Gate::runDropSequence() {
         break;
 
     case 5:
-        if (navigation.goTo(retreatTarget, false, true) != NavReturn::Done) return false;
+        if (navigation_->goTo(retreatTarget, false, true) != NavReturn::Done) return false;
         break;
 
     case 6:

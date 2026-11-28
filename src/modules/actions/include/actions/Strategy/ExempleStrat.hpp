@@ -4,50 +4,49 @@
 
 #include "navigation/driveControl.h"
 #include "defs/tableState.hpp"
-#include "actions/RobotControl.hpp"
+#include "actions/Robot.hpp"
 /*
     ExempleStrat
     ------------
-    Exemple de "stratégie" au sens de VirtualStrategy : contrairement à
-    une action unique à états, une VirtualStrategy expose un ensemble
-    d'actions possibles, chacune pondérée, et choisit à chaque appel de
-    bestAction() la plus intéressante/prioritaire.
-    
-    - chaque action candidate sait dire si elle est jouable maintenant
-      via available() (cf. VirtualAction::available()),
-    - la pondération (poids fixé à la construction) permet de hiérarchiser
-      des actions qui seraient toutes disponibles en même temps.
+    Example "strategy" in the VirtualStrategy sense: unlike a single
+    stateful action, a VirtualStrategy exposes a set of possible actions,
+    each weighted, and picks the most interesting/priority one on each call to
+    bestAction().
+
+    - each candidate action can tell whether it is playable right now via
+      available() (cf. VirtualAction::available()),
+    - the weighting (fixed at construction) ranks actions that would all be
+      available at the same time.
 */
 class ExempleStrat : public VirtualStrategy {
 public:
-    ExempleStrat(TableState* ts, RobotControl* rc);
+    ExempleStrat(TableState* ts, Robot* rc);
     ~ExempleStrat() override = default;
 
     /*
-        Sélectionne, parmi possible_actions, l'action dont le score
-        (pondération * action->available()) est le plus élevé parmi
-        celles disponibles (available() >= 0), et renvoie un pointeur
-        NON POSSÉDANT vers elle : elle reste dans le pool et appartient
-        toujours à la stratégie, qui peut donc la reproposer.
+        Select, among possible_actions, the action whose score (weighting *
+        action->available()) is highest among the available ones
+        (available() >= 0), and return a NON-OWNING pointer to it: it stays in
+        the pool and is still owned by the strategy, so it can be re-offered.
 
-        Retourne nullptr si la stratégie est arrêtée (stop()) ou si
-        aucune action du pool n'est disponible.
+        Returns nullptr if the strategy is stopped (stop()) or if no action in
+        the pool is available.
     */
     VirtualAction* bestAction() override;
     /*
-        Action de temporisation ("attente") à exécuter quand aucune action
-        du pool n'est disponible. La stratégie en garde la propriété : le
-        FSM n'en reçoit qu'un pointeur, il ne doit jamais la libérer.
+        Temporary ("wait") action to run when no action in the pool is
+        available. The strategy keeps ownership: the FSM only gets a pointer
+        and must never free it.
     */
     VirtualAction* tempAction() override;
 
-    /* Ré-remplit le pool d'actions possibles (à appeler par exemple au
-       Reset() du FSM, ou quand la stratégie a écoulé toutes ses actions
-       et doit être rejouée depuis le début).
+    /* Refill the pool of possible actions (e.g. call it on the FSM Reset(), or
+       when the strategy has used up all its actions and must be replayed from
+       the start).
 
-       ATTENTION : les actions précédentes sont détruites. Appeler
-       ActionFSM::Reset() juste après, sinon le FSM garde un currentAction
-       pointant sur une action libérée. */
+       WARNING: the previous actions are destroyed. Call ActionFSM::Reset()
+       right after, otherwise the FSM keeps a currentAction pointing to a freed
+       action. */
     void reset();
 
     // Function to handle the strategy
@@ -55,12 +54,12 @@ public:
     position_t StratFinishingPos() override;
 
 private:
-    // (Re)construit le pool possible_actions pour la stratégie courante
+    // (Re)build the possible_actions pool for the current strategy
     void buildPossibleActions();
-    // Action de temporisation possédée par la stratégie : elle est réservée
-    // hors du pool (cf. reset()) et n'en sort jamais, le FSM n'en obtient
-    // qu'un pointeur via tempAction().
+    // Temporary action owned by the strategy: it is kept out of the pool (cf.
+    // reset()) and never leaves it; the FSM only gets a pointer via
+    // tempAction().
     std::unique_ptr<VirtualAction> waitAction;
     TableState* tableStatus;
-    RobotControl* robot;
+    Robot* robot;
 };

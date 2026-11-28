@@ -1,17 +1,34 @@
-#include "restAPI/matAPI.hpp"
+#include "mat/mat.hpp"
 
+#include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <string>
 #include <thread>
 
 #include "utils/httplib.h"
 #include "utils/logger.hpp"
 
-const std::string mat_api::MAT_OBJECTS_PATH = "/objects";
+#ifndef MAT_HOST
+#define MAT_HOST "192.168.0.135"
+#endif
+#ifndef MAT_PORT
+#define MAT_PORT 5000
+#endif
+// Period at which the background thread refreshes the table.
+#ifndef MAT_POLL_PERIOD_MS
+#define MAT_POLL_PERIOD_MS 100
+#endif
+// Beyond this age, the last table received is considered stale.
+#ifndef MAT_STALE_MS
+#define MAT_STALE_MS 120
+#endif
+
+const std::string Mat::MAT_OBJECTS_PATH = "/objects";
 
 namespace {
 
-// Délais courts : le thread de fond ne doit pas rester bloqué si le mat est absent.
+// Short timeouts: the background thread must not stay blocked if the mat is absent.
 constexpr int CONNECT_TIMEOUT_US = 50 * 1000;   // 50 ms
 constexpr int READ_TIMEOUT_US = 150 * 1000;     // 150 ms
 
@@ -26,8 +43,8 @@ void configure(httplib::Client& cli) {
 }
 
 struct HttpGet {
-    bool ok = false;
-    std::string error;
+        bool ok = false;
+        std::string error;
 };
 
 HttpGet get(httplib::Client& cli, const std::string& path, json& response) {
@@ -47,22 +64,22 @@ HttpGet get(httplib::Client& cli, const std::string& path, json& response) {
     return {true, {}};
 }
 
-// État partagé entre le thread de fond et la boucle principale (protégé par g_mutex).
+// Shared state between the background thread and the main loop (guarded by g_mutex).
 std::mutex g_mutex;
-std::condition_variable g_wake;   // réveille le thread de fond au stop()
+std::condition_variable g_wake;   // wakes the background thread on stop()
 std::thread g_thread;
 bool g_runRequested = false;
-MatTableData g_data;              // dernière table reçue
+MatTableData g_data;              // last table received
 bool g_hasData = false;
 std::chrono::steady_clock::time_point g_stamp;
 
-// g_mutex doit être verrouillé.
+// g_mutex must be held.
 bool isFresh() {
     return g_hasData && std::chrono::steady_clock::now() - g_stamp <= STALE_PERIOD;
 }
 
-// Interroge le mat sans fin. Seuls le retour, la perte de la connexion et
-// l'échec du tout premier essai sont loggés (jamais les tentatives suivantes).
+// Polls the mat endlessly. Only the (re)connection, the connection loss and
+// the failure of the very first attempt are logged (never the later retries).
 void workerLoop() {
     httplib::Client cli(MAT_URL);
     configure(cli);
@@ -71,7 +88,7 @@ void workerLoop() {
     bool firstAttemptDone = false;
     while (true) {
         json response;
-        const HttpGet objects = get(cli, mat_api::MAT_OBJECTS_PATH, response);
+        const HttpGet objects = get(cli, Mat::MAT_OBJECTS_PATH, response);
 
         std::unique_lock<std::mutex> lock(g_mutex);
         if (g_runRequested == false) {
@@ -100,7 +117,7 @@ void workerLoop() {
         g_wake.wait_for(lock, POLL_PERIOD, [] { return !g_runRequested; });
     }
 
-    // Le client HTTP n'appartient qu'à ce thread : /stop est envoyé ici.
+    // The HTTP client belongs to this thread only: /stop is sent here.
     if (connected) {
         json response;
         const HttpGet stop = get(cli, "/stop", response);
@@ -114,7 +131,7 @@ void workerLoop() {
 
 }  // namespace
 
-bool mat_api::start() {
+bool Mat::start() {
     std::lock_guard<std::mutex> lock(g_mutex);
 
     if (!g_thread.joinable()) {
@@ -124,7 +141,7 @@ bool mat_api::start() {
     return isFresh();
 }
 
-void mat_api::stop() {
+void Mat::stop() {
     {
         std::lock_guard<std::mutex> lock(g_mutex);
         g_runRequested = false;
@@ -139,12 +156,12 @@ void mat_api::stop() {
     g_hasData = false;
 }
 
-bool mat_api::ready() {
+bool Mat::ready() {
     std::lock_guard<std::mutex> lock(g_mutex);
     return isFresh();
 }
 
-bool mat_api::latest(MatTableData& data) {
+bool Mat::latest(MatTableData& data) {
     std::lock_guard<std::mutex> lock(g_mutex);
 
     if (!isFresh()) {
@@ -154,14 +171,14 @@ bool mat_api::latest(MatTableData& data) {
     return true;
 }
 
-bool mat_api::fetchTable(MatTableData& data) {
+bool Mat::fetchTable(MatTableData& data) {
     httplib::Client cli(MAT_URL);
     configure(cli);
 
     json response;
-    const HttpGet result = get(cli, mat_api::MAT_OBJECTS_PATH, response);
+    const HttpGet result = get(cli, Mat::MAT_OBJECTS_PATH, response);
     if (!result.ok) {
-        LOG_ERROR("MAT ", MAT_URL, mat_api::MAT_OBJECTS_PATH, ": ", result.error);
+        LOG_ERROR("MAT ", MAT_URL, Mat::MAT_OBJECTS_PATH, ": ", result.error);
         return false;
     }
     data = parseMatTableData(response);

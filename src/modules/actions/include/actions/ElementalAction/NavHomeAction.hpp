@@ -2,7 +2,7 @@
 #include "actions/VirtualAction.hpp"
 #include "defs/tableState.hpp"
 
-class RobotControl;
+class Robot;
 
 /*
     Action de retour sur la zone de départ.
@@ -11,7 +11,7 @@ class RobotControl;
 */
 class NavHomeAction : public VirtualAction {
     public:
-        NavHomeAction(TableState* tableState, RobotControl* robot, position_t homePos);
+        NavHomeAction(TableState* tableState, Robot* robot, position_t homePos);
         ~NavHomeAction() override = default;
 
         ReturnFSM run() override;
@@ -27,11 +27,11 @@ class NavHomeAction : public VirtualAction {
 
     private:
         TableState* tableState;
-        RobotControl* robot;
-        // valeur de l'action en point
+        Robot* robot;
+        // the action's value in points
         int value = 10;
         position_t homePos;
-        // Passe à true quand le retour est terminé : l'action n'est alors
-        // plus candidate (available() renvoie -1) jusqu'à reset().
+        // Set to true when the return is complete: the action is then no longer
+        // a candidate (available() returns -1) until reset().
         bool done = false;
 };

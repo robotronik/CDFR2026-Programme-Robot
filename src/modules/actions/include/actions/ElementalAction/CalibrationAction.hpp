@@ -3,17 +3,17 @@
 #include "defs/tableState.hpp"
 #include "navigation/navigation.h" //For NavReturn & position_t
 
-class RobotControl;
+class Robot;
 
 /*
-    Action de calibration : force la calibration en se tournant vers
-    un tag aruco (ou en s'en éloignant si trop proche/trop loin).
-    Si la navigation échoue la calibration est considérée échouée
-    (ReturnFSM::Error) et sera retentée une action plus tard.
+    Calibration action: forces a calibration by turning towards an aruco tag
+    (or moving away from it if too close/far). If navigation fails, the
+    calibration is considered failed (ReturnFSM::Error) and will be retried one
+    action later.
 */
 class CalibrationAction : public VirtualAction {
     public:
-        CalibrationAction(RobotControl* robot, TableState* tableState);
+        CalibrationAction(Robot* robot, TableState* tableState);
         ~CalibrationAction() override = default;
 
         ReturnFSM run() override;
@@ -33,14 +33,14 @@ class CalibrationAction : public VirtualAction {
             CalibrationNav,
         };
 
-        RobotControl* robot;
+        Robot* robot;
         TableState* tableState;
 
         StateCalibration calibrationState;
         position_t calibrationTarget_;
         NavReturn nav_ret;
 
-        // renvoie la position la plus proche
-        // à adopter pour regarder un marqueur aruco et se recalibrer.
+        // Returns the nearest position to adopt in order to look at an aruco
+        // marker and recalibrate.
         position_t calculateClosestArucoPosition(position_t currentPos);
 };

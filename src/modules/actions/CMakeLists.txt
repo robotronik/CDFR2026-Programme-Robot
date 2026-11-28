@@ -9,7 +9,7 @@ target_sources(actions
         src/ElementalAction/TakeStoneAction.cpp
         src/Strategy/ExempleStrategy.cpp
         src/ActuatorsControl.cpp
-        src/RobotControl.cpp
+        src/Robot.cpp
         src/MainActionFSM.cpp
         src/SensorControl.cpp
         src/calibration.cpp
@@ -26,6 +26,8 @@ target_link_libraries(actions
         db
         defs
         i2c
+        lidar
+        mat
         vision
         utils
         external_robot_interfaces

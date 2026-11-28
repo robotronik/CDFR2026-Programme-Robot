@@ -12,14 +12,14 @@ protected:
     std::string nom;
     bool isActive = false;
 
-    // Clé = nom de l'action (VirtualAction::getNom()), pour pouvoir
-    // retrouver/retirer une action du pool directement par son nom,
-    // en O(1) en moyenne, plutôt que par recherche linéaire dans un vector.
+    // Key = action name (VirtualAction::getNom()), so an action can be
+    // found/removed from the pool directly by name, O(1) on average, rather
+    // than a linear search through a vector.
     std::unordered_map<std::string, std::pair<float, std::unique_ptr<VirtualAction>>> possible_actions;
-    /* Pour ajouter une action au pool, dans le constructeur (ou buildPossibleActions) : */
+    /* To add an action to the pool, in the constructor (or buildPossibleActions): */
     /*
     *    possible_actions.emplace(
-    *        "NomDeLAction",                          // doit correspondre à action->getNom()
+    *        "ActionName",                            // must match action->getNom()
     *        std::make_pair(1.0f, std::make_unique<WaitAction>())
     *    );
     */
@@ -28,11 +28,10 @@ protected:
 public:
     virtual ~VirtualStrategy() = default;
 
-    /* Sélectionne la meilleure action du pool et renvoie un pointeur NON
-       POSSÉDANT vers elle : l'action reste la propriété de la stratégie
-       (elle demeure dans le pool) et peut donc être rejouée plusieurs fois.
-       Une action reste candidate tant que available() >= 0.
-       Renvoie nullptr si aucune action n'est disponible. */
+    /* Select the best action in the pool and return a NON-OWNING pointer to
+       it: the action stays owned by the strategy (it remains in the pool) and
+       can therefore be replayed several times. An action remains a candidate
+       as long as available() >= 0. Returns nullptr if no action is available. */
     virtual VirtualAction* bestAction() = 0;
 
     virtual position_t StratStartingPos() = 0;
@@ -41,23 +40,23 @@ public:
     void stop(){ isActive = false; }
     void resume(){ isActive = true; }
 
-    /* Action de temporisation à exécuter quand la stratégie n'a plus rien à
-       proposer. L'action reste la propriété de la stratégie : le FSM n'en
-       reçoit qu'un pointeur, qu'il ne doit jamais libérer. Peut renvoyer
-       nullptr si la stratégie n'en fournit pas. */
+    /* Temporary ("wait") action to run when the strategy has nothing left to
+       offer. The action stays owned by the strategy: the FSM only gets a
+       pointer and must never free it. May return nullptr if the strategy does
+       not provide one. */
     virtual VirtualAction* tempAction() = 0;
 
-    /* Cherche une action du pool par son nom, sans la retirer.
-       Renvoie nullptr si absente. */
+    /* Look up an action in the pool by name, without removing it.
+       Returns nullptr if absent. */
     VirtualAction* findAction(const std::string& name) const {
         auto it = possible_actions.find(name);
         if (it == possible_actions.end()) return nullptr;
         return it->second.second.get();
     }
 
-    /* Retire du pool et renvoie (transfert de propriété) l'action
-       nommée `name`, ou nullptr si absente. Utile pour re-proposer
-       une action précise après un ReturnFSM::Done par exemple. */
+    /* Remove from the pool and return (ownership transfer) the action named
+       `name`, or nullptr if absent. Useful to re-offer a specific action after
+       a ReturnFSM::Done, for example. */
     std::unique_ptr<VirtualAction> extractAction(const std::string& name) {
         auto it = possible_actions.find(name);
         if (it == possible_actions.end()) return nullptr;
@@ -66,8 +65,8 @@ public:
         return action;
     }
 
-    // NB: renvoyée par référence constante, car une unordered_map de
-    // unique_ptr n'est pas copiable.
+    // NB: returned by const reference, because an unordered_map of unique_ptr
+    // is not copyable.
     const std::unordered_map<std::string, std::pair<float, std::unique_ptr<VirtualAction>>>& available() const {
         return possible_actions;
     }

@@ -1,12 +1,12 @@
 #include <math.h>
 #include "actions/ElementalAction/CalibrationAction.hpp"
-#include "actions/RobotControl.hpp"
+#include "actions/Robot.hpp"
 #include "utils/logger.hpp"
 #include "navigation/pathfind.h"
 #include "defs/constante.h"
 #include "vision/Cam.hpp" // for OFFSET_CAM_A
 
-CalibrationAction::CalibrationAction(RobotControl* robot, TableState* tableState) {
+CalibrationAction::CalibrationAction(Robot* robot, TableState* tableState) {
     nom = "Calibration";
     duree = 1000;
     calibrationState = StateCalibration::CalcCalculation;
@@ -30,11 +30,11 @@ ReturnFSM CalibrationAction::run() {
         break;
     case StateCalibration::CalibrationNav: {
         // Look towards the closest aruco marker to recalibrate the position
-        nav_ret = navigation.goTo(calibrationTarget_, true);
+        nav_ret = robot->navigation().goTo(calibrationTarget_, true);
         if (nav_ret == NavReturn::Done) {
             LOG_EXTENDED_DEBUG("FSM_CALIBRATION_NAV: Nav done");
-            if (tableState->calibrationAge) {
-                // Si calibrationAge != 0 la calibration a échoué
+            if (robot->calibrationAge) {
+                // If calibrationAge != 0 the calibration failed
                 errorManagement(NavReturn::Done);
                 return ReturnFSM::Error;
             }
@@ -50,7 +50,7 @@ ReturnFSM CalibrationAction::run() {
 }
 
 bool CalibrationAction::errorManagement(NavReturn error_code) {
-    tableState->calibrationAge -= 1;
+    robot->calibrationAge -= 1;
     if (error_code == NavReturn::Done) {
         LOG_WARNING("ACTION_CALIBRATION: Failed nav to calibration action");
     } else if (error_code == NavReturn::Error) {

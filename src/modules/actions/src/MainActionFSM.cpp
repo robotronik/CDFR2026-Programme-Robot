@@ -1,37 +1,34 @@
 #include <string>
 #include "actions/MainActionFSM.hpp"
+#include "actions/Robot.hpp"
 #include "actions/VirtualAction.hpp"
 #include "actions/VirtualStrategy.hpp"
 #include "utils/logger.hpp"
 
-ActionFSM::ActionFSM(RobotControl* robot, TableState* tableState)
-    : robotControl(robot), tableState(tableState)
-{
-    Reset();
-}
-
-ActionFSM::ActionFSM(VirtualStrategy* strategy, RobotControl* robot, TableState* tableState)
-    : robotControl(robot), tableState(tableState), currentStrategy(strategy)
-{
+ActionFSM::ActionFSM(Robot* robot, TableState* tableState)
+    : robotControl(robot), tableState(tableState) {
     Reset();
 }
 
 ActionFSM::~ActionFSM(){}
 
-void ActionFSM::setStrategy(VirtualStrategy* strategy){
+void ActionFSM::syncStrategy() {
+    VirtualStrategy* strategy = robotControl ? robotControl->currentStrategy : nullptr;
+    if (strategy == currentStrategy) return;
+    // Abandon the running action: it belongs to the previous strategy, which
+    // may disappear at any time.
     currentStrategy = strategy;
-    // On abandonne l'action en cours : elle appartient à l'ancienne
-    // stratégie, qui peut disparaître à tout moment.
     currentAction = nullptr;
 }
 
 void ActionFSM::Reset(){
     /****** RESET OF FSM STATES *******/
+    syncStrategy();
     if (currentStrategy != nullptr){
-        // Réactive la stratégie si elle avait été stoppée (stop()).
-        // NB: si la stratégie a besoin de reconstruire son pool d'actions
-        // (cf. ExempleStrat::reset()), c'est à l'appelant de le faire
-        // explicitement, VirtualStrategy n'imposant pas cette méthode.
+        // Resume the strategy if it had been stopped (stop()).
+        // NB: if the strategy needs to rebuild its action pool (cf.
+        // ExempleStrat::reset()), the caller must do it explicitly;
+        // VirtualStrategy does not require this method.
         currentStrategy->resume();
     }
 
@@ -39,15 +36,15 @@ void ActionFSM::Reset(){
 }
 
 /*
-    Boucle principale : on récupère la meilleure action à exécuter
-    (si aucune n'est en cours) puis on la lance.
-    TODO: une seule action à la fois pour l'instant une parallélisation est envisageable à réfléchir
+    Main loop: pick the best action to run (if none is running) then run it.
+    TODO: one action at a time for now; parallelism could be considered.
 */
 bool ActionFSM::RunFSM(){
-    // Sélection d'une nouvelle action : au démarrage, ou tant qu'on tourne sur
-    // l'action de temporisation (on resonde alors la stratégie à chaque tick
-    // pour voir si elle propose mieux). Réassigner la même action ne relance
-    // pas le chrono : il s'agit de la même exécution qui se poursuit.
+    syncStrategy();
+    // Select a new action: at startup, or while running the temporary action
+    // (the strategy is then re-polled every tick to see if it offers better).
+    // Reassigning the same action does not restart the timer: it is the same
+    // execution carrying on.
     if (currentAction == nullptr || currentAction == currentStrategy->tempAction()){
         VirtualAction* best = SetBestAction();
         if (best != currentAction){
@@ -57,16 +54,15 @@ bool ActionFSM::RunFSM(){
     }
 
     if (currentAction == nullptr){
-        // Aucune action à exécuter : pas de stratégie branchée, ou pas
-        // même d'action de temporisation disponible.
+        // No action to run: no strategy attached, or no temporary action
+        // available either.
         return false;
     }
 
     ReturnFSM ret = currentAction->run();
 
     if (ret == ReturnFSM::Done){
-        // Action menée à son terme : on enregistre le temps qu'elle a
-        // réellement pris.
+        // Action completed: record how long it actually took.
         //durationDB.record(currentAction->getNom(), _millis() - actionStartTime);
         currentAction = SetBestAction();
         actionStartTime = _millis();
@@ -80,8 +76,8 @@ bool ActionFSM::RunFSM(){
 }
 
 /*
-    Wrapper pour déterminer la meilleure action à exécuter
-    Permet d'ajouter des modes comme endless mode
+    Wrapper to pick the best action to run.
+    Lets us add modes such as endless mode.
 */
 VirtualAction* ActionFSM::SetBestAction(){
     //ENDLESSMODE
@@ -89,21 +85,21 @@ VirtualAction* ActionFSM::SetBestAction(){
         if (_millis() > tableState->startTime + 50000) tableState->startTime = _millis();
     }
 
-    /************************** DEMANDE À LA STRATÉGIE COURANTE *************************/
+    /************************** ASK THE CURRENT STRATEGY *************************/
     if (currentStrategy != nullptr){
-        // Pointeur non-possédant : l'action reste la propriété de la
-        // stratégie, le FSM ne la libère jamais.
+        // Non-owning pointer: the action stays owned by the strategy; the FSM
+        // never frees it.
         VirtualAction* best = currentStrategy->bestAction();
         if (best != nullptr){
-            LOG_GREEN_INFO("ActionFSM: exécution de l'action de stratégie '",
-                            best->getNom().c_str(), "'");
+            LOG_GREEN_INFO("ActionFSM: running strategy action '",
+                           best->getNom().c_str(), "'");
             return best;
         }
-        // bestAction() a renvoyé nullptr : stratégie arrêtée (stop()) ou
-        // aucune action disponible. On retombe sur l'attente ci-dessous.
+        // bestAction() returned nullptr: strategy stopped (stop()) or no action
+        // available. Fall back to waiting below.
     }
 
-    /************************** SINON, ON ATTEND *************************/
+    /************************** OTHERWISE, WAIT *************************/
     if (currentStrategy == nullptr) return nullptr;
     return currentStrategy->tempAction();
 }

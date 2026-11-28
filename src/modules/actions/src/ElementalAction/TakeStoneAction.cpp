@@ -2,14 +2,14 @@
 #include "defs/constante.h"
 #include "defs/structs.hpp"
 #include "defs/tableState.hpp"
-#include "actions/RobotControl.hpp"
+#include "actions/Robot.hpp"
 #include "drive_interface.h"
 #include "navigation/driveControl.h" // for position_t
 #include "navigation/navigation.h" // for nav_return_t & position_t
 #include "navigation/pathfind.h"
 #include "utils/logger.hpp"
 
-TakeStoneAction::TakeStoneAction(TableState* tableState, RobotControl* robot)
+TakeStoneAction::TakeStoneAction(TableState* tableState, Robot* robot)
     : tableState(tableState), robot(robot) {
     nom = "TakeStone";
     reset();
@@ -124,7 +124,7 @@ float TakeStoneAction::bestTake(const position_t& from) {
 ReturnFSM TakeStoneAction::run() {
     switch (state) {
     case TakeStoneState::MOVE1: {
-        NavReturn res1 = navigation.goTo(target, true, false, false);
+        NavReturn res1 = robot->navigation().goTo(target, true, false, false);
         switch (res1) {
         case NavReturn::Paused:
             LOG_DEBUG("TakeStone: nav is paused");
@@ -147,7 +147,7 @@ ReturnFSM TakeStoneAction::run() {
             return ReturnFSM::Done;
         }
         selected_face->grabStone(); // TODO: implement face selection
-        NavReturn res2 = navigation.goTo(diffPos, false, true, true); // TODO: fast mode
+        NavReturn res2 = robot->navigation().goTo(diffPos, false, true, true); // TODO: fast mode
         switch (res2) {
         case NavReturn::Paused:
             LOG_DEBUG("TakeStone: nav is paused");

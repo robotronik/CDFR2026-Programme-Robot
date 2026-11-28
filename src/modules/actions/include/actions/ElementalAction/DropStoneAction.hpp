@@ -2,10 +2,10 @@
 #include "actions/VirtualAction.hpp"
 #include "defs/structs.hpp"
 #include "drive_interface.h"
-#include "navigation/navigation.h" // pour NavReturn & position_t
+#include "navigation/navigation.h" // for NavReturn & position_t
 #include "defs/tableState.hpp"
 #include "navigation/pathfind.h"
-#include "actions/RobotControl.hpp"
+#include "actions/Robot.hpp"
 
 /*
     Action de pose : pose les pierres portees dans une zone de construction
@@ -13,7 +13,7 @@
 */
 class DropStoneAction : public VirtualAction {
     public:
-        DropStoneAction(TableState* tableState, RobotControl* robot);
+        DropStoneAction(TableState* tableState, Robot* robot);
         ~DropStoneAction() override = default;
 
         ReturnFSM run() override;
@@ -31,7 +31,7 @@ class DropStoneAction : public VirtualAction {
 
     private:
         TableState* tableState;
-        RobotControl* robot;
+        Robot* robot;
 
         bool findBestConstructionZone();
         bool moveTargetToConstructionPosition();

@@ -5,12 +5,12 @@
 #include "defs/tableState.hpp"
 #include "drive_interface.h"
 
-class RobotControl;
+class Robot;
 
 class TakeStoneAction : public VirtualAction {
     private:
         TableState* tableState;
-        RobotControl* robot;
+        Robot* robot;
 
         enum class TakeStoneState {
             MOVE1,
@@ -35,7 +35,7 @@ class TakeStoneAction : public VirtualAction {
         Wall* getBestPossibleFace();
 
     public:
-        TakeStoneAction(TableState* tableState, RobotControl* robot);
+        TakeStoneAction(TableState* tableState, Robot* robot);
         ~TakeStoneAction() override = default;
 
         ReturnFSM run() override;

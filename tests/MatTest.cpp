@@ -1,11 +1,10 @@
 #include "mat/mat.hpp"
-#include "restAPI/matAPI.hpp"
 
 // Vérifie la lecture d'une réponse GET /objects du mat : position de
 // l'adversaire et objets de jeu, y compris les champs manquants ou nuls.
 bool test_mat_parse() {
     // La route interrogée par getMapStatus() doit rester celle de l'API du mat.
-    if (mat_api::MAT_OBJECTS_PATH != "/objects") return false;
+    if (Mat::MAT_OBJECTS_PATH != "/objects") return false;
 
     const json payload = json::parse(R"JSON({
         "our_color": "blue",
@@ -45,6 +44,8 @@ bool test_mat_parse() {
 
 bool test_start_mat(){
     // Is it useful ?
-    while(!StartMat());
+    Mat mat;
+    while (!mat.start())
+        ;
     return true;
 }
