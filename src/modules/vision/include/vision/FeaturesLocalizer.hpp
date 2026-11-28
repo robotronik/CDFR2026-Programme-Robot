@@ -20,7 +20,6 @@ struct GroundWarper {
     cv::Size out_size;
     cv::Mat homography; // CV_64F 3x3, capture pixel -> ground mm
 
-    cv::Mat warp(const cv::Mat& gray) const;          // capture -> top-down patch
     cv::Point2d robotMm(const cv::Point2d& px) const; // patch pixel -> robot mm
     cv::Point2d cameraPatchPx() const;                // patch pixel under the camera
 };
@@ -59,6 +58,11 @@ private:
 
     GroundWarper warper_;
     cv::Size warper_size_;
+
+    // Precomputed capture-pixel -> patch-pixel maps (undistortion and ground
+    // warp folded into one remap), built once per frame size.
+    cv::Mat capture_to_patch_x_;
+    cv::Mat capture_to_patch_y_;
 
     double map_mm_per_px_ = 1.0;
     cv::Point2d map_origin_px_;

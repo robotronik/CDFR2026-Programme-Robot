@@ -233,6 +233,11 @@ bool Cam::getLocalisation(position_t& cameraPose) const {
     return true;
 }
 
+std::vector<vision::DetectionResult> Cam::getDetections() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return detections_;
+}
+
 bool Cam::getPreview(std::vector<uchar>& jpeg) const {
     cv::Mat annotated;
     std::vector<vision::DetectionResult> detections;

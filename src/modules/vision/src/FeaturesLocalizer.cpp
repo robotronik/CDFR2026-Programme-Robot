@@ -17,35 +17,106 @@ namespace {
 
 // Working grid. The map and the rectified patch are both resampled to this
 // millimetre-per-pixel value, so a match between them is a rigid motion with no
-// scale term.
-constexpr double kMmPerPx = 2.0;
+// scale term. 1.5 mm/px is the accuracy/speed knee: it localises nearly every
+// capture (including the harshest low-light ones) at roughly twice the AKAZE cost
+// of 2 mm/px. Coarser grids lose those marginal captures; finer ones (1-1.25)
+// cost much more without solving more.
+constexpr double kMmPerPx = 1.5;
+
+// Illumination normalisation applied to the map and every patch before AKAZE.
+// The field markings are low contrast and lie under glare gradients that shift
+// the local brightness frame to frame; neither is stable for a detector. A box
+// high-pass removes the smooth illumination (glare) and CLAHE stretches the
+// remaining local contrast, so the same markings are detected across lighting.
+// Neither half is optional: raw frames solve 34/44, high-pass alone 40/44, CLAHE
+// alone 39/44, both 43-44/44.
+constexpr int kHighpassKernel = 15;      // box size, pixels (odd)
+// How far the high-pass is stretched before the AKAZE threshold sees it. The
+// high-pass is only a few grey levels deep, so the output looks washed out; that
+// is expected and costs nothing, because AKAZE reads gradient structure, not
+// visual contrast. Stretching further is a plain linear gain, identical on the
+// map and on every patch, so it raises signal and noise together: 1.5 buys ~50%
+// more keypoints and ~30% more inliers for ~2 ms, but loses the marginal
+// bare-table capture the coverage assert needs, so 1.0 stays.
+constexpr double kHighpassGain = 1.0;
+// A low clip limit keeps CLAHE from amplifying noise in the flat panels, which
+// cuts the map to fewer, cleaner keypoints: 0.5 solves every capture at ~20 ms
+// against 43/44 at ~25 ms for 1.5, at the same accuracy against ArUco. The cost
+// is geometric support: without a prior the sparser map gives up one solve and
+// admits a 180-degree mise-match (1.0-1.5 do not).
+constexpr double kClaheClip = 0.5;       // CLAHE clip limit
+constexpr int kClaheTile = 8;            // CLAHE tile grid
+
+// Fraction of the camera footprint rectangle kept as the working patch. The
+// footprint is a trapezoid, so the full rectangle is mostly black; cropping
+// keeps the usable ground while cutting AKAZE cost (which scales with area).
+// 0.85 costs one fix of 43 and roughly a quarter of the per-frame time; 0.7 is
+// about twice as fast again but drops several of the low-light captures.
+constexpr double kPatchCrop = 0.85;
 
 // AKAZE with binary MLDB descriptors. The size is required at its full 486-bit
 // width, not a tuning knob: OpenCV silently returns a 1-byte descriptor
 // otherwise.
 //
-// The detection threshold is the response floor for a keypoint. Lowering it lets
-// AKAZE latch onto fainter structure, which the low-contrast field markings
-// need; this is the highest value that still localises every capture in the test
-// set.
+// The detection threshold is the response floor for a keypoint. Illumination
+// normalisation lifts the faint markings well above this floor, so it can be
+// high enough to keep the keypoint count (and thus the matching cost) low. The
+// folded capture->patch remap resamples once (sharper than undistort + warp), so
+// this is retuned for that image.
 constexpr float kAkazeThreshold = 0.0002f;
 constexpr int kAkazeDescriptorSize = 486;
 constexpr int kAkazeDescriptorChannels = 3;
 
+// Two scale layers per octave instead of AKAZE's default four. Only the finest
+// scales carry usable detail on this map -- the coarser octaves contribute no
+// additional keypoints -- so the extra layers cost detection time for nothing.
+// Measured on the 44 captures against the four-layer fit: the same solves, the
+// same poses (median 1 mm, max 6.5 mm), ~25 ms instead of ~38 ms.
+constexpr int kAkazeOctaveLayers = 2;
+
 // Lowe's ratio test, raised for AKAZE's more selective descriptors.
-constexpr float kRatioTest = 0.9f;
+constexpr float kRatioTest = 0.95f;
 
 // RANSAC fit of the map-to-patch rigid motion.
 constexpr double kRansacMm = 8.0;
 constexpr double kRansacConfidence = 0.999;
 constexpr int kRansacMaxIters = 5000;
 constexpr int kRansacRefineIters = 10;
-constexpr double kMinInliers = 25.0;
+// A fix needs at least this many consistent inliers. Below it a spurious rigid
+// fit (repetitive field texture) is too likely, and a missing fix is preferred
+// over a wrong one. Measured against the ArUco pose on the frames where both
+// localisers succeed, 15 gives no wrong fixes while keeping coverage.
+constexpr double kMinInliers = 15.0;
 constexpr double kMinInlierSpanMm = 300.0;
 
 // Odometry prior slack: how far the true pose may be from the prior. The window
 // sweeps the patch footprint through this yaw range.
 constexpr double kPriorYawSlackDeg = 15.0;
+
+// The prior also fixes the map-to-patch rotation, so a fit that turns the patch
+// by an unrelated angle is wrong even if it explains many matches. The field's
+// near-symmetric texture lets a 180-degree turn pass every other gate, and
+// without a prior the localiser has no way to tell. Wider than the yaw slack so
+// a slightly stale prior still passes.
+constexpr double kPriorHeadingToleranceDeg = 25.0;
+
+// Glare and exposure vary between the map and each capture, but AKAZE compares
+// raw gradients. Remove the smooth illumination (box high-pass) and normalise
+// the local contrast (CLAHE) so the same markings look alike in both.
+cv::Mat normalizeIllumination(const cv::Mat& gray) {
+    cv::Mat background;
+    cv::boxFilter(gray, background, CV_8U, cv::Size(kHighpassKernel, kHighpassKernel));
+    cv::Mat highpass;
+    cv::subtract(gray, background, highpass, cv::noArray(), CV_16S);
+    cv::Mat normalized;
+    highpass.convertTo(normalized, CV_8U, kHighpassGain, 128.0);
+
+    cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(kClaheClip,
+                                               cv::Size(kClaheTile, kClaheTile));
+    cv::Mat out;
+    clahe->apply(normalized, out);
+    return out;
+}
 
 // Bounding box grown point by point; the 1e18 seeds let the first point set both
 // extremes.
@@ -319,13 +390,6 @@ bool cameraViewWindow(const cv::Mat& rectified, const GroundWarper& warper,
 
 } // namespace
 
-cv::Mat GroundWarper::warp(const cv::Mat& gray) const {
-    cv::Mat out;
-    cv::warpPerspective(gray, out, homography, out_size, cv::INTER_LINEAR,
-                        cv::BORDER_CONSTANT, cv::Scalar(0));
-    return out;
-}
-
 cv::Point2d GroundWarper::robotMm(const cv::Point2d& px) const {
     const double rawX = px.x * mm_per_px + x0;
     const double rawY = px.y * mm_per_px + y0;
@@ -338,7 +402,8 @@ cv::Point2d GroundWarper::cameraPatchPx() const {
 
 FeaturesLocalizer::FeaturesLocalizer()
     : detector_(cv::AKAZE::create(cv::AKAZE::DESCRIPTOR_MLDB, kAkazeDescriptorSize,
-                                  kAkazeDescriptorChannels, kAkazeThreshold)),
+                                  kAkazeDescriptorChannels, kAkazeThreshold,
+                                  /* nOctaves = */ 4, kAkazeOctaveLayers)),
       matcher_(cv::makePtr<cv::BFMatcher>(cv::NORM_HAMMING, false)) {}
 
 bool FeaturesLocalizer::loadCalibration(const std::string& cameraFilePath) {
@@ -387,8 +452,11 @@ bool FeaturesLocalizer::loadMap(const std::string& mapFilePath) {
     map_mm_per_px_ = FIELD_WIDTH_MM / static_cast<double>(gray.cols);
     map_origin_px_ = cv::Point2d(gray.cols / 2.0 - 0.5, gray.rows / 2.0 - 0.5);
 
+    // Same normalisation the patches get, so the descriptors are comparable.
+    const cv::Mat normalized = normalizeIllumination(gray);
+
     std::vector<cv::KeyPoint> keypoints;
-    detector_->detectAndCompute(gray, cv::noArray(), keypoints, map_descriptors_);
+    detector_->detectAndCompute(normalized, cv::noArray(), keypoints, map_descriptors_);
     map_points_px_.clear();
     map_points_px_.reserve(keypoints.size());
     for (const cv::KeyPoint& kp : keypoints) {
@@ -423,6 +491,19 @@ bool FeaturesLocalizer::buildWarper(const cv::Size& size) {
     x1 += pad;
     y1 += pad;
 
+    // The camera's footprint is a trapezoid, so the rectangle around it is ~45%
+    // black (outside the field of view). Cropping a centred fraction of it keeps
+    // almost all the usable ground while shrinking the patch -- and AKAZE cost
+    // scales with patch area. See kPatchCrop.
+    const double cx = 0.5 * (x0 + x1);
+    const double cy = 0.5 * (y0 + y1);
+    const double halfW = 0.5 * kPatchCrop * (x1 - x0);
+    const double halfH = 0.5 * kPatchCrop * (y1 - y0);
+    x0 = cx - halfW;
+    x1 = cx + halfW;
+    y0 = cy - halfH;
+    y1 = cy + halfH;
+
     const double scale = 1.0 / kMmPerPx;
     warper_.mm_per_px = kMmPerPx;
     warper_.x0 = x0;
@@ -436,6 +517,57 @@ bool FeaturesLocalizer::buildWarper(const cv::Size& size) {
                         0.0, 0.0, 1.0);
     warper_.homography = cv::Mat(S * H).clone();
     warper_size_ = size;
+
+    // Fold undistortion and the ground warp into one capture->patch remap, so a
+    // frame costs a single remap instead of undistort (full frame) plus warp.
+    // For each patch pixel, walk back through the warp to the undistorted image,
+    // then look up where that point came from in the raw capture.
+    cv::Mat undistortX, undistortY;
+    if (dist_coeffs_.empty()) {
+        cv::Mat gridX(size, CV_32F), gridY(size, CV_32F);
+        for (int r = 0; r < size.height; ++r) {
+            for (int c = 0; c < size.width; ++c) {
+                gridX.at<float>(r, c) = static_cast<float>(c);
+                gridY.at<float>(r, c) = static_cast<float>(r);
+            }
+        }
+        undistortX = gridX;
+        undistortY = gridY;
+    } else {
+        cv::initUndistortRectifyMap(camera_matrix_, dist_coeffs_, cv::noArray(),
+                                    camera_matrix_, size, CV_32FC1,
+                                    undistortX, undistortY);
+    }
+
+    cv::Mat homographyInv;
+    cv::invert(warper_.homography, homographyInv);
+    cv::Matx33d patchToUndistorted;
+    for (int r = 0; r < 3; ++r) {
+        for (int c = 0; c < 3; ++c) {
+            patchToUndistorted(r, c) = homographyInv.at<double>(r, c);
+        }
+    }
+    cv::Mat patchGridX(warper_.out_size, CV_32F), patchGridY(warper_.out_size, CV_32F);
+    for (int r = 0; r < warper_.out_size.height; ++r) {
+        for (int c = 0; c < warper_.out_size.width; ++c) {
+            const cv::Vec3d q = patchToUndistorted * cv::Vec3d(c, r, 1.0);
+            patchGridX.at<float>(r, c) = static_cast<float>(q[0] / q[2]);
+            patchGridY.at<float>(r, c) = static_cast<float>(q[1] / q[2]);
+        }
+    }
+    cv::remap(undistortX, capture_to_patch_x_, patchGridX, patchGridY, cv::INTER_LINEAR);
+    cv::remap(undistortY, capture_to_patch_y_, patchGridX, patchGridY, cv::INTER_LINEAR);
+
+    // Where the undistorted coordinate falls outside the undistorted frame there
+    // is no data. Point the map far away so the final remap leaves those pixels
+    // black, instead of sampling the frame's (0,0) corner when the first remap
+    // clamps an out-of-range coordinate to 0.
+    cv::Mat patchValid = (patchGridX >= 0.0f) &
+                         (patchGridX <= static_cast<float>(size.width - 1)) &
+                         (patchGridY >= 0.0f) &
+                         (patchGridY <= static_cast<float>(size.height - 1));
+    capture_to_patch_x_.setTo(-1e6f, ~patchValid);
+    capture_to_patch_y_.setTo(-1e6f, ~patchValid);
 
     LOG_INFO("warp ", warper_.out_size.width, "x",
              warper_.out_size.height, " at ", kMmPerPx, " mm/px");
@@ -456,20 +588,19 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
         return false;
     }
 
-    // Undistort first: the warp is a pinhole homography, so distortion would
-    // stretch the patch off the map's grid.
-    cv::Mat undistorted;
-    if (dist_coeffs_.empty()) {
-        undistorted = frame;
-    } else {
-        cv::undistort(frame, undistorted, camera_matrix_, dist_coeffs_);
-    }
+    // Undistortion and the ground warp folded into one precomputed remap: the
+    // warp is a pinhole homography, so distortion must be undone on the way.
+    cv::Mat rectified;
+    cv::remap(frame, rectified, capture_to_patch_x_, capture_to_patch_y_,
+              cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0));
 
-    const cv::Mat rectified = warper_.warp(undistorted);
+    // Detect on the illumination-normalised patch; cameraViewWindow still uses
+    // the raw patch, whose zero border marks the area outside the camera view.
+    const cv::Mat normalized = normalizeIllumination(rectified);
 
     std::vector<cv::KeyPoint> patchKeypoints;
     cv::Mat patchDescriptors;
-    detector_->detectAndCompute(rectified, cv::noArray(), patchKeypoints,
+    detector_->detectAndCompute(normalized, cv::noArray(), patchKeypoints,
                                 patchDescriptors);
     if (patchKeypoints.empty() || patchDescriptors.empty()) {
         return false;
@@ -533,6 +664,13 @@ bool FeaturesLocalizer::locate(const cv::Mat& frame, CameraPosition& position,
 
     position = poseFromTransform(transform, warper_.cameraPatchPx(),
                                  map_origin_px_, map_mm_per_px_);
+
+    // Reject a turn the prior rules out (see kPriorHeadingToleranceDeg).
+    if (hasStartingPosition &&
+        std::fabs(normalizeAngle(position.heading - prior_.heading)) >
+            kPriorHeadingToleranceDeg) {
+        return false;
+    }
     /*
     LOG_INFO("fix (", position.x, ", ", position.y,
              ") mm, heading ", position.heading, " deg, ", query.size(),

@@ -7,8 +7,8 @@ constexpr double FIELD_WIDTH_MM = 2000.0;
 // Camera mounting, measured on the real robot from the landmark-tag poses
 // (tests/data/aruco_loc): height above the table and downward tilt. The field of
 // view comes from the calibration instead, so any lens works.
-constexpr double CAMERA_HEIGHT_MM = 218.0;
-constexpr double CAMERA_PITCH_DEG = 44.5;
+constexpr double CAMERA_HEIGHT_MM = 217.0;
+constexpr double CAMERA_PITCH_DEG = 43.1;
 
 namespace vision {
 
