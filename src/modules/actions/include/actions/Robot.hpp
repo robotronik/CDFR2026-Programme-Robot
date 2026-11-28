@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -10,7 +11,6 @@
 #include "defs/structs.hpp"
 #include "navigation/driveControl.h"
 
-class ActionFSM;
 class Arduino;
 class Cam;
 class Lidar;
@@ -34,11 +34,17 @@ class Robot {
         SensorControl sensor_;
 
         // Owned collaborators (constructed by the robot itself).
-        std::unique_ptr<TableState> tableState_;
-        std::unique_ptr<ActionFSM> action_;
+        TableState* tableState_ = nullptr; // owned by the app, shared in
         std::unique_ptr<Navigation> navigation_;
         MainState* currentState_ = nullptr;
         bool hardwareReady_ = false;
+
+        // Pending requests from the API thread, drained by updateTeamStrat().
+        std::mutex requestMutex_;
+        bool hasColorRequest_ = false;
+        ColorTeam requestedColor_ = ColorTeam::None;
+        bool hasStrategyRequest_ = false;
+        std::string requestedStrategy_;
 
         void initStrategies();
 
@@ -100,9 +106,9 @@ class Robot {
         VirtualStrategy* currentStrategy = nullptr;
         std::vector<VirtualStrategy*> strategies;
 
-        // Owned collaborators.
+        // Table state (owned by the app, injected here).
+        void setTableState(TableState* tableState);
         TableState& tableState() { return *tableState_; }
-        ActionFSM& action() { return *action_; }
         Navigation& navigation() { return *navigation_; }
 
         // Wiring from the app.
@@ -133,4 +139,10 @@ class Robot {
         // Team / strategy switching.
         void switchTeamSide(ColorTeam color);
         void switchStrategy(const std::string& strategy);
+
+        // Thread-safe request entry points (called from the API thread) and the
+        // main-thread consumer that applies them.
+        void requestColor(ColorTeam color);
+        void requestStrategy(const std::string& strategy);
+        void updateTeamStrat();
 };

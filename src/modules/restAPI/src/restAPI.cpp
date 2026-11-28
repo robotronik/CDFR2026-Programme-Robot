@@ -27,41 +27,8 @@ using json = nlohmann::json;
 
 #define API_PORT 80
 
-RestAPI::RestAPI(MainState* currentState,
-                 MainState* nextState,
-                 Robot* robot,
-                 TableState* tableStatus,
-                 Arduino* arduino,
-                 SensorControl* sensor,
-                 Lidar* lidar,
-                 Cam* cam,
-                 Navigation* navigation,
-                 std::vector<VirtualStrategy*>* strategies)
-    : currentState(currentState),
-      nextState(nextState),
-      robot(robot),
-      tableStatus(tableStatus),
-      arduino(arduino),
-      sensor(sensor),
-      lidar(lidar),
-      cam(cam),
-      navigation(navigation),
-      strategies(strategies) {
-}
-
-bool RestAPI::consumeColorRequest(ColorTeam& color){
-    if (!hasColorRequest) return false;
-    color = requestedColor;
-    hasColorRequest = false;
-    return true;
-}
-
-bool RestAPI::consumeStrategyRequest(std::string& strategy){
-    if (!hasStrategyRequest) return false;
-    strategy = requestedStrategy;
-    hasStrategyRequest = false;
-    return true;
-}
+RestAPI::RestAPI(MainState* currentState, MainState* nextState, Robot* robot)
+    : currentState(currentState), nextState(nextState), robot(robot) {}
 
 static crow::response serveFile(const std::string& path);
 static std::string getContentType(const std::string& path);
@@ -119,9 +86,8 @@ static position_t readRequestedPosition(const json& req_data, const position_t& 
     return pos;
 }
 
-static bool isKnownStrategy(const std::vector<VirtualStrategy*>* strategies, const std::string& name){
-    if (strategies == nullptr) return false;
-    for (VirtualStrategy* strategy : *strategies)
+static bool isKnownStrategy(const std::vector<VirtualStrategy*>& strategies, const std::string& name) {
+    for (VirtualStrategy* strategy : strategies)
         if (strategy != nullptr && strategy->getNom() == name)
             return true;
     return false;
@@ -204,8 +170,8 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/get_table")
     ([this](){
         json response;
-        response["table"] = *tableStatus;
-        response["score"] = tableStatus->getScore(robot->drive.position);
+        response["table"] = robot->tableState();
+        response["score"] = robot->tableState().getScore(robot->drive.position);
         return crow::response(response.dump(4));
     });
 
@@ -214,18 +180,18 @@ void RestAPI::start(){
     ([this](){
         json response;
         response["status"] = static_cast<int>(*currentState);
-        response["table"] = *tableStatus;
-        response["score"] = tableStatus->getScore(robot->drive.position);
+        response["table"] = robot->tableState();
+        response["score"] = robot->tableState().getScore(robot->drive.position);
 
         json limitedAbsoluteLidarData = json::array();
 
-        // Add the first lidar->count elements to the new array
-        for (int i = 0; i < lidar->count; ++i) {
-            limitedAbsoluteLidarData.push_back({{"x", lidar->data[i].x}, {"y", lidar->data[i].y}});
+        // Add the first robot->lidar()->count elements to the new array
+        for (int i = 0; i < robot->lidar()->count; ++i) {
+            limitedAbsoluteLidarData.push_back({{"x", robot->lidar()->data[i].x}, {"y", robot->lidar()->data[i].y}});
         }
         response["lidar"] = limitedAbsoluteLidarData;
         json current_navigation_path;
-        navigation->pathJson(current_navigation_path);
+        robot->navigation().pathJson(current_navigation_path);
         response["navigation"] = current_navigation_path;
         
         response["target_pos"] = (position_t)robot->drive.target;
@@ -244,8 +210,8 @@ void RestAPI::start(){
         json limitedLidarData = json::array();
 
         // Add the first lidar_count elements to the new array
-        for (int i = 0; i < lidar->count; ++i) {
-            limitedLidarData.push_back(lidar->data[i]);
+        for (int i = 0; i < robot->lidar()->count; ++i) {
+            limitedLidarData.push_back(robot->lidar()->data[i]);
         }
         response["data"] = limitedLidarData;
         return crow::response(response.dump());
@@ -257,8 +223,8 @@ void RestAPI::start(){
         json response;
         response["status"] = static_cast<int>(*currentState);
         response["team"] = static_cast<int>(robot->colorTeam);
-        response["score"] = tableStatus->getScore(robot->drive.position);
-        response["time"] = (tableStatus->startTime == 0) ? 0 : (_millis() - tableStatus->startTime);
+        response["score"] = robot->tableState().getScore(robot->drive.position);
+        response["time"] = (robot->tableState().startTime == 0) ? 0 : (_millis() - robot->tableState().startTime);
         response["strategy"] = robot->strategy;
         response["runid"] = log_main_get_id();
         return crow::response(response.dump(4));
@@ -268,11 +234,9 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/get_strategies")
     ([this](){
         json strategies_json = json::array();
-        if (strategies != nullptr){
-            for (VirtualStrategy* strategy : *strategies){
-                if (strategy != nullptr)
-                    strategies_json.push_back(strategy->getNom());
-            }
+        for (VirtualStrategy* strategy : robot->strategies) {
+            if (strategy != nullptr)
+                strategies_json.push_back(strategy->getNom());
         }
         json response;
         response["strategies"] = strategies_json;
@@ -312,13 +276,13 @@ void RestAPI::start(){
         json stepper_pos = json::array();
         for (int i = 1; i <= 4; i++){
             int32_t val ;
-            if (!arduino->getStepper(val, i)) return crow::response(400, response.dump(4));
+            if (!robot->arduino()->getStepper(val, i)) return crow::response(400, response.dump(4));
             stepper_pos.push_back({i, val});
         }
         json sensor_state = json::array();
         for (int i = 1; i <= 6; i++){
             bool val ;
-            if (!arduino->readSensor(i, val)) return crow::response(400, response.dump(4));
+            if (!robot->arduino()->readSensor(i, val)) return crow::response(400, response.dump(4));
             sensor_state.push_back({i, val});
         }
         response["steppers_pos"] = stepper_pos;
@@ -342,10 +306,10 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/objects")
     ([this](){
         position_t camera_pos = {0.0, 0.0, 0.0};
-        if (!cam->getLocalisation(camera_pos)){
+        if (!robot->cam()->getLocalisation(camera_pos)) {
             camera_pos = robotToCamera(robot->drive.position);
         }
-        const std::vector<GameElement> elements = cam->getGameElements(camera_pos);
+        const std::vector<GameElement> elements = robot->cam()->getGameElements(camera_pos);
         json objects = json::array();
         for (const GameElement& element : elements){
             objects.push_back(json{{"x", element.x}, {"y", element.y}, {"z", element.z},
@@ -363,11 +327,10 @@ void RestAPI::start(){
     ([this](){
         position_t camera_pos = {0.0, 0.0, 0.0};
         json response;
-        if (cam->getLocalisation(camera_pos)){
+        if (robot->cam()->getLocalisation(camera_pos)) {
             const position_t robot_pos = cameraToRobot(camera_pos);
             response["object"] = json{{"x", robot_pos.x}, {"y", robot_pos.y}, {"a", robot_pos.a}};
-        }
-        else{
+        } else {
             response["object"] = nullptr;
         }
         crow::response res(response.dump());
@@ -377,16 +340,16 @@ void RestAPI::start(){
 
     // Starts/stops the camera capture thread.
     CROW_ROUTE(app, "/start")
-    ([this](){
-        cam->start();
+    ([this]() {
+        robot->cam()->start();
         json response;
         response["message"] = "Camera started";
         return crow::response(response.dump());
     });
 
     CROW_ROUTE(app, "/stop")
-    ([this](){
-        cam->stop();
+    ([this]() {
+        robot->cam()->stop();
         json response;
         response["message"] = "Camera stopped";
         return crow::response(response.dump());
@@ -396,7 +359,7 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/preview")
     ([this](){
         std::vector<uchar> jpeg;
-        if (!cam->getPreview(jpeg))
+        if (!robot->cam()->getPreview(jpeg))
             return jsonError(503, "No preview available");
         crow::response res(200, std::string(jpeg.begin(), jpeg.end()));
         res.set_header("Content-Type", "image/jpeg");
@@ -407,7 +370,7 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/preview_raw")
     ([this](){
         std::vector<uchar> jpeg;
-        if (!cam->getRawPreview(jpeg))
+        if (!robot->cam()->getRawPreview(jpeg))
             return jsonError(503, "No preview available");
         crow::response res(200, std::string(jpeg.begin(), jpeg.end()));
         res.set_header("Content-Type", "image/jpeg");
@@ -418,9 +381,9 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/camera_settings").methods(crow::HTTPMethod::GET)
     ([this](){
         json response;
-        response["exposure_value"] = cam->getExposureValue();
-        response["contrast"] = cam->getContrast();
-        response["brightness"] = cam->getBrightness();
+        response["exposure_value"] = robot->cam()->getExposureValue();
+        response["contrast"] = robot->cam()->getContrast();
+        response["brightness"] = robot->cam()->getBrightness();
         return crow::response(200, response.dump());
     });
 
@@ -430,19 +393,19 @@ void RestAPI::start(){
         if (!parseBody(req, req_data))
             return jsonError(400, "Invalid JSON");
         if (req_data.contains("exposure_value") && req_data["exposure_value"].is_number()) {
-            cam->setExposureValue(req_data["exposure_value"].get<float>());
+            robot->cam()->setExposureValue(req_data["exposure_value"].get<float>());
         }
         if (req_data.contains("contrast") && req_data["contrast"].is_number()) {
-            cam->setContrast(req_data["contrast"].get<float>());
+            robot->cam()->setContrast(req_data["contrast"].get<float>());
         }
         if (req_data.contains("brightness") && req_data["brightness"].is_number()) {
-            cam->setBrightness(req_data["brightness"].get<float>());
+            robot->cam()->setBrightness(req_data["brightness"].get<float>());
         }
         json response;
         response["message"] = "Camera settings updated";
-        response["exposure_value"] = cam->getExposureValue();
-        response["contrast"] = cam->getContrast();
-        response["brightness"] = cam->getBrightness();
+        response["exposure_value"] = robot->cam()->getExposureValue();
+        response["contrast"] = robot->cam()->getContrast();
+        response["brightness"] = robot->cam()->getBrightness();
         return crow::response(200, response.dump());
     });
 
@@ -463,8 +426,7 @@ void RestAPI::start(){
         if (*currentState == MainState::Run)
             return jsonError(400, "Cannot change the color in the current state");
 
-        requestedColor = req_color;
-        hasColorRequest = true;
+        robot->requestColor(req_color);
 
         return jsonMessage("Successful");
     });
@@ -477,13 +439,12 @@ void RestAPI::start(){
 
         std::string req_strat = req_data["strat"];
 
-        if (!isKnownStrategy(strategies, req_strat))
+        if (!isKnownStrategy(robot->strategies, req_strat))
             return jsonError(400, "Invalid Strategy Request");
         if (*currentState == MainState::Run)
             return jsonError(400, "Cannot change the strategy in the current state");
 
-        requestedStrategy = req_strat;
-        hasStrategyRequest = true;
+        robot->requestStrategy(req_strat);
 
         return jsonMessage("Successful");
     });
@@ -515,7 +476,7 @@ void RestAPI::start(){
 
         const position_t pos = readRequestedPosition(req_data, robot->drive.position);
         robot->drive.setCoordinates(pos);
-        navigation->goTo(pos, false);
+        robot->navigation().goTo(pos, false);
 
         return jsonMessage("Successful");
     });
@@ -531,7 +492,7 @@ void RestAPI::start(){
 
         const position_t pos = readRequestedPosition(req_data, robot->drive.position);
         LOG_INFO("Manual ctrl : Requested set_target_coordinates, x=", pos.x, " y=", pos.y, " a=", pos.a);
-        navigation->goTo(pos, false);
+        robot->navigation().goTo(pos, false);
 
         return jsonMessage("Successful");
     });
@@ -547,7 +508,7 @@ void RestAPI::start(){
 
         const position_t pos = readRequestedPosition(req_data, robot->drive.position);
         LOG_INFO("Manual ctrl : Requested set_target_coordinates_Astart, x=", pos.x, " y=", pos.y, " a=", pos.a);
-        navigation->goTo(pos, true);
+        robot->navigation().goTo(pos, true);
 
         return jsonMessage("Successful");
     });
@@ -569,7 +530,7 @@ void RestAPI::start(){
         LOG_INFO("Manual ctrl : Requested set_move, value=", req_value);
 
         position_t pos = {newXvalue, newYvalue, robot->drive.position.a};
-        navigation->goTo(pos);
+        robot->navigation().goTo(pos);
 
         return jsonMessage("Successful");
     });
@@ -587,7 +548,7 @@ void RestAPI::start(){
 
         // TODO
         position_t pos = {robot->drive.position.x, robot->drive.position.y, robot->drive.position.a + req_value};
-        navigation->goTo(pos);
+        robot->navigation().goTo(pos);
 
         LOG_INFO("Manual ctrl : Requested set_rotate, value=", req_value);
 
@@ -608,9 +569,9 @@ void RestAPI::start(){
         int req_speed = req_data["speed"];
 
         if (req_speed != 0)
-            arduino->moveServoSpeed(req_id, req_value, req_speed);
+            robot->arduino()->moveServoSpeed(req_id, req_value, req_speed);
         else
-            arduino->moveServo(req_id, req_value);
+            robot->arduino()->moveServo(req_id, req_value);
 
         return jsonMessage("Successful");
     });
@@ -627,7 +588,7 @@ void RestAPI::start(){
         int req_value = req_data["value"];
         int req_id = req_data["id"];
 
-        arduino->moveStepper(req_value, req_id);
+        robot->arduino()->moveStepper(req_value, req_id);
 
         return jsonMessage("Successful");
     });

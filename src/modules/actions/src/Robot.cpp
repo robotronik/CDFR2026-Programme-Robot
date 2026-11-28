@@ -1,6 +1,5 @@
 #include "actions/Robot.hpp"
 
-#include "actions/MainActionFSM.hpp"
 #include "actions/SensorControl.hpp"
 #include "actions/Strategy/ExempleStrat.hpp"
 #include "actions/VirtualStrategy.hpp"
@@ -36,16 +35,18 @@ Robot::Robot()
       gate2(idxGate2, position_t{0, 0, 0}, &actuators) {
     wallTable[0] = &wall2;
     wallTable[1] = &gate1;
+}
 
-    // Owned collaborators: the table state, the strategy pool it feeds, and the
-    // action FSM that runs the selected strategy.
-    tableState_ = std::make_unique<TableState>(&colorTeam);
-    navigation_ = std::make_unique<Navigation>(&drive, tableState_.get(), &sensor_.cam(), &calibrationAge);
+void Robot::setTableState(TableState* tableState) {
+    tableState_ = tableState;
+
+    // Navigation needs the table; build it now that the table exists.
+    navigation_ = std::make_unique<Navigation>(&drive, tableState_, &sensor_.cam(), &calibrationAge);
     // The gates run a navigation sequence directly, so give them the instance.
     gate1.setNavigation(navigation_.get());
     gate2.setNavigation(navigation_.get());
+
     initStrategies();
-    action_ = std::make_unique<ActionFSM>(currentStrategy, this, tableState_.get());
 }
 
 Robot::~Robot() = default;
@@ -72,7 +73,7 @@ bool Robot::homeActuators() {
 }
 
 void Robot::initStrategies() {
-    currentStrategy = new ExempleStrat(tableState_.get(), this);
+    currentStrategy = new ExempleStrat(tableState_, this);
     strategies = {currentStrategy};
 }
 
@@ -146,8 +147,39 @@ void Robot::switchStrategy(const std::string& newStrategy) {
     LOG_INFO("Strategy switch detected");
     strategy = newStrategy;
     currentStrategy = selectedStrategy;
-    if (action_)
-        action_->setStrategy(selectedStrategy);
+}
+
+void Robot::requestColor(ColorTeam color) {
+    std::lock_guard<std::mutex> lock(requestMutex_);
+    requestedColor_ = color;
+    hasColorRequest_ = true;
+}
+
+void Robot::requestStrategy(const std::string& strategy) {
+    std::lock_guard<std::mutex> lock(requestMutex_);
+    requestedStrategy_ = strategy;
+    hasStrategyRequest_ = true;
+}
+
+void Robot::updateTeamStrat() {
+    ColorTeam color = ColorTeam::None;
+    bool hasColor = false;
+    std::string strategy;
+    bool hasStrategy = false;
+    {
+        std::lock_guard<std::mutex> lock(requestMutex_);
+        hasColor = hasColorRequest_;
+        color = requestedColor_;
+        hasColorRequest_ = false;
+        hasStrategy = hasStrategyRequest_;
+        strategy = requestedStrategy_;
+        hasStrategyRequest_ = false;
+    }
+
+    if (hasColor)
+        switchTeamSide(color);
+    if (hasStrategy)
+        switchStrategy(strategy);
 }
 
 bool Robot::startup() {

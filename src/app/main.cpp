@@ -1,19 +1,10 @@
-#include "main.hpp"
-
-#include <stdlib.h>
 #include <signal.h>
-#include <string>
 #include <thread>
-#include <vector>
 #include <unistd.h>  // for usleep
 
 #include "actions/Robot.hpp"
 #include "utils/logger.hpp"
 #include "utils/debugSound.hpp"
-
-// Lidar
-#include "lidar/Lidar.hpp"
-#include "lidar/lidarAnalize.h"
 
 // Navigation
 #include "navigation/navigation.h"
@@ -23,12 +14,9 @@
 #include "utils/utils.h"
 #include "restAPI/restAPI.hpp"
 #include "restAPI/manual_mode.h"
-#include "vision/Cam.hpp"
-#include "mat/mat.hpp"
 
 // Actions
 #include "actions/MainActionFSM.hpp"
-#include "actions/Strategy/ExempleStrat.hpp"
 
 // Arduino
 #include "i2c/Arduino.hpp"
@@ -44,6 +32,11 @@
 // Robot: owns the hardware (Arduino, lidar, camera, mat, sensors) and the
 // chassis/actuator control (see actions/Robot.hpp).
 Robot robot;
+TableState tableStatus(&robot.colorTeam);
+
+// The action FSM runs the selected strategy; it depends on the robot and table.
+// (The robot's table reference + navigation are wired in StartSequence.)
+ActionFSM action(&robot, &tableStatus);
 
 MainState currentState;
 MainState nextState;
@@ -52,7 +45,7 @@ bool initState;
 std::thread api_server_thread;
 
 // REST API
-RestAPI api(&currentState, &nextState, &robot, &robot.tableState(), robot.arduino(), robot.sensor(), robot.lidar(), robot.cam(), &robot.navigation(), &robot.strategies);
+RestAPI api(&currentState, &nextState, &robot);
 
 // Prototypes
 int StartSequence();
@@ -95,7 +88,7 @@ int main()
                 robot.arduino()->RGB_Rainbow();
             }
 
-            update_team_strat();
+            robot.updateTeamStrat();
 
             if (robot.sensor()->readButtonSensor() && !robot.sensor()->readLatchSensor() && robot.colorTeam != ColorTeam::None && robot.currentStrategy != nullptr)
                 nextState = MainState::Calibration;
@@ -165,9 +158,9 @@ int main()
                 LOG_GREEN_INFO("RUN");
                 robot.tableState().reset();
                 robot.tableState().startTime = _millis();
-                robot.action().Reset();
+                action.Reset();
             }
-            bool finished = robot.action().RunFSM();
+            bool finished = action.RunFSM();
 
             if (_millis() > robot.tableState().startTime + MATCH_DURATION_MS || finished || robot.sensor()->readButtonSensor())
                 nextState = MainState::Fin;
@@ -250,6 +243,9 @@ int StartSequence()
     if (!robot.startup())
         return -1;
 
+    // Hand the table to the robot: builds navigation and the strategy pool.
+    robot.setTableState(&tableStatus);
+
     // Start the api server in a separate thread
     api_server_thread = std::thread([&]()
                                     { api.start(); });
@@ -298,18 +294,4 @@ void tests()
         * Call test functions here.
         * They will be executed in loop until the program is stopped.
     */
-}
-
-// ------------------------------------------------------
-//                        OTHER
-// ------------------------------------------------------
-
-void update_team_strat(){
-    ColorTeam requestedColor;
-    if (api.consumeColorRequest(requestedColor))
-        robot.switchTeamSide(requestedColor);
-
-    std::string requestedStrategy;
-    if (api.consumeStrategyRequest(requestedStrategy))
-        robot.switchStrategy(requestedStrategy);
 }

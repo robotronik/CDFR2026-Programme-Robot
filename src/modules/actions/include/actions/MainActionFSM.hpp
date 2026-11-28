@@ -18,13 +18,15 @@ class ActionFSM{
         // Permet de brancher/changer la stratégie utilisée par le FSM.
         // N'importe quelle classe dérivant de VirtualStrategy (ExempleStrat,
         // ou toute autre stratégie de match) peut être utilisée ici.
-        void setStrategy(VirtualStrategy* strategy);
         VirtualStrategy* getStrategy(){ return currentStrategy; }
 
     private:
         Robot* robotControl = nullptr;
         TableState* tableState = nullptr;
         /***** FUNCTIONS  *******/
+        // Pull the strategy currently selected on the robot; drop the running
+        // action if it changed.
+        void syncStrategy();
         // Détermine et renvoie l'action la plus prioritaire à exécuter
         VirtualAction* SetBestAction();
 

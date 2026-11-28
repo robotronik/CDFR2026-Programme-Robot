@@ -1,5 +1,6 @@
 #include <string>
 #include "actions/MainActionFSM.hpp"
+#include "actions/Robot.hpp"
 #include "actions/VirtualAction.hpp"
 #include "actions/VirtualStrategy.hpp"
 #include "utils/logger.hpp"
@@ -16,15 +17,18 @@ ActionFSM::ActionFSM(VirtualStrategy* strategy, Robot* robot, TableState* tableS
 
 ActionFSM::~ActionFSM(){}
 
-void ActionFSM::setStrategy(VirtualStrategy* strategy){
-    currentStrategy = strategy;
+void ActionFSM::syncStrategy() {
+    VirtualStrategy* strategy = robotControl ? robotControl->currentStrategy : nullptr;
+    if (strategy == currentStrategy) return;
     // On abandonne l'action en cours : elle appartient à l'ancienne
     // stratégie, qui peut disparaître à tout moment.
+    currentStrategy = strategy;
     currentAction = nullptr;
 }
 
 void ActionFSM::Reset(){
     /****** RESET OF FSM STATES *******/
+    syncStrategy();
     if (currentStrategy != nullptr){
         // Réactive la stratégie si elle avait été stoppée (stop()).
         // NB: si la stratégie a besoin de reconstruire son pool d'actions
@@ -42,6 +46,7 @@ void ActionFSM::Reset(){
     TODO: une seule action à la fois pour l'instant une parallélisation est envisageable à réfléchir
 */
 bool ActionFSM::RunFSM(){
+    syncStrategy();
     // Sélection d'une nouvelle action : au démarrage, ou tant qu'on tourne sur
     // l'action de temporisation (on resonde alors la stratégie à chaque tick
     // pour voir si elle propose mieux). Réassigner la même action ne relance
