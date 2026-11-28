@@ -11,8 +11,6 @@ target_include_directories(defs
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/../navigation/include
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/../actions/include
 )
 
 target_link_libraries(defs

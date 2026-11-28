@@ -3,7 +3,6 @@ add_library(restAPI OBJECT)
 target_sources(restAPI
     PRIVATE
         src/restAPI.cpp
-        src/matAPI.cpp
         src/manual_mode.cpp
 )
 
@@ -17,6 +16,7 @@ target_link_libraries(restAPI
         defs
         i2c
         lidar
+        mat
         navigation
         actions
         vision

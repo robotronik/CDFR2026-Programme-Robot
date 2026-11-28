@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "actions/RobotControl.hpp"
+class Robot;
 #include "defs/mainState.hpp"
 #include "defs/structs.hpp"
 
@@ -19,7 +19,7 @@ class RestAPI {
     public:
         RestAPI(MainState* currentState,
                 MainState* nextState,
-                RobotControl* robot,
+                Robot* robot,
                 TableState* tableStatus,
                 Arduino* arduino,
                 SensorControl* sensor,
@@ -39,7 +39,7 @@ class RestAPI {
     private:
         MainState* currentState;
         MainState* nextState;
-        RobotControl* robot;
+        Robot* robot;
         TableState* tableStatus;
         Arduino* arduino;
         SensorControl* sensor;

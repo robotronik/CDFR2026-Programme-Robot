@@ -1,22 +1,17 @@
 #include "defs/tableState.hpp"
 #include "defs/constante.h"
-#include "actions/RobotControl.hpp"
 
-TableState::TableState(RobotControl* robot) {
-    this->robot = robot;
+TableState::TableState(const ColorTeam* teamColor)
+    : teamColor_(teamColor) {
     pos_opponent.x = 3000;
     pos_opponent.y = 0; //si on detect pas l'adversaire, on se mettrait en slow mode proche de 0,0
-    colorTeam = ColorTeam::None;
-    strategy = "";
     startTime = 0;
-    calibrationAge = 0;
     reset();
 }
 
 TableState::~TableState() {}
 
 void TableState::reset() {
-    resetCalibrationAge();
     /* reset of specific The legend of Camelot */
     elements.clear();
     initQuarry();
@@ -36,14 +31,14 @@ bool TableState::isRobotInArrivalArea(position_t position) {
     int w = 450;
     int h = 600;
     int c_x = -550 - w / 2;
-    int c_y = colorTeam == ColorTeam::Blue ? (900 + h / 2) : (-900 - h / 2);
+    int c_y = teamColor() == ColorTeam::Blue ? (900 + h / 2) : (-900 - h / 2);
     return isPointInsideRectangle(position.x, position.y, c_x, c_y, w + 2 * robotSmallRadius, h + 2 * robotSmallRadius);
 }
 
-int TableState::getScore() {
+int TableState::getScore(const position_t& robotPos) {
     int totalScore = 0;
     // TODO, should be "completely inside" and not just "in"
-    if (isRobotInArrivalArea((position_t)robot->drive.getPosition()))
+    if (isRobotInArrivalArea(robotPos))
         totalScore += 5;
     return totalScore;
 }
@@ -71,7 +66,7 @@ bool TableState::hasEmptyConstructionZone() {
 
 bool TableState::hasEmptyTower() {
     for (towerZone_t tower : towerZone) {
-        if (tower.nb == 0 && tower.colorTeam == colorTeam) {
+        if (tower.nb == 0 && tower.colorTeam == teamColor()) {
             return true;
         }
     }
@@ -80,7 +75,7 @@ bool TableState::hasEmptyTower() {
 
 bool TableState::hasEmptyWall() {
     for (wallZone_t wall : wallZone) {
-        if (wall.nb == 0 && wall.colorTeam == colorTeam) {
+        if (wall.nb == 0 && wall.colorTeam == teamColor()) {
             return true;
         }
     }
@@ -90,7 +85,7 @@ bool TableState::hasEmptyWall() {
 int TableState::countMissingTowers() {
     int count = 4;
     for (towerZone_t tower : towerZone) {
-        if (tower.bestConstruction == ConstructionType::Tower && tower.colorTeam == colorTeam) {
+        if (tower.bestConstruction == ConstructionType::Tower && tower.colorTeam == teamColor()) {
             count--;
         }
     }
@@ -100,7 +95,7 @@ int TableState::countMissingTowers() {
 int TableState::countMissingWalls() {
     int count = 5;
     for (wallZone_t wall : wallZone) {
-        if (wall.bestConstruction == ConstructionType::Wall && wall.colorTeam == colorTeam) {
+        if (wall.bestConstruction == ConstructionType::Wall && wall.colorTeam == teamColor()) {
             count--;
         }
     }
@@ -109,7 +104,7 @@ int TableState::countMissingWalls() {
 
 bool TableState::isGateNeeded() {
     for (wallZone_t wall : wallZone) {
-        if (wall.bestConstruction == ConstructionType::Gate && wall.colorTeam == colorTeam) {
+        if (wall.bestConstruction == ConstructionType::Gate && wall.colorTeam == teamColor()) {
             return false;
         }
     }
@@ -142,8 +137,7 @@ void to_json(json& j, const TableState& ts) {
     j = json{
         {"pos_opponent", ts.pos_opponent},
         {"startTime", ts.startTime},
-        {"colorTeam", static_cast<int>(ts.colorTeam)},
-        {"strategy", ts.strategy},
+        {"colorTeam", static_cast<int>(ts.teamColor())},
         {"mastStatus", ts.mastStatus}};
 }
 

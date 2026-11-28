@@ -21,7 +21,7 @@
     mesure qu'elles deviennent la plus prioritaire.
 */
 
-ExempleStrat::ExempleStrat(TableState* ts, RobotControl* rc) {
+ExempleStrat::ExempleStrat(TableState* ts, Robot* rc) {
     nom = "ExempleStrat";
     tableStatus = ts;
     robot = rc;
@@ -32,7 +32,7 @@ position_t ExempleStrat::StratStartingPos() {
     // Returns the starting position of the robot
     position_t pos = START_POSITION;
 
-    if (tableStatus->colorTeam == ColorTeam::Yellow)
+    if (robot->colorTeam == ColorTeam::Yellow)
         position_robot_flip(pos);
 
     return pos;
@@ -42,7 +42,7 @@ position_t ExempleStrat::StratFinishingPos() {
     // Returns the finishing position of the robot
     position_t pos = FINAL_POSITION;
 
-    if (tableStatus->colorTeam == ColorTeam::Yellow)
+    if (robot->colorTeam == ColorTeam::Yellow)
         position_robot_flip(pos);
 
     return pos;

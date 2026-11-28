@@ -3,7 +3,7 @@
 #include "defs/tableState.hpp"
 #include "navigation/navigation.h" //For NavReturn & position_t
 
-class RobotControl;
+class Robot;
 
 /*
     Action de calibration : force la calibration en se tournant vers
@@ -13,7 +13,7 @@ class RobotControl;
 */
 class CalibrationAction : public VirtualAction {
     public:
-        CalibrationAction(RobotControl* robot, TableState* tableState);
+        CalibrationAction(Robot* robot, TableState* tableState);
         ~CalibrationAction() override = default;
 
         ReturnFSM run() override;
@@ -33,7 +33,7 @@ class CalibrationAction : public VirtualAction {
             CalibrationNav,
         };
 
-        RobotControl* robot;
+        Robot* robot;
         TableState* tableState;
 
         StateCalibration calibrationState;

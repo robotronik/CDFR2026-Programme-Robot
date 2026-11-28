@@ -1,10 +1,10 @@
 #include "actions/ElementalAction/NavHomeAction.hpp"
-#include "actions/RobotControl.hpp"
+#include "actions/Robot.hpp"
 #include "utils/logger.hpp"
 #include "navigation/navigation.h" //For NavReturn & position_t
 #include "navigation/pathfind.h"
 
-NavHomeAction::NavHomeAction(TableState* tableState, RobotControl* robot, position_t homePos)
+NavHomeAction::NavHomeAction(TableState* tableState, Robot* robot, position_t homePos)
     : homePos(homePos) {
     nom = "NavHome";
     duree = 2000.0f;
@@ -13,7 +13,7 @@ NavHomeAction::NavHomeAction(TableState* tableState, RobotControl* robot, positi
 }
 
 ReturnFSM NavHomeAction::run() {
-    NavReturn res = navigation.goTo(homePos, true);
+    NavReturn res = robot->navigation().goTo(homePos, true);
     if (res == NavReturn::Error) {
         errorManagement();
     }

@@ -2,7 +2,7 @@ add_library(mat OBJECT)
 
 target_sources(mat
     PRIVATE
-        src/mat.cpp
+        src/Mat.cpp
 )
 
 target_include_directories(mat
@@ -14,6 +14,6 @@ target_link_libraries(mat
     PUBLIC
         utils
         defs
-        restAPI
+        Threads::Threads
         project_compiler_options
 )

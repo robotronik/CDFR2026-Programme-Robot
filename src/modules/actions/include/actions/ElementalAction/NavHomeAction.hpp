@@ -2,7 +2,7 @@
 #include "actions/VirtualAction.hpp"
 #include "defs/tableState.hpp"
 
-class RobotControl;
+class Robot;
 
 /*
     Action de retour sur la zone de départ.
@@ -11,7 +11,7 @@ class RobotControl;
 */
 class NavHomeAction : public VirtualAction {
     public:
-        NavHomeAction(TableState* tableState, RobotControl* robot, position_t homePos);
+        NavHomeAction(TableState* tableState, Robot* robot, position_t homePos);
         ~NavHomeAction() override = default;
 
         ReturnFSM run() override;
@@ -27,7 +27,7 @@ class NavHomeAction : public VirtualAction {
 
     private:
         TableState* tableState;
-        RobotControl* robot;
+        Robot* robot;
         // valeur de l'action en point
         int value = 10;
         position_t homePos;

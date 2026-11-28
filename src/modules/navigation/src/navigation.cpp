@@ -6,8 +6,8 @@
 #include "defs/tableState.hpp"
 #include "vision/Cam.hpp"
 
-Navigation::Navigation(DriveControl* drive, TableState* tableStatus, Cam* cam)
-    : drive(drive), tableStatus(tableStatus), cam(cam) {
+Navigation::Navigation(DriveControl* drive, TableState* tableStatus, Cam* cam, int* calibrationAge)
+    : drive(drive), tableStatus(tableStatus), cam(cam), calibrationAge(calibrationAge) {
 }
 
 NavReturn Navigation::driveStep() {
@@ -55,7 +55,7 @@ NavReturn Navigation::go() {
             // Convert to the robot's frame and apply the new position
             const position_t robot_pos = cameraToRobot(camera_pos);
             drive->setCoordinates(robot_pos);
-            tableStatus->resetCalibrationAge();
+            if (calibrationAge) *calibrationAge = 0;
             LOG_GREEN_INFO("Camera calibration during move successful, new position: { x = ", robot_pos.x, " y = ", robot_pos.y, " a = ", robot_pos.a, " }");
         } else {
             LOG_WARNING("Camera localisation failed, keeping the odometry estimate");

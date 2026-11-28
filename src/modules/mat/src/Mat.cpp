@@ -1,13 +1,30 @@
-#include "restAPI/matAPI.hpp"
+#include "mat/mat.hpp"
 
+#include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <string>
 #include <thread>
 
 #include "utils/httplib.h"
 #include "utils/logger.hpp"
 
-const std::string mat_api::MAT_OBJECTS_PATH = "/objects";
+#ifndef MAT_HOST
+#define MAT_HOST "192.168.0.135"
+#endif
+#ifndef MAT_PORT
+#define MAT_PORT 5000
+#endif
+// Period at which the background thread refreshes the table.
+#ifndef MAT_POLL_PERIOD_MS
+#define MAT_POLL_PERIOD_MS 100
+#endif
+// Beyond this age, the last table received is considered stale.
+#ifndef MAT_STALE_MS
+#define MAT_STALE_MS 120
+#endif
+
+const std::string Mat::MAT_OBJECTS_PATH = "/objects";
 
 namespace {
 
@@ -26,8 +43,8 @@ void configure(httplib::Client& cli) {
 }
 
 struct HttpGet {
-    bool ok = false;
-    std::string error;
+        bool ok = false;
+        std::string error;
 };
 
 HttpGet get(httplib::Client& cli, const std::string& path, json& response) {
@@ -71,7 +88,7 @@ void workerLoop() {
     bool firstAttemptDone = false;
     while (true) {
         json response;
-        const HttpGet objects = get(cli, mat_api::MAT_OBJECTS_PATH, response);
+        const HttpGet objects = get(cli, Mat::MAT_OBJECTS_PATH, response);
 
         std::unique_lock<std::mutex> lock(g_mutex);
         if (g_runRequested == false) {
@@ -114,7 +131,7 @@ void workerLoop() {
 
 }  // namespace
 
-bool mat_api::start() {
+bool Mat::start() {
     std::lock_guard<std::mutex> lock(g_mutex);
 
     if (!g_thread.joinable()) {
@@ -124,7 +141,7 @@ bool mat_api::start() {
     return isFresh();
 }
 
-void mat_api::stop() {
+void Mat::stop() {
     {
         std::lock_guard<std::mutex> lock(g_mutex);
         g_runRequested = false;
@@ -139,12 +156,12 @@ void mat_api::stop() {
     g_hasData = false;
 }
 
-bool mat_api::ready() {
+bool Mat::ready() {
     std::lock_guard<std::mutex> lock(g_mutex);
     return isFresh();
 }
 
-bool mat_api::latest(MatTableData& data) {
+bool Mat::latest(MatTableData& data) {
     std::lock_guard<std::mutex> lock(g_mutex);
 
     if (!isFresh()) {
@@ -154,14 +171,14 @@ bool mat_api::latest(MatTableData& data) {
     return true;
 }
 
-bool mat_api::fetchTable(MatTableData& data) {
+bool Mat::fetchTable(MatTableData& data) {
     httplib::Client cli(MAT_URL);
     configure(cli);
 
     json response;
-    const HttpGet result = get(cli, mat_api::MAT_OBJECTS_PATH, response);
+    const HttpGet result = get(cli, Mat::MAT_OBJECTS_PATH, response);
     if (!result.ok) {
-        LOG_ERROR("MAT ", MAT_URL, mat_api::MAT_OBJECTS_PATH, ": ", result.error);
+        LOG_ERROR("MAT ", MAT_URL, Mat::MAT_OBJECTS_PATH, ": ", result.error);
         return false;
     }
     data = parseMatTableData(response);

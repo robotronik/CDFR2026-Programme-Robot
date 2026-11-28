@@ -7,7 +7,7 @@
 #include <arpa/inet.h>
 #include <net/if.h>
 
-#include "actions/RobotControl.hpp"
+#include "actions/Robot.hpp"
 #include "utils/logger.hpp"
 #include "defs/mainState.hpp"
 #include "defs/tableState.hpp"
@@ -29,7 +29,7 @@ using json = nlohmann::json;
 
 RestAPI::RestAPI(MainState* currentState,
                  MainState* nextState,
-                 RobotControl* robot,
+                 Robot* robot,
                  TableState* tableStatus,
                  Arduino* arduino,
                  SensorControl* sensor,
@@ -46,7 +46,7 @@ RestAPI::RestAPI(MainState* currentState,
       lidar(lidar),
       cam(cam),
       navigation(navigation),
-      strategies(strategies){
+      strategies(strategies) {
 }
 
 bool RestAPI::consumeColorRequest(ColorTeam& color){
@@ -205,7 +205,7 @@ void RestAPI::start(){
     ([this](){
         json response;
         response["table"] = *tableStatus;
-        response["score"] = tableStatus->getScore();
+        response["score"] = tableStatus->getScore(robot->drive.position);
         return crow::response(response.dump(4));
     });
 
@@ -215,8 +215,8 @@ void RestAPI::start(){
         json response;
         response["status"] = static_cast<int>(*currentState);
         response["table"] = *tableStatus;
-        response["score"] = tableStatus->getScore();
-        
+        response["score"] = tableStatus->getScore(robot->drive.position);
+
         json limitedAbsoluteLidarData = json::array();
 
         // Add the first lidar->count elements to the new array
@@ -256,10 +256,10 @@ void RestAPI::start(){
     ([this](){
         json response;
         response["status"] = static_cast<int>(*currentState);
-        response["team"] = static_cast<int>(tableStatus->colorTeam);
-        response["score"] = tableStatus->getScore();
+        response["team"] = static_cast<int>(robot->colorTeam);
+        response["score"] = tableStatus->getScore(robot->drive.position);
         response["time"] = (tableStatus->startTime == 0) ? 0 : (_millis() - tableStatus->startTime);
-        response["strategy"] = tableStatus->strategy;
+        response["strategy"] = robot->strategy;
         response["runid"] = log_main_get_id();
         return crow::response(response.dump(4));
     });

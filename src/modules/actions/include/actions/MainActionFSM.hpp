@@ -4,12 +4,12 @@
 //#include "db/ActionDurationDB.hpp"
 #include "defs/tableState.hpp"
 
-class RobotControl;
+class Robot;
 
 class ActionFSM{
     public:
-        ActionFSM(RobotControl* robot, TableState* tableState);
-        explicit ActionFSM(VirtualStrategy* strategy, RobotControl* robot, TableState* tableState);
+        ActionFSM(Robot* robot, TableState* tableState);
+        explicit ActionFSM(VirtualStrategy* strategy, Robot* robot, TableState* tableState);
         ~ActionFSM();
         void Reset();
         bool RunFSM();
@@ -22,7 +22,7 @@ class ActionFSM{
         VirtualStrategy* getStrategy(){ return currentStrategy; }
 
     private:
-        RobotControl* robotControl = nullptr;
+        Robot* robotControl = nullptr;
         TableState* tableState = nullptr;
         /***** FUNCTIONS  *******/
         // Détermine et renvoie l'action la plus prioritaire à exécuter

@@ -7,25 +7,20 @@
 
 using json = nlohmann::json;
 
-class RobotControl;
-
 class TableState {
     public:
-        explicit TableState(RobotControl* robot);
+        explicit TableState(const ColorTeam* teamColor);
         ~TableState();
 
         void reset();
-        int getScore();
+        int getScore(const position_t& robotPos);
+
+        /* Team colour, owned by the Robot and kept in sync through a pointer. */
+        ColorTeam teamColor() const { return teamColor_ ? *teamColor_ : ColorTeam::None; }
 
         /* common data */
         position_t pos_opponent;
         unsigned long startTime;
-        ColorTeam colorTeam;
-        std::string strategy;
-
-        /* Cam calibration related*/
-        int calibrationAge; // Age of calibration by Camera if exist
-        void resetCalibrationAge() { calibrationAge = 0; }
 
         bool mastStatus = false; // True while the mast is reachable and publishing
         void updateMapStatus(const MatTableData& data); // update of tableState relative to data recived by mast
@@ -54,7 +49,7 @@ class TableState {
         bool isGateNeeded();
 
     private:
-        RobotControl* robot;
+        const ColorTeam* teamColor_;
         void initQuarry();
         void initConstructionZones();
 };

@@ -5,7 +5,7 @@
 
 //#include "utils/logger.hpp"
 
-DropStoneAction::DropStoneAction(TableState* tableState, RobotControl* robot)
+DropStoneAction::DropStoneAction(TableState* tableState, Robot* robot)
     : tableState(tableState), robot(robot) {
     this->nom = "DropStone";
     reset();
@@ -14,7 +14,7 @@ DropStoneAction::DropStoneAction(TableState* tableState, RobotControl* robot)
 ReturnFSM DropStoneAction::run() {
     switch (state) {
     case DropStoneState::Moving: {
-        NavReturn nav_result = navigation.goTo(target, true);
+        NavReturn nav_result = robot->navigation().goTo(target, true);
         if (nav_result == NavReturn::Done) {
             stop();
             if (!selected_face->releaseStone()) return ReturnFSM::Error; // In practice can't fail
@@ -93,10 +93,10 @@ bool DropStoneAction::findBestConstructionZone() {
 
     best_path_length = INFINITY;
     position_t path[1024];
-    const int side = tableState->colorTeam == ColorTeam::Blue ? 1 : -1;
+    const int side = robot->colorTeam == ColorTeam::Blue ? 1 : -1;
     for (int i = 0; i < WALL_ZONE_COUNT; i++) {
         wallZone_t* zone = &tableState->wallZone[i];
-        if (zone->nb != 0 || zone->colorTeam != tableState->colorTeam) continue;
+        if (zone->nb != 0 || zone->colorTeam != robot->colorTeam) continue;
 
         double zone_path_length;
         if (!pathfind(robot_pos, zone->pos, path, zone_path_length)) continue;

@@ -4,15 +4,13 @@
 #include "actions/VirtualStrategy.hpp"
 #include "utils/logger.hpp"
 
-ActionFSM::ActionFSM(RobotControl* robot, TableState* tableState)
-    : robotControl(robot), tableState(tableState)
-{
+ActionFSM::ActionFSM(Robot* robot, TableState* tableState)
+    : robotControl(robot), tableState(tableState) {
     Reset();
 }
 
-ActionFSM::ActionFSM(VirtualStrategy* strategy, RobotControl* robot, TableState* tableState)
-    : robotControl(robot), tableState(tableState), currentStrategy(strategy)
-{
+ActionFSM::ActionFSM(VirtualStrategy* strategy, Robot* robot, TableState* tableState)
+    : robotControl(robot), tableState(tableState), currentStrategy(strategy) {
     Reset();
 }
 
