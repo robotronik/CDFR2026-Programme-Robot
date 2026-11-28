@@ -73,8 +73,28 @@ bool Robot::homeActuators() {
 }
 
 void Robot::initStrategies() {
-    currentStrategy = new ExempleStrat(tableState_, this);
-    strategies = {currentStrategy};
+    strategies.clear();
+    strategies.push_back(std::make_unique<ExempleStrat>(tableState_, this));
+    currentStrategy = strategies.back().get();
+}
+
+std::string Robot::strategyName() const {
+    return currentStrategy ? currentStrategy->getNom() : std::string();
+}
+
+std::vector<std::string> Robot::strategyNames() const {
+    std::vector<std::string> names;
+    for (const auto& candidate : strategies)
+        if (candidate)
+            names.push_back(candidate->getNom());
+    return names;
+}
+
+bool Robot::hasStrategy(const std::string& name) const {
+    for (const auto& candidate : strategies)
+        if (candidate && candidate->getNom() == name)
+            return true;
+    return false;
 }
 
 void Robot::startMatchHardware() {
@@ -139,13 +159,12 @@ void Robot::switchStrategy(const std::string& newStrategy) {
     }
 
     VirtualStrategy* selectedStrategy = nullptr;
-    for (VirtualStrategy* candidate : strategies)
+    for (const auto& candidate : strategies)
         if (candidate && candidate->getNom() == newStrategy)
-            selectedStrategy = candidate;
+            selectedStrategy = candidate.get();
     if (!selectedStrategy) return;
 
     LOG_INFO("Strategy switch detected");
-    strategy = newStrategy;
     currentStrategy = selectedStrategy;
 }
 
@@ -164,7 +183,7 @@ void Robot::requestStrategy(const std::string& strategy) {
 void Robot::updateTeamStrat() {
     ColorTeam color = ColorTeam::None;
     bool hasColor = false;
-    std::string strategy;
+    std::string requestedStrategy;
     bool hasStrategy = false;
     {
         std::lock_guard<std::mutex> lock(requestMutex_);
@@ -172,14 +191,14 @@ void Robot::updateTeamStrat() {
         color = requestedColor_;
         hasColorRequest_ = false;
         hasStrategy = hasStrategyRequest_;
-        strategy = requestedStrategy_;
+        requestedStrategy = requestedStrategy_;
         hasStrategyRequest_ = false;
     }
 
     if (hasColor)
         switchTeamSide(color);
     if (hasStrategy)
-        switchStrategy(strategy);
+        switchStrategy(requestedStrategy);
 }
 
 bool Robot::startup() {

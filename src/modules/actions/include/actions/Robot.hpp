@@ -12,11 +12,7 @@
 #include "navigation/driveControl.h"
 
 class Arduino;
-class Cam;
-class Lidar;
-class Mat;
 class Navigation;
-class SensorControl;
 class TableState;
 class VirtualStrategy;
 
@@ -102,9 +98,15 @@ class Robot {
         void resetCalibrationAge() { calibrationAge = 0; }
 
         // Strategy selection (moved out of the app globals).
-        std::string strategy;
         VirtualStrategy* currentStrategy = nullptr;
-        std::vector<VirtualStrategy*> strategies;
+        std::vector<std::unique_ptr<VirtualStrategy>> strategies;
+
+        // Name of the active strategy ("" when none).
+        std::string strategyName() const;
+
+        // Non-owning views over the strategy pool (used by the REST API).
+        std::vector<std::string> strategyNames() const;
+        bool hasStrategy(const std::string& name) const;
 
         // Table state (owned by the app, injected here).
         void setTableState(TableState* tableState);

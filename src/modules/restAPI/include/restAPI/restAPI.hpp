@@ -1,11 +1,8 @@
 #pragma once
 
-#include <string>
-#include <vector>
+#include "defs/mainState.hpp"
 
 class Robot;
-#include "defs/mainState.hpp"
-#include "defs/structs.hpp"
 
 class RestAPI {
     public:

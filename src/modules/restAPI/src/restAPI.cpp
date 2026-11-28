@@ -12,12 +12,10 @@
 #include "defs/mainState.hpp"
 #include "defs/tableState.hpp"
 #include "i2c/Arduino.hpp"
-#include "actions/SensorControl.hpp"
 #include "lidar/Lidar.hpp"
 #include "lidar/lidarAnalize.h" // for static variable
 #include "navigation/navigation.h"
 #include "navigation/astar.h" // for static variable
-#include "actions/VirtualStrategy.hpp" // for the strategy list
 #include "vision/Cam.hpp" // for vision functions
 #include "restAPI/manual_mode.h" // for manual mode functions
 
@@ -84,13 +82,6 @@ static position_t readRequestedPosition(const json& req_data, const position_t& 
     if (req_data.contains("y")) pos.y = req_data["y"];
     if (req_data.contains("a")) pos.a = req_data["a"];
     return pos;
-}
-
-static bool isKnownStrategy(const std::vector<VirtualStrategy*>& strategies, const std::string& name) {
-    for (VirtualStrategy* strategy : strategies)
-        if (strategy != nullptr && strategy->getNom() == name)
-            return true;
-    return false;
 }
 
 void RestAPI::start(){
@@ -225,7 +216,7 @@ void RestAPI::start(){
         response["team"] = static_cast<int>(robot->colorTeam);
         response["score"] = robot->tableState().getScore(robot->drive.position);
         response["time"] = (robot->tableState().startTime == 0) ? 0 : (_millis() - robot->tableState().startTime);
-        response["strategy"] = robot->strategy;
+        response["strategy"] = robot->strategyName();
         response["runid"] = log_main_get_id();
         return crow::response(response.dump(4));
     });
@@ -234,10 +225,8 @@ void RestAPI::start(){
     CROW_ROUTE(app, "/get_strategies")
     ([this](){
         json strategies_json = json::array();
-        for (VirtualStrategy* strategy : robot->strategies) {
-            if (strategy != nullptr)
-                strategies_json.push_back(strategy->getNom());
-        }
+        for (const std::string& name : robot->strategyNames())
+            strategies_json.push_back(name);
         json response;
         response["strategies"] = strategies_json;
         return crow::response(response.dump());
@@ -439,7 +428,7 @@ void RestAPI::start(){
 
         std::string req_strat = req_data["strat"];
 
-        if (!isKnownStrategy(robot->strategies, req_strat))
+        if (!robot->hasStrategy(req_strat))
             return jsonError(400, "Invalid Strategy Request");
         if (*currentState == MainState::Run)
             return jsonError(400, "Cannot change the strategy in the current state");
